@@ -1,3 +1,4 @@
+
 // Common properties shared by all component types
 export interface BaseComponent {
   id: string;
@@ -179,6 +180,7 @@ export interface DesignRequirements {
   };
   storageRequirements: {
     totalCapacityTB?: number;  // Changed to "Usable Capacity (TiB)" in UI
+    availabilityZoneQuantity?: number; // New field
     poolType?: 
       | '3 Replica' 
       | '2 Replica' 
@@ -194,9 +196,17 @@ export interface DesignRequirements {
       | 'Core-Distribution-Access' 
       | 'Full Mesh' 
       | 'Partial Mesh';  // Changed from redundancyLevel
+    managementNetwork?: 
+      | 'Single connection' 
+      | 'Dual Home';
+    ipmiNetwork?: 
+      | 'Management converged' 
+      | 'Dedicated IPMI switch';
   };
   physicalConstraints: {
-    availableRacks?: number;
+    rackQuantity?: number; // Changed from availableRacks
+    totalAvailabilityZones?: number; // New field
+    racksPerAvailabilityZone?: number; // New field
     rackUnitsPerRack?: number;
     powerPerRackWatts?: number;  // Kept, cooling removed
   };
@@ -211,4 +221,30 @@ export interface InfrastructureDesign {
   updatedAt?: Date;
   requirements: DesignRequirements;
   components: InfrastructureComponent[];
+}
+
+// Role-based component for design planning
+export interface ComponentRole {
+  id: string;
+  role: string;
+  description: string;
+  requiredCount: number;
+  assignedComponentId?: string;
+  assignedComponent?: InfrastructureComponent;
+}
+
+// Device role types
+export enum DeviceRoleType {
+  ControllerNode = 'controllerNode',
+  ComputeNode = 'computeNode',
+  StorageNode = 'storageNode',
+  ManagementSwitch = 'managementSwitch',
+  ComputeSwitch = 'computeSwitch',
+  StorageSwitch = 'storageSwitch',
+  BorderLeafSwitch = 'borderLeafSwitch',
+  SpineSwitch = 'spineSwitch',
+  ToRSwitch = 'torSwitch',
+  Firewall = 'firewall',
+  LoadBalancer = 'loadBalancer',
+  OtherDevice = 'otherDevice'
 }

@@ -5,6 +5,7 @@ import { ComponentLibrary } from '@/components/sidebar/ComponentLibrary';
 import { Header } from '@/components/layout/Header';
 import { RequirementsPanel } from '@/components/requirements/RequirementsPanel';
 import { ResultsPanel } from '@/components/results/ResultsPanel';
+import { DesignPanel } from '@/components/design/DesignPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export const AppLayout: React.FC = () => {
@@ -16,6 +17,7 @@ export const AppLayout: React.FC = () => {
           <TabsList className="mx-6 mt-2 mb-0">
             <TabsTrigger value="requirements">Requirements</TabsTrigger>
             <TabsTrigger value="components">Component Library</TabsTrigger>
+            <TabsTrigger value="design">Design</TabsTrigger>
             <TabsTrigger value="results">Results</TabsTrigger>
           </TabsList>
           <TabsContent value="requirements" className="flex-1 overflow-auto m-0 pt-6 px-6">
@@ -23,6 +25,9 @@ export const AppLayout: React.FC = () => {
           </TabsContent>
           <TabsContent value="components" className="flex-1 overflow-auto m-0 pt-6 px-6">
             <ComponentLibrary />
+          </TabsContent>
+          <TabsContent value="design" className="flex-1 overflow-auto m-0 pt-6 px-6">
+            <DesignPanel />
           </TabsContent>
           <TabsContent value="results" className="flex-1 overflow-auto m-0 pt-6 px-6">
             <ResultsPanel />

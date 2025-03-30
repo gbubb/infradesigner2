@@ -117,6 +117,17 @@ export const RequirementsPanel: React.FC = () => {
             </div>
             
             <div className="space-y-2">
+              <Label htmlFor="az-quantity">Availability Zone Quantity</Label>
+              <Input
+                id="az-quantity"
+                type="number"
+                min={1}
+                value={requirements.storageRequirements.availabilityZoneQuantity || ''}
+                onChange={(e) => handleInputChange('storageRequirements', 'availabilityZoneQuantity', Number(e.target.value))}
+              />
+            </div>
+            
+            <div className="space-y-2">
               <Label htmlFor="pool-type">Pool Type</Label>
               <Select
                 value={requirements.storageRequirements.poolType || '3 Replica'}
@@ -163,6 +174,38 @@ export const RequirementsPanel: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="management-network">Management Network</Label>
+              <Select
+                value={requirements.networkRequirements.managementNetwork || 'Single connection'}
+                onValueChange={(value) => handleInputChange('networkRequirements', 'managementNetwork', value)}
+              >
+                <SelectTrigger id="management-network">
+                  <SelectValue placeholder="Select management network type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Single connection">Single connection</SelectItem>
+                  <SelectItem value="Dual Home">Dual Home</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="ipmi-network">IPMI Network</Label>
+              <Select
+                value={requirements.networkRequirements.ipmiNetwork || 'Management converged'}
+                onValueChange={(value) => handleInputChange('networkRequirements', 'ipmiNetwork', value)}
+              >
+                <SelectTrigger id="ipmi-network">
+                  <SelectValue placeholder="Select IPMI network type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Management converged">Management converged</SelectItem>
+                  <SelectItem value="Dedicated IPMI switch">Dedicated IPMI switch</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
         
@@ -174,12 +217,34 @@ export const RequirementsPanel: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="racks">Available Racks</Label>
+              <Label htmlFor="rack-quantity">Rack Quantity</Label>
               <Input
-                id="racks"
+                id="rack-quantity"
                 type="number"
-                value={requirements.physicalConstraints.availableRacks || ''}
-                onChange={(e) => handleInputChange('physicalConstraints', 'availableRacks', Number(e.target.value))}
+                value={requirements.physicalConstraints.rackQuantity || ''}
+                onChange={(e) => handleInputChange('physicalConstraints', 'rackQuantity', Number(e.target.value))}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="total-azs">Total Availability Zones</Label>
+              <Input
+                id="total-azs"
+                type="number"
+                min={1}
+                value={requirements.physicalConstraints.totalAvailabilityZones || ''}
+                onChange={(e) => handleInputChange('physicalConstraints', 'totalAvailabilityZones', Number(e.target.value))}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="racks-per-az">Racks per Availability Zone</Label>
+              <Input
+                id="racks-per-az"
+                type="number"
+                min={1}
+                value={requirements.physicalConstraints.racksPerAvailabilityZone || ''}
+                onChange={(e) => handleInputChange('physicalConstraints', 'racksPerAvailabilityZone', Number(e.target.value))}
               />
             </div>
             
