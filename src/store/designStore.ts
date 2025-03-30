@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { StoreState } from './types';
 import { createRequirementsSlice, RequirementsSlice } from './slices/requirementsSlice';
@@ -37,6 +38,12 @@ export const initializeStore = () => {
     state.calculateComponentRoles();
   }
   
+  // Initialize selectedDisksByRole if it's empty
+  if (Object.keys(state.selectedDisksByRole).length === 0) {
+    // This is already an empty object, but making sure it's initialized
+    state.selectedDisksByRole = {};
+  }
+  
   // Mark as initialized
   storeInitialized = true;
 };
@@ -71,11 +78,46 @@ export const recalculateDesign = () => {
           
           if (!componentTemplate) return null;
           
-          return {
+          // Clone the component template and set the quantity and role
+          const component = {
             ...componentTemplate,
             quantity: role.adjustedRequiredCount || role.requiredCount,
             role: role.role
           };
+          
+          // For storage nodes, calculate additional properties based on disk configuration
+          if (role.role === 'storageNode') {
+            const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
+            
+            // Calculate the total cost and power with attached disks
+            let totalComponentCost = component.cost;
+            let totalComponentPower = component.powerRequired;
+            
+            // Add disk details if we have them
+            if (roleDiskConfigs.length > 0) {
+              roleDiskConfigs.forEach(diskConfig => {
+                const disk = state.componentTemplates.find(c => c.id === diskConfig.diskId);
+                if (disk) {
+                  totalComponentCost += disk.cost * diskConfig.quantity;
+                  totalComponentPower += disk.powerRequired * diskConfig.quantity;
+                }
+              });
+              
+              component.cost = totalComponentCost;
+              component.powerRequired = totalComponentPower;
+              
+              // You might want to add attached disks to the component for reference
+              (component as any).attachedDisks = roleDiskConfigs.map(diskConfig => {
+                const disk = state.componentTemplates.find(c => c.id === diskConfig.diskId);
+                return {
+                  ...disk,
+                  quantity: diskConfig.quantity
+                };
+              }).filter(Boolean);
+            }
+          }
+          
+          return component;
         })
         .filter(Boolean);
       

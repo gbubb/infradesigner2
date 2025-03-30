@@ -34,7 +34,8 @@ import {
   Switch,
   Router,
   Firewall,
-  Disk
+  Disk,
+  DiskType
 } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
 
@@ -84,6 +85,11 @@ interface DiskFormValues {
   capacityTB?: number;
   formFactor?: string;
   interface?: string;
+  diskType?: DiskType;
+  rpm?: number;
+  iops?: number;
+  readSpeed?: number;
+  writeSpeed?: number;
 }
 
 type ComponentFormValues = {
@@ -188,123 +194,6 @@ export const ComponentLibrary: React.FC = () => {
       ...component
     } as ComponentFormValues);
     setIsEditDialogOpen(true);
-  };
-
-  const handleAddComponent = () => {
-    if (!componentForm.name || !componentForm.manufacturer || !componentForm.model) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    const baseComponent = {
-      id: componentForm.id || undefined,
-      type: componentForm.type,
-      name: componentForm.name,
-      manufacturer: componentForm.manufacturer,
-      model: componentForm.model,
-      cost: componentForm.cost || 0,
-      powerRequired: componentForm.powerRequired || 0,
-    };
-    
-    let component: InfrastructureComponent;
-    
-    switch (componentForm.type) {
-      case ComponentType.Server:
-        component = {
-          ...baseComponent,
-          type: ComponentType.Server,
-          rackUnitsConsumed: componentForm.ruSize || 1,
-          cpuModel: componentForm.cpuModel || "Generic CPU",
-          cpuCount: componentForm.cpuCount || 1,
-          coreCount: componentForm.coreCount || 8,
-          memoryGB: componentForm.memoryGB || 32,
-          serverRole: componentForm.serverRole || ServerRole.Compute,
-          cpuSockets: componentForm.cpuSockets || 1,
-          cpuCoresPerSocket: componentForm.cpuCoresPerSocket || 4,
-          memoryCapacity: componentForm.memoryCapacity || 32,
-          diskSlotType: componentForm.diskSlotType || DiskSlotType.TwoPointFive,
-          diskSlotQuantity: componentForm.diskSlotQuantity || 8,
-          ruSize: componentForm.ruSize || 1,
-          networkPortType: componentForm.networkPortType || NetworkPortType.SFP,
-          portsConsumedQuantity: componentForm.portsConsumedQuantity || 2
-        } as Server;
-        break;
-      case ComponentType.Switch:
-        component = {
-          ...baseComponent,
-          type: ComponentType.Switch,
-          rackUnitsConsumed: componentForm.ruSize || 1,
-          portCount: componentForm.portCount || 24,
-          portSpeed: componentForm.portSpeed || 10,
-          layer: componentForm.layer || 2,
-          switchRole: componentForm.switchRole || SwitchRole.Access,
-          ruSize: componentForm.ruSize || 1,
-          portSpeedType: componentForm.portSpeedType || PortSpeed.TenG,
-          portsProvidedQuantity: componentForm.portsProvidedQuantity || 24
-        } as Switch;
-        break;
-      case ComponentType.Router:
-        component = {
-          ...baseComponent,
-          type: ComponentType.Router,
-          rackUnitsConsumed: componentForm.rackUnitsConsumed || 1,
-          portCount: componentForm.portCount || 8,
-          portSpeed: componentForm.portSpeed || 10,
-          throughput: componentForm.throughput || 40,
-          supportedProtocols: ['BGP', 'OSPF']
-        } as Router;
-        break;
-      case ComponentType.Firewall:
-        component = {
-          ...baseComponent,
-          type: ComponentType.Firewall,
-          rackUnitsConsumed: componentForm.rackUnitsConsumed || 1,
-          portCount: componentForm.portCount || 8,
-          portSpeed: componentForm.portSpeed || 10,
-          throughput: componentForm.throughput || 10,
-          features: ['IPS', 'VPN']
-        } as Firewall;
-        break;
-      case ComponentType.Disk:
-        component = {
-          ...baseComponent,
-          type: ComponentType.Disk,
-          capacityTB: componentForm.capacityTB || 1,
-          formFactor: componentForm.formFactor || '2.5"',
-          interface: componentForm.interface || 'SATA'
-        } as Disk;
-        break;
-      default:
-        component = {
-          ...baseComponent
-        } as InfrastructureComponent;
-    }
-
-    if (editingComponentId) {
-      updateComponentTemplate(editingComponentId, component);
-      setIsEditDialogOpen(false);
-    } else {
-      addComponentTemplate(component);
-      setIsAddDialogOpen(false);
-    }
-    
-    resetForm();
-  };
-
-  const [deleteComponentId, setDeleteComponentId] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  const openDeleteConfirmation = (id: string) => {
-    setDeleteComponentId(id);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (deleteComponentId) {
-      deleteComponentTemplate(deleteComponentId);
-      setIsDeleteDialogOpen(false);
-      setDeleteComponentId(null);
-    }
   };
 
   const renderServerFormFields = () => {
@@ -549,14 +438,264 @@ export const ComponentLibrary: React.FC = () => {
     );
   };
 
+  const renderDiskFormFields = () => {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="capacityTB">Capacity (TB)</Label>
+            <Input
+              id="capacityTB"
+              name="capacityTB"
+              type="number"
+              value={componentForm.capacityTB || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="diskType">Disk Type</Label>
+            <Select
+              value={componentForm.diskType?.toString() || ''}
+              onValueChange={(value) => handleSelectChange('diskType', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(DiskType).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="formFactor">Form Factor</Label>
+            <Select
+              value={componentForm.formFactor?.toString() || ''}
+              onValueChange={(value) => handleSelectChange('formFactor', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select form factor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='2.5"'>2.5"</SelectItem>
+                <SelectItem value='3.5"'>3.5"</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="interface">Interface</Label>
+            <Select
+              value={componentForm.interface?.toString() || ''}
+              onValueChange={(value) => handleSelectChange('interface', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select interface" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SATA">SATA</SelectItem>
+                <SelectItem value="SAS">SAS</SelectItem>
+                <SelectItem value="NVMe">NVMe</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        {componentForm.diskType === DiskType.HDD && (
+          <div className="space-y-2">
+            <Label htmlFor="rpm">RPM</Label>
+            <Input
+              id="rpm"
+              name="rpm"
+              type="number"
+              value={componentForm.rpm || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+        )}
+        
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="iops">IOPS</Label>
+            <Input
+              id="iops"
+              name="iops"
+              type="number"
+              value={componentForm.iops || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="readSpeed">Read Speed (MB/s)</Label>
+            <Input
+              id="readSpeed"
+              name="readSpeed"
+              type="number"
+              value={componentForm.readSpeed || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="writeSpeed">Write Speed (MB/s)</Label>
+            <Input
+              id="writeSpeed"
+              name="writeSpeed"
+              type="number"
+              value={componentForm.writeSpeed || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderTypeSpecificFormFields = () => {
     switch(componentForm.type) {
       case ComponentType.Server:
         return renderServerFormFields();
       case ComponentType.Switch:
         return renderSwitchFormFields();
+      case ComponentType.Disk:
+        return renderDiskFormFields();
       default:
         return null;
+    }
+  };
+
+  const handleAddComponent = () => {
+    if (!componentForm.name || !componentForm.manufacturer || !componentForm.model) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    const baseComponent = {
+      id: componentForm.id || undefined,
+      type: componentForm.type,
+      name: componentForm.name,
+      manufacturer: componentForm.manufacturer,
+      model: componentForm.model,
+      cost: componentForm.cost || 0,
+      powerRequired: componentForm.powerRequired || 0,
+    };
+    
+    let component: InfrastructureComponent;
+    
+    switch (componentForm.type) {
+      case ComponentType.Server:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Server,
+          rackUnitsConsumed: componentForm.ruSize || 1,
+          cpuModel: componentForm.cpuModel || "Generic CPU",
+          cpuCount: componentForm.cpuCount || 1,
+          coreCount: componentForm.coreCount || 8,
+          memoryGB: componentForm.memoryGB || 32,
+          serverRole: componentForm.serverRole || ServerRole.Compute,
+          cpuSockets: componentForm.cpuSockets || 1,
+          cpuCoresPerSocket: componentForm.cpuCoresPerSocket || 4,
+          memoryCapacity: componentForm.memoryCapacity || 32,
+          diskSlotType: componentForm.diskSlotType || DiskSlotType.TwoPointFive,
+          diskSlotQuantity: componentForm.diskSlotQuantity || 8,
+          ruSize: componentForm.ruSize || 1,
+          networkPortType: componentForm.networkPortType || NetworkPortType.SFP,
+          portsConsumedQuantity: componentForm.portsConsumedQuantity || 2
+        } as Server;
+        break;
+      case ComponentType.Switch:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Switch,
+          rackUnitsConsumed: componentForm.ruSize || 1,
+          portCount: componentForm.portCount || 24,
+          portSpeed: componentForm.portSpeed || 10,
+          layer: componentForm.layer || 2,
+          switchRole: componentForm.switchRole || SwitchRole.Access,
+          ruSize: componentForm.ruSize || 1,
+          portSpeedType: componentForm.portSpeedType || PortSpeed.TenG,
+          portsProvidedQuantity: componentForm.portsProvidedQuantity || 24
+        } as Switch;
+        break;
+      case ComponentType.Router:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Router,
+          rackUnitsConsumed: componentForm.rackUnitsConsumed || 1,
+          portCount: componentForm.portCount || 8,
+          portSpeed: componentForm.portSpeed || 10,
+          throughput: componentForm.throughput || 40,
+          supportedProtocols: ['BGP', 'OSPF']
+        } as Router;
+        break;
+      case ComponentType.Firewall:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Firewall,
+          rackUnitsConsumed: componentForm.rackUnitsConsumed || 1,
+          portCount: componentForm.portCount || 8,
+          portSpeed: componentForm.portSpeed || 10,
+          throughput: componentForm.throughput || 10,
+          features: ['IPS', 'VPN']
+        } as Firewall;
+        break;
+      case ComponentType.Disk:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Disk,
+          capacityTB: componentForm.capacityTB || 1,
+          formFactor: componentForm.formFactor || '2.5"',
+          interface: componentForm.interface || 'SATA',
+          diskType: componentForm.diskType || DiskType.SATASSD,
+          rpm: componentForm.rpm,
+          iops: componentForm.iops,
+          readSpeed: componentForm.readSpeed,
+          writeSpeed: componentForm.writeSpeed
+        } as Disk;
+        break;
+      default:
+        component = {
+          ...baseComponent
+        } as InfrastructureComponent;
+    }
+
+    if (editingComponentId) {
+      updateComponentTemplate(editingComponentId, component);
+      setIsEditDialogOpen(false);
+    } else {
+      addComponentTemplate(component);
+      setIsAddDialogOpen(false);
+    }
+    
+    resetForm();
+  };
+
+  const [deleteComponentId, setDeleteComponentId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const openDeleteConfirmation = (id: string) => {
+    setDeleteComponentId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteComponentId) {
+      deleteComponentTemplate(deleteComponentId);
+      setIsDeleteDialogOpen(false);
+      setDeleteComponentId(null);
     }
   };
 

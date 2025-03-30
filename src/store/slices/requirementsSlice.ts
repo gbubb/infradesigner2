@@ -1,17 +1,21 @@
 
 import { StateCreator } from 'zustand';
-import { DesignRequirements, DeviceRoleType, NetworkTopology } from '@/types/infrastructure';
+import { DesignRequirements, DeviceRoleType, NetworkTopology, StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/types/infrastructure';
 import { StoreState, RequirementsState } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface RequirementsSlice {
   requirements: DesignRequirements;
   componentRoles: any[];
+  selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>;
   
   updateRequirements: (newRequirements: Partial<DesignRequirements>) => void;
   calculateComponentRoles: () => void;
   calculateRequiredQuantity: (roleId: string, componentId: string) => number;
   assignComponentToRole: (roleId: string, componentId: string) => void;
+  addDiskToStorageNode: (roleId: string, diskId: string, quantity: number) => void;
+  removeDiskFromStorageNode: (roleId: string, diskId: string) => void;
+  calculateStorageNodeCapacity: (roleId: string) => number;
 }
 
 const defaultRequirements: DesignRequirements = {
@@ -156,7 +160,7 @@ export const createRequirementsSlice: StateCreator<
             id: uuidv4(),
             role: 'storageSwitch',
             description: 'Provides network connectivity for storage nodes',
-            requiredCount: storageAvailabilityZoneQuantity
+            requiredCount: storageAvailabilityZoneQuantity * 2 // 2 switches per AZ for redundancy
           });
         }
         
@@ -201,7 +205,7 @@ export const createRequirementsSlice: StateCreator<
     
     calculateRequiredQuantity: (roleId: string, componentId: string): number => {
       const state = get();
-      const { requirements, componentRoles } = state;
+      const { requirements, componentRoles, selectedDisksByRole } = state;
       const componentTemplates = state.componentTemplates || [];
       
       const role = componentRoles.find(r => r.id === roleId);
@@ -227,23 +231,65 @@ export const createRequirementsSlice: StateCreator<
         }
       } else if (role.role === 'storageNode') {
         const totalCapacityTB = requirements.storageRequirements?.totalCapacityTB || 100;
+        const poolType = requirements.storageRequirements?.poolType || '3 Replica';
+        const maxFillFactor = requirements.storageRequirements?.maxFillFactor || 80;
         
-        // For storage nodes, we need to consider the selected disks
-        // This should be updated to account for disks in the component
-        if ('capacityTB' in component) {
-          const capacityTBPerNode = component.capacityTB;
+        // If we have disks assigned to this storage node
+        const roleDiskConfigs = selectedDisksByRole[roleId] || [];
+        
+        if (roleDiskConfigs.length > 0) {
+          // Calculate total usable capacity per node
+          const storageNodeCapacityTiB = sliceMethods.calculateStorageNodeCapacity(roleId);
           
-          requiredQuantity = Math.ceil(totalCapacityTB / capacityTBPerNode);
+          if (storageNodeCapacityTiB > 0) {
+            // Calculate how many nodes we need to meet the total capacity requirement
+            // Apply efficiency factors for replication/EC and fill factor
+            const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);
+            const fillFactorAdjustment = maxFillFactor / 100;
+            
+            // Convert total required capacity from TB to TiB
+            const totalRequiredCapacityTiB = totalCapacityTB * TB_TO_TIB_FACTOR;
+            
+            // Calculate effective capacity per node after all adjustments
+            const effectiveCapacityPerNodeTiB = storageNodeCapacityTiB * poolEfficiencyFactor * fillFactorAdjustment;
+            
+            // Calculate required node count
+            const requiredNodeCount = Math.ceil(totalRequiredCapacityTiB / effectiveCapacityPerNodeTiB);
+            
+            // Return at least the minimum number of nodes specified by role.requiredCount
+            requiredQuantity = Math.max(requiredNodeCount, role.requiredCount);
+          }
         }
       }
       
       return requiredQuantity;
+    },
+    
+    calculateStorageNodeCapacity: (roleId: string): number => {
+      const state = get();
+      const { selectedDisksByRole, componentTemplates } = state;
+      
+      const roleDiskConfigs = selectedDisksByRole[roleId] || [];
+      let totalCapacityTiB = 0;
+      
+      // Calculate raw capacity in TiB
+      roleDiskConfigs.forEach(diskConfig => {
+        const disk = componentTemplates.find(c => c.id === diskConfig.diskId);
+        if (disk && disk.type === ComponentType.Disk && 'capacityTB' in disk) {
+          // Convert TB to TiB and multiply by quantity
+          const diskCapacityTiB = disk.capacityTB * TB_TO_TIB_FACTOR * diskConfig.quantity;
+          totalCapacityTiB += diskCapacityTiB;
+        }
+      });
+      
+      return totalCapacityTiB;
     }
   };
   
   return {
     requirements: defaultRequirements,
     componentRoles: [],
+    selectedDisksByRole: {},
     
     updateRequirements: (newRequirements) => {
       set((state) => ({
@@ -276,6 +322,8 @@ export const createRequirementsSlice: StateCreator<
     
     calculateRequiredQuantity: sliceMethods.calculateRequiredQuantity,
     
+    calculateStorageNodeCapacity: sliceMethods.calculateStorageNodeCapacity,
+    
     assignComponentToRole: (roleId: string, componentId: string) => {
       set((state) => {
         const updatedRoles = state.componentRoles.map(role => {
@@ -297,6 +345,88 @@ export const createRequirementsSlice: StateCreator<
       
       if (role) {
         const newQuantity = sliceMethods.calculateRequiredQuantity(roleId, componentId);
+        
+        set((state) => ({
+          componentRoles: state.componentRoles.map(r => {
+            if (r.id === roleId) {
+              return {
+                ...r,
+                adjustedRequiredCount: newQuantity
+              };
+            }
+            return r;
+          })
+        }));
+      }
+    },
+    
+    addDiskToStorageNode: (roleId: string, diskId: string, quantity: number) => {
+      set((state) => {
+        // Find if this disk is already added to this role
+        const currentDisks = state.selectedDisksByRole[roleId] || [];
+        const existingDiskIndex = currentDisks.findIndex(d => d.diskId === diskId);
+        
+        let updatedDisks;
+        if (existingDiskIndex >= 0) {
+          // Update existing disk quantity
+          updatedDisks = [...currentDisks];
+          updatedDisks[existingDiskIndex] = { 
+            ...updatedDisks[existingDiskIndex], 
+            quantity 
+          };
+        } else {
+          // Add new disk
+          updatedDisks = [...currentDisks, { diskId, quantity }];
+        }
+        
+        const updatedSelectedDisks = {
+          ...state.selectedDisksByRole,
+          [roleId]: updatedDisks
+        };
+        
+        return { selectedDisksByRole: updatedSelectedDisks };
+      });
+      
+      // Recalculate storage node quantities after disk changes
+      const state = get();
+      const role = state.componentRoles.find(r => r.id === roleId);
+      
+      if (role && role.assignedComponentId) {
+        const newQuantity = sliceMethods.calculateRequiredQuantity(roleId, role.assignedComponentId);
+        
+        set((state) => ({
+          componentRoles: state.componentRoles.map(r => {
+            if (r.id === roleId) {
+              return {
+                ...r,
+                adjustedRequiredCount: newQuantity
+              };
+            }
+            return r;
+          })
+        }));
+      }
+    },
+    
+    removeDiskFromStorageNode: (roleId: string, diskId: string) => {
+      set((state) => {
+        const currentDisks = state.selectedDisksByRole[roleId] || [];
+        const updatedDisks = currentDisks.filter(d => d.diskId !== diskId);
+        
+        const updatedSelectedDisks = {
+          ...state.selectedDisksByRole,
+          [roleId]: updatedDisks
+        };
+        
+        return { selectedDisksByRole: updatedSelectedDisks };
+      });
+      
+      // Recalculate storage node quantities after disk changes
+      const state = get();
+      const role = state.componentRoles.find(r => r.id === roleId);
+      
+      if (role && role.assignedComponentId) {
+        const newQuantity = sliceMethods.calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
           componentRoles: state.componentRoles.map(r => {

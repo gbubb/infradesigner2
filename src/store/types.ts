@@ -1,55 +1,34 @@
 
-import { 
-  ComponentRole, 
-  DesignRequirements, 
-  InfrastructureComponent, 
-  InfrastructureDesign
-} from '@/types/infrastructure';
-import { ComponentWithPosition } from '@/types/workspace';
+import { InfrastructureComponent, InfrastructureDesign, DesignRequirements } from '@/types/infrastructure';
 
-// Base state shared by all store slices
-export interface BaseState {
-  // Selected component ID
+export interface StoreState {
+  // Component templates
+  componentTemplates: InfrastructureComponent[];
+  
+  // Component roles for requirement calculation
+  componentRoles: any[];
+  
+  // Selected disks for storage nodes (key is roleId, value is array of disk configs)
+  selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>;
+  
+  // Requirements
+  requirements: DesignRequirements;
+  
+  // Designs
+  savedDesigns: InfrastructureDesign[];
+  activeDesign: InfrastructureDesign | null;
+  
+  // Workspace components
+  placedComponents: Record<string, InfrastructureComponent>;
+  workspaceComponents: any[]; // this should be more specific
   selectedComponentId: string | null;
-  // Currently editing component ID
+  
+  // Editing state
   editingComponentId: string | null;
 }
 
-// Design state slice
-export interface DesignState extends BaseState {
-  // Design requirements
-  requirements: DesignRequirements;
-  // Saved designs
-  savedDesigns: InfrastructureDesign[];
-  // Currently active design
-  activeDesign: InfrastructureDesign | null;
-}
-
-// Workspace state slice
-export interface WorkspaceState extends BaseState {
-  // Components placed in the workspace
-  placedComponents: Record<string, InfrastructureComponent>;
-  // Components with position in the workspace
-  workspaceComponents: ComponentWithPosition[];
-}
-
-// Component Library state slice
-export interface ComponentLibraryState {
-  // All available component templates
-  componentTemplates: InfrastructureComponent[];
-}
-
-// Requirements slice interface - needed to define the structure
-export interface RequirementsState {
-  // Component roles based on requirements
-  componentRoles: ComponentRole[];
-}
-
-// Combined store state
-export interface StoreState extends 
-  DesignState, 
-  WorkspaceState, 
-  ComponentLibraryState,
-  RequirementsState {
-    // Add any additional properties that need to be combined
-}
+// Define individual slice states if needed
+export interface RequirementsState extends StoreState {}
+export interface DesignState extends StoreState {}
+export interface WorkspaceState extends StoreState {}
+export interface ComponentLibraryState extends StoreState {}

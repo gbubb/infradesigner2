@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -238,6 +237,13 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
                 
                 <div className="text-gray-500">Interface</div>
                 <div>{component.interface}</div>
+                
+                {component.diskType && (
+                  <>
+                    <div className="text-gray-500">Disk Type</div>
+                    <div>{component.diskType}</div>
+                  </>
+                )}
                 
                 {component.iops && (
                   <>

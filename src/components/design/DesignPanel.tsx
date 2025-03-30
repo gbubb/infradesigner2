@@ -5,13 +5,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calculator, HardDrive, Plus, Save } from 'lucide-react';
-import { ComponentType, InfrastructureComponent, ServerRole, SwitchRole, Disk } from '@/types/infrastructure';
+import { Calculator, HardDrive, Plus, Save, Trash2 } from 'lucide-react';
+import { 
+  ComponentType, 
+  InfrastructureComponent, 
+  ServerRole, 
+  SwitchRole, 
+  Disk, 
+  StoragePoolEfficiencyFactors, 
+  TB_TO_TIB_FACTOR,
+  DiskType
+} from '@/types/infrastructure';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 export const DesignPanel: React.FC = () => {
   const { 
@@ -22,7 +32,11 @@ export const DesignPanel: React.FC = () => {
     calculateRequiredQuantity,
     getAvailableComponents,
     activeDesign,
-    requirements
+    requirements,
+    selectedDisksByRole,
+    addDiskToStorageNode,
+    removeDiskFromStorageNode,
+    calculateStorageNodeCapacity
   } = useDesignStore();
   
   // State for tracking which storage node's disk config is open
@@ -178,11 +192,51 @@ export const DesignPanel: React.FC = () => {
 
   // Handle disk selection for storage node
   const handleAddDisk = (roleId: string) => {
-    // Here we would update the storage node's disk configuration
-    console.log(`Adding disk ${selectedDiskId} (${diskQuantity}x) to storage node ${roleId}`);
+    if (!selectedDiskId) {
+      toast.error("Please select a disk model");
+      return;
+    }
     
-    // In a real implementation, we would add this to the storage node configuration
-    // and recalculate the capacity of the storage node
+    if (diskQuantity <= 0) {
+      toast.error("Please enter a valid disk quantity");
+      return;
+    }
+    
+    // Add disk to storage node
+    addDiskToStorageNode(roleId, selectedDiskId, diskQuantity);
+    toast.success(`Added disk configuration to storage node`);
+    
+    // Reset form
+    setSelectedDiskId('');
+    setDiskQuantity(1);
+  };
+  
+  // Handle removing a disk from storage node
+  const handleRemoveDisk = (roleId: string, diskId: string) => {
+    removeDiskFromStorageNode(roleId, diskId);
+    toast.success("Removed disk from storage node");
+  };
+  
+  // Calculate the effective storage capacity for a node with selected disks
+  const calculateEffectiveStorageCapacity = (roleId: string) => {
+    // Get raw capacity of the node
+    const rawCapacityTiB = calculateStorageNodeCapacity(roleId);
+    
+    // Apply storage pool efficiency factor
+    const poolType = requirements?.storageRequirements?.poolType || '3 Replica';
+    const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);
+    
+    // Apply fill factor
+    const maxFillFactor = requirements?.storageRequirements?.maxFillFactor || 80;
+    const fillFactorAdjustment = maxFillFactor / 100;
+    
+    // Calculate effective capacity
+    const effectiveCapacityTiB = rawCapacityTiB * poolEfficiencyFactor * fillFactorAdjustment;
+    
+    return {
+      rawCapacityTiB,
+      effectiveCapacityTiB
+    };
   };
 
   return (
@@ -301,7 +355,8 @@ export const DesignPanel: React.FC = () => {
                                 </span>
                               </Button>
                             </CollapsibleTrigger>
-                            <CollapsibleContent className="p-4 space-y-3 border-t">
+                            <CollapsibleContent className="p-4 space-y-4 border-t">
+                              {/* Add disk form */}
                               <div className="grid grid-cols-3 gap-4">
                                 <div>
                                   <Label htmlFor="disk-model">Disk Model</Label>
@@ -342,9 +397,99 @@ export const DesignPanel: React.FC = () => {
                                   </Button>
                                 </div>
                               </div>
-                              <div className="text-sm text-muted-foreground">
-                                Storage capacity will be recalculated based on the selected disks.
+                              
+                              {/* Disk configuration summary */}
+                              <div className="border rounded-md">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Disk Model</TableHead>
+                                      <TableHead>Type</TableHead>
+                                      <TableHead>Capacity</TableHead>
+                                      <TableHead>Quantity</TableHead>
+                                      <TableHead>Actions</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {selectedDisksByRole[role.id]?.length > 0 ? (
+                                      selectedDisksByRole[role.id].map((diskConfig) => {
+                                        const disk = findComponentById(diskConfig.diskId) as Disk | undefined;
+                                        if (!disk) return null;
+                                        
+                                        return (
+                                          <TableRow key={disk.id}>
+                                            <TableCell>
+                                              {disk.manufacturer} {disk.model}
+                                            </TableCell>
+                                            <TableCell>
+                                              {disk.diskType || 'Unknown'}
+                                            </TableCell>
+                                            <TableCell>
+                                              {disk.capacityTB} TB
+                                            </TableCell>
+                                            <TableCell>
+                                              {diskConfig.quantity}
+                                            </TableCell>
+                                            <TableCell>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleRemoveDisk(role.id, disk.id)}
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })
+                                    ) : (
+                                      <TableRow>
+                                        <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
+                                          No disks added yet. Please add at least one disk configuration.
+                                        </TableCell>
+                                      </TableRow>
+                                    )}
+                                  </TableBody>
+                                </Table>
                               </div>
+                              
+                              {/* Storage capacity summary */}
+                              {selectedDisksByRole[role.id]?.length > 0 && (
+                                <div className="bg-muted p-4 rounded-md">
+                                  <h4 className="text-sm font-medium mb-2">Storage Capacity Summary</h4>
+                                  
+                                  {(() => {
+                                    const { rawCapacityTiB, effectiveCapacityTiB } = calculateEffectiveStorageCapacity(role.id);
+                                    const poolType = requirements?.storageRequirements?.poolType || '3 Replica';
+                                    const fillFactor = requirements?.storageRequirements?.maxFillFactor || 80;
+                                    
+                                    return (
+                                      <div className="space-y-1 text-sm">
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="text-muted-foreground">Raw Capacity (per node):</div>
+                                          <div>{rawCapacityTiB.toFixed(2)} TiB</div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="text-muted-foreground">Storage Pool Type:</div>
+                                          <div>{poolType}</div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="text-muted-foreground">Max Fill Factor:</div>
+                                          <div>{fillFactor}%</div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 font-medium">
+                                          <div className="text-muted-foreground">Effective Capacity (per node):</div>
+                                          <div>{effectiveCapacityTiB.toFixed(2)} TiB</div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 font-medium">
+                                          <div className="text-muted-foreground">Total Effective Capacity:</div>
+                                          <div>{(effectiveCapacityTiB * actualQuantity).toFixed(2)} TiB</div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              )}
                             </CollapsibleContent>
                           </Collapsible>
                         </TableCell>
@@ -383,8 +528,25 @@ export const DesignPanel: React.FC = () => {
                 if (!component) return null;
                 
                 const actualQuantity = role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId!);
-                const totalCost = component.cost * actualQuantity;
-                const totalPower = component.powerRequired * actualQuantity;
+                
+                // Calculate cost and power based on the component type
+                let componentCost = component.cost;
+                let componentPower = component.powerRequired;
+                
+                // For storage nodes, add the cost and power of attached disks
+                if (role.role === 'storageNode') {
+                  const disks = selectedDisksByRole[role.id] || [];
+                  disks.forEach(diskConfig => {
+                    const disk = findComponentById(diskConfig.diskId);
+                    if (disk) {
+                      componentCost += disk.cost * diskConfig.quantity;
+                      componentPower += disk.powerRequired * diskConfig.quantity;
+                    }
+                  });
+                }
+                
+                const totalCost = componentCost * actualQuantity;
+                const totalPower = componentPower * actualQuantity;
                 
                 // Calculate rack units if the component has them
                 const rackUnits = 'rackUnitsConsumed' in component 

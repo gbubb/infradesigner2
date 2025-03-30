@@ -1,4 +1,3 @@
-
 import { 
   ComponentType, 
   InfrastructureComponent, 
@@ -11,7 +10,8 @@ import {
   DiskSlotType,
   NetworkPortType,
   SwitchRole,
-  PortSpeed
+  PortSpeed,
+  DiskType
 } from '../types/infrastructure';
 
 // Sample server templates
@@ -211,7 +211,7 @@ export const firewallTemplates: Firewall[] = [
   }
 ];
 
-// Sample disk templates
+// Updated disk templates
 export const diskTemplates: Disk[] = [
   {
     id: 'disk-1',
@@ -224,6 +224,7 @@ export const diskTemplates: Disk[] = [
     capacityTB: 7.68,
     formFactor: '2.5"',
     interface: 'NVMe',
+    diskType: DiskType.NVMeSSD,
     iops: 800000,
     readSpeed: 6800,
     writeSpeed: 3800
@@ -239,10 +240,27 @@ export const diskTemplates: Disk[] = [
     capacityTB: 16,
     formFactor: '3.5"',
     interface: 'SAS',
+    diskType: DiskType.HDD,
     rpm: 7200,
     iops: 170,
     readSpeed: 261,
     writeSpeed: 261
+  },
+  {
+    id: 'disk-3',
+    type: ComponentType.Disk,
+    name: 'Enterprise SATA SSD',
+    manufacturer: 'Intel',
+    model: 'D3-S4510',
+    cost: 550,
+    powerRequired: 6,
+    capacityTB: 3.84,
+    formFactor: '2.5"',
+    interface: 'SATA',
+    diskType: DiskType.SATASSD,
+    iops: 97000,
+    readSpeed: 560,
+    writeSpeed: 510
   }
 ];
 

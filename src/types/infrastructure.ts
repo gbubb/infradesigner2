@@ -1,4 +1,3 @@
-
 // Common properties shared by all component types
 export interface BaseComponent {
   id: string;
@@ -98,6 +97,13 @@ export enum PortSpeed {
   HundredG = '100g'
 }
 
+// New disk type enum
+export enum DiskType {
+  HDD = 'HDD',
+  SATASSD = 'SATA SSD',
+  NVMeSSD = 'NVMe SSD'
+}
+
 // Server specific properties
 export interface Server extends BaseComponent, RackMountable {
   type: ComponentType.Server;
@@ -160,6 +166,7 @@ export interface Disk extends BaseComponent {
   capacityTB: number;
   formFactor: string;  // e.g., "2.5", "3.5"
   interface: string;   // e.g., "SATA", "SAS", "NVMe"
+  diskType?: DiskType; // New field for disk type
   rpm?: number;        // for spinning disks
   iops?: number;       // Input/output operations per second
   readSpeed?: number;  // in MB/s
@@ -219,6 +226,19 @@ export interface DesignRequirements {
     powerPerRackWatts?: number;
   };
 }
+
+// Define pool efficiency factors
+export const StoragePoolEfficiencyFactors: Record<string, number> = {
+  '3 Replica': 1/3,
+  '2 Replica': 1/2,
+  'Erasure Coding 4+2': 0.66,
+  'Erasure Coding 8+3': 0.73,
+  'Erasure Coding 8+4': 0.66,
+  'Erasure Coding 10+4': 0.71
+};
+
+// TiB conversion factor (TB to TiB)
+export const TB_TO_TIB_FACTOR = 0.90949;
 
 // Infrastructure design - the complete solution
 export interface InfrastructureDesign {
