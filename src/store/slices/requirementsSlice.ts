@@ -1,3 +1,4 @@
+
 import { StateCreator } from 'zustand';
 import { DesignRequirements, DeviceRoleType, NetworkTopology } from '@/types/infrastructure';
 import { StoreState, RequirementsState } from '../types';
@@ -87,6 +88,15 @@ export const createRequirementsSlice: StateCreator<
       const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', 'Spine-Leaf') || 'Spine-Leaf';
       const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false) || false;
       const leafSwitchesPerAZ = getValue(requirements, 'networkRequirements.leafSwitchesPerAZ', 2) || 2;
+      const dedicatedStorageNetwork = getValue(requirements, 'networkRequirements.dedicatedStorageNetwork', false) || false;
+      const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', 'Dual Home') || 'Dual Home';
+      
+      // Calculate number of management switches based on availability zones and network type
+      const mgmtSwitchesPerAZ = managementNetwork === 'Dual Home' ? 2 : 1;
+      const managementSwitchCount = totalAvailabilityZones * mgmtSwitchesPerAZ;
+      
+      // Calculate number of leaf switches based on AZs and switches per AZ setting
+      const leafSwitchCount = totalAvailabilityZones * leafSwitchesPerAZ;
       
       const newRoles = [
         {
@@ -100,14 +110,18 @@ export const createRequirementsSlice: StateCreator<
           role: 'computeNode',
           description: 'Provides compute resources for the cluster',
           requiredCount: computeNodeCount
-        },
-        {
+        }
+      ];
+      
+      // Only add storage nodes if there's storage capacity needed
+      if (totalCapacityTB > 0) {
+        newRoles.push({
           id: uuidv4(),
           role: 'storageNode',
           description: 'Provides storage resources for the cluster',
           requiredCount: storageAvailabilityZoneQuantity
-        }
-      ];
+        });
+      }
       
       if (infrastructureClusterRequired) {
         newRoles.push({
@@ -118,50 +132,69 @@ export const createRequirementsSlice: StateCreator<
         });
       }
       
-      newRoles.push(
-        {
+      // Add management switches
+      newRoles.push({
+        id: uuidv4(),
+        role: 'managementSwitch',
+        description: 'Provides network connectivity for management interfaces',
+        requiredCount: managementSwitchCount
+      });
+      
+      // Add appropriate network components based on network topology
+      if (networkTopology === 'Spine-Leaf') {
+        // Add leaf switches for compute - rename based on topology
+        newRoles.push({
           id: uuidv4(),
-          role: 'managementSwitch',
-          description: 'Provides network connectivity for management interfaces',
-          requiredCount: 1
-        },
-        {
-          id: uuidv4(),
-          role: 'computeSwitch',
+          role: 'leafSwitch',
           description: 'Provides network connectivity for compute nodes',
-          requiredCount: computeNodeCount
-        },
-        {
-          id: uuidv4(),
-          role: 'storageSwitch',
-          description: 'Provides network connectivity for storage nodes',
-          requiredCount: storageAvailabilityZoneQuantity
-        },
-        {
+          requiredCount: leafSwitchCount
+        });
+        
+        // Only add storage switches if dedicated storage network is enabled
+        if (dedicatedStorageNetwork) {
+          newRoles.push({
+            id: uuidv4(),
+            role: 'storageSwitch',
+            description: 'Provides network connectivity for storage nodes',
+            requiredCount: storageAvailabilityZoneQuantity
+          });
+        }
+        
+        // Add border leaf switches
+        newRoles.push({
           id: uuidv4(),
           role: 'borderLeafSwitch',
           description: 'Connects the internal network to external networks',
           requiredCount: 2
-        },
-        {
+        });
+        
+        // Add spine switches
+        newRoles.push({
           id: uuidv4(),
           role: 'spineSwitch',
           description: 'Provides high-speed connectivity between leaf switches',
-          requiredCount: networkTopology === 'Spine-Leaf' ? 2 : 0
-        },
-        {
+          requiredCount: 2
+        });
+      } else {
+        // For other topologies like three-tier, we would have different switch types
+        // Only add these when network topology is not Spine-Leaf
+        newRoles.push({
           id: uuidv4(),
           role: 'torSwitch',
           description: 'Provides top-of-rack switching for servers',
-          requiredCount: networkTopology !== 'Spine-Leaf' ? computeNodeCount : 0
-        },
-        {
+          requiredCount: computeNodeCount
+        });
+      }
+      
+      // Only add firewalls if physical firewalls are required
+      if (physicalFirewalls) {
+        newRoles.push({
           id: uuidv4(),
           role: 'firewall',
           description: 'Provides network security and traffic filtering',
-          requiredCount: physicalFirewalls ? 2 : 0
-        }
-      );
+          requiredCount: 2
+        });
+      }
       
       set({ componentRoles: newRoles });
     },
@@ -195,6 +228,8 @@ export const createRequirementsSlice: StateCreator<
       } else if (role.role === 'storageNode') {
         const totalCapacityTB = requirements.storageRequirements?.totalCapacityTB || 100;
         
+        // For storage nodes, we need to consider the selected disks
+        // This should be updated to account for disks in the component
         if ('capacityTB' in component) {
           const capacityTBPerNode = component.capacityTB;
           

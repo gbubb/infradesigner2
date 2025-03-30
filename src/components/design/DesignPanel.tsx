@@ -1,14 +1,17 @@
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { useDesignStore, recalculateDesign } from '@/store/designStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calculator, Save } from 'lucide-react';
-import { ComponentType, InfrastructureComponent, ServerRole, SwitchRole } from '@/types/infrastructure';
+import { Calculator, HardDrive, Plus, Save } from 'lucide-react';
+import { ComponentType, InfrastructureComponent, ServerRole, SwitchRole, Disk } from '@/types/infrastructure';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export const DesignPanel: React.FC = () => {
   const { 
@@ -22,6 +25,11 @@ export const DesignPanel: React.FC = () => {
     requirements
   } = useDesignStore();
   
+  // State for tracking which storage node's disk config is open
+  const [openStorageNodeId, setOpenStorageNodeId] = useState<string | null>(null);
+  const [selectedDiskId, setSelectedDiskId] = useState<string>('');
+  const [diskQuantity, setDiskQuantity] = useState<number>(1);
+  
   // Ensure roles are calculated when component mounts - but only once
   useEffect(() => {
     // Only calculate if we don't already have roles
@@ -34,7 +42,13 @@ export const DesignPanel: React.FC = () => {
   // We'll use a callback to handle component selection to avoid recreating functions
   const handleComponentSelect = useCallback((roleId: string, componentId: string) => {
     assignComponentToRole(roleId, componentId);
-  }, [assignComponentToRole]);
+    
+    // If this is a storage node, open the disk configuration panel
+    const role = componentRoles.find(r => r.id === roleId);
+    if (role && role.role === 'storageNode') {
+      setOpenStorageNodeId(roleId);
+    }
+  }, [assignComponentToRole, componentRoles]);
 
   const handleRecalculate = useCallback(() => {
     calculateComponentRoles();
@@ -66,6 +80,12 @@ export const DesignPanel: React.FC = () => {
           'serverRole' in c && 
           c.serverRole === ServerRole.Compute
         );
+      case 'infrastructureNode':
+        return allComponents.filter(c => 
+          c.type === ComponentType.Server && 
+          'serverRole' in c && 
+          c.serverRole === ServerRole.Infrastructure
+        );
       case 'storageNode':
         return allComponents.filter(c => 
           c.type === ComponentType.Server && 
@@ -78,7 +98,12 @@ export const DesignPanel: React.FC = () => {
           'switchRole' in c && 
           c.switchRole === SwitchRole.Management
         );
-      case 'computeSwitch':
+      case 'leafSwitch':
+        return allComponents.filter(c => 
+          c.type === ComponentType.Switch && 
+          'switchRole' in c && 
+          c.switchRole === SwitchRole.Leaf
+        );
       case 'storageSwitch':
         return allComponents.filter(c => 
           c.type === ComponentType.Switch && 
@@ -106,19 +131,11 @@ export const DesignPanel: React.FC = () => {
           );
         }
       case 'torSwitch':
-        if (networkTopology === 'Spine-Leaf') {
-          return allComponents.filter(c => 
-            c.type === ComponentType.Switch && 
-            'switchRole' in c && 
-            c.switchRole === SwitchRole.Leaf
-          );
-        } else {
-          return allComponents.filter(c => 
-            c.type === ComponentType.Switch && 
-            'switchRole' in c && 
-            c.switchRole === SwitchRole.Access
-          );
-        }
+        return allComponents.filter(c => 
+          c.type === ComponentType.Switch && 
+          'switchRole' in c && 
+          c.switchRole === SwitchRole.Access
+        );
       case 'firewall':
         return allComponents.filter(c => c.type === ComponentType.Firewall);
       default:
@@ -130,6 +147,14 @@ export const DesignPanel: React.FC = () => {
         }
         return [];
     }
+  };
+  
+  // Function to get available disks for storage nodes
+  const getAvailableDisks = (): Disk[] => {
+    const allComponents = getAvailableComponents();
+    return allComponents.filter(c => 
+      c.type === ComponentType.Disk
+    ) as Disk[];
   };
   
   // Find component by ID - looking at all available components
@@ -150,6 +175,15 @@ export const DesignPanel: React.FC = () => {
   const hasAllRequiredComponents = componentRoles
     .filter(role => role.requiredCount > 0) // Only check required roles
     .every(role => role.assignedComponentId);
+
+  // Handle disk selection for storage node
+  const handleAddDisk = (roleId: string) => {
+    // Here we would update the storage node's disk configuration
+    console.log(`Adding disk ${selectedDiskId} (${diskQuantity}x) to storage node ${roleId}`);
+    
+    // In a real implementation, we would add this to the storage node configuration
+    // and recalculate the capacity of the storage node
+  };
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -204,47 +238,119 @@ export const DesignPanel: React.FC = () => {
                 const showBaseQuantity = role.role !== 'computeNode' || (role.role === 'computeNode' && role.assignedComponentId);
                 
                 return (
-                  <TableRow key={role.id}>
-                    <TableCell className="font-medium">
-                      {formatRoleName(role.role)}
-                    </TableCell>
-                    <TableCell>{role.description}</TableCell>
-                    <TableCell>
-                      {showBaseQuantity ? (
-                        <Badge variant="outline">{role.requiredCount}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Select a component first</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={role.assignedComponentId}
-                        onValueChange={(value) => handleComponentSelect(role.id, value)}
-                      >
-                        <SelectTrigger className="w-[300px]">
-                          <SelectValue placeholder="Select component" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {componentsForRole.length > 0 ? (
-                            componentsForRole.map((component) => (
-                              <SelectItem key={component.id} value={component.id}>
-                                {component.manufacturer} {component.model} - ${component.cost}
+                  <React.Fragment key={role.id}>
+                    <TableRow>
+                      <TableCell className="font-medium">
+                        {formatRoleName(role.role)}
+                      </TableCell>
+                      <TableCell>{role.description}</TableCell>
+                      <TableCell>
+                        {showBaseQuantity ? (
+                          <Badge variant="outline">{role.requiredCount}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Select a component first</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={role.assignedComponentId}
+                          onValueChange={(value) => handleComponentSelect(role.id, value)}
+                        >
+                          <SelectTrigger className="w-[300px]">
+                            <SelectValue placeholder="Select component" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {componentsForRole.length > 0 ? (
+                              componentsForRole.map((component) => (
+                                <SelectItem key={component.id} value={component.id}>
+                                  {component.manufacturer} {component.model} - ${component.cost}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="none" disabled>
+                                No compatible components available
                               </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="none" disabled>
-                              No compatible components available
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      {role.assignedComponentId && (
-                        <Badge>{actualQuantity}</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        {role.assignedComponentId && (
+                          <Badge>{actualQuantity}</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                    
+                    {/* Storage Node Disk Configuration */}
+                    {role.role === 'storageNode' && role.assignedComponentId && (
+                      <TableRow className="bg-muted/20">
+                        <TableCell colSpan={5} className="p-0">
+                          <Collapsible 
+                            open={openStorageNodeId === role.id}
+                            onOpenChange={(open) => setOpenStorageNodeId(open ? role.id : null)}
+                            className="p-2"
+                          >
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="sm" className="w-full flex items-center justify-between px-4">
+                                <span className="flex items-center">
+                                  <HardDrive className="h-4 w-4 mr-2" />
+                                  Configure Storage Disks
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  (Required for accurate capacity calculation)
+                                </span>
+                              </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="p-4 space-y-3 border-t">
+                              <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                  <Label htmlFor="disk-model">Disk Model</Label>
+                                  <Select
+                                    value={selectedDiskId}
+                                    onValueChange={setSelectedDiskId}
+                                  >
+                                    <SelectTrigger id="disk-model">
+                                      <SelectValue placeholder="Select disk model" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {getAvailableDisks().map((disk) => (
+                                        <SelectItem key={disk.id} value={disk.id}>
+                                          {disk.manufacturer} {disk.model} ({disk.capacityTB}TB) - ${disk.cost}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label htmlFor="disk-quantity">Quantity per Node</Label>
+                                  <Input
+                                    id="disk-quantity"
+                                    type="number"
+                                    min="1"
+                                    value={diskQuantity}
+                                    onChange={(e) => setDiskQuantity(parseInt(e.target.value) || 1)}
+                                  />
+                                </div>
+                                <div className="flex items-end">
+                                  <Button 
+                                    onClick={() => handleAddDisk(role.id)}
+                                    disabled={!selectedDiskId}
+                                    className="w-full"
+                                  >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Disks
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Storage capacity will be recalculated based on the selected disks.
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </TableBody>
