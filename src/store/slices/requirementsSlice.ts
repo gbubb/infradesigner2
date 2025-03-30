@@ -141,19 +141,19 @@ export const createRequirementsSlice: StateCreator<
       if (storagePerNode > 0) {
         // Calculate raw capacity needed based on storage pool type
         let capacityMultiplier = 1;
-        const poolType = state.requirements.storageRequirements.poolType;
+        const storagePoolType = state.requirements.storageRequirements.poolType;
         
-        if (poolType === '3 Replica') {
+        if (storagePoolType === '3 Replica') {
           capacityMultiplier = 3; // Need 3x the capacity for 3 replicas
-        } else if (poolType === '2 Replica') {
+        } else if (storagePoolType === '2 Replica') {
           capacityMultiplier = 2; // Need 2x the capacity for 2 replicas
-        } else if (poolType === 'Erasure Coding 4+2') {
+        } else if (storagePoolType === 'Erasure Coding 4+2') {
           capacityMultiplier = 1.5; // EC 4+2 has ~1.5x overhead
-        } else if (poolType === 'Erasure Coding 8+3') {
+        } else if (storagePoolType === 'Erasure Coding 8+3') {
           capacityMultiplier = 1.375; // EC 8+3 has ~1.375x overhead
-        } else if (poolType === 'Erasure Coding 8+4') {
+        } else if (storagePoolType === 'Erasure Coding 8+4') {
           capacityMultiplier = 1.5; // EC 8+4 has ~1.5x overhead
-        } else if (poolType === 'Erasure Coding 10+4') {
+        } else if (storagePoolType === 'Erasure Coding 10+4') {
           capacityMultiplier = 1.4; // EC 10+4 has ~1.4x overhead
         }
         
@@ -170,11 +170,11 @@ export const createRequirementsSlice: StateCreator<
         // For storage, we typically need at least 3 nodes per AZ for quorum
         const minNodesPerAZ = 3;
         
-        const poolType = state.requirements.storageRequirements.poolType;
-        if ((poolType === 'Erasure Coding 4+2' || 
-            poolType === 'Erasure Coding 8+3' || 
-            poolType === 'Erasure Coding 8+4' || 
-            poolType === 'Erasure Coding 10+4') && 
+        // Use the storage pool type from above, don't redeclare
+        if ((storagePoolType === 'Erasure Coding 4+2' || 
+            storagePoolType === 'Erasure Coding 8+3' || 
+            storagePoolType === 'Erasure Coding 8+4' || 
+            storagePoolType === 'Erasure Coding 10+4') && 
             nodesPerAZ < 7) {
           // For EC, we need more nodes per AZ
           adjustedCount = Math.max(7, nodesPerAZ) * azCount;
