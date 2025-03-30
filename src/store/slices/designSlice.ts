@@ -56,6 +56,7 @@ export const createDesignSlice: StateCreator<
         const assignedComponents: InfrastructureComponent[] = state.componentRoles
           .filter(role => role.assignedComponentId && role.adjustedRequiredCount > 0)
           .map(role => {
+            // Look in all component sources (templates and custom components)
             const componentTemplate = state.componentTemplates.find(
               c => c.id === role.assignedComponentId
             );
@@ -111,9 +112,10 @@ export const createDesignSlice: StateCreator<
     });
   },
 
-  // Add this new method to get all available components
+  // Method to get all available components - include both templates and custom components
   getAvailableComponents: () => {
-    // Combine all custom components and template components
-    return [...get().componentTemplates];
+    const state = get();
+    // Combine all component sources - custom components and template components
+    return [...state.componentTemplates];
   }
 });

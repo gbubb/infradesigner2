@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { ComponentRole, DesignRequirements, ServerRole, SwitchRole } from '@/types/infrastructure';
@@ -33,7 +32,9 @@ export const createRequirementsSlice: StateCreator<
   // Define the calculateRequiredQuantity function separately to avoid circular references
   const calculateRequiredQuantity = (roleId: string, componentId: string, state: StoreState): number => {
     const role = state.componentRoles.find(r => r.id === roleId);
-    const component = allComponentTemplates.find(c => c.id === componentId);
+    
+    // Find the component from all available sources (templates and custom components)
+    const component = state.componentTemplates.find(c => c.id === componentId);
     
     if (!role || !component) return role?.requiredCount || 0;
     
@@ -47,13 +48,13 @@ export const createRequirementsSlice: StateCreator<
       const totalMemoryGB = totalMemoryTB * 1024; // Convert TB to GB
       
       // Calculate based on CPU requirements
-      const serverCPU = component as any;
-      const cpuSockets = serverCPU.cpuSockets || 1;
-      const coresPerSocket = serverCPU.cpuCoresPerSocket || serverCPU.coreCount || 0;
+      // Extract CPU data handling both property naming conventions
+      const cpuSockets = component.cpuSockets || ('cpuCount' in component ? component.cpuCount : 1);
+      const coresPerSocket = component.cpuCoresPerSocket || ('coreCount' in component ? component.coreCount : 0);
       const totalCoresPerServer = cpuSockets * coresPerSocket;
       
-      // Get memory per server
-      const memoryPerServerGB = serverCPU.memoryCapacity || serverCPU.memoryGB || 0;
+      // Get memory per server - handle different property names
+      const memoryPerServerGB = component.memoryCapacity || ('memoryGB' in component ? component.memoryGB : 0);
       
       // Overcommit ratio
       const overcommitRatio = state.requirements.computeRequirements.overcommitRatio || 1;

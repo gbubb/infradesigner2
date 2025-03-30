@@ -17,7 +17,7 @@ export const DesignPanel: React.FC = () => {
     assignComponentToRole,
     saveDesign,
     calculateRequiredQuantity,
-    componentTemplates
+    getAvailableComponents
   } = useDesignStore();
   
   useEffect(() => {
@@ -28,7 +28,7 @@ export const DesignPanel: React.FC = () => {
   // Function to get appropriate components for a role
   const getComponentOptionsForRole = (role: string): InfrastructureComponent[] => {
     // Get all available components including custom and template components
-    const allComponents = componentTemplates;
+    const allComponents = getAvailableComponents();
     
     // Map design roles to component types and roles
     switch(role) {
@@ -94,15 +94,12 @@ export const DesignPanel: React.FC = () => {
     }
   };
   
-  // Find component by ID - looking only at the filtered components for each role
-  const findComponentById = (roleId: string, componentId: string | undefined): InfrastructureComponent | undefined => {
+  // Find component by ID - looking at all available components
+  const findComponentById = (componentId: string | undefined): InfrastructureComponent | undefined => {
     if (!componentId) return undefined;
     
-    const role = componentRoles.find(r => r.id === roleId);
-    if (!role) return undefined;
-    
-    // Return the component directly from the componentTemplates array
-    return componentTemplates.find(component => component.id === componentId);
+    // Use the store's getAvailableComponents to get all components
+    return getAvailableComponents().find(component => component.id === componentId);
   };
   
   const handleComponentSelect = (roleId: string, componentId: string) => {
@@ -250,7 +247,7 @@ export const DesignPanel: React.FC = () => {
             </TableHeader>
             <TableBody>
               {componentRoles.filter(role => role.assignedComponentId).map((role) => {
-                const component = findComponentById(role.id, role.assignedComponentId);
+                const component = findComponentById(role.assignedComponentId);
                 if (!component) return null;
                 
                 const actualQuantity = role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId!);
