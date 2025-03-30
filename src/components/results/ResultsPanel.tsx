@@ -205,7 +205,7 @@ export const ResultsPanel: React.FC = () => {
           } else if ('portCount' in component) {
             mgmtPortsAvailable += (component as any).portCount * quantity;
           }
-        } else if (component.role === 'computeSwitch' || component.role === 'storageSwitch' || component.role === 'borderLeafSwitch') {
+        } else if (component.role === 'computeSwitch' || component.role === 'storageSwitch' || component.role === 'borderLeafSwitch' || component.role === 'leafSwitch') {
           totalLeafSwitches += quantity;
           if ('portsProvidedQuantity' in component) {
             leafPortsAvailable += (component as any).portsProvidedQuantity * quantity;

@@ -83,6 +83,7 @@ export const recalculateDesign = () => {
       if (updatedComponents.length > 0) {
         // Update the active design with new components
         state.updateActiveDesign(updatedComponents);
+        console.log(`Updated design with ${updatedComponents.length} components`);
       } else {
         console.warn("No components found to update design with");
       }

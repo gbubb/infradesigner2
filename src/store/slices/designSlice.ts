@@ -100,8 +100,18 @@ export const createDesignSlice: StateCreator<
           };
         }
 
-        // Save the design - now with properly typed components
-        const updatedDesigns = [...state.savedDesigns, designToSave];
+        // Find if the design already exists in savedDesigns
+        const existingDesignIndex = state.savedDesigns.findIndex(d => d.id === designToSave.id);
+        
+        let updatedDesigns;
+        if (existingDesignIndex >= 0) {
+          // Update existing design
+          updatedDesigns = [...state.savedDesigns];
+          updatedDesigns[existingDesignIndex] = designToSave;
+        } else {
+          // Add new design
+          updatedDesigns = [...state.savedDesigns, designToSave];
+        }
         
         toast.success("Design saved successfully!");
         return { 
