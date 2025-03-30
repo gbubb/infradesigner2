@@ -8,16 +8,9 @@ import {
   InfrastructureComponent, 
   InfrastructureDesign,
   ComponentType,
-  Position
 } from '@/types/infrastructure';
+import { Position, ComponentWithPosition } from '@/types/workspace';
 import { allComponentTemplates } from '@/data/componentData';
-
-// Type for component with position information
-export interface ComponentWithPosition {
-  component: InfrastructureComponent;
-  id: string;
-  position: Position;
-}
 
 // State interface for the design store
 interface DesignState {
@@ -142,11 +135,13 @@ export const useDesignStore = create<DesignState>((set, get) => ({
             }
 
             // Clone and return with proper typing - add role to the component
-            return {
+            const component: InfrastructureComponent = {
               ...componentTemplate,
               quantity: role.adjustedRequiredCount || role.requiredCount,
               role: role.role // Add the role to the component
-            } as InfrastructureComponent;
+            };
+            
+            return component;
           });
 
         // Create or update activeDesign
@@ -430,15 +425,20 @@ export const useDesignStore = create<DesignState>((set, get) => ({
   addComponent: (component, position) => {
     set((state) => {
       const componentId = uuidv4();
-      const updatedPlacedComponents = {
+      
+      // Ensure we're adding a proper InfrastructureComponent
+      const newComponent: InfrastructureComponent = { ...component };
+      
+      // Update state with properly typed components
+      const updatedPlacedComponents: Record<string, InfrastructureComponent> = {
         ...state.placedComponents,
-        [componentId]: component,
+        [componentId]: newComponent,
       };
       
-      const updatedWorkspaceComponents = [
+      const updatedWorkspaceComponents: ComponentWithPosition[] = [
         ...state.workspaceComponents,
         {
-          component,
+          component: newComponent,
           id: componentId,
           position,
         },
@@ -479,19 +479,23 @@ export const useDesignStore = create<DesignState>((set, get) => ({
   
   updateComponent: (id, updates) => {
     set((state) => {
-      if (!state.placedComponents[id]) return state;
+      const component = state.placedComponents[id];
+      if (!component) return state;
       
-      const updatedComponent = {
-        ...state.placedComponents[id],
+      // Create updated component with proper typing
+      const updatedComponent: InfrastructureComponent = {
+        ...component,
         ...updates
       };
       
-      const updatedPlacedComponents = {
+      // Update the placed components with proper typing
+      const updatedPlacedComponents: Record<string, InfrastructureComponent> = {
         ...state.placedComponents,
         [id]: updatedComponent
       };
       
-      const updatedWorkspaceComponents = state.workspaceComponents.map(comp => 
+      // Update workspace components with proper typing
+      const updatedWorkspaceComponents: ComponentWithPosition[] = state.workspaceComponents.map(comp => 
         comp.id === id ? { ...comp, component: updatedComponent } : comp
       );
       
@@ -515,15 +519,22 @@ export const useDesignStore = create<DesignState>((set, get) => ({
         y: componentToClone.position.y + 20,
       };
       
-      const updatedPlacedComponents = {
-        ...state.placedComponents,
-        [newComponentId]: componentToClone.component,
+      // Create a properly typed copy of the component
+      const componentCopy: InfrastructureComponent = { 
+        ...componentToClone.component 
       };
       
-      const updatedWorkspaceComponents = [
+      // Update the placed components with proper typing
+      const updatedPlacedComponents: Record<string, InfrastructureComponent> = {
+        ...state.placedComponents,
+        [newComponentId]: componentCopy,
+      };
+      
+      // Update workspace components with proper typing
+      const updatedWorkspaceComponents: ComponentWithPosition[] = [
         ...state.workspaceComponents,
         {
-          component: componentToClone.component,
+          component: componentCopy,
           id: newComponentId,
           position: newPosition,
         },
