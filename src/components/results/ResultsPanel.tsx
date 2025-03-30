@@ -1,15 +1,30 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { useDesignStore, recalculateDesign } from '@/store/designStore';
+import { useDesignStore } from '@/store/designStore';
 import { ComponentType, InfrastructureComponent, DeviceRoleType, SwitchRole } from '@/types/infrastructure';
 import { ResourceUtilizationChart } from './PowerDistributionChart';
 
 export const ResultsPanel: React.FC = () => {
-  const { activeDesign, requirements, componentRoles } = useDesignStore();
+  const { activeDesign, requirements, componentRoles, calculateComponentRoles } = useDesignStore();
+  
+  // Safely trigger calculation only once when the component mounts
+  useEffect(() => {
+    // Only calculate if we have assigned components but no active design
+    const hasAssignedComponents = componentRoles.some(role => role.assignedComponentId);
+    
+    if (hasAssignedComponents && (!activeDesign || !activeDesign.components?.length)) {
+      // Use a timeout to avoid immediate state updates in render cycle
+      const timer = setTimeout(() => {
+        calculateComponentRoles();
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [componentRoles, activeDesign, calculateComponentRoles]);
   
   // Recalculate when the component mounts or when key properties change
   useEffect(() => {

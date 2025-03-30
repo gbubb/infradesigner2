@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useDesignStore, recalculateDesign } from '@/store/designStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,22 +20,27 @@ export const DesignPanel: React.FC = () => {
     activeDesign
   } = useDesignStore();
   
-  // Ensure roles are calculated when component mounts
+  // Ensure roles are calculated when component mounts - but only once
   useEffect(() => {
+    // Only calculate if we don't already have roles
+    if (componentRoles.length === 0) {
+      calculateComponentRoles();
+    }
+  }, [calculateComponentRoles, componentRoles.length]);
+
+  // Using a more stable approach to recalculate when assignments change
+  // We'll use a callback to handle component selection to avoid recreating functions
+  const handleComponentSelect = useCallback((roleId: string, componentId: string) => {
+    assignComponentToRole(roleId, componentId);
+  }, [assignComponentToRole]);
+
+  const handleRecalculate = useCallback(() => {
     calculateComponentRoles();
   }, [calculateComponentRoles]);
 
-  // Recalculate when component assignments change
-  useEffect(() => {
-    // Track any changes to assigned components
-    const assignedComponents = componentRoles
-      .filter(role => role.assignedComponentId)
-      .map(role => `${role.id}:${role.assignedComponentId}`);
-      
-    if (assignedComponents.length > 0) {
-      recalculateDesign();
-    }
-  }, [componentRoles]);
+  const handleSaveDesign = useCallback(() => {
+    saveDesign();
+  }, [saveDesign]);
 
   // Function to get appropriate components for a role
   const getComponentOptionsForRole = (role: string): InfrastructureComponent[] => {
@@ -113,22 +117,6 @@ export const DesignPanel: React.FC = () => {
     
     // Use the store's getAvailableComponents to get all components
     return getAvailableComponents().find(component => component.id === componentId);
-  };
-  
-  const handleComponentSelect = (roleId: string, componentId: string) => {
-    assignComponentToRole(roleId, componentId);
-    // Force recalculation after component assignment
-    setTimeout(() => {
-      recalculateDesign();
-    }, 0);
-  };
-
-  const handleRecalculate = () => {
-    calculateComponentRoles();
-  };
-
-  const handleSaveDesign = () => {
-    saveDesign();
   };
 
   // Format role name for display

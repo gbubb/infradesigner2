@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ComputeRequirementsForm } from './ComputeRequirementsForm';
@@ -25,14 +25,31 @@ export const RequirementsPanel: React.FC = () => {
     requirements.physicalConstraints.totalAvailabilityZones
   ]);
 
-  const handleSaveRequirements = () => {
+  // Use callbacks to avoid recreation of functions on each render
+  const handleSaveRequirements = useCallback(() => {
     calculateComponentRoles();
     toast.success('Requirements saved and component roles calculated');
-  };
+  }, [calculateComponentRoles]);
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);
-  };
+  }, []);
+
+  const handleUpdateComputeRequirements = useCallback((computeRequirements) => {
+    updateRequirements({ computeRequirements });
+  }, [updateRequirements]);
+
+  const handleUpdateStorageRequirements = useCallback((storageRequirements) => {
+    updateRequirements({ storageRequirements });
+  }, [updateRequirements]);
+
+  const handleUpdateNetworkRequirements = useCallback((networkRequirements) => {
+    updateRequirements({ networkRequirements });
+  }, [updateRequirements]);
+
+  const handleUpdatePhysicalConstraints = useCallback((physicalConstraints) => {
+    updateRequirements({ physicalConstraints });
+  }, [updateRequirements]);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -49,27 +66,21 @@ export const RequirementsPanel: React.FC = () => {
         <TabsContent value="compute">
           <ComputeRequirementsForm 
             requirements={requirements.computeRequirements}
-            onUpdate={(computeRequirements) => 
-              updateRequirements({ computeRequirements })
-            }
+            onUpdate={handleUpdateComputeRequirements}
           />
         </TabsContent>
         
         <TabsContent value="storage">
           <StorageRequirementsForm 
             requirements={requirements.storageRequirements}
-            onUpdate={(storageRequirements) => 
-              updateRequirements({ storageRequirements })
-            }
+            onUpdate={handleUpdateStorageRequirements}
           />
         </TabsContent>
         
         <TabsContent value="network">
           <NetworkRequirementsForm 
             requirements={requirements.networkRequirements}
-            onUpdate={(networkRequirements) => 
-              updateRequirements({ networkRequirements })
-            }
+            onUpdate={handleUpdateNetworkRequirements}
           />
         </TabsContent>
         
@@ -77,9 +88,7 @@ export const RequirementsPanel: React.FC = () => {
           <div className="space-y-6">
             <PhysicalConstraintsForm 
               requirements={requirements.physicalConstraints}
-              onUpdate={(physicalConstraints) => 
-                updateRequirements({ physicalConstraints })
-              }
+              onUpdate={handleUpdatePhysicalConstraints}
             />
             
             {/* Derived values card */}

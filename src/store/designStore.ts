@@ -17,8 +17,14 @@ export const useDesignStore = create<DesignStoreState>()((...a) => ({
   ...createComponentLibrarySlice(...a),
 }));
 
+// Flag to track if initialization has occurred - prevents infinite loops
+let storeInitialized = false;
+
 // Initialize component templates - this should run only once
-const initializeStore = () => {
+export const initializeStore = () => {
+  // Skip if already initialized
+  if (storeInitialized) return;
+  
   const state = useDesignStore.getState();
   
   // Only initialize if not already initialized
@@ -30,12 +36,15 @@ const initializeStore = () => {
   if (state.componentRoles.length === 0) {
     state.calculateComponentRoles();
   }
+  
+  // Mark as initialized
+  storeInitialized = true;
 };
 
 // Call initialization once
 initializeStore();
 
-// Export a function to recalculate when needed
+// Export a function to recalculate when needed - but don't trigger it automatically
 export const recalculateDesign = () => {
   useDesignStore.getState().calculateComponentRoles();
 };
