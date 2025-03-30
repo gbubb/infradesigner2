@@ -34,27 +34,25 @@ interface DesignState {
   saveDesign: () => void;
 }
 
-// Initial requirements state
+// Initial requirements state with updated fields
 const initialRequirements: DesignRequirements = {
   computeRequirements: {
     totalVCPUs: 0,
-    totalMemoryGB: 0,
-    redundancyFactor: 1
+    totalMemoryTB: 0,
+    availabilityZoneRedundancy: 'None',
+    overcommitRatio: 1
   },
   storageRequirements: {
     totalCapacityTB: 0,
-    performanceIOPS: 0,
-    redundancyLevel: 'RAID5'
+    poolType: '3 Replica'
   },
   networkRequirements: {
-    totalBandwidthGbps: 0,
-    redundancyLevel: 'Dual-homed'
+    networkTopology: 'Spine-Leaf'
   },
   physicalConstraints: {
     availableRacks: 1,
     rackUnitsPerRack: 42,
-    powerPerRackWatts: 5000,
-    coolingBTU: 17000
+    powerPerRackWatts: 5000
   }
 };
 
@@ -138,28 +136,38 @@ export const useDesignStore = create<DesignState>((set, get) => ({
 
   // Update a component
   updateComponent: (id, updates) => {
-    set((state) => ({
-      placedComponents: {
-        ...state.placedComponents,
-        [id]: {
-          ...state.placedComponents[id],
-          ...updates
+    set((state) => {
+      const component = state.placedComponents[id];
+      if (!component) return state;
+      
+      return {
+        placedComponents: {
+          ...state.placedComponents,
+          [id]: {
+            ...component,
+            ...updates
+          }
         }
-      }
-    }));
+      };
+    });
   },
 
   // Update component position
   updateComponentPosition: (id, position) => {
-    set((state) => ({
-      placedComponents: {
-        ...state.placedComponents,
-        [id]: {
-          ...state.placedComponents[id],
-          position
+    set((state) => {
+      const component = state.placedComponents[id];
+      if (!component) return state;
+      
+      return {
+        placedComponents: {
+          ...state.placedComponents,
+          [id]: {
+            ...component,
+            position
+          }
         }
-      }
-    }));
+      };
+    });
   },
 
   // Select a component
@@ -172,11 +180,17 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     const { activeDesign, placedComponents, requirements } = get();
     if (!activeDesign) return;
 
+    // Safe type handling for the components extraction
+    const extractedComponents: InfrastructureComponent[] = Object.values(placedComponents).map(({ position, ...component }) => {
+      // Extract only the InfrastructureComponent properties
+      return component as InfrastructureComponent;
+    });
+
     const updatedDesign: InfrastructureDesign = {
       ...activeDesign,
       updatedAt: new Date(),
       requirements,
-      components: Object.values(placedComponents).map(({ position, ...component }) => component as InfrastructureComponent)
+      components: extractedComponents
     };
 
     set({ activeDesign: updatedDesign });

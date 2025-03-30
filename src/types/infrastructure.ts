@@ -1,4 +1,3 @@
-
 // Common properties shared by all component types
 export interface BaseComponent {
   id: string;
@@ -170,27 +169,36 @@ export type InfrastructureComponent =
   | NetworkCard
   | (BaseComponent & { type: ComponentType.Other });
 
-// Design requirements specification
+// Updated Design requirements specification
 export interface DesignRequirements {
   computeRequirements: {
     totalVCPUs?: number;
-    totalMemoryGB?: number;
-    redundancyFactor?: number;  // N+1, N+2, 2N
+    totalMemoryTB?: number;  // Changed from GB to TB
+    availabilityZoneRedundancy?: 'None' | 'N+1' | 'N+2';  // Changed from redundancyFactor
+    overcommitRatio?: number;  // New field: between 1 and 10
   };
   storageRequirements: {
-    totalCapacityTB?: number;
-    performanceIOPS?: number;
-    redundancyLevel?: string;   // e.g., "RAID5", "RAID6", "Erasure Coding"
+    totalCapacityTB?: number;  // Changed to "Usable Capacity (TiB)" in UI
+    poolType?: 
+      | '3 Replica' 
+      | '2 Replica' 
+      | 'Erasure Coding 4+2' 
+      | 'Erasure Coding 8+3' 
+      | 'Erasure Coding 8+4' 
+      | 'Erasure Coding 10+4';  // Changed from redundancyLevel
   };
   networkRequirements: {
-    totalBandwidthGbps?: number;
-    redundancyLevel?: string;   // e.g., "Dual-homed", "Meshed"
+    networkTopology?: 
+      | 'Spine-Leaf' 
+      | 'Three-Tier' 
+      | 'Core-Distribution-Access' 
+      | 'Full Mesh' 
+      | 'Partial Mesh';  // Changed from redundancyLevel
   };
   physicalConstraints: {
     availableRacks?: number;
     rackUnitsPerRack?: number;
-    powerPerRackWatts?: number;
-    coolingBTU?: number;
+    powerPerRackWatts?: number;  // Kept, cooling removed
   };
 }
 

@@ -6,27 +6,23 @@ import {
   HardDrive, 
   Router, 
   Shield, 
-  Database, 
+  Database,
   LayoutGrid,
   Cpu,
-  Power
+  Power,
+  Plus,
+  Pencil,
+  Trash,
+  Copy
 } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { ComponentCard } from './ComponentCard';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { ComponentType, componentTypeToCategory, ComponentCategory } from '@/types/infrastructure';
 import { 
-  allComponentTemplates,
-  serverTemplates,
-  switchTemplates,
-  routerTemplates,
-  firewallTemplates,
-  storageArrayTemplates,
-  diskTemplates,
-  rackTemplates,
-  pduTemplates,
-  upsTemplates,
-  networkCardTemplates
+  allComponentTemplates
 } from '@/data/componentData';
 
 export const ComponentLibrary: React.FC = () => {
@@ -58,61 +54,110 @@ export const ComponentLibrary: React.FC = () => {
   };
 
   return (
-    <div className="w-72 border-r bg-gray-50 flex flex-col h-full overflow-hidden">
-      <div className="p-4">
-        <h2 className="text-lg font-semibold mb-2">Component Library</h2>
+    <div className="container mx-auto py-4">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold">Component Library</h2>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Component
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Component</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              {/* Component add form would go here */}
+              <p className="text-sm text-muted-foreground">Component creation form to be implemented</p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+      
+      <div className="flex items-center space-x-4 mb-6">
         <Input
           type="search"
           placeholder="Search components..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="mb-4"
+          className="max-w-sm"
         />
         
-        <div className="flex flex-wrap gap-1 mb-4">
-          <button
-            className={`flex items-center px-3 py-1.5 text-sm rounded-md ${
-              selectedCategory === 'all' 
-                ? 'bg-primary text-white' 
-                : 'bg-gray-100 hover:bg-gray-200'
-            }`}
+        <div className="flex flex-wrap gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className={selectedCategory === 'all' ? 'bg-primary text-white' : ''}
             onClick={() => setSelectedCategory('all')}
           >
             {categoryIcons.all}
             <span className="ml-1.5">All</span>
-          </button>
+          </Button>
           
           {Object.values(ComponentCategory).map((category) => (
-            <button
+            <Button
               key={category}
-              className={`flex items-center px-3 py-1.5 text-sm rounded-md ${
-                selectedCategory === category 
-                  ? 'bg-primary text-white' 
-                  : 'bg-gray-100 hover:bg-gray-200'
-              }`}
+              variant="outline"
+              size="sm"
+              className={selectedCategory === category ? 'bg-primary text-white' : ''}
               onClick={() => setSelectedCategory(category)}
             >
               {categoryIcons[category]}
               <span className="ml-1.5">{category}</span>
-            </button>
+            </Button>
           ))}
         </div>
       </div>
       
-      <Separator />
-      
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-1 gap-3">
-          {filteredComponents.length > 0 ? (
-            filteredComponents.map((component) => (
-              <ComponentCard key={component.id} component={component} />
-            ))
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No components found matching your criteria
-            </div>
-          )}
-        </div>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Manufacturer</TableHead>
+              <TableHead>Model</TableHead>
+              <TableHead className="text-right">Cost</TableHead>
+              <TableHead className="text-right">Power (W)</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredComponents.length > 0 ? (
+              filteredComponents.map((component) => (
+                <TableRow key={component.id}>
+                  <TableCell className="font-medium">{component.name}</TableCell>
+                  <TableCell>{component.type}</TableCell>
+                  <TableCell>{component.manufacturer}</TableCell>
+                  <TableCell>{component.model}</TableCell>
+                  <TableCell className="text-right">${component.cost}</TableCell>
+                  <TableCell className="text-right">{component.powerRequired}W</TableCell>
+                  <TableCell>
+                    <div className="flex justify-center space-x-2">
+                      <Button variant="ghost" size="icon">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon">
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon">
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  No components found matching your criteria
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

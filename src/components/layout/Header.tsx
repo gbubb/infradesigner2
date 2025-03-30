@@ -26,7 +26,7 @@ export const Header: React.FC = () => {
     <header className="bg-infra-blue px-6 py-3 flex items-center shadow-md z-10">
       <div className="flex items-center">
         <FileSymlink className="h-6 w-6 text-white mr-2" />
-        <h1 className="text-white text-xl font-semibold">InfraDesigner</h1>
+        <h1 className="text-white text-xl font-semibold">Infrastructure Design Tool</h1>
       </div>
       
       <div className="ml-6 text-white">
@@ -40,7 +40,7 @@ export const Header: React.FC = () => {
       <div className="ml-auto flex gap-2">
         <Dialog open={isNewDesignDialogOpen} onOpenChange={setIsNewDesignDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="text-white border-white hover:bg-white/10">
+            <Button variant="secondary" className="bg-white text-infra-blue hover:bg-gray-100">
               <PlusCircle className="mr-2 h-4 w-4" />
               New Design
             </Button>
@@ -74,8 +74,8 @@ export const Header: React.FC = () => {
         </Dialog>
 
         <Button 
-          variant="outline" 
-          className="text-white border-white hover:bg-white/10"
+          variant="secondary"
+          className="bg-white text-infra-blue hover:bg-gray-100"
           onClick={saveDesign}
           disabled={!activeDesign}
         >
@@ -84,15 +84,18 @@ export const Header: React.FC = () => {
         </Button>
         
         <Button 
-          variant="outline" 
-          className="text-white border-white hover:bg-white/10"
+          variant="secondary"
+          className="bg-white text-infra-blue hover:bg-gray-100"
           disabled={!activeDesign}
         >
           <Download className="mr-2 h-4 w-4" />
           Export
         </Button>
         
-        <Button variant="outline" className="text-white border-white hover:bg-white/10">
+        <Button 
+          variant="secondary" 
+          className="bg-white text-infra-blue hover:bg-gray-100"
+        >
           <Upload className="mr-2 h-4 w-4" />
           Import
         </Button>

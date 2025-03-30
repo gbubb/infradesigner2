@@ -6,20 +6,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDesignStore } from '@/store/designStore';
-import { DesignRequirements } from '@/types/infrastructure';
 import { Slider } from '@/components/ui/slider';
 import { Calculator, Save } from 'lucide-react';
 
 export const RequirementsPanel: React.FC = () => {
   const { requirements, updateRequirements } = useDesignStore();
   
-  const handleInputChange = (section: keyof DesignRequirements, field: string, value: any) => {
+  const handleInputChange = (section: keyof typeof requirements, field: string, value: any) => {
     const sectionData = { ...requirements[section] } as any;
     sectionData[field] = value;
     
     updateRequirements({
       [section]: sectionData
-    } as Partial<DesignRequirements>);
+    } as any);
   };
   
   return (
@@ -57,31 +56,45 @@ export const RequirementsPanel: React.FC = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="memory">Total Memory (GB)</Label>
+              <Label htmlFor="memory">Total Memory (TB)</Label>
               <Input
                 id="memory"
                 type="number"
-                value={requirements.computeRequirements.totalMemoryGB || ''}
-                onChange={(e) => handleInputChange('computeRequirements', 'totalMemoryGB', Number(e.target.value))}
+                step="0.1"
+                value={requirements.computeRequirements.totalMemoryTB || ''}
+                onChange={(e) => handleInputChange('computeRequirements', 'totalMemoryTB', Number(e.target.value))}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="compute-redundancy">Redundancy Factor</Label>
+              <Label htmlFor="availability">Availability Zone Redundancy</Label>
               <Select
-                value={requirements.computeRequirements.redundancyFactor?.toString() || '1'}
-                onValueChange={(value) => handleInputChange('computeRequirements', 'redundancyFactor', Number(value))}
+                value={requirements.computeRequirements.availabilityZoneRedundancy || 'None'}
+                onValueChange={(value) => handleInputChange('computeRequirements', 'availabilityZoneRedundancy', value)}
               >
-                <SelectTrigger id="compute-redundancy">
+                <SelectTrigger id="availability">
                   <SelectValue placeholder="Select redundancy" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">N (No redundancy)</SelectItem>
-                  <SelectItem value="1.5">N+1</SelectItem>
-                  <SelectItem value="2">N+2</SelectItem>
-                  <SelectItem value="3">2N (Full redundancy)</SelectItem>
+                  <SelectItem value="None">None</SelectItem>
+                  <SelectItem value="N+1">N+1</SelectItem>
+                  <SelectItem value="N+2">N+2</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label htmlFor="overcommit">Overcommit Ratio: {requirements.computeRequirements.overcommitRatio || 1}:1</Label>
+              </div>
+              <Slider
+                id="overcommit"
+                min={1}
+                max={10}
+                step={1}
+                value={[requirements.computeRequirements.overcommitRatio || 1]}
+                onValueChange={(value) => handleInputChange('computeRequirements', 'overcommitRatio', value[0])}
+              />
             </div>
           </CardContent>
         </Card>
@@ -94,7 +107,7 @@ export const RequirementsPanel: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="capacity">Total Capacity (TB)</Label>
+              <Label htmlFor="capacity">Usable Capacity (TiB)</Label>
               <Input
                 id="capacity"
                 type="number"
@@ -104,31 +117,21 @@ export const RequirementsPanel: React.FC = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="iops">Performance (IOPS)</Label>
-              <Input
-                id="iops"
-                type="number"
-                value={requirements.storageRequirements.performanceIOPS || ''}
-                onChange={(e) => handleInputChange('storageRequirements', 'performanceIOPS', Number(e.target.value))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="storage-redundancy">Redundancy Level</Label>
+              <Label htmlFor="pool-type">Pool Type</Label>
               <Select
-                value={requirements.storageRequirements.redundancyLevel || 'RAID5'}
-                onValueChange={(value) => handleInputChange('storageRequirements', 'redundancyLevel', value)}
+                value={requirements.storageRequirements.poolType || '3 Replica'}
+                onValueChange={(value) => handleInputChange('storageRequirements', 'poolType', value)}
               >
-                <SelectTrigger id="storage-redundancy">
-                  <SelectValue placeholder="Select redundancy" />
+                <SelectTrigger id="pool-type">
+                  <SelectValue placeholder="Select pool type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="RAID0">RAID 0 (Striping, no redundancy)</SelectItem>
-                  <SelectItem value="RAID1">RAID 1 (Mirroring)</SelectItem>
-                  <SelectItem value="RAID5">RAID 5 (Single parity)</SelectItem>
-                  <SelectItem value="RAID6">RAID 6 (Dual parity)</SelectItem>
-                  <SelectItem value="RAID10">RAID 10 (Striped mirrors)</SelectItem>
-                  <SelectItem value="ErasureCoding">Erasure Coding</SelectItem>
+                  <SelectItem value="3 Replica">3 Replica</SelectItem>
+                  <SelectItem value="2 Replica">2 Replica</SelectItem>
+                  <SelectItem value="Erasure Coding 4+2">Erasure Coding 4+2</SelectItem>
+                  <SelectItem value="Erasure Coding 8+3">Erasure Coding 8+3</SelectItem>
+                  <SelectItem value="Erasure Coding 8+4">Erasure Coding 8+4</SelectItem>
+                  <SelectItem value="Erasure Coding 10+4">Erasure Coding 10+4</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -139,33 +142,24 @@ export const RequirementsPanel: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle>Network Requirements</CardTitle>
-            <CardDescription>Define your connectivity needs</CardDescription>
+            <CardDescription>Define your connectivity topology</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="bandwidth">Total Bandwidth (Gbps)</Label>
-              <Input
-                id="bandwidth"
-                type="number"
-                value={requirements.networkRequirements.totalBandwidthGbps || ''}
-                onChange={(e) => handleInputChange('networkRequirements', 'totalBandwidthGbps', Number(e.target.value))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="network-redundancy">Redundancy Level</Label>
+              <Label htmlFor="network-topology">Network Topology</Label>
               <Select
-                value={requirements.networkRequirements.redundancyLevel || 'Dual-homed'}
-                onValueChange={(value) => handleInputChange('networkRequirements', 'redundancyLevel', value)}
+                value={requirements.networkRequirements.networkTopology || 'Spine-Leaf'}
+                onValueChange={(value) => handleInputChange('networkRequirements', 'networkTopology', value)}
               >
-                <SelectTrigger id="network-redundancy">
-                  <SelectValue placeholder="Select redundancy" />
+                <SelectTrigger id="network-topology">
+                  <SelectValue placeholder="Select network topology" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Single">Single connection</SelectItem>
-                  <SelectItem value="Dual-homed">Dual-homed</SelectItem>
-                  <SelectItem value="MLAG">MLAG</SelectItem>
-                  <SelectItem value="Meshed">Fully meshed</SelectItem>
+                  <SelectItem value="Spine-Leaf">Spine-Leaf</SelectItem>
+                  <SelectItem value="Three-Tier">Three-Tier</SelectItem>
+                  <SelectItem value="Core-Distribution-Access">Core-Distribution-Access</SelectItem>
+                  <SelectItem value="Full Mesh">Full Mesh</SelectItem>
+                  <SelectItem value="Partial Mesh">Partial Mesh</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -206,16 +200,6 @@ export const RequirementsPanel: React.FC = () => {
                 type="number"
                 value={requirements.physicalConstraints.powerPerRackWatts || ''}
                 onChange={(e) => handleInputChange('physicalConstraints', 'powerPerRackWatts', Number(e.target.value))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="cooling">Cooling Capacity (BTU)</Label>
-              <Input
-                id="cooling"
-                type="number"
-                value={requirements.physicalConstraints.coolingBTU || ''}
-                onChange={(e) => handleInputChange('physicalConstraints', 'coolingBTU', Number(e.target.value))}
               />
             </div>
           </CardContent>
