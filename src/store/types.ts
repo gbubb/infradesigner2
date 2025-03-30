@@ -6,6 +6,7 @@ import {
   InfrastructureDesign
 } from '@/types/infrastructure';
 import { ComponentWithPosition } from '@/types/workspace';
+import { RequirementsSlice } from './slices/requirementsSlice';
 
 // Base state shared by all store slices
 export interface BaseState {
@@ -42,4 +43,8 @@ export interface ComponentLibraryState {
 }
 
 // Combined store state
-export interface StoreState extends DesignState, WorkspaceState, ComponentLibraryState {}
+export interface StoreState extends 
+  DesignState, 
+  WorkspaceState, 
+  ComponentLibraryState, 
+  RequirementsSlice {}

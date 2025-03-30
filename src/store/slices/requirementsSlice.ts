@@ -78,8 +78,8 @@ export const createRequirementsSlice: StateCreator<
       }
     }));
     
-    const currentSlice = get() as RequirementsSlice;
-    currentSlice.calculateComponentRoles();
+    const requirementsSlice = get();
+    requirementsSlice.calculateComponentRoles();
   },
   
   calculateComponentRoles: () => {
@@ -179,7 +179,9 @@ export const createRequirementsSlice: StateCreator<
   },
   
   calculateRequiredQuantity: (roleId: string, componentId: string): number => {
-    const { requirements, componentRoles, componentTemplates } = get() as StoreState & RequirementsSlice;
+    const state = get();
+    const { requirements, componentRoles } = state;
+    const componentTemplates = state.componentTemplates || [];
     
     const role = componentRoles.find(r => r.id === roleId);
     if (!role) return 0;
@@ -231,11 +233,11 @@ export const createRequirementsSlice: StateCreator<
       return { componentRoles: updatedRoles };
     });
     
-    const updatedState = get() as RequirementsSlice;
-    const role = updatedState.componentRoles.find(r => r.id === roleId);
+    const state = get();
+    const role = state.componentRoles.find(r => r.id === roleId);
     
     if (role) {
-      const newQuantity = updatedState.calculateRequiredQuantity(roleId, componentId);
+      const newQuantity = state.calculateRequiredQuantity(roleId, componentId);
       
       set((state) => ({
         componentRoles: state.componentRoles.map(r => {
