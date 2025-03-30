@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -81,21 +80,17 @@ export const createRequirementsSlice: StateCreator<
       const totalVCPUs = getValue(requirements, 'computeRequirements.totalVCPUs', 5000) || 5000;
       const totalMemoryTB = getValue(requirements, 'computeRequirements.totalMemoryTB', 30) || 30;
       const availabilityZoneRedundancy = getValue(requirements, 'computeRequirements.availabilityZoneRedundancy', 'N+1') || 'N+1';
+      const overcommitRatio = getValue(requirements, 'computeRequirements.overcommitRatio', 2) || 2;
       const totalAvailabilityZones = getValue(requirements, 'physicalConstraints.totalAvailabilityZones', 2) || 2;
       const controllerNodeCount = getValue(requirements, 'computeRequirements.controllerNodeCount', 3) || 3;
       const infrastructureClusterRequired = getValue(requirements, 'computeRequirements.infrastructureClusterRequired', false) || false;
       const infrastructureNodeCount = getValue(requirements, 'computeRequirements.infrastructureNodeCount', 3) || 3;
       
-      let computeNodeCount = totalAvailabilityZones;
-      if (availabilityZoneRedundancy === 'N+1') {
-        computeNodeCount = totalAvailabilityZones + 1;
-      } else if (availabilityZoneRedundancy === 'N+2') {
-        computeNodeCount = totalAvailabilityZones + 2;
-      }
-      
+      // Get the total capacity for storage
       const totalCapacityTB = getValue(requirements, 'storageRequirements.totalCapacityTB', 100) || 100;
       const storageAvailabilityZoneQuantity = getValue(requirements, 'storageRequirements.availabilityZoneQuantity', 3) || 3;
       
+      // Get network requirements
       const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', 'Spine-Leaf') || 'Spine-Leaf';
       const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false) || false;
       const leafSwitchesPerAZ = getValue(requirements, 'networkRequirements.leafSwitchesPerAZ', 2) || 2;
@@ -109,20 +104,38 @@ export const createRequirementsSlice: StateCreator<
       // Calculate number of leaf switches based on AZs and switches per AZ setting
       const leafSwitchCount = totalAvailabilityZones * leafSwitchesPerAZ;
       
+      // Initialize roles array with controller nodes
       const newRoles = [
         {
           id: uuidv4(),
           role: 'controllerNode',
           description: 'Handles cluster management and monitoring',
           requiredCount: controllerNodeCount
-        },
-        {
-          id: uuidv4(),
-          role: 'computeNode',
-          description: 'Provides compute resources for the cluster',
-          requiredCount: computeNodeCount
         }
       ];
+      
+      // For compute nodes, we need to calculate the base amount and then apply AZ redundancy
+      // The compute needed is total vCPUs / overcommit ratio, distributed across AZs
+      const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
+      
+      // Calculate additional nodes based on redundancy policy
+      let additionalAZs = 0;
+      if (availabilityZoneRedundancy === 'N+1') {
+        additionalAZs = 1;
+      } else if (availabilityZoneRedundancy === 'N+2') {
+        additionalAZs = 2;
+      }
+      
+      // Calculate the total compute node count based on AZs and redundancy
+      const baseComputeNodeCount = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones) * totalAvailabilityZones;
+      const totalComputeNodeCount = baseComputeNodeCount + (additionalAZs * Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones));
+      
+      newRoles.push({
+        id: uuidv4(),
+        role: 'computeNode',
+        description: 'Provides compute resources for the cluster',
+        requiredCount: totalComputeNodeCount
+      });
       
       // Only add storage nodes if there's storage capacity needed
       if (totalCapacityTB > 0) {
@@ -193,7 +206,7 @@ export const createRequirementsSlice: StateCreator<
           id: uuidv4(),
           role: 'torSwitch',
           description: 'Provides top-of-rack switching for servers',
-          requiredCount: computeNodeCount
+          requiredCount: Math.ceil(totalComputeNodeCount / 2) // Assuming 2 servers per ToR switch
         });
       }
       

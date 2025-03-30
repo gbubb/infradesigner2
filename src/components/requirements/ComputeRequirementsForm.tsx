@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface ComputeRequirementsProps {
   requirements: {
@@ -81,11 +82,15 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
                 <SelectValue placeholder="Select redundancy level" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="None">None</SelectItem>
-                <SelectItem value="N+1">N+1 (One extra node per AZ)</SelectItem>
-                <SelectItem value="N+2">N+2 (Two extra nodes per AZ)</SelectItem>
+                <SelectItem value="None">None (No additional capacity)</SelectItem>
+                <SelectItem value="N+1">N+1 (One additional AZ worth of capacity)</SelectItem>
+                <SelectItem value="N+2">N+2 (Two additional AZs worth of capacity)</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Determines additional compute capacity beyond what's needed for basic operations. 
+              N+1 adds one AZ worth of redundancy, N+2 adds two AZs worth.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -103,6 +108,9 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
               value={requirements.overcommitRatio || ''}
               onChange={handleInputChange}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Ratio of virtual CPUs to physical cores. Higher values mean more VMs per physical core.
+            </p>
           </div>
           
           <div className="space-y-2">

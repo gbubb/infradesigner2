@@ -1,12 +1,12 @@
 
-import { InfrastructureComponent, InfrastructureDesign, DesignRequirements } from '@/types/infrastructure';
+import { InfrastructureComponent, InfrastructureDesign, DesignRequirements, ComponentRole } from '@/types/infrastructure';
 
 export interface StoreState {
   // Component templates
   componentTemplates: InfrastructureComponent[];
   
   // Component roles for requirement calculation
-  componentRoles: any[];
+  componentRoles: ComponentRole[];
   
   // Selected disks for storage nodes (key is roleId, value is array of disk configs)
   selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>;
