@@ -52,8 +52,44 @@ export const recalculateDesign = () => {
   
   try {
     isRecalculating = true;
-    useDesignStore.getState().calculateComponentRoles();
+    
+    // Get the current state
+    const state = useDesignStore.getState();
+    
+    // First calculate component roles
+    state.calculateComponentRoles();
+    
+    // Then update the active design if it exists
+    if (state.activeDesign) {
+      // Get updated component data based on roles
+      const updatedComponents = state.componentRoles
+        .filter(role => role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
+        .map(role => {
+          const componentTemplate = state.componentTemplates.find(
+            c => c.id === role.assignedComponentId
+          );
+          
+          if (!componentTemplate) return null;
+          
+          return {
+            ...componentTemplate,
+            quantity: role.adjustedRequiredCount || role.requiredCount,
+            role: role.role
+          };
+        })
+        .filter(Boolean);
+      
+      // Update the active design with new components
+      state.updateActiveDesign(updatedComponents);
+    }
   } finally {
     isRecalculating = false;
   }
+};
+
+// Export a manual recalculation function for UI usage
+export const manualRecalculateDesign = () => {
+  // Reset to ensure we can force a recalculation
+  isRecalculating = false;
+  recalculateDesign();
 };

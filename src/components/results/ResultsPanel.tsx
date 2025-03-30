@@ -1,37 +1,22 @@
+
 import React, { useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
-import { useDesignStore, recalculateDesign } from '@/store/designStore';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { useDesignStore, manualRecalculateDesign } from '@/store/designStore';
 import { ComponentType, InfrastructureComponent, DeviceRoleType, SwitchRole } from '@/types/infrastructure';
 import { ResourceUtilizationChart } from './PowerDistributionChart';
 
 export const ResultsPanel: React.FC = () => {
-  const { activeDesign, requirements, componentRoles, calculateComponentRoles } = useDesignStore();
+  const { activeDesign, requirements, componentRoles } = useDesignStore();
   
-  // Safely trigger calculation only once when the component mounts
-  useEffect(() => {
-    // Only calculate if we have assigned components but no active design
-    const hasAssignedComponents = componentRoles.some(role => role.assignedComponentId);
-    
-    if (hasAssignedComponents && (!activeDesign || !activeDesign.components?.length)) {
-      // Use a timeout to avoid immediate state updates in render cycle
-      const timer = setTimeout(() => {
-        calculateComponentRoles();
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [componentRoles, activeDesign, calculateComponentRoles]);
-  
-  // Only recalculate when the component mounts
-  useEffect(() => {
-    // This runs once on mount
-    recalculateDesign();
-    // Don't add recalculateDesign to the dependency array to avoid loops
-  }, []); 
+  // Recalculate handler - this will update the design when clicked
+  const handleRecalculate = useCallback(() => {
+    manualRecalculateDesign();
+  }, []);
   
   // Calculate total cost
   const totalCost = useMemo(() => {
@@ -105,7 +90,7 @@ export const ResultsPanel: React.FC = () => {
           totalVCPUs += coresPerServer * quantity * overcommitRatio;
         }
         
-        // Add memory capacity
+        // Add memory capacity - fix the memory calculation issue
         if ('memoryGB' in component) {
           totalMemoryGB += (component as any).memoryGB * quantity;
         } else if ('memoryCapacity' in component) {
@@ -338,7 +323,26 @@ export const ResultsPanel: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h2 className="text-2xl font-semibold mb-6">Design Results</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold">Design Results</h2>
+        <Button 
+          onClick={handleRecalculate} 
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Recalculate Design
+        </Button>
+      </div>
+      
+      {(!activeDesign || !activeDesign.components || activeDesign.components.length === 0) && (
+        <Alert variant="warning" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>No design data available</AlertTitle>
+          <AlertDescription>
+            Please assign components to roles in the Design tab and then click "Recalculate Design" to see results.
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Error alerts for implausible scenarios */}
       {designErrors.length > 0 && (
@@ -363,7 +367,7 @@ export const ResultsPanel: React.FC = () => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Compute:</span>
-                <span className="font-medium">{Math.round(actualHardwareTotals.totalVCPUs)} vCPUs, {actualHardwareTotals.totalMemoryTB.toFixed(2)} TB</span>
+                <span className="font-medium">{Math.round(actualHardwareTotals.totalVCPUs)} vCPUs, {actualHardwareTotals.totalMemoryTB.toFixed(2)} TB memory</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Storage:</span>
