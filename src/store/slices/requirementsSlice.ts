@@ -261,11 +261,13 @@ export const createRequirementsSlice: StateCreator<
           
           let additionalNodesCount = 0;
           if (availabilityZoneRedundancy === 'N+1') {
-            additionalNodesCount = nodesPerAZ;
-            calculationSteps.push(`N+1 redundancy: Adding ${nodesPerAZ} nodes (1 AZ worth)`);
+            const redundancyNodesNeeded = nodesPerAZ;
+            additionalNodesCount = Math.ceil(redundancyNodesNeeded / totalAvailabilityZones) * totalAvailabilityZones;
+            calculationSteps.push(`N+1 redundancy: Need ${redundancyNodesNeeded} nodes for 1 AZ, rounded to ${additionalNodesCount} nodes for even distribution across ${totalAvailabilityZones} AZs`);
           } else if (availabilityZoneRedundancy === 'N+2') {
-            additionalNodesCount = nodesPerAZ * 2;
-            calculationSteps.push(`N+2 redundancy: Adding ${nodesPerAZ * 2} nodes (2 AZs worth)`);
+            const redundancyNodesNeeded = nodesPerAZ * 2;
+            additionalNodesCount = Math.ceil(redundancyNodesNeeded / totalAvailabilityZones) * totalAvailabilityZones;
+            calculationSteps.push(`N+2 redundancy: Need ${redundancyNodesNeeded} nodes for 2 AZs, rounded to ${additionalNodesCount} nodes for even distribution across ${totalAvailabilityZones} AZs`);
           } else {
             calculationSteps.push(`No redundancy: Adding 0 additional nodes`);
           }
