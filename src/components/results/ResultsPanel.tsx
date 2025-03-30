@@ -1,10 +1,11 @@
+
 import React, { useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { useDesignStore } from '@/store/designStore';
+import { useDesignStore, recalculateDesign } from '@/store/designStore';
 import { ComponentType, InfrastructureComponent, DeviceRoleType, SwitchRole } from '@/types/infrastructure';
 import { ResourceUtilizationChart } from './PowerDistributionChart';
 
