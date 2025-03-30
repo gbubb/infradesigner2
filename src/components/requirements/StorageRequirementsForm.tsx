@@ -16,6 +16,7 @@ interface StorageRequirementsProps {
       | 'Erasure Coding 8+3' 
       | 'Erasure Coding 8+4' 
       | 'Erasure Coding 10+4';
+    maxFillFactor?: number;
   };
   onUpdate: (storageRequirements: any) => void;
 }
@@ -62,6 +63,20 @@ export const StorageRequirementsForm: React.FC<StorageRequirementsProps> = ({
               min="1"
               placeholder="e.g., 3"
               value={requirements.availabilityZoneQuantity || ''}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="maxFillFactor">Maximum Fill Factor (%)</Label>
+            <Input
+              id="maxFillFactor"
+              name="maxFillFactor"
+              type="number"
+              min="1"
+              max="100"
+              placeholder="e.g., 80"
+              value={requirements.maxFillFactor || ''}
               onChange={handleInputChange}
             />
           </div>

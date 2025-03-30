@@ -66,41 +66,79 @@ export const createRequirementsSlice: StateCreator<
       // Calculate AZ distribution
       const azCount = state.requirements.physicalConstraints.totalAvailabilityZones || 1;
       
-      // Calculate nodes needed for CPU requirements
-      let cpuBasedNodes = 0;
+      // Calculate nodes needed for CPU requirements per AZ
+      let cpuBasedNodesPerAZ = 0;
       if (effectiveVCPUsPerServer > 0) {
-        // Calculate total nodes required
-        const rawNodeCount = Math.ceil(totalVCPUs / effectiveVCPUsPerServer);
-        
-        // Ensure the node count is divisible by AZ count
-        cpuBasedNodes = Math.ceil(rawNodeCount / azCount) * azCount;
+        // Calculate total vCPUs needed per AZ
+        const vCPUsPerAZ = Math.ceil(totalVCPUs / azCount);
+        cpuBasedNodesPerAZ = Math.ceil(vCPUsPerAZ / effectiveVCPUsPerServer);
       }
       
-      // Calculate nodes needed for memory requirements
-      let memoryBasedNodes = 0;
+      // Calculate nodes needed for memory requirements per AZ
+      let memoryBasedNodesPerAZ = 0;
       if (memoryPerServerGB > 0) {
-        // Calculate total nodes required
-        const rawNodeCount = Math.ceil(totalMemoryGB / memoryPerServerGB);
-        
-        // Ensure the node count is divisible by AZ count
-        memoryBasedNodes = Math.ceil(rawNodeCount / azCount) * azCount;
+        // Calculate total memory needed per AZ
+        const memoryGBPerAZ = Math.ceil(totalMemoryGB / azCount);
+        memoryBasedNodesPerAZ = Math.ceil(memoryGBPerAZ / memoryPerServerGB);
       }
       
-      // Use the larger of CPU or memory based requirements
-      adjustedCount = Math.max(cpuBasedNodes, memoryBasedNodes);
+      // Use the larger of CPU or memory based requirements for each AZ
+      const nodesPerAZ = Math.max(cpuBasedNodesPerAZ, memoryBasedNodesPerAZ);
       
-      // Apply availability zone redundancy if required
+      // Apply availability zone redundancy - properly handling full AZ failures
       const redundancy = state.requirements.computeRequirements.availabilityZoneRedundancy;
-      if (redundancy === 'N+1') {
-        adjustedCount += azCount; // Add 1 node per AZ
-      } else if (redundancy === 'N+2') {
-        adjustedCount += (azCount * 2); // Add 2 nodes per AZ
+      if (redundancy === 'N+1' && azCount > 1) {
+        // For N+1: We need to be able to lose an entire AZ, so each remaining AZ needs extra capacity
+        // Calculate how many additional nodes per remaining AZ are needed to handle the failed AZ's workload
+        const totalRequiredNodes = nodesPerAZ * azCount; // Total nodes across all AZs
+        const remainingAZs = azCount - 1; // After one AZ fails
+        const nodesPerRemainingAZ = Math.ceil(totalRequiredNodes / remainingAZs);
+        
+        // Each AZ now needs the higher of: original requirement OR capacity to handle failover
+        const redundantNodesPerAZ = Math.max(nodesPerAZ, nodesPerRemainingAZ);
+        adjustedCount = redundantNodesPerAZ * azCount;
+      } else if (redundancy === 'N+2' && azCount > 2) {
+        // For N+2: We need to be able to lose two entire AZs
+        const totalRequiredNodes = nodesPerAZ * azCount;
+        const remainingAZs = azCount - 2; // After two AZs fail
+        const nodesPerRemainingAZ = Math.ceil(totalRequiredNodes / remainingAZs);
+        
+        const redundantNodesPerAZ = Math.max(nodesPerAZ, nodesPerRemainingAZ);
+        adjustedCount = redundantNodesPerAZ * azCount;
+      } else {
+        // No additional redundancy or not enough AZs to support the redundancy level
+        adjustedCount = nodesPerAZ * azCount;
       }
     } else if (role.role === 'storageNode' && component.type === 'server') {
       const totalCapacity = state.requirements.storageRequirements.totalCapacityTB || 0;
-      const serverCapacity = (component as any).storageCapacityTB || 0;
+      const maxFillFactor = state.requirements.storageRequirements.maxFillFactor || 80;
       
-      if (serverCapacity > 0) {
+      // Factor in the max fill factor (80% by default)
+      const effectiveCapacityNeeded = totalCapacity / (maxFillFactor / 100);
+      
+      // Calculate the storage capacity based on selected disk components
+      let storagePerNode = 0;
+      
+      // Check if disk components have been selected for this node
+      const diskComponentIds = state.requirements.storageRequirements.selectedDiskIds || [];
+      const diskQuantities = state.requirements.storageRequirements.diskQuantities || {};
+      
+      if (diskComponentIds.length > 0) {
+        // Calculate total storage capacity from selected disks
+        diskComponentIds.forEach(diskId => {
+          const diskComponent = state.componentTemplates.find(c => c.id === diskId);
+          if (diskComponent && diskComponent.type === 'disk') {
+            const quantity = diskQuantities[diskId] || 0;
+            const diskCapacity = (diskComponent as any).capacityTB || 0;
+            storagePerNode += (diskCapacity * quantity);
+          }
+        });
+      } else {
+        // No disks selected, use the server's storage capacity
+        storagePerNode = (component as any).storageCapacityTB || 0;
+      }
+      
+      if (storagePerNode > 0) {
         // Calculate raw capacity needed based on storage pool type
         let capacityMultiplier = 1;
         const poolType = state.requirements.storageRequirements.poolType;
@@ -119,20 +157,30 @@ export const createRequirementsSlice: StateCreator<
           capacityMultiplier = 1.4; // EC 10+4 has ~1.4x overhead
         }
         
-        const rawCapacityNeeded = totalCapacity * capacityMultiplier;
+        const rawCapacityNeeded = effectiveCapacityNeeded * capacityMultiplier;
         
         // Calculate AZ distribution
         const azCount = state.requirements.storageRequirements.availabilityZoneQuantity || 1;
         
-        // Calculate raw count and ensure it's divisible by AZ count
-        const rawNodeCount = Math.ceil(rawCapacityNeeded / serverCapacity);
-        adjustedCount = Math.ceil(rawNodeCount / azCount) * azCount;
+        // Calculate nodes per AZ
+        const rawCapacityPerAZ = rawCapacityNeeded / azCount;
+        const nodesPerAZ = Math.ceil(rawCapacityPerAZ / storagePerNode);
         
-        // Apply availability zone distribution if specified
-        if (azCount > 1) {
-          // Ensure minimum nodes per AZ for the storage technology
-          const minNodesPerAZ = 3; // Most storage systems need min 3 nodes
-          adjustedCount = Math.max(adjustedCount, azCount * minNodesPerAZ);
+        // Apply availability zone redundancy similar to compute nodes
+        // For storage, we typically need at least 3 nodes per AZ for quorum
+        const minNodesPerAZ = 3;
+        
+        const poolType = state.requirements.storageRequirements.poolType;
+        if ((poolType === 'Erasure Coding 4+2' || 
+            poolType === 'Erasure Coding 8+3' || 
+            poolType === 'Erasure Coding 8+4' || 
+            poolType === 'Erasure Coding 10+4') && 
+            nodesPerAZ < 7) {
+          // For EC, we need more nodes per AZ
+          adjustedCount = Math.max(7, nodesPerAZ) * azCount;
+        } else {
+          // For replica, we need at least 3 nodes per AZ
+          adjustedCount = Math.max(minNodesPerAZ, nodesPerAZ) * azCount;
         }
       }
     } else if (role.role === 'managementSwitch' && component.type === 'switch') {
@@ -282,15 +330,35 @@ export const createRequirementsSlice: StateCreator<
 
   return {
     requirements: {
-      computeRequirements: {},
-      storageRequirements: {},
+      computeRequirements: {
+        totalVCPUs: 512,
+        totalMemoryTB: 4,
+        availabilityZoneRedundancy: 'None',
+        overcommitRatio: 2.0
+      },
+      storageRequirements: {
+        totalCapacityTB: 1000,
+        availabilityZoneQuantity: 3,
+        poolType: '3 Replica',
+        maxFillFactor: 80,
+        selectedDiskIds: [],
+        diskQuantities: {}
+      },
       networkRequirements: {
+        networkTopology: 'Spine-Leaf',
+        managementNetwork: 'Dual Home',
+        ipmiNetwork: 'Management converged',
         physicalFirewalls: false,
         dedicatedStorageNetwork: false,
         dedicatedNetworkCoreRacks: false,
         leafSwitchesPerAZ: 2,
       },
-      physicalConstraints: {},
+      physicalConstraints: {
+        computeStorageRackQuantity: 16,
+        totalAvailabilityZones: 3,
+        rackUnitsPerRack: 42,
+        powerPerRackWatts: 10000
+      },
     },
     componentRoles: [],
 

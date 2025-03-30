@@ -1,3 +1,4 @@
+
 // Common properties shared by all component types
 export interface BaseComponent {
   id: string;
@@ -188,6 +189,9 @@ export interface DesignRequirements {
       | 'Erasure Coding 8+3' 
       | 'Erasure Coding 8+4' 
       | 'Erasure Coding 10+4';  // Changed from redundancyLevel
+    maxFillFactor?: number; // Max fill factor as a percentage (1-100)
+    selectedDiskIds?: string[]; // IDs of disks selected for storage nodes
+    diskQuantities?: Record<string, number>; // Quantity of each disk type
   };
   networkRequirements: {
     networkTopology?: 
