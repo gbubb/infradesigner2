@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 interface ComputeRequirementsProps {
   requirements: {
@@ -11,6 +12,9 @@ interface ComputeRequirementsProps {
     totalMemoryTB?: number;
     availabilityZoneRedundancy?: 'None' | 'N+1' | 'N+2';
     overcommitRatio?: number;
+    controllerNodeCount?: number;
+    infrastructureClusterRequired?: boolean;
+    infrastructureNodeCount?: number;
   };
   onUpdate: (computeRequirements: any) => void;
 }
@@ -32,6 +36,10 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
     onUpdate({ [name]: value });
   };
 
+  const handleSwitchChange = (name: string, checked: boolean) => {
+    onUpdate({ [name]: checked });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -45,7 +53,7 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
               id="totalVCPUs"
               name="totalVCPUs"
               type="number"
-              placeholder="e.g., 512"
+              placeholder="e.g., 5000"
               value={requirements.totalVCPUs || ''}
               onChange={handleInputChange}
             />
@@ -57,7 +65,7 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
               id="totalMemoryTB"
               name="totalMemoryTB"
               type="number"
-              placeholder="e.g., 32"
+              placeholder="e.g., 30"
               value={requirements.totalMemoryTB || ''}
               onChange={handleInputChange}
             />
@@ -96,6 +104,43 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
               onChange={handleInputChange}
             />
           </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="controllerNodeCount">Controller Node Count</Label>
+            <Input
+              id="controllerNodeCount"
+              name="controllerNodeCount"
+              type="number"
+              min="1"
+              placeholder="e.g., 3"
+              value={requirements.controllerNodeCount || ''}
+              onChange={handleInputChange}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between space-y-0 pt-4">
+            <Label htmlFor="infrastructureClusterRequired">Infrastructure Cluster Required</Label>
+            <Switch
+              id="infrastructureClusterRequired"
+              checked={requirements.infrastructureClusterRequired || false}
+              onCheckedChange={(checked) => handleSwitchChange('infrastructureClusterRequired', checked)}
+            />
+          </div>
+          
+          {requirements.infrastructureClusterRequired && (
+            <div className="space-y-2">
+              <Label htmlFor="infrastructureNodeCount">Infrastructure Node Count</Label>
+              <Input
+                id="infrastructureNodeCount"
+                name="infrastructureNodeCount"
+                type="number"
+                min="1"
+                placeholder="e.g., 3"
+                value={requirements.infrastructureNodeCount || ''}
+                onChange={handleInputChange}
+              />
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

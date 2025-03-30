@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { DesignRequirements, DeviceRoleType, NetworkTopology } from '@/types/infrastructure';
 import { StoreState, RequirementsState } from '../types';
@@ -16,26 +15,29 @@ export interface RequirementsSlice {
 
 const defaultRequirements: DesignRequirements = {
   computeRequirements: {
-    totalVCPUs: 16,
-    totalMemoryTB: 0.128,
+    totalVCPUs: 5000,
+    totalMemoryTB: 30,
     availabilityZoneRedundancy: 'N+1',
-    overcommitRatio: 2
+    overcommitRatio: 2,
+    controllerNodeCount: 3,
+    infrastructureClusterRequired: false,
+    infrastructureNodeCount: 3
   },
   storageRequirements: {
     totalCapacityTB: 100,
-    availabilityZoneQuantity: 2,
-    poolType: 'Erasure Coding 4+2',
-    maxFillFactor: 75,
+    availabilityZoneQuantity: 3,
+    poolType: '3 Replica',
+    maxFillFactor: 80,
     selectedDiskIds: [],
     diskQuantities: {}
   },
   networkRequirements: {
     networkTopology: 'Spine-Leaf',
-    managementNetwork: 'Single connection',
+    managementNetwork: 'Dual Home',
     ipmiNetwork: 'Management converged',
-    physicalFirewalls: true,
+    physicalFirewalls: false,
     leafSwitchesPerAZ: 2,
-    dedicatedStorageNetwork: true,
+    dedicatedStorageNetwork: false,
     dedicatedNetworkCoreRacks: true
   },
   physicalConstraints: {
@@ -52,7 +54,6 @@ export const createRequirementsSlice: StateCreator<
   [],
   RequirementsSlice
 > = (set, get) => {
-  // Create a local object to store methods that will be called internally
   const sliceMethods = {
     calculateComponentRoles: () => {
       const { requirements } = get();
@@ -65,10 +66,13 @@ export const createRequirementsSlice: StateCreator<
         }
       };
       
-      const totalVCPUs = getValue(requirements, 'computeRequirements.totalVCPUs', 16) || 16;
-      const totalMemoryTB = getValue(requirements, 'computeRequirements.totalMemoryTB', 0.128) || 0.128;
+      const totalVCPUs = getValue(requirements, 'computeRequirements.totalVCPUs', 5000) || 5000;
+      const totalMemoryTB = getValue(requirements, 'computeRequirements.totalMemoryTB', 30) || 30;
       const availabilityZoneRedundancy = getValue(requirements, 'computeRequirements.availabilityZoneRedundancy', 'N+1') || 'N+1';
       const totalAvailabilityZones = getValue(requirements, 'physicalConstraints.totalAvailabilityZones', 2) || 2;
+      const controllerNodeCount = getValue(requirements, 'computeRequirements.controllerNodeCount', 3) || 3;
+      const infrastructureClusterRequired = getValue(requirements, 'computeRequirements.infrastructureClusterRequired', false) || false;
+      const infrastructureNodeCount = getValue(requirements, 'computeRequirements.infrastructureNodeCount', 3) || 3;
       
       let computeNodeCount = totalAvailabilityZones;
       if (availabilityZoneRedundancy === 'N+1') {
@@ -78,10 +82,10 @@ export const createRequirementsSlice: StateCreator<
       }
       
       const totalCapacityTB = getValue(requirements, 'storageRequirements.totalCapacityTB', 100) || 100;
-      const storageAvailabilityZoneQuantity = getValue(requirements, 'storageRequirements.availabilityZoneQuantity', 2) || 2;
+      const storageAvailabilityZoneQuantity = getValue(requirements, 'storageRequirements.availabilityZoneQuantity', 3) || 3;
       
       const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', 'Spine-Leaf') || 'Spine-Leaf';
-      const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', true) || true;
+      const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false) || false;
       const leafSwitchesPerAZ = getValue(requirements, 'networkRequirements.leafSwitchesPerAZ', 2) || 2;
       
       const newRoles = [
@@ -89,7 +93,7 @@ export const createRequirementsSlice: StateCreator<
           id: uuidv4(),
           role: 'controllerNode',
           description: 'Handles cluster management and monitoring',
-          requiredCount: totalAvailabilityZones
+          requiredCount: controllerNodeCount
         },
         {
           id: uuidv4(),
@@ -102,7 +106,19 @@ export const createRequirementsSlice: StateCreator<
           role: 'storageNode',
           description: 'Provides storage resources for the cluster',
           requiredCount: storageAvailabilityZoneQuantity
-        },
+        }
+      ];
+      
+      if (infrastructureClusterRequired) {
+        newRoles.push({
+          id: uuidv4(),
+          role: 'infrastructureNode',
+          description: 'Provides infrastructure services for the cluster',
+          requiredCount: infrastructureNodeCount
+        });
+      }
+      
+      newRoles.push(
         {
           id: uuidv4(),
           role: 'managementSwitch',
@@ -145,7 +161,7 @@ export const createRequirementsSlice: StateCreator<
           description: 'Provides network security and traffic filtering',
           requiredCount: physicalFirewalls ? 2 : 0
         }
-      ];
+      );
       
       set({ componentRoles: newRoles });
     },
@@ -164,8 +180,8 @@ export const createRequirementsSlice: StateCreator<
       let requiredQuantity = role.requiredCount || 1;
       
       if (role.role === 'computeNode') {
-        const totalVCPUs = requirements.computeRequirements?.totalVCPUs || 16;
-        const totalMemoryTB = requirements.computeRequirements?.totalMemoryTB || 0.128;
+        const totalVCPUs = requirements.computeRequirements?.totalVCPUs || 5000;
+        const totalMemoryTB = requirements.computeRequirements?.totalMemoryTB || 30;
         
         if ('cpuCount' in component && 'coreCount' in component && 'memoryGB' in component) {
           const vCPUsPerNode = component.cpuCount * component.coreCount;
@@ -218,11 +234,9 @@ export const createRequirementsSlice: StateCreator<
         }
       }));
       
-      // Call the local method instead of trying to access it through get()
       sliceMethods.calculateComponentRoles();
     },
     
-    // Expose the methods from sliceMethods
     calculateComponentRoles: sliceMethods.calculateComponentRoles,
     
     calculateRequiredQuantity: sliceMethods.calculateRequiredQuantity,
@@ -247,7 +261,6 @@ export const createRequirementsSlice: StateCreator<
       const role = state.componentRoles.find(r => r.id === roleId);
       
       if (role) {
-        // Call the local method instead of trying to access it through get()
         const newQuantity = sliceMethods.calculateRequiredQuantity(roleId, componentId);
         
         set((state) => ({

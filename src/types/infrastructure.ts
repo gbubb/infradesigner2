@@ -1,3 +1,4 @@
+
 // Common properties shared by all component types
 export interface BaseComponent {
   id: string;
@@ -180,6 +181,9 @@ export interface DesignRequirements {
     totalMemoryTB?: number;  // Changed from GB to TB
     availabilityZoneRedundancy?: 'None' | 'N+1' | 'N+2';  // Changed from redundancyFactor
     overcommitRatio?: number;  // New field: between 1 and 10
+    controllerNodeCount?: number; // Number of controller nodes
+    infrastructureClusterRequired?: boolean; // Whether infrastructure cluster is required
+    infrastructureNodeCount?: number; // Number of infrastructure nodes
   };
   storageRequirements: {
     totalCapacityTB?: number;  // Changed to "Usable Capacity (TiB)" in UI
