@@ -1,6 +1,13 @@
 
 import { StateCreator } from 'zustand';
-import { DesignRequirements, DeviceRoleType, NetworkTopology, StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/types/infrastructure';
+import { 
+  DesignRequirements, 
+  DeviceRoleType, 
+  NetworkTopology, 
+  StoragePoolEfficiencyFactors, 
+  TB_TO_TIB_FACTOR,
+  ComponentType 
+} from '@/types/infrastructure';
 import { StoreState, RequirementsState } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
