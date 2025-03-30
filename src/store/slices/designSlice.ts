@@ -1,3 +1,4 @@
+
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
@@ -115,16 +116,28 @@ export const createDesignSlice: StateCreator<
     });
   },
 
-  // New method to directly update the active design
+  // Method to directly update the active design
   updateActiveDesign: (components) => {
     set((state) => {
-      if (!state.activeDesign) return state;
+      if (!state.activeDesign) {
+        console.warn("Cannot update: No active design");
+        return state;
+      }
       
+      // Make sure components isn't empty - if it is, preserve the existing components
+      if (!components || components.length === 0) {
+        console.warn("No components provided for update - preserving existing components");
+        return state; // Return state unchanged
+      }
+      
+      // Create updated design with new components
       const updatedDesign = {
         ...state.activeDesign,
         components,
         updatedAt: new Date()
       };
+      
+      console.log(`Updated design with ${components.length} components`);
       
       return {
         activeDesign: updatedDesign

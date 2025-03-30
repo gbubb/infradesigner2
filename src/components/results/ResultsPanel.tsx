@@ -1,5 +1,4 @@
-
-import React, { useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -65,64 +64,67 @@ export const ResultsPanel: React.FC = () => {
       return {
         totalVCPUs: 0,
         totalMemoryTB: 0,
+        totalComputeMemoryTB: 0,
         totalStorageTB: 0
       };
     }
     
     let totalVCPUs = 0;
     let totalMemoryGB = 0;
+    let computeMemoryGB = 0;
     let totalStorageTB = 0;
     
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
       
       if (component.type === ComponentType.Server) {
-        // Add CPU capacity
         if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
           const coresPerServer = (component as any).cpuSockets * (component as any).cpuCoresPerSocket;
-          // Apply overcommit ratio
           const overcommitRatio = requirements.computeRequirements.overcommitRatio || 1;
           totalVCPUs += coresPerServer * quantity * overcommitRatio;
         } else if ('cpuCount' in component && 'coreCount' in component) {
           const coresPerServer = (component as any).cpuCount * (component as any).coreCount;
-          // Apply overcommit ratio
           const overcommitRatio = requirements.computeRequirements.overcommitRatio || 1;
           totalVCPUs += coresPerServer * quantity * overcommitRatio;
         }
         
-        // Add memory capacity - fix the memory calculation issue
+        let componentMemoryGB = 0;
         if ('memoryGB' in component) {
-          totalMemoryGB += (component as any).memoryGB * quantity;
+          componentMemoryGB = (component as any).memoryGB;
         } else if ('memoryCapacity' in component) {
-          totalMemoryGB += (component as any).memoryCapacity * quantity;
+          componentMemoryGB = (component as any).memoryCapacity;
         }
         
-        // Add storage capacity for storage servers
+        totalMemoryGB += componentMemoryGB * quantity;
+        
+        if (component.role === 'computeNode') {
+          computeMemoryGB += componentMemoryGB * quantity;
+        }
+        
         if (component.role === 'storageNode' && 'storageCapacityTB' in component) {
           totalStorageTB += (component as any).storageCapacityTB * quantity;
         }
       }
     });
     
-    // Convert memory from GB to TB
     const totalMemoryTB = totalMemoryGB / 1024;
+    const computeMemoryTB = computeMemoryGB / 1024;
     
-    // Apply storage pooling overhead reduction
     const poolType = requirements.storageRequirements.poolType;
     let usableStorageFactor = 1;
     
     if (poolType === '3 Replica') {
-      usableStorageFactor = 1/3; // Only 1/3 of raw capacity is usable
+      usableStorageFactor = 1/3;
     } else if (poolType === '2 Replica') {
-      usableStorageFactor = 1/2; // Only 1/2 of raw capacity is usable
+      usableStorageFactor = 1/2;
     } else if (poolType === 'Erasure Coding 4+2') {
-      usableStorageFactor = 4/6; // EC 4+2 has 4/6 usable capacity
+      usableStorageFactor = 4/6;
     } else if (poolType === 'Erasure Coding 8+3') {
-      usableStorageFactor = 8/11; // EC 8+3 has 8/11 usable capacity
+      usableStorageFactor = 8/11;
     } else if (poolType === 'Erasure Coding 8+4') {
-      usableStorageFactor = 8/12; // EC 8+4 has 8/12 usable capacity
+      usableStorageFactor = 8/12;
     } else if (poolType === 'Erasure Coding 10+4') {
-      usableStorageFactor = 10/14; // EC 10+4 has 10/14 usable capacity
+      usableStorageFactor = 10/14;
     }
     
     const usableStorageTB = totalStorageTB * usableStorageFactor;
@@ -130,6 +132,7 @@ export const ResultsPanel: React.FC = () => {
     return {
       totalVCPUs,
       totalMemoryTB,
+      totalComputeMemoryTB: computeMemoryTB,
       totalStorageTB: usableStorageTB
     };
   }, [activeDesign, requirements]);
@@ -164,20 +167,16 @@ export const ResultsPanel: React.FC = () => {
       };
     }
     
-    // Calculate total racks, including network core racks if enabled
     const computeStorageRacks = requirements.physicalConstraints.computeStorageRackQuantity || 0;
     const networkCoreRacks = requirements.networkRequirements.dedicatedNetworkCoreRacks ? 2 : 0;
     const totalRackQuantity = computeStorageRacks + networkCoreRacks;
     
-    // Calculate total available resources from requirements
-    const ruPerRack = requirements.physicalConstraints.rackUnitsPerRack || 42; // Default 42U rack
+    const ruPerRack = requirements.physicalConstraints.rackUnitsPerRack || 42;
     const powerPerRack = requirements.physicalConstraints.powerPerRackWatts || 0;
     
-    // Calculate total available RU and power
     const totalAvailableRU = totalRackQuantity * ruPerRack;
     const totalAvailablePower = totalRackQuantity * powerPerRack;
     
-    // Count servers and network devices
     let totalServers = 0;
     let totalLeafSwitches = 0;
     let totalMgmtSwitches = 0;
@@ -191,31 +190,23 @@ export const ResultsPanel: React.FC = () => {
       
       if (component.type === ComponentType.Server) {
         totalServers += quantity;
-        // Each server consumes network ports (both leaf and management)
         if ('portsConsumedQuantity' in component) {
           leafPortsUsed += (component as any).portsConsumedQuantity * quantity;
-          // Assume each server uses 1 management port
           mgmtPortsUsed += quantity;
         } else {
-          // Default assumption: 2 ports per server if not specified for leaf
           leafPortsUsed += 2 * quantity;
-          // 1 port for management
           mgmtPortsUsed += quantity;
         }
       } else if (component.type === ComponentType.Switch) {
-        // Check switch role to categorize
         if (component.role === 'managementSwitch') {
           totalMgmtSwitches += quantity;
-          // Management switch provides ports
           if ('portsProvidedQuantity' in component) {
             mgmtPortsAvailable += (component as any).portsProvidedQuantity * quantity;
           } else if ('portCount' in component) {
             mgmtPortsAvailable += (component as any).portCount * quantity;
           }
         } else if (component.role === 'computeSwitch' || component.role === 'storageSwitch' || component.role === 'borderLeafSwitch') {
-          // All other switch types counted as leaf/compute switches
           totalLeafSwitches += quantity;
-          // Leaf switch provides ports
           if ('portsProvidedQuantity' in component) {
             leafPortsAvailable += (component as any).portsProvidedQuantity * quantity;
           } else if ('portCount' in component) {
@@ -282,7 +273,6 @@ export const ResultsPanel: React.FC = () => {
   const designErrors = useMemo(() => {
     const errors = [];
     
-    // Check if we have more RU than available
     if (resourceUtilization.spaceUtilization.percentage > 100) {
       errors.push({
         id: 'ru-exceeded',
@@ -291,7 +281,6 @@ export const ResultsPanel: React.FC = () => {
       });
     }
     
-    // Check if we're exceeding power capacity
     if (resourceUtilization.powerUtilization.percentage > 100) {
       errors.push({
         id: 'power-exceeded',
@@ -300,7 +289,6 @@ export const ResultsPanel: React.FC = () => {
       });
     }
     
-    // Check if we're exceeding leaf network port capacity
     if (resourceUtilization.leafNetworkUtilization.percentage > 100 || (resourceUtilization.leafNetworkUtilization.used > 0 && resourceUtilization.leafNetworkUtilization.total === 0)) {
       errors.push({
         id: 'leaf-network-exceeded',
@@ -309,7 +297,6 @@ export const ResultsPanel: React.FC = () => {
       });
     }
     
-    // Check if we're exceeding management network port capacity
     if (resourceUtilization.mgmtNetworkUtilization.percentage > 100 || (resourceUtilization.mgmtNetworkUtilization.used > 0 && resourceUtilization.mgmtNetworkUtilization.total === 0)) {
       errors.push({
         id: 'mgmt-network-exceeded',
@@ -344,7 +331,6 @@ export const ResultsPanel: React.FC = () => {
         </Alert>
       )}
       
-      {/* Error alerts for implausible scenarios */}
       {designErrors.length > 0 && (
         <div className="mb-6 space-y-4">
           {designErrors.map(error => (
@@ -357,7 +343,6 @@ export const ResultsPanel: React.FC = () => {
         </div>
       )}
       
-      {/* Resource metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card>
           <CardHeader>
@@ -367,7 +352,11 @@ export const ResultsPanel: React.FC = () => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Compute:</span>
-                <span className="font-medium">{Math.round(actualHardwareTotals.totalVCPUs)} vCPUs, {actualHardwareTotals.totalMemoryTB.toFixed(2)} TB memory</span>
+                <span className="font-medium">{Math.round(actualHardwareTotals.totalVCPUs)} vCPUs</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Compute Memory:</span>
+                <span className="font-medium">{actualHardwareTotals.totalComputeMemoryTB.toFixed(2)} TB memory</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Storage:</span>
@@ -419,7 +408,6 @@ export const ResultsPanel: React.FC = () => {
         </Card>
       </div>
       
-      {/* Resource Utilization Chart */}
       <div className="mb-8">
         <ResourceUtilizationChart 
           powerUtilization={resourceUtilization.powerUtilization}
@@ -429,7 +417,6 @@ export const ResultsPanel: React.FC = () => {
         />
       </div>
       
-      {/* Infrastructure Summary */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Infrastructure Summary</CardTitle>
@@ -460,7 +447,6 @@ export const ResultsPanel: React.FC = () => {
         </CardContent>
       </Card>
       
-      {/* Required Components Table */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Required Components</CardTitle>
@@ -517,7 +503,6 @@ export const ResultsPanel: React.FC = () => {
         </CardContent>
       </Card>
       
-      {/* Component Type Summary */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Component Type Summary</CardTitle>

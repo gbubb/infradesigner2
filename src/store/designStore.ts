@@ -79,9 +79,18 @@ export const recalculateDesign = () => {
         })
         .filter(Boolean);
       
-      // Update the active design with new components
-      state.updateActiveDesign(updatedComponents);
+      // Only update if we have components to update with
+      if (updatedComponents.length > 0) {
+        // Update the active design with new components
+        state.updateActiveDesign(updatedComponents);
+      } else {
+        console.warn("No components found to update design with");
+      }
+    } else {
+      console.warn("No active design to update");
     }
+  } catch (error) {
+    console.error("Error during design recalculation:", error);
   } finally {
     isRecalculating = false;
   }
