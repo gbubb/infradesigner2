@@ -14,6 +14,9 @@ export interface StoreState {
   // Requirements
   requirements: DesignRequirements;
   
+  // Calculation breakdowns for role calculations
+  calculationBreakdowns: Record<string, string[]>;
+  
   // Designs
   savedDesigns: InfrastructureDesign[];
   activeDesign: InfrastructureDesign | null;

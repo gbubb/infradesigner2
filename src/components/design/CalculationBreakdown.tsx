@@ -24,14 +24,12 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const getCalculationBreakdown = useDesignStore(state => state.getCalculationBreakdown);
   
   const breakdownSteps = getCalculationBreakdown(roleId);
-  const hasBreakdown = breakdownSteps.length > 0;
+  const hasBreakdown = breakdownSteps && breakdownSteps.length > 0;
   
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <span className="cursor-pointer underline text-primary hover:text-primary/80">
-          {children}
-        </span>
+        {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>

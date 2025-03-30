@@ -256,7 +256,7 @@ export const createRequirementsSlice: StateCreator<
           calculationSteps.push(`Number of availability zones: ${totalAvailabilityZones}`);
           calculationSteps.push(`Minimum nodes per AZ: ${totalNodesNeeded} / ${totalAvailabilityZones} = ${nodesPerAZ} (rounded up)`);
           
-          const baseNodeCount = nodesPerAZ * totalAvailabilityZones;
+          let baseNodeCount = nodesPerAZ * totalAvailabilityZones;
           calculationSteps.push(`Base node count: ${nodesPerAZ} × ${totalAvailabilityZones} = ${baseNodeCount}`);
           
           let additionalNodesCount = 0;
@@ -298,7 +298,7 @@ export const createRequirementsSlice: StateCreator<
         }
       }
       
-      set(state => ({
+      set((state) => ({
         calculationBreakdowns: {
           ...state.calculationBreakdowns,
           [roleId]: calculationSteps
