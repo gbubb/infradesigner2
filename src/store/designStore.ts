@@ -19,3 +19,8 @@ export const useDesignStore = create<DesignStoreState>()((...a) => ({
 
 // Initialize component templates
 useDesignStore.getState().initializeComponentTemplates();
+
+// Initialize device roles based on requirements
+setTimeout(() => {
+  useDesignStore.getState().calculateComponentRoles();
+}, 100);

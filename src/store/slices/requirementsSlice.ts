@@ -1,7 +1,6 @@
-
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
-import { ComponentRole, DesignRequirements } from '@/types/infrastructure';
+import { ComponentRole, DesignRequirements, ServerRole, SwitchRole } from '@/types/infrastructure';
 import { StoreState } from '../types';
 import { allComponentTemplates } from '@/data/componentData';
 
@@ -43,22 +42,56 @@ export const createRequirementsSlice: StateCreator<
     // Apply capacity factors for different component types
     if (role.role === 'computeNode' && component.type === 'server') {
       const totalVCPUs = state.requirements.computeRequirements.totalVCPUs || 0;
-      const serverVCPUs = (component as any).coreCount * (component as any).cpuCount;
+      const totalMemoryTB = state.requirements.computeRequirements.totalMemoryTB || 0;
+      const totalMemoryGB = totalMemoryTB * 1024; // Convert TB to GB
       
-      if (serverVCPUs > 0) {
-        // Calculate how many servers we need to meet vCPU requirements
-        // Include overcommit ratio if specified
-        const overcommitRatio = state.requirements.computeRequirements.overcommitRatio || 1;
-        const effectiveVCPUs = serverVCPUs * overcommitRatio;
-        adjustedCount = Math.ceil(totalVCPUs / effectiveVCPUs);
+      // Calculate based on CPU requirements
+      const serverCPU = component as any;
+      const cpuSockets = serverCPU.cpuSockets || 1;
+      const coresPerSocket = serverCPU.cpuCoresPerSocket || serverCPU.coreCount || 0;
+      const totalCoresPerServer = cpuSockets * coresPerSocket;
+      
+      // Get memory per server
+      const memoryPerServerGB = serverCPU.memoryCapacity || serverCPU.memoryGB || 0;
+      
+      // Overcommit ratio
+      const overcommitRatio = state.requirements.computeRequirements.overcommitRatio || 1;
+      
+      // Calculate effective vCPUs
+      const effectiveVCPUsPerServer = totalCoresPerServer * overcommitRatio;
+      
+      // Calculate AZ distribution
+      const azCount = state.requirements.physicalConstraints.totalAvailabilityZones || 1;
+      
+      // Calculate nodes needed for CPU requirements
+      let cpuBasedNodes = 0;
+      if (effectiveVCPUsPerServer > 0) {
+        // Calculate total nodes required
+        const rawNodeCount = Math.ceil(totalVCPUs / effectiveVCPUsPerServer);
         
-        // Apply availability zone redundancy if required
-        const redundancy = state.requirements.computeRequirements.availabilityZoneRedundancy;
-        if (redundancy === 'N+1') {
-          adjustedCount += 1;
-        } else if (redundancy === 'N+2') {
-          adjustedCount += 2;
-        }
+        // Ensure the node count is divisible by AZ count
+        cpuBasedNodes = Math.ceil(rawNodeCount / azCount) * azCount;
+      }
+      
+      // Calculate nodes needed for memory requirements
+      let memoryBasedNodes = 0;
+      if (memoryPerServerGB > 0) {
+        // Calculate total nodes required
+        const rawNodeCount = Math.ceil(totalMemoryGB / memoryPerServerGB);
+        
+        // Ensure the node count is divisible by AZ count
+        memoryBasedNodes = Math.ceil(rawNodeCount / azCount) * azCount;
+      }
+      
+      // Use the larger of CPU or memory based requirements
+      adjustedCount = Math.max(cpuBasedNodes, memoryBasedNodes);
+      
+      // Apply availability zone redundancy if required
+      const redundancy = state.requirements.computeRequirements.availabilityZoneRedundancy;
+      if (redundancy === 'N+1') {
+        adjustedCount += azCount; // Add 1 node per AZ
+      } else if (redundancy === 'N+2') {
+        adjustedCount += (azCount * 2); // Add 2 nodes per AZ
       }
     } else if (role.role === 'storageNode' && component.type === 'server') {
       const totalCapacity = state.requirements.storageRequirements.totalCapacityTB || 0;
@@ -84,15 +117,104 @@ export const createRequirementsSlice: StateCreator<
         }
         
         const rawCapacityNeeded = totalCapacity * capacityMultiplier;
-        adjustedCount = Math.ceil(rawCapacityNeeded / serverCapacity);
+        
+        // Calculate AZ distribution
+        const azCount = state.requirements.storageRequirements.availabilityZoneQuantity || 1;
+        
+        // Calculate raw count and ensure it's divisible by AZ count
+        const rawNodeCount = Math.ceil(rawCapacityNeeded / serverCapacity);
+        adjustedCount = Math.ceil(rawNodeCount / azCount) * azCount;
         
         // Apply availability zone distribution if specified
-        const azCount = state.requirements.storageRequirements.availabilityZoneQuantity || 1;
         if (azCount > 1) {
           // Ensure minimum nodes per AZ for the storage technology
           const minNodesPerAZ = 3; // Most storage systems need min 3 nodes
           adjustedCount = Math.max(adjustedCount, azCount * minNodesPerAZ);
         }
+      }
+    } else if (role.role === 'managementSwitch' && component.type === 'switch') {
+      // Calculate management switch quantity
+      const azCount = state.requirements.physicalConstraints.totalAvailabilityZones || 1;
+      const dualHome = state.requirements.networkRequirements.managementNetwork === 'Dual Home';
+      
+      // Each AZ gets at least 1 management switch, 2 if dual home
+      adjustedCount = azCount * (dualHome ? 2 : 1);
+    } else if (role.role === 'spineSwitch' && component.type === 'switch') {
+      // Calculate spine switch quantity - minimum 2 for redundancy
+      if (state.requirements.networkRequirements.networkTopology === 'Spine-Leaf') {
+        adjustedCount = 2; // Minimum for redundancy
+        
+        // Add more spine switches if we have many leaf switches
+        const leafCount = state.componentRoles.find(r => r.role === 'computeSwitch')?.adjustedRequiredCount || 0;
+        if (leafCount > 4) {
+          adjustedCount = Math.min(4, Math.ceil(leafCount / 4) * 2); // Add more in pairs
+        }
+      } else {
+        adjustedCount = 0; // No spine switches for other topologies
+      }
+    } else if ((role.role === 'computeSwitch' || role.role === 'storageSwitch') && component.type === 'switch') {
+      // Calculate compute/storage switch quantity
+      const azCount = state.requirements.physicalConstraints.totalAvailabilityZones || 1;
+      
+      // Calculate total server connections
+      let totalServerPorts = 0;
+      let portType = '';
+      
+      if (role.role === 'computeSwitch') {
+        // For compute switches, count ports from compute nodes
+        const computeRoles = state.componentRoles.find(r => r.role === 'computeNode');
+        const computeComponentId = computeRoles?.assignedComponentId;
+        
+        if (computeComponentId) {
+          const computeComponent = allComponentTemplates.find(c => c.id === computeComponentId);
+          if (computeComponent && computeComponent.type === 'server') {
+            const portsPerServer = (computeComponent as any).portsConsumedQuantity || 2; // Default to 2 ports per server
+            const serverCount = computeRoles?.adjustedRequiredCount || 0;
+            totalServerPorts = portsPerServer * serverCount;
+            
+            // Get port type for compatibility check
+            portType = (computeComponent as any).networkPortType || '';
+          }
+        }
+      } else if (role.role === 'storageSwitch') {
+        // For storage switches, count ports from storage nodes
+        const storageRoles = state.componentRoles.find(r => r.role === 'storageNode');
+        const storageComponentId = storageRoles?.assignedComponentId;
+        
+        if (storageComponentId) {
+          const storageComponent = allComponentTemplates.find(c => c.id === storageComponentId);
+          if (storageComponent && storageComponent.type === 'server') {
+            const portsPerServer = (storageComponent as any).portsConsumedQuantity || 2; // Default to 2 ports per server
+            const serverCount = storageRoles?.adjustedRequiredCount || 0;
+            totalServerPorts = portsPerServer * serverCount;
+            
+            // Get port type for compatibility check
+            portType = (storageComponent as any).networkPortType || '';
+          }
+        }
+      }
+      
+      // Calculate number of switches needed
+      if (totalServerPorts > 0 && component.type === 'switch') {
+        const portsPerSwitch = (component as any).portsProvidedQuantity || (component as any).portCount || 0;
+        
+        if (portsPerSwitch > 0) {
+          // Reserve ports for uplinks - typically 25% for leaf switches
+          const usablePortsPerSwitch = Math.floor(portsPerSwitch * 0.75);
+          
+          // Calculate raw switch count
+          const rawSwitchCount = Math.ceil(totalServerPorts / usablePortsPerSwitch);
+          
+          // Each AZ gets a minimum of 2 switches for redundancy, and more if needed
+          const switchesPerAZ = Math.max(2, Math.ceil(rawSwitchCount / azCount));
+          adjustedCount = switchesPerAZ * azCount;
+        } else {
+          // Default to 2 switches per AZ if we can't calculate
+          adjustedCount = 2 * azCount;
+        }
+      } else {
+        // Default to 2 switches per AZ if we can't calculate
+        adjustedCount = 2 * azCount;
       }
     }
     
@@ -182,34 +304,36 @@ export const createRequirementsSlice: StateCreator<
         }
         
         // Network switches - simple topology with redundancy
-        // Management switch pair (always have 2 for redundancy)
+        // Management switch pair (always have at least 1 per AZ, 2 if dual home)
+        const azCount = requirements.physicalConstraints.totalAvailabilityZones || 1;
+        const dualHome = requirements.networkRequirements.managementNetwork === 'Dual Home';
         roles.push({
           id: uuidv4(),
           role: 'managementSwitch',
           description: 'Switches for management network traffic',
-          requiredCount: 2,
-          adjustedRequiredCount: 2,
+          requiredCount: azCount * (dualHome ? 2 : 1),
+          adjustedRequiredCount: azCount * (dualHome ? 2 : 1),
         });
         
-        // Compute switches
+        // Compute switches (always at least 2 per AZ for redundancy)
         if (requirements.computeRequirements.totalVCPUs) {
           roles.push({
             id: uuidv4(),
             role: 'computeSwitch',
             description: 'Switches for compute network traffic',
-            requiredCount: 2, // Always redundant
-            adjustedRequiredCount: 2,
+            requiredCount: azCount * 2, // 2 per AZ
+            adjustedRequiredCount: azCount * 2,
           });
         }
         
-        // Storage switches
+        // Storage switches (always at least 2 per AZ for redundancy)
         if (requirements.storageRequirements.totalCapacityTB) {
           roles.push({
             id: uuidv4(),
             role: 'storageSwitch',
             description: 'Switches for storage network traffic',
-            requiredCount: 2, // Always redundant
-            adjustedRequiredCount: 2,
+            requiredCount: azCount * 2, // 2 per AZ
+            adjustedRequiredCount: azCount * 2,
           });
         }
         

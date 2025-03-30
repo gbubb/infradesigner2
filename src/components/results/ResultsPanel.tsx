@@ -2,8 +2,11 @@ import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent, DeviceRoleType } from '@/types/infrastructure';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Database, Server, Network, Shield, HardDrive } from 'lucide-react';
 
 export const ResultsPanel: React.FC = () => {
   const { activeDesign, requirements } = useDesignStore();
@@ -61,6 +64,105 @@ export const ResultsPanel: React.FC = () => {
     if (!requirements.storageRequirements.totalCapacityTB || !totalCost) return 0;
     return totalCost / requirements.storageRequirements.totalCapacityTB;
   }, [requirements.storageRequirements.totalCapacityTB, totalCost]);
+  
+  const deviceDistribution = useMemo(() => {
+    if (!activeDesign?.components || !requirements.physicalConstraints.totalAvailabilityZones) {
+      return [];
+    }
+    
+    const azCount = requirements.physicalConstraints.totalAvailabilityZones || 1;
+    const racksPerAZ = requirements.physicalConstraints.racksPerAvailabilityZone || 1;
+    
+    const distribution = Array(azCount).fill(0).map((_, i) => ({
+      name: `AZ-${i + 1}`,
+      servers: 0,
+      switches: 0,
+      storage: 0,
+      other: 0,
+      totalRackUnits: 0,
+      totalPower: 0
+    }));
+    
+    activeDesign.components.forEach(component => {
+      const quantity = component.quantity || 1;
+      const componentRU = 'rackUnitsConsumed' in component ? (component as any).rackUnitsConsumed : 0;
+      const totalComponentRU = componentRU * quantity;
+      const totalComponentPower = component.powerRequired * quantity;
+      
+      if (component.role === 'controllerNode') {
+        const perAZ = Math.ceil(quantity / azCount);
+        for (let i = 0; i < azCount; i++) {
+          const azAllocation = i < azCount - 1 ? perAZ : quantity - (perAZ * (azCount - 1));
+          if (azAllocation > 0) {
+            distribution[i].servers += azAllocation;
+            distribution[i].totalRackUnits += componentRU * azAllocation;
+            distribution[i].totalPower += component.powerRequired * azAllocation;
+          }
+        }
+      } else if (component.role === 'computeNode') {
+        const perAZ = Math.ceil(quantity / azCount);
+        for (let i = 0; i < azCount; i++) {
+          const azAllocation = i < azCount - 1 ? perAZ : quantity - (perAZ * (azCount - 1));
+          if (azAllocation > 0) {
+            distribution[i].servers += azAllocation;
+            distribution[i].totalRackUnits += componentRU * azAllocation;
+            distribution[i].totalPower += component.powerRequired * azAllocation;
+          }
+        }
+      } else if (component.role === 'storageNode') {
+        const perAZ = Math.ceil(quantity / azCount);
+        for (let i = 0; i < azCount; i++) {
+          const azAllocation = i < azCount - 1 ? perAZ : quantity - (perAZ * (azCount - 1));
+          if (azAllocation > 0) {
+            distribution[i].storage += azAllocation;
+            distribution[i].totalRackUnits += componentRU * azAllocation;
+            distribution[i].totalPower += component.powerRequired * azAllocation;
+          }
+        }
+      } else if (component.role?.includes('Switch') || component.type === ComponentType.Switch) {
+        const perAZ = Math.ceil(quantity / azCount);
+        for (let i = 0; i < azCount; i++) {
+          const azAllocation = i < azCount - 1 ? perAZ : quantity - (perAZ * (azCount - 1));
+          if (azAllocation > 0) {
+            distribution[i].switches += azAllocation;
+            distribution[i].totalRackUnits += componentRU * azAllocation;
+            distribution[i].totalPower += component.powerRequired * azAllocation;
+          }
+        }
+      } else {
+        const perAZ = Math.ceil(quantity / azCount);
+        for (let i = 0; i < azCount; i++) {
+          const azAllocation = i < azCount - 1 ? perAZ : quantity - (perAZ * (azCount - 1));
+          if (azAllocation > 0) {
+            distribution[i].other += azAllocation;
+            distribution[i].totalRackUnits += componentRU * azAllocation;
+            distribution[i].totalPower += component.powerRequired * azAllocation;
+          }
+        }
+      }
+    });
+    
+    return distribution;
+  }, [activeDesign, requirements.physicalConstraints.totalAvailabilityZones, requirements.physicalConstraints.racksPerAvailabilityZone]);
+  
+  const powerUtilization = useMemo(() => {
+    return deviceDistribution.map(az => {
+      const racksPerAZ = requirements.physicalConstraints.racksPerAvailabilityZone || 1;
+      const powerPerRack = requirements.physicalConstraints.powerPerRackWatts || 0;
+      const totalAvailablePower = racksPerAZ * powerPerRack;
+      
+      const utilizationPercentage = totalAvailablePower > 0 
+        ? (az.totalPower / totalAvailablePower) * 100 
+        : 0;
+        
+      return {
+        name: az.name,
+        powerUtilization: Math.min(utilizationPercentage, 100),
+        powerWatts: az.totalPower,
+        totalAvailable: totalAvailablePower
+      };
+    });
+  }, [deviceDistribution, requirements.physicalConstraints.racksPerAvailabilityZone, requirements.physicalConstraints.powerPerRackWatts]);
   
   return (
     <div className="max-w-4xl mx-auto">
@@ -123,6 +225,83 @@ export const ResultsPanel: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {deviceDistribution.length > 0 && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Device Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Availability Zone</TableHead>
+                  <TableHead>Servers</TableHead>
+                  <TableHead>Storage Nodes</TableHead>
+                  <TableHead>Network Devices</TableHead>
+                  <TableHead>Total RU</TableHead>
+                  <TableHead>Power Used</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {deviceDistribution.map((az, index) => (
+                  <TableRow key={az.name}>
+                    <TableCell className="font-medium">{az.name}</TableCell>
+                    <TableCell>{az.servers}</TableCell>
+                    <TableCell>{az.storage}</TableCell>
+                    <TableCell>{az.switches}</TableCell>
+                    <TableCell>{az.totalRackUnits} RU</TableCell>
+                    <TableCell>{az.totalPower.toLocaleString()} W</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            
+            <div className="mt-8">
+              <h3 className="text-lg font-medium mb-4">Power Utilization per Availability Zone</h3>
+              
+              {powerUtilization.map((item) => (
+                <div key={item.name} className="mb-4">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm font-medium">{item.name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {item.powerWatts.toLocaleString()} W / {item.totalAvailable.toLocaleString()} W
+                      ({Math.round(item.powerUtilization)}%)
+                    </span>
+                  </div>
+                  <Progress value={item.powerUtilization} className="h-2" />
+                </div>
+              ))}
+              
+              {powerUtilization.length > 0 && (
+                <div className="mt-6 h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={powerUtilization} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" />
+                      <YAxis
+                        label={{ 
+                          value: "Power (W)", 
+                          angle: -90, 
+                          position: "insideLeft",
+                          style: { textAnchor: "middle" } 
+                        }}
+                      />
+                      <Tooltip 
+                        formatter={(value, name) => {
+                          if (name === "powerWatts") return [`${Number(value).toLocaleString()} W`, "Used Power"];
+                          return [value, name];
+                        }}
+                      />
+                      <Bar dataKey="powerWatts" name="Used Power" fill="#8884d8" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       <Card className="mb-8">
         <CardHeader>
