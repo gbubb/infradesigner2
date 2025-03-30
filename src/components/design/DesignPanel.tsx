@@ -10,9 +10,6 @@ import { ComponentType, InfrastructureComponent, ServerRole, SwitchRole } from '
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-// Use the function to get components by role or get all components
-import { getComponentsByRole, getComponentsByType } from '@/data/componentData';
-
 export const DesignPanel: React.FC = () => {
   const { 
     componentRoles, 
@@ -20,7 +17,7 @@ export const DesignPanel: React.FC = () => {
     assignComponentToRole,
     saveDesign,
     calculateRequiredQuantity,
-    getAvailableComponents
+    componentTemplates
   } = useDesignStore();
   
   useEffect(() => {
@@ -30,8 +27,8 @@ export const DesignPanel: React.FC = () => {
 
   // Function to get appropriate components for a role
   const getComponentOptionsForRole = (role: string): InfrastructureComponent[] => {
-    // Get all available components first (including custom and template components)
-    const allComponents = getAvailableComponents();
+    // Get all available components including custom and template components
+    const allComponents = componentTemplates;
     
     // Map design roles to component types and roles
     switch(role) {
@@ -104,8 +101,8 @@ export const DesignPanel: React.FC = () => {
     const role = componentRoles.find(r => r.id === roleId);
     if (!role) return undefined;
     
-    const componentsForRole = getComponentOptionsForRole(role.role);
-    return componentsForRole.find(component => component.id === componentId);
+    // Return the component directly from the componentTemplates array
+    return componentTemplates.find(component => component.id === componentId);
   };
   
   const handleComponentSelect = (roleId: string, componentId: string) => {

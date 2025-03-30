@@ -4,7 +4,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { InfrastructureDesign, InfrastructureComponent } from '@/types/infrastructure';
 import { StoreState } from '../types';
-import { allComponentTemplates } from '@/data/componentData';
 
 export interface DesignSlice {
   // Saved designs
@@ -57,7 +56,7 @@ export const createDesignSlice: StateCreator<
         const assignedComponents: InfrastructureComponent[] = state.componentRoles
           .filter(role => role.assignedComponentId && role.adjustedRequiredCount > 0)
           .map(role => {
-            const componentTemplate = allComponentTemplates.find(
+            const componentTemplate = state.componentTemplates.find(
               c => c.id === role.assignedComponentId
             );
             
@@ -115,6 +114,6 @@ export const createDesignSlice: StateCreator<
   // Add this new method to get all available components
   getAvailableComponents: () => {
     // Combine all custom components and template components
-    return [...allComponentTemplates];
+    return [...get().componentTemplates];
   }
 });

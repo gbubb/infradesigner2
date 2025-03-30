@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,36 @@ import { Calculator, Save } from 'lucide-react';
 
 export const RequirementsPanel: React.FC = () => {
   const { requirements, updateRequirements } = useDesignStore();
+  
+  // Set default values when component mounts
+  useEffect(() => {
+    // Only set defaults if values are not already set
+    const updatedRequirements = {
+      computeRequirements: {
+        ...requirements.computeRequirements,
+        totalVCPUs: requirements.computeRequirements.totalVCPUs || 5000,
+        totalMemoryTB: requirements.computeRequirements.totalMemoryTB || 30,
+        availabilityZoneRedundancy: requirements.computeRequirements.availabilityZoneRedundancy || 'N+1',
+        overcommitRatio: requirements.computeRequirements.overcommitRatio || 2
+      },
+      storageRequirements: {
+        ...requirements.storageRequirements,
+        totalCapacityTB: requirements.storageRequirements.totalCapacityTB || 100,
+        availabilityZoneQuantity: requirements.storageRequirements.availabilityZoneQuantity || 3,
+        poolType: requirements.storageRequirements.poolType || '3 Replica'
+      },
+      physicalConstraints: {
+        ...requirements.physicalConstraints,
+        rackQuantity: requirements.physicalConstraints.rackQuantity || 16,
+        totalAvailabilityZones: requirements.physicalConstraints.totalAvailabilityZones || 8,
+        racksPerAvailabilityZone: requirements.physicalConstraints.racksPerAvailabilityZone || 2,
+        rackUnitsPerRack: requirements.physicalConstraints.rackUnitsPerRack || 42,
+        powerPerRackWatts: requirements.physicalConstraints.powerPerRackWatts || 5000
+      }
+    };
+    
+    updateRequirements(updatedRequirements);
+  }, []);
   
   const handleInputChange = (section: keyof typeof requirements, field: string, value: any) => {
     const sectionData = { ...requirements[section] } as any;
@@ -169,8 +199,6 @@ export const RequirementsPanel: React.FC = () => {
                   <SelectItem value="Spine-Leaf">Spine-Leaf</SelectItem>
                   <SelectItem value="Three-Tier">Three-Tier</SelectItem>
                   <SelectItem value="Core-Distribution-Access">Core-Distribution-Access</SelectItem>
-                  <SelectItem value="Full Mesh">Full Mesh</SelectItem>
-                  <SelectItem value="Partial Mesh">Partial Mesh</SelectItem>
                 </SelectContent>
               </Select>
             </div>
