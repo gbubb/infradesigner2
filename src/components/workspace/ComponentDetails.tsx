@@ -15,6 +15,14 @@ interface ComponentDetailsProps {
   onDelete?: () => void;
 }
 
+type EditFormValues = {
+  name?: string;
+  manufacturer?: string;
+  model?: string;
+  cost?: number;
+  powerRequired?: number;
+};
+
 export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClose, onDelete }) => {
   const { 
     selectedComponentId, 
@@ -30,7 +38,7 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
   const component = selectedComponentId ? placedComponents[selectedComponentId] : null;
   const isEditing = editingComponentId === selectedComponentId;
   
-  const [editForm, setEditForm] = useState<Partial<InfrastructureComponent>>({});
+  const [editForm, setEditForm] = useState<EditFormValues>({});
   
   if (!component) {
     return null;

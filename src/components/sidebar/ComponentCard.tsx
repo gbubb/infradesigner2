@@ -5,13 +5,7 @@ import {
   Network, 
   HardDrive, 
   Router,
-  Shield, 
-  Database,
-  Box,
-  Zap,
-  Cpu,
-  Power,
-  Grid3X3
+  Shield
 } from 'lucide-react';
 import { 
   InfrastructureComponent, 
@@ -19,8 +13,7 @@ import {
   Server as ServerType,
   Switch as SwitchType,
   Router as RouterType,
-  Disk as DiskType,
-  StorageArray as StorageArrayType
+  Disk as DiskType
 } from '@/types/infrastructure';
 
 // Helper function to get the icon based on component type
@@ -34,19 +27,10 @@ const getComponentIcon = (type: ComponentType) => {
       return <Router className="h-10 w-10 text-infra-component-network" />;
     case ComponentType.Firewall:
       return <Shield className="h-10 w-10 text-infra-component-security" />;
-    case ComponentType.StorageArray:
-      return <Database className="h-10 w-10 text-infra-component-storage" />;
     case ComponentType.Disk:
       return <HardDrive className="h-10 w-10 text-infra-component-storage" />;
-    case ComponentType.Rack:
-      return <Grid3X3 className="h-10 w-10 text-infra-component-rack" />;
-    case ComponentType.PDU:
-    case ComponentType.UPS:
-      return <Power className="h-10 w-10 text-infra-component-server" />;
-    case ComponentType.NetworkCard:
-      return <Cpu className="h-10 w-10 text-infra-component-network" />;
     default:
-      return <Box className="h-10 w-10 text-gray-400" />;
+      return <Server className="h-10 w-10 text-gray-400" />;
   }
 };
 
@@ -60,8 +44,6 @@ const getComponentSummary = (component: InfrastructureComponent): string => {
       return `${(component as SwitchType | RouterType).portCount} ports @ ${(component as SwitchType | RouterType).portSpeed}Gbps`;
     case ComponentType.Disk:
       return `${(component as DiskType).capacityTB}TB, ${(component as DiskType).interface}`;
-    case ComponentType.StorageArray:
-      return `${(component as StorageArrayType).driveCapacity}TB, ${(component as StorageArrayType).driveSlots} slots`;
     default:
       return `${component.manufacturer} ${component.model}`;
   }

@@ -1,20 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Server as ServerIcon, 
   Network, 
   HardDrive, 
   Router as RouterIcon, 
-  Shield, 
-  Database,
-  LayoutGrid,
-  Cpu,
-  Plus,
+  Shield,
   Pencil,
   Trash,
   Copy,
   Save,
-  X
+  X,
+  Plus
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -33,9 +29,72 @@ import {
   DiskSlotType,
   NetworkPortType,
   SwitchRole,
-  PortSpeed
+  PortSpeed,
+  Server,
+  Switch,
+  Router,
+  Firewall,
+  Disk
 } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
+
+interface ServerFormValues {
+  cpuModel?: string;
+  cpuCount?: number;
+  coreCount?: number; 
+  memoryGB?: number;
+  serverRole?: ServerRole;
+  cpuSockets?: number;
+  cpuCoresPerSocket?: number;
+  memoryCapacity?: number;
+  diskSlotType?: DiskSlotType;
+  diskSlotQuantity?: number;
+  ruSize?: number;
+  networkPortType?: NetworkPortType;
+  portsConsumedQuantity?: number;
+}
+
+interface SwitchFormValues {
+  portCount?: number;
+  portSpeed?: number;
+  layer?: 2 | 3;
+  switchRole?: SwitchRole;
+  ruSize?: number;
+  portSpeedType?: PortSpeed;
+  portsProvidedQuantity?: number;
+}
+
+interface RouterFormValues {
+  portCount?: number;
+  portSpeed?: number;
+  throughput?: number;
+  supportedProtocols?: string[];
+  rackUnitsConsumed?: number;
+}
+
+interface FirewallFormValues {
+  portCount?: number;
+  portSpeed?: number;
+  throughput?: number;
+  features?: string[];
+  rackUnitsConsumed?: number;
+}
+
+interface DiskFormValues {
+  capacityTB?: number;
+  formFactor?: string;
+  interface?: string;
+}
+
+type ComponentFormValues = {
+  id?: string;
+  type: ComponentType;
+  name: string;
+  manufacturer: string;
+  model: string;
+  cost: number;
+  powerRequired: number;
+} & Partial<ServerFormValues & SwitchFormValues & RouterFormValues & FirewallFormValues & DiskFormValues>;
 
 export const ComponentLibrary: React.FC = () => {
   const { 
@@ -51,7 +110,7 @@ export const ComponentLibrary: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingComponentId, setEditingComponentId] = useState<string | null>(null);
-  const [componentForm, setComponentForm] = useState<Partial<InfrastructureComponent>>({
+  const [componentForm, setComponentForm] = useState<ComponentFormValues>({
     type: ComponentType.Server,
     name: '',
     manufacturer: '',
@@ -60,7 +119,6 @@ export const ComponentLibrary: React.FC = () => {
     powerRequired: 0,
   });
   
-  // Filter components based on search term and selected category
   const filteredComponents = componentTemplates.filter(component => {
     const matchesSearch = 
       component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -75,21 +133,20 @@ export const ComponentLibrary: React.FC = () => {
   });
 
   const categoryIcons = {
-    [ComponentCategory.Compute]: <Cpu className="h-5 w-5" />,
+    [ComponentCategory.Compute]: <ServerIcon className="h-5 w-5" />,
     [ComponentCategory.Network]: <Network className="h-5 w-5" />,
-    [ComponentCategory.Storage]: <Database className="h-5 w-5" />,
+    [ComponentCategory.Storage]: <HardDrive className="h-5 w-5" />,
     [ComponentCategory.Security]: <Shield className="h-5 w-5" />,
-    all: <LayoutGrid className="h-5 w-5" />
+    all: <Plus className="h-5 w-5" />
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     let parsedValue: string | number = value;
     
-    // Convert number fields from string to number
     if (['cost', 'powerRequired', 'cpuSockets', 'cpuCoresPerSocket', 'memoryCapacity', 
          'diskSlotQuantity', 'ruSize', 'portsConsumedQuantity', 'portCount', 'portSpeed', 
-         'portsProvidedQuantity'].includes(name)) {
+         'portsProvidedQuantity', 'throughput', 'capacityTB'].includes(name)) {
       parsedValue = parseFloat(value) || 0;
     }
     
@@ -129,24 +186,19 @@ export const ComponentLibrary: React.FC = () => {
     setEditingComponentId(component.id);
     setComponentForm({
       ...component
-    });
+    } as ComponentFormValues);
     setIsEditDialogOpen(true);
   };
 
   const handleAddComponent = () => {
-    // Validate required fields
     if (!componentForm.name || !componentForm.manufacturer || !componentForm.model) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    // Create new component with a unique ID
-    const componentType = componentForm.type || ComponentType.Server;
-    
-    // Create the base component properties
     const baseComponent = {
-      id: componentForm.id || undefined, // If editing, keep existing ID
-      type: componentType,
+      id: componentForm.id || undefined,
+      type: componentForm.type,
       name: componentForm.name,
       manufacturer: componentForm.manufacturer,
       model: componentForm.model,
@@ -154,11 +206,9 @@ export const ComponentLibrary: React.FC = () => {
       powerRequired: componentForm.powerRequired || 0,
     };
     
-    // Create the appropriate component type
     let component: InfrastructureComponent;
     
-    // Handle different component types
-    switch (componentType) {
+    switch (componentForm.type) {
       case ComponentType.Server:
         component = {
           ...baseComponent,
@@ -168,7 +218,6 @@ export const ComponentLibrary: React.FC = () => {
           cpuCount: componentForm.cpuCount || 1,
           coreCount: componentForm.coreCount || 8,
           memoryGB: componentForm.memoryGB || 32,
-          // New fields
           serverRole: componentForm.serverRole || ServerRole.Compute,
           cpuSockets: componentForm.cpuSockets || 1,
           cpuCoresPerSocket: componentForm.cpuCoresPerSocket || 4,
@@ -178,7 +227,7 @@ export const ComponentLibrary: React.FC = () => {
           ruSize: componentForm.ruSize || 1,
           networkPortType: componentForm.networkPortType || NetworkPortType.SFP,
           portsConsumedQuantity: componentForm.portsConsumedQuantity || 2
-        } as InfrastructureComponent;
+        } as Server;
         break;
       case ComponentType.Switch:
         component = {
@@ -187,13 +236,12 @@ export const ComponentLibrary: React.FC = () => {
           rackUnitsConsumed: componentForm.ruSize || 1,
           portCount: componentForm.portCount || 24,
           portSpeed: componentForm.portSpeed || 10,
-          layer: 2,
-          // New fields
+          layer: componentForm.layer || 2,
           switchRole: componentForm.switchRole || SwitchRole.Access,
           ruSize: componentForm.ruSize || 1,
           portSpeedType: componentForm.portSpeedType || PortSpeed.TenG,
           portsProvidedQuantity: componentForm.portsProvidedQuantity || 24
-        } as InfrastructureComponent;
+        } as Switch;
         break;
       case ComponentType.Router:
         component = {
@@ -204,7 +252,7 @@ export const ComponentLibrary: React.FC = () => {
           portSpeed: componentForm.portSpeed || 10,
           throughput: componentForm.throughput || 40,
           supportedProtocols: ['BGP', 'OSPF']
-        } as InfrastructureComponent;
+        } as Router;
         break;
       case ComponentType.Firewall:
         component = {
@@ -215,7 +263,7 @@ export const ComponentLibrary: React.FC = () => {
           portSpeed: componentForm.portSpeed || 10,
           throughput: componentForm.throughput || 10,
           features: ['IPS', 'VPN']
-        } as InfrastructureComponent;
+        } as Firewall;
         break;
       case ComponentType.Disk:
         component = {
@@ -224,16 +272,14 @@ export const ComponentLibrary: React.FC = () => {
           capacityTB: componentForm.capacityTB || 1,
           formFactor: componentForm.formFactor || '2.5"',
           interface: componentForm.interface || 'SATA'
-        } as InfrastructureComponent;
+        } as Disk;
         break;
       default:
-        // Fallback for any other component types
         component = {
           ...baseComponent
         } as InfrastructureComponent;
     }
 
-    // Add or update component
     if (editingComponentId) {
       updateComponentTemplate(editingComponentId, component);
       setIsEditDialogOpen(false);
@@ -242,11 +288,9 @@ export const ComponentLibrary: React.FC = () => {
       setIsAddDialogOpen(false);
     }
     
-    // Reset form
     resetForm();
   };
 
-  // Confirm deletion dialog
   const [deleteComponentId, setDeleteComponentId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -263,7 +307,6 @@ export const ComponentLibrary: React.FC = () => {
     }
   };
 
-  // Render server specific form fields
   const renderServerFormFields = () => {
     return (
       <div className="space-y-4">
@@ -417,8 +460,7 @@ export const ComponentLibrary: React.FC = () => {
       </div>
     );
   };
-  
-  // Render switch specific form fields
+
   const renderSwitchFormFields = () => {
     return (
       <div className="space-y-4">
@@ -507,7 +549,6 @@ export const ComponentLibrary: React.FC = () => {
     );
   };
 
-  // Render type-specific form fields based on selected component type
   const renderTypeSpecificFormFields = () => {
     switch(componentForm.type) {
       case ComponentType.Server:
@@ -616,7 +657,6 @@ export const ComponentLibrary: React.FC = () => {
                 </div>
               </div>
               
-              {/* Render type-specific form fields */}
               {renderTypeSpecificFormFields()}
             </div>
             <DialogFooter>
@@ -720,7 +760,6 @@ export const ComponentLibrary: React.FC = () => {
         </Table>
       </div>
 
-      {/* Edit Component Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -789,7 +828,6 @@ export const ComponentLibrary: React.FC = () => {
               </div>
             </div>
             
-            {/* Render type-specific form fields for editing */}
             {renderTypeSpecificFormFields()}
           </div>
           <DialogFooter>
@@ -808,7 +846,6 @@ export const ComponentLibrary: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
