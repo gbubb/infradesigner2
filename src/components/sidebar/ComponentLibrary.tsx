@@ -13,14 +13,20 @@ import {
   Plus,
   Pencil,
   Trash,
-  Copy
+  Copy,
+  Save,
+  X
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { ComponentType, componentTypeToCategory, ComponentCategory } from '@/types/infrastructure';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
+import { ComponentType, componentTypeToCategory, ComponentCategory, InfrastructureComponent } from '@/types/infrastructure';
 import { 
   allComponentTemplates
 } from '@/data/componentData';
@@ -28,6 +34,15 @@ import {
 export const ComponentLibrary: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ComponentCategory | 'all'>('all');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newComponent, setNewComponent] = useState<Partial<InfrastructureComponent>>({
+    type: ComponentType.Server,
+    name: '',
+    manufacturer: '',
+    model: '',
+    cost: 0,
+    powerRequired: 0,
+  });
   
   // Filter components based on search term and selected category
   const filteredComponents = allComponentTemplates.filter(component => {
@@ -53,11 +68,68 @@ export const ComponentLibrary: React.FC = () => {
     all: <LayoutGrid className="h-5 w-5" />
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    let parsedValue: string | number = value;
+    
+    // Convert number fields from string to number
+    if (name === 'cost' || name === 'powerRequired') {
+      parsedValue = parseFloat(value) || 0;
+    }
+    
+    setNewComponent({
+      ...newComponent,
+      [name]: parsedValue
+    });
+  };
+
+  const handleTypeChange = (value: string) => {
+    setNewComponent({
+      ...newComponent,
+      type: value as ComponentType
+    });
+  };
+
+  const handleAddComponent = () => {
+    // Validate required fields
+    if (!newComponent.name || !newComponent.manufacturer || !newComponent.model) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Create new component with a unique ID
+    const component: InfrastructureComponent = {
+      id: uuidv4(),
+      type: newComponent.type || ComponentType.Server,
+      name: newComponent.name,
+      manufacturer: newComponent.manufacturer,
+      model: newComponent.model,
+      cost: newComponent.cost || 0,
+      powerRequired: newComponent.powerRequired || 0,
+    };
+
+    // Add component to library
+    // Note: In a real app, you'd update the component library data
+    // For this example, we're just showing a success message
+    toast.success(`Added ${component.name} to library`);
+    
+    // Reset form and close dialog
+    setNewComponent({
+      type: ComponentType.Server,
+      name: '',
+      manufacturer: '',
+      model: '',
+      cost: 0,
+      powerRequired: 0,
+    });
+    setIsAddDialogOpen(false);
+  };
+
   return (
     <div className="container mx-auto py-4">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Component Library</h2>
-        <Dialog>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -68,10 +140,95 @@ export const ComponentLibrary: React.FC = () => {
             <DialogHeader>
               <DialogTitle>Add New Component</DialogTitle>
             </DialogHeader>
-            <div className="py-4">
-              {/* Component add form would go here */}
-              <p className="text-sm text-muted-foreground">Component creation form to be implemented</p>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="type">Component Type</Label>
+                <Select
+                  value={newComponent.type}
+                  onValueChange={handleTypeChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(ComponentType).map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={newComponent.name}
+                  onChange={handleInputChange}
+                  placeholder="Component name"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="manufacturer">Manufacturer</Label>
+                <Input
+                  id="manufacturer"
+                  name="manufacturer"
+                  value={newComponent.manufacturer}
+                  onChange={handleInputChange}
+                  placeholder="Manufacturer"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="model">Model</Label>
+                <Input
+                  id="model"
+                  name="model"
+                  value={newComponent.model}
+                  onChange={handleInputChange}
+                  placeholder="Model"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cost">Cost ($)</Label>
+                  <Input
+                    id="cost"
+                    name="cost"
+                    type="number"
+                    value={newComponent.cost}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="powerRequired">Power (W)</Label>
+                  <Input
+                    id="powerRequired"
+                    name="powerRequired"
+                    type="number"
+                    value={newComponent.powerRequired}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
             </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <X className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleAddComponent}>
+                <Save className="mr-2 h-4 w-4" />
+                Add Component
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

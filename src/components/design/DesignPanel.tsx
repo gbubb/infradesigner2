@@ -10,14 +10,15 @@ import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
 import { Badge } from '@/components/ui/badge';
 
 // Change import to use the correct export name
-import { allComponentTemplates as componentData } from '@/data/componentData';
+import { allComponentTemplates } from '@/data/componentData';
 
 export const DesignPanel: React.FC = () => {
   const { 
     componentRoles, 
     calculateComponentRoles, 
     assignComponentToRole,
-    saveDesign
+    saveDesign,
+    calculateRequiredQuantity
   } = useDesignStore();
   
   useEffect(() => {
@@ -27,7 +28,7 @@ export const DesignPanel: React.FC = () => {
 
   // Function to get components of a specific type
   const getComponentsByType = (type: ComponentType): InfrastructureComponent[] => {
-    return componentData.filter(component => component.type === type);
+    return allComponentTemplates.filter(component => component.type === type);
   };
 
   // Get appropriate components for a role
@@ -54,7 +55,7 @@ export const DesignPanel: React.FC = () => {
   // Find component by ID
   const findComponentById = (id: string | undefined): InfrastructureComponent | undefined => {
     if (!id) return undefined;
-    return componentData.find(component => component.id === id);
+    return allComponentTemplates.find(component => component.id === id);
   };
   
   const handleComponentSelect = (roleId: string, componentId: string) => {
@@ -67,6 +68,12 @@ export const DesignPanel: React.FC = () => {
 
   const handleSaveDesign = () => {
     saveDesign();
+  };
+
+  // Format role name for display
+  const formatRoleName = (roleName: string): string => {
+    return roleName.charAt(0).toUpperCase() + 
+      roleName.slice(1).replace(/([A-Z])/g, ' $1');
   };
 
   return (
@@ -96,41 +103,53 @@ export const DesignPanel: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Role</TableHead>
+                <TableHead className="w-[150px]">Role</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>Quantity</TableHead>
+                <TableHead>Base Quantity</TableHead>
                 <TableHead>Component</TableHead>
+                <TableHead>Actual Quantity</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {componentRoles.map((role) => (
-                <TableRow key={role.id}>
-                  <TableCell className="font-medium">
-                    {role.role.charAt(0).toUpperCase() + role.role.slice(1).replace(/([A-Z])/g, ' $1')}
-                  </TableCell>
-                  <TableCell>{role.description}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{role.requiredCount}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={role.assignedComponentId}
-                      onValueChange={(value) => handleComponentSelect(role.id, value)}
-                    >
-                      <SelectTrigger className="w-[300px]">
-                        <SelectValue placeholder="Select component" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getComponentOptionsForRole(role.role).map((component) => (
-                          <SelectItem key={component.id} value={component.id}>
-                            {component.manufacturer} {component.model} - ${component.cost}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {componentRoles.map((role) => {
+                const actualQuantity = role.assignedComponentId ? 
+                  role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
+                  role.requiredCount;
+                
+                return (
+                  <TableRow key={role.id}>
+                    <TableCell className="font-medium">
+                      {formatRoleName(role.role)}
+                    </TableCell>
+                    <TableCell>{role.description}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{role.requiredCount}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={role.assignedComponentId}
+                        onValueChange={(value) => handleComponentSelect(role.id, value)}
+                      >
+                        <SelectTrigger className="w-[300px]">
+                          <SelectValue placeholder="Select component" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getComponentOptionsForRole(role.role).map((component) => (
+                            <SelectItem key={component.id} value={component.id}>
+                              {component.manufacturer} {component.model} - ${component.cost}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      {role.assignedComponentId && (
+                        <Badge>{actualQuantity}</Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
@@ -160,23 +179,24 @@ export const DesignPanel: React.FC = () => {
                 const component = findComponentById(role.assignedComponentId);
                 if (!component) return null;
                 
-                const totalCost = component.cost * role.requiredCount;
-                const totalPower = component.powerRequired * role.requiredCount;
+                const actualQuantity = role.adjustedRequiredCount || role.requiredCount;
+                const totalCost = component.cost * actualQuantity;
+                const totalPower = component.powerRequired * actualQuantity;
                 
                 // Calculate rack units if the component has them
                 const rackUnits = 'rackUnitsConsumed' in component 
-                  ? (component as any).rackUnitsConsumed * role.requiredCount 
+                  ? (component as any).rackUnitsConsumed * actualQuantity 
                   : 0;
                 
                 return (
                   <TableRow key={role.id}>
                     <TableCell className="font-medium">
-                      {role.role.charAt(0).toUpperCase() + role.role.slice(1).replace(/([A-Z])/g, ' $1')}
+                      {formatRoleName(role.role)}
                     </TableCell>
                     <TableCell>
                       {component.manufacturer} {component.model}
                     </TableCell>
-                    <TableCell>{role.requiredCount}</TableCell>
+                    <TableCell>{actualQuantity}</TableCell>
                     <TableCell>${totalCost.toLocaleString()}</TableCell>
                     <TableCell>{totalPower.toLocaleString()} W</TableCell>
                     <TableCell>{rackUnits} RU</TableCell>

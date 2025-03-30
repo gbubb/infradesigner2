@@ -1,12 +1,13 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Trash2, Copy, Edit } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Trash2, Copy, Edit, Save, X } from 'lucide-react';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType } from '@/types/infrastructure';
-import { ComponentWithPosition } from '@/types/workspace';
+import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
 
 interface ComponentDetailsProps {
   open: boolean;
@@ -15,16 +16,84 @@ interface ComponentDetailsProps {
 }
 
 export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClose, onDelete }) => {
-  const { selectedComponentId, placedComponents } = useDesignStore();
+  const { 
+    selectedComponentId, 
+    placedComponents, 
+    removeComponent, 
+    duplicateComponent, 
+    startEditingComponent, 
+    editingComponentId,
+    cancelEditingComponent,
+    updateComponent
+  } = useDesignStore();
   
   const component = selectedComponentId ? placedComponents[selectedComponentId] : null;
+  const isEditing = editingComponentId === selectedComponentId;
+  
+  const [editForm, setEditForm] = useState<Partial<InfrastructureComponent>>({});
   
   if (!component) {
     return null;
   }
 
+  const handleDelete = () => {
+    if (selectedComponentId) {
+      removeComponent(selectedComponentId);
+      onClose();
+    }
+  };
+
+  const handleDuplicate = () => {
+    if (selectedComponentId) {
+      duplicateComponent(selectedComponentId);
+      onClose();
+    }
+  };
+
+  const handleEdit = () => {
+    if (selectedComponentId) {
+      // Initialize edit form with current values
+      setEditForm({
+        name: component.name,
+        manufacturer: component.manufacturer,
+        model: component.model,
+        cost: component.cost,
+        powerRequired: component.powerRequired,
+      });
+      startEditingComponent(selectedComponentId);
+    }
+  };
+
+  const handleSave = () => {
+    if (selectedComponentId && Object.keys(editForm).length > 0) {
+      updateComponent(selectedComponentId, editForm);
+    }
+  };
+
+  const handleCancel = () => {
+    cancelEditingComponent();
+    setEditForm({});
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    let parsedValue: string | number = value;
+    
+    // Convert number fields from string to number
+    if (name === 'cost' || name === 'powerRequired') {
+      parsedValue = parseFloat(value) || 0;
+    }
+    
+    setEditForm({
+      ...editForm,
+      [name]: parsedValue
+    });
+  };
+
   // Render specific component properties based on type
   const renderComponentSpecificDetails = () => {
+    if (isEditing) return null;
+    
     switch (component.type) {
       case ComponentType.Server:
         // Check if component has server properties
@@ -157,44 +226,119 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <SheetContent className="w-80 sm:w-96">
         <SheetHeader>
-          <SheetTitle>{component.name}</SheetTitle>
+          <SheetTitle>{isEditing ? "Edit Component" : component.name}</SheetTitle>
         </SheetHeader>
         
         <div className="py-4">
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="text-gray-500">Manufacturer</div>
-            <div>{component.manufacturer}</div>
-            
-            <div className="text-gray-500">Model</div>
-            <div>{component.model}</div>
-            
-            <div className="text-gray-500">Cost</div>
-            <div>${component.cost}</div>
-            
-            <div className="text-gray-500">Power</div>
-            <div>{component.powerRequired} W</div>
-          </div>
-          
-          <Separator className="my-4" />
-          
-          {renderComponentSpecificDetails()}
+          {isEditing ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={editForm.name || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="manufacturer">Manufacturer</Label>
+                <Input
+                  id="manufacturer"
+                  name="manufacturer"
+                  value={editForm.manufacturer || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="model">Model</Label>
+                <Input
+                  id="model"
+                  name="model"
+                  value={editForm.model || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cost">Cost ($)</Label>
+                  <Input
+                    id="cost"
+                    name="cost"
+                    type="number"
+                    value={editForm.cost || 0}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="powerRequired">Power (W)</Label>
+                  <Input
+                    id="powerRequired"
+                    name="powerRequired"
+                    type="number"
+                    value={editForm.powerRequired || 0}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-500">Manufacturer</div>
+                <div>{component.manufacturer}</div>
+                
+                <div className="text-gray-500">Model</div>
+                <div>{component.model}</div>
+                
+                <div className="text-gray-500">Cost</div>
+                <div>${component.cost}</div>
+                
+                <div className="text-gray-500">Power</div>
+                <div>{component.powerRequired} W</div>
+              </div>
+              
+              <Separator className="my-4" />
+              
+              {renderComponentSpecificDetails()}
+            </>
+          )}
         </div>
         
         <SheetFooter className="flex justify-between sm:justify-between">
-          <Button variant="outline" size="sm" onClick={onDelete}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Remove
-          </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Copy className="h-4 w-4 mr-2" />
-              Duplicate
-            </Button>
-            <Button size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-          </div>
+          {isEditing ? (
+            <>
+              <Button variant="outline" size="sm" onClick={handleCancel}>
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSave}>
+                <Save className="h-4 w-4 mr-2" />
+                Save
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={handleDelete}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Remove
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleDuplicate}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplicate
+                </Button>
+                <Button size="sm" onClick={handleEdit}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              </div>
+            </>
+          )}
         </SheetFooter>
       </SheetContent>
     </Sheet>

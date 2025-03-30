@@ -1,4 +1,3 @@
-
 // Common properties shared by all component types
 export interface BaseComponent {
   id: string;
@@ -10,6 +9,7 @@ export interface BaseComponent {
   powerRequired: number;  // in watts
   description?: string;
   quantity?: number;
+  capacityFactor?: number; // Factor for calculating required quantity
 }
 
 // Enum for all component types
@@ -202,6 +202,7 @@ export interface DesignRequirements {
     ipmiNetwork?: 
       | 'Management converged' 
       | 'Dedicated IPMI switch';
+    physicalFirewalls?: boolean; // Added physical firewalls option
   };
   physicalConstraints: {
     rackQuantity?: number; // Changed from availableRacks

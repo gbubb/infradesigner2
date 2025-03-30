@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -31,6 +32,14 @@ export const ResultsPanel: React.FC = () => {
       return total;
     }, 0);
   }, [activeDesign]);
+  
+  // Calculate power per rack
+  const powerPerRack = useMemo(() => {
+    if (!requirements.physicalConstraints.rackQuantity || requirements.physicalConstraints.rackQuantity === 0) {
+      return 0;
+    }
+    return totalPower / requirements.physicalConstraints.rackQuantity;
+  }, [totalPower, requirements.physicalConstraints.rackQuantity]);
   
   // Group components by type
   const componentsByType = useMemo(() => {
@@ -88,6 +97,10 @@ export const ResultsPanel: React.FC = () => {
                 <span className="text-muted-foreground">Total Power:</span>
                 <span className="font-medium">{totalPower.toLocaleString()} W</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Power per Rack:</span>
+                <span className="font-medium">{powerPerRack.toLocaleString(undefined, { maximumFractionDigits: 0 })} W</span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -123,6 +136,7 @@ export const ResultsPanel: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Role</TableHead>
                 <TableHead>Component</TableHead>
                 <TableHead>Quantity</TableHead>
                 <TableHead>Unit Cost</TableHead>
@@ -139,10 +153,17 @@ export const ResultsPanel: React.FC = () => {
                 const rackUnits = 'rackUnitsConsumed' in component 
                   ? (component as any).rackUnitsConsumed * quantity
                   : '-';
+                
+                // Get role name from component if available
+                const roleName = component.role?.charAt(0).toUpperCase() + 
+                  component.role?.slice(1).replace(/([A-Z])/g, ' $1') || '';
                   
                 return (
                   <TableRow key={`${component.id}-${index}`}>
                     <TableCell className="font-medium">
+                      {roleName}
+                    </TableCell>
+                    <TableCell>
                       {component.manufacturer} {component.model}
                       <div className="text-xs text-muted-foreground mt-1">
                         <Badge variant="outline" className="mr-1">{component.type}</Badge>

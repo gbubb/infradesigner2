@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -31,6 +32,7 @@ interface DesignState {
   } | null;
   selectedComponentId: string | null;
   placedComponents: Record<string, InfrastructureComponent>;
+  editingComponentId: string | null;
   setRequirements: (requirements: Partial<DesignRequirements>) => void;
   updateRequirements: (requirements: Partial<DesignRequirements>) => void;
   calculateComponentRoles: () => void;
@@ -43,6 +45,11 @@ interface DesignState {
   selectComponent: (id: string | null) => void;
   addComponent: (component: InfrastructureComponent, position: Position) => void;
   removeComponent: (id: string) => void;
+  duplicateComponent: (id: string) => void;
+  startEditingComponent: (id: string) => void;
+  cancelEditingComponent: () => void;
+  updateComponent: (id: string, updatedComponent: Partial<InfrastructureComponent>) => void;
+  calculateRequiredQuantity: (roleId: string, componentId: string) => number;
 }
 
 export const useDesignStore = create<DesignState>((set, get) => ({
@@ -62,6 +69,7 @@ export const useDesignStore = create<DesignState>((set, get) => ({
       networkTopology: 'Spine-Leaf',
       managementNetwork: 'Dual Home',
       ipmiNetwork: 'Dedicated IPMI switch',
+      physicalFirewalls: true,
     },
     physicalConstraints: {
       rackQuantity: 3,
@@ -77,6 +85,7 @@ export const useDesignStore = create<DesignState>((set, get) => ({
   activeDesign: null,
   selectedComponentId: null,
   placedComponents: {},
+  editingComponentId: null,
 
   setRequirements: (newRequirements) => 
     set((state) => ({
@@ -280,33 +289,107 @@ export const useDesignStore = create<DesignState>((set, get) => ({
         requiredCount: 2, // Redundant pair
       });
       
-      // Firewall
-      roles.push({
-        id: uuidv4(),
-        role: DeviceRoleType.Firewall,
-        description: 'Security and traffic filtering',
-        requiredCount: 2, // Redundant pair
-      });
+      // Firewall - only add if physical firewalls are required
+      if (requirements.networkRequirements.physicalFirewalls) {
+        roles.push({
+          id: uuidv4(),
+          role: DeviceRoleType.Firewall,
+          description: 'Security and traffic filtering',
+          requiredCount: 2, // Redundant pair
+        });
+      }
 
       return { componentRoles: roles };
     });
   },
 
+  calculateRequiredQuantity: (roleId, componentId) => {
+    const state = get();
+    const role = state.componentRoles.find(r => r.id === roleId);
+    if (!role) return 0;
+    
+    const component = allComponentTemplates.find(c => c.id === componentId);
+    if (!component) return 0;
+    
+    // Get base required count from role
+    const baseCount = role.requiredCount;
+    
+    // Check if component has capacity factor
+    if (component.capacityFactor && component.capacityFactor > 0) {
+      // For compute nodes, adjust based on CPU/memory capacity
+      if (role.role === DeviceRoleType.ComputeNode) {
+        const baseVCPUs = 40; // Standard server vCPU count
+        const baseMemory = 0.384; // Standard server memory in TB (384GB)
+        
+        if (component.type === ComponentType.Server) {
+          const server = component as any; // Type as any to access server-specific properties
+          
+          // Calculate capacity ratios
+          const cpuRatio = server.coreCount * server.cpuCount * 2 / baseVCPUs; // Assuming 2 vCPUs per core
+          const memoryRatio = (server.memoryGB / 1024) / baseMemory;
+          
+          // Use the lower ratio (bottleneck) to determine how many nodes needed
+          const capacityRatio = Math.min(cpuRatio, memoryRatio);
+          
+          if (capacityRatio > 0) {
+            return Math.ceil(baseCount / capacityRatio);
+          }
+        }
+      }
+      
+      // For storage nodes, adjust based on capacity
+      if (role.role === DeviceRoleType.StorageNode) {
+        const baseCapacity = 20; // Standard storage node capacity in TB
+        
+        if (component.type === ComponentType.StorageArray || component.type === ComponentType.Server) {
+          let storageCapacity = 0;
+          
+          if (component.type === ComponentType.StorageArray && 'driveCapacity' in component) {
+            storageCapacity = (component as any).driveCapacity;
+          } else if (component.type === ComponentType.Server && 'storageCapacityTB' in component) {
+            storageCapacity = (component as any).storageCapacityTB || 0;
+          }
+          
+          if (storageCapacity > 0) {
+            const capacityRatio = storageCapacity / baseCapacity;
+            return Math.ceil(baseCount / capacityRatio);
+          }
+        }
+      }
+    }
+    
+    // Default to base count if no capacity adjustments
+    return baseCount;
+  },
+
   assignComponentToRole: (roleId, componentId) => {
     set((state) => {
+      const { calculateRequiredQuantity } = get();
       const updatedRoles = state.componentRoles.map((role) => {
         if (role.id === roleId) {
           const component = allComponentTemplates.find(c => c.id === componentId);
+          const adjustedQuantity = calculateRequiredQuantity(roleId, componentId);
+          
           return {
             ...role,
             assignedComponentId: componentId,
-            assignedComponent: component
+            assignedComponent: component,
+            // Update the quantity based on component capacity
+            adjustedRequiredCount: adjustedQuantity
           };
         }
         return role;
       });
       
       return { componentRoles: updatedRoles };
+    });
+    
+    // After assigning component, recalculate required quantities
+    const { componentRoles } = get();
+    componentRoles.forEach(role => {
+      if (role.assignedComponentId) {
+        get().calculateRequiredQuantity(role.id, role.assignedComponentId);
+      }
     });
   },
 
@@ -339,7 +422,7 @@ export const useDesignStore = create<DesignState>((set, get) => ({
             // Clone and return with proper typing
             return {
               ...componentTemplate,
-              quantity: role.requiredCount
+              quantity: role.adjustedRequiredCount || role.requiredCount
             } as InfrastructureComponent;
           });
 
@@ -434,8 +517,82 @@ export const useDesignStore = create<DesignState>((set, get) => ({
       const { [id]: _, ...rest } = state.placedComponents;
       return { 
         placedComponents: rest,
-        workspaceComponents: state.workspaceComponents.filter(comp => comp.id !== id)
+        workspaceComponents: state.workspaceComponents.filter(comp => comp.id !== id),
+        selectedComponentId: state.selectedComponentId === id ? null : state.selectedComponentId
       };
     });
+    toast.success("Component removed");
+  },
+  
+  duplicateComponent: (id) => {
+    set((state) => {
+      const componentToDuplicate = state.placedComponents[id];
+      if (!componentToDuplicate) return state;
+      
+      const positionRef = state.workspaceComponents.find(c => c.id === id)?.position || { x: 0, y: 0 };
+      const newPosition = { x: positionRef.x + 20, y: positionRef.y + 20 };
+      
+      const newId = uuidv4();
+      
+      return {
+        placedComponents: {
+          ...state.placedComponents,
+          [newId]: { ...componentToDuplicate }
+        },
+        workspaceComponents: [
+          ...state.workspaceComponents,
+          {
+            id: newId,
+            component: { ...componentToDuplicate },
+            position: newPosition
+          }
+        ]
+      };
+    });
+    toast.success("Component duplicated");
+  },
+  
+  startEditingComponent: (id) => {
+    set({ editingComponentId: id });
+  },
+  
+  cancelEditingComponent: () => {
+    set({ editingComponentId: null });
+  },
+  
+  updateComponent: (id, updatedComponent) => {
+    set((state) => {
+      const component = state.placedComponents[id];
+      if (!component) return state;
+      
+      const updatedData = {
+        ...component,
+        ...updatedComponent
+      };
+      
+      // Update in placed components
+      const updatedPlacedComponents = {
+        ...state.placedComponents,
+        [id]: updatedData
+      };
+      
+      // Update in workspace components
+      const updatedWorkspaceComponents = state.workspaceComponents.map(comp => {
+        if (comp.id === id) {
+          return {
+            ...comp,
+            component: updatedData
+          };
+        }
+        return comp;
+      });
+      
+      return {
+        placedComponents: updatedPlacedComponents,
+        workspaceComponents: updatedWorkspaceComponents,
+        editingComponentId: null
+      };
+    });
+    toast.success("Component updated");
   }
 }));
