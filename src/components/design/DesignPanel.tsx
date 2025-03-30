@@ -9,8 +9,8 @@ import { Calculator, Save } from 'lucide-react';
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
 import { Badge } from '@/components/ui/badge';
 
-// Import sample component data
-import { componentData } from '@/data/componentData';
+// Change import to use the correct export name
+import { allComponentTemplates as componentData } from '@/data/componentData';
 
 export const DesignPanel: React.FC = () => {
   const { 
