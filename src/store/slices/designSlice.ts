@@ -54,7 +54,7 @@ export const createDesignSlice: StateCreator<
       try {
         // Filter out component roles that don't have an assigned component
         const assignedComponents: InfrastructureComponent[] = state.componentRoles
-          .filter(role => role.assignedComponentId && role.adjustedRequiredCount > 0)
+          .filter(role => role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
           .map(role => {
             // Look in all component sources (templates and custom components)
             const componentTemplate = state.componentTemplates.find(

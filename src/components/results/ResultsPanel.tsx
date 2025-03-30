@@ -198,31 +198,21 @@ export const ResultsPanel: React.FC = () => {
         }
       } else if (component.type === ComponentType.Switch) {
         // Check switch role to categorize
-        if ('switchRole' in component) {
-          const switchRole = (component as any).switchRole;
-          
-          if (switchRole === SwitchRole.Management) {
-            totalMgmtSwitches += quantity;
-            // Management switch provides ports
-            if ('portsProvidedQuantity' in component) {
-              mgmtPortsAvailable += (component as any).portsProvidedQuantity * quantity;
-            } else if ('portCount' in component) {
-              mgmtPortsAvailable += (component as any).portCount * quantity;
-            }
-          } else {
-            // All other switch types counted as leaf/compute switches
-            totalLeafSwitches += quantity;
-            // Leaf switch provides ports
-            if ('portsProvidedQuantity' in component) {
-              leafPortsAvailable += (component as any).portsProvidedQuantity * quantity;
-            } else if ('portCount' in component) {
-              leafPortsAvailable += (component as any).portCount * quantity;
-            }
+        if (component.role === 'managementSwitch') {
+          totalMgmtSwitches += quantity;
+          // Management switch provides ports
+          if ('portsProvidedQuantity' in component) {
+            mgmtPortsAvailable += (component as any).portsProvidedQuantity * quantity;
+          } else if ('portCount' in component) {
+            mgmtPortsAvailable += (component as any).portCount * quantity;
           }
-        } else {
-          // If no role specified, count as a leaf switch by default
+        } else if (component.role === 'computeSwitch' || component.role === 'storageSwitch' || component.role === 'borderLeafSwitch') {
+          // All other switch types counted as leaf/compute switches
           totalLeafSwitches += quantity;
-          if ('portCount' in component) {
+          // Leaf switch provides ports
+          if ('portsProvidedQuantity' in component) {
+            leafPortsAvailable += (component as any).portsProvidedQuantity * quantity;
+          } else if ('portCount' in component) {
             leafPortsAvailable += (component as any).portCount * quantity;
           }
         }
@@ -270,12 +260,12 @@ export const ResultsPanel: React.FC = () => {
         total: totalAvailableRU
       },
       leafNetworkUtilization: {
-        percentage: leafPortsAvailable > 0 ? (leafPortsUsed / leafPortsAvailable) * 100 : 0,
+        percentage: leafPortsAvailable > 0 ? (leafPortsUsed / leafPortsAvailable) * 100 : (leafPortsUsed > 0 ? 100 : 0),
         used: leafPortsUsed,
         total: leafPortsAvailable
       },
       mgmtNetworkUtilization: {
-        percentage: mgmtPortsAvailable > 0 ? (mgmtPortsUsed / mgmtPortsAvailable) * 100 : 0,
+        percentage: mgmtPortsAvailable > 0 ? (mgmtPortsUsed / mgmtPortsAvailable) * 100 : (mgmtPortsUsed > 0 ? 100 : 0),
         used: mgmtPortsUsed,
         total: mgmtPortsAvailable
       }
@@ -305,7 +295,7 @@ export const ResultsPanel: React.FC = () => {
     }
     
     // Check if we're exceeding leaf network port capacity
-    if (resourceUtilization.leafNetworkUtilization.percentage > 100) {
+    if (resourceUtilization.leafNetworkUtilization.percentage > 100 || (resourceUtilization.leafNetworkUtilization.used > 0 && resourceUtilization.leafNetworkUtilization.total === 0)) {
       errors.push({
         id: 'leaf-network-exceeded',
         title: 'Leaf Network Port Capacity Exceeded',
@@ -314,7 +304,7 @@ export const ResultsPanel: React.FC = () => {
     }
     
     // Check if we're exceeding management network port capacity
-    if (resourceUtilization.mgmtNetworkUtilization.percentage > 100) {
+    if (resourceUtilization.mgmtNetworkUtilization.percentage > 100 || (resourceUtilization.mgmtNetworkUtilization.used > 0 && resourceUtilization.mgmtNetworkUtilization.total === 0)) {
       errors.push({
         id: 'mgmt-network-exceeded',
         title: 'Management Network Port Capacity Exceeded',

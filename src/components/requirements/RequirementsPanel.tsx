@@ -1,356 +1,108 @@
-
-import React, { useEffect, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ComputeRequirementsForm } from './ComputeRequirementsForm';
+import { StorageRequirementsForm } from './StorageRequirementsForm';
+import { NetworkRequirementsForm } from './NetworkRequirementsForm';
+import { PhysicalConstraintsForm } from './PhysicalConstraintsForm';
 import { useDesignStore } from '@/store/designStore';
-import { Slider } from '@/components/ui/slider';
-import { Calculator, Save } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { DesignRequirements } from '@/types/infrastructure';
 
 export const RequirementsPanel: React.FC = () => {
-  const { requirements, updateRequirements } = useDesignStore();
-  
-  // Set default values when component mounts
-  useEffect(() => {
-    // Only set defaults if values are not already set
-    const updatedRequirements = {
-      computeRequirements: {
-        ...requirements.computeRequirements,
-        totalVCPUs: requirements.computeRequirements.totalVCPUs || 5000,
-        totalMemoryTB: requirements.computeRequirements.totalMemoryTB || 30,
-        availabilityZoneRedundancy: requirements.computeRequirements.availabilityZoneRedundancy || 'N+1',
-        overcommitRatio: requirements.computeRequirements.overcommitRatio || 2
-      },
-      storageRequirements: {
-        ...requirements.storageRequirements,
-        totalCapacityTB: requirements.storageRequirements.totalCapacityTB || 100,
-        availabilityZoneQuantity: requirements.storageRequirements.availabilityZoneQuantity || 3,
-        poolType: requirements.storageRequirements.poolType || '3 Replica'
-      },
-      networkRequirements: {
-        ...requirements.networkRequirements,
-        networkTopology: requirements.networkRequirements.networkTopology || 'Spine-Leaf',
-        managementNetwork: requirements.networkRequirements.managementNetwork || 'Single connection',
-        ipmiNetwork: requirements.networkRequirements.ipmiNetwork || 'Management converged',
-        leafSwitchesPerAZ: requirements.networkRequirements.leafSwitchesPerAZ || 2,
-        dedicatedStorageNetwork: requirements.networkRequirements.dedicatedStorageNetwork || false,
-        dedicatedNetworkCoreRacks: requirements.networkRequirements.dedicatedNetworkCoreRacks || false
-      },
-      physicalConstraints: {
-        ...requirements.physicalConstraints,
-        computeStorageRackQuantity: requirements.physicalConstraints.computeStorageRackQuantity || 16,
-        totalAvailabilityZones: requirements.physicalConstraints.totalAvailabilityZones || 8,
-        rackUnitsPerRack: requirements.physicalConstraints.rackUnitsPerRack || 42,
-        powerPerRackWatts: requirements.physicalConstraints.powerPerRackWatts || 5000
-      }
-    };
-    
-    updateRequirements(updatedRequirements);
-  }, []);
-  
-  const handleInputChange = (section: keyof typeof requirements, field: string, value: any) => {
-    const sectionData = { ...requirements[section] } as any;
-    sectionData[field] = value;
-    
-    updateRequirements({
-      [section]: sectionData
-    } as any);
-  };
-  
-  // Calculate racks per AZ based on other inputs
-  const racksPerAZ = useMemo(() => {
+  const { requirements, updateRequirements, calculateComponentRoles } = useDesignStore();
+  const [activeTab, setActiveTab] = useState('compute');
+
+  // Calculate racks per AZ (derived value)
+  const racksPerAZ = React.useMemo(() => {
+    const totalRacks = requirements.physicalConstraints.computeStorageRackQuantity || 0;
     const totalAZs = requirements.physicalConstraints.totalAvailabilityZones || 1;
-    const computeStorageRacks = requirements.physicalConstraints.computeStorageRackQuantity || 0;
-    const dedicatedNetworkRacks = requirements.networkRequirements.dedicatedNetworkCoreRacks ? 2 : 0;
-    const totalRacks = computeStorageRacks + dedicatedNetworkRacks;
-    
-    return totalAZs > 0 ? Math.ceil(totalRacks / totalAZs) : 0;
+    return totalAZs > 0 ? Math.floor(totalRacks / totalAZs) : 0;
   }, [
-    requirements.physicalConstraints.totalAvailabilityZones,
     requirements.physicalConstraints.computeStorageRackQuantity,
-    requirements.networkRequirements.dedicatedNetworkCoreRacks
+    requirements.physicalConstraints.totalAvailabilityZones
   ]);
-  
+
+  const handleSaveRequirements = () => {
+    calculateComponentRoles();
+    toast.success('Requirements saved and component roles calculated');
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold">Design Requirements</h2>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Calculator className="h-4 w-4 mr-2" />
-            Auto-Calculate
-          </Button>
-          <Button>
-            <Save className="h-4 w-4 mr-2" />
-            Save Requirements
-          </Button>
-        </div>
-      </div>
+      <h2 className="text-2xl font-semibold mb-6">Design Requirements</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Compute Requirements */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Compute Requirements</CardTitle>
-            <CardDescription>Define your processing needs</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="vcpus">Total vCPUs</Label>
-              <Input
-                id="vcpus"
-                type="number"
-                value={requirements.computeRequirements.totalVCPUs || ''}
-                onChange={(e) => handleInputChange('computeRequirements', 'totalVCPUs', Number(e.target.value))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="memory">Total Memory (TB)</Label>
-              <Input
-                id="memory"
-                type="number"
-                step="0.1"
-                value={requirements.computeRequirements.totalMemoryTB || ''}
-                onChange={(e) => handleInputChange('computeRequirements', 'totalMemoryTB', Number(e.target.value))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="availability">Availability Zone Redundancy</Label>
-              <Select
-                value={requirements.computeRequirements.availabilityZoneRedundancy || 'None'}
-                onValueChange={(value) => handleInputChange('computeRequirements', 'availabilityZoneRedundancy', value)}
-              >
-                <SelectTrigger id="availability">
-                  <SelectValue placeholder="Select redundancy" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="None">None</SelectItem>
-                  <SelectItem value="N+1">N+1</SelectItem>
-                  <SelectItem value="N+2">N+2</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Label htmlFor="overcommit">Overcommit Ratio: {requirements.computeRequirements.overcommitRatio || 1}:1</Label>
-              </div>
-              <Slider
-                id="overcommit"
-                min={1}
-                max={10}
-                step={1}
-                value={[requirements.computeRequirements.overcommitRatio || 1]}
-                onValueChange={(value) => handleInputChange('computeRequirements', 'overcommitRatio', value[0])}
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="compute" value={activeTab} onValueChange={handleTabChange}>
+        <TabsList className="grid grid-cols-4 mb-8">
+          <TabsTrigger value="compute">Compute</TabsTrigger>
+          <TabsTrigger value="storage">Storage</TabsTrigger>
+          <TabsTrigger value="network">Network</TabsTrigger>
+          <TabsTrigger value="physical">Physical</TabsTrigger>
+        </TabsList>
         
-        {/* Storage Requirements */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Storage Requirements</CardTitle>
-            <CardDescription>Define your storage needs</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="capacity">Usable Capacity (TiB)</Label>
-              <Input
-                id="capacity"
-                type="number"
-                value={requirements.storageRequirements.totalCapacityTB || ''}
-                onChange={(e) => handleInputChange('storageRequirements', 'totalCapacityTB', Number(e.target.value))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="az-quantity">Availability Zone Quantity</Label>
-              <Input
-                id="az-quantity"
-                type="number"
-                min={1}
-                value={requirements.storageRequirements.availabilityZoneQuantity || ''}
-                onChange={(e) => handleInputChange('storageRequirements', 'availabilityZoneQuantity', Number(e.target.value))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="pool-type">Pool Type</Label>
-              <Select
-                value={requirements.storageRequirements.poolType || '3 Replica'}
-                onValueChange={(value) => handleInputChange('storageRequirements', 'poolType', value)}
-              >
-                <SelectTrigger id="pool-type">
-                  <SelectValue placeholder="Select pool type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="3 Replica">3 Replica</SelectItem>
-                  <SelectItem value="2 Replica">2 Replica</SelectItem>
-                  <SelectItem value="Erasure Coding 4+2">Erasure Coding 4+2</SelectItem>
-                  <SelectItem value="Erasure Coding 8+3">Erasure Coding 8+3</SelectItem>
-                  <SelectItem value="Erasure Coding 8+4">Erasure Coding 8+4</SelectItem>
-                  <SelectItem value="Erasure Coding 10+4">Erasure Coding 10+4</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="compute">
+          <ComputeRequirementsForm 
+            requirements={requirements.computeRequirements}
+            onUpdate={(computeRequirements) => 
+              updateRequirements({ computeRequirements })
+            }
+          />
+        </TabsContent>
         
-        {/* Network Requirements */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Network Requirements</CardTitle>
-            <CardDescription>Define your connectivity topology</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="network-topology">Network Topology</Label>
-              <Select
-                value={requirements.networkRequirements.networkTopology || 'Spine-Leaf'}
-                onValueChange={(value) => handleInputChange('networkRequirements', 'networkTopology', value)}
-              >
-                <SelectTrigger id="network-topology">
-                  <SelectValue placeholder="Select network topology" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Spine-Leaf">Spine-Leaf</SelectItem>
-                  <SelectItem value="Three-Tier">Three-Tier</SelectItem>
-                  <SelectItem value="Core-Distribution-Access">Core-Distribution-Access</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Conditional input for Spine-Leaf topology */}
-            {requirements.networkRequirements.networkTopology === 'Spine-Leaf' && (
-              <div className="space-y-2">
-                <Label htmlFor="leaf-switches-per-az">Leaf Switches per AZ</Label>
-                <Input
-                  id="leaf-switches-per-az"
-                  type="number"
-                  min={2}
-                  value={requirements.networkRequirements.leafSwitchesPerAZ || 2}
-                  onChange={(e) => handleInputChange('networkRequirements', 'leafSwitchesPerAZ', Number(e.target.value))}
-                />
-              </div>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="management-network">Management Network</Label>
-              <Select
-                value={requirements.networkRequirements.managementNetwork || 'Single connection'}
-                onValueChange={(value) => handleInputChange('networkRequirements', 'managementNetwork', value)}
-              >
-                <SelectTrigger id="management-network">
-                  <SelectValue placeholder="Select management network type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Single connection">Single connection</SelectItem>
-                  <SelectItem value="Dual Home">Dual Home</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="ipmi-network">IPMI Network</Label>
-              <Select
-                value={requirements.networkRequirements.ipmiNetwork || 'Management converged'}
-                onValueChange={(value) => handleInputChange('networkRequirements', 'ipmiNetwork', value)}
-              >
-                <SelectTrigger id="ipmi-network">
-                  <SelectValue placeholder="Select IPMI network type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Management converged">Management converged</SelectItem>
-                  <SelectItem value="Dedicated IPMI switch">Dedicated IPMI switch</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex items-center justify-between space-y-0 pt-1">
-              <Label htmlFor="dedicated-storage-network">Dedicated Storage Network</Label>
-              <Switch
-                id="dedicated-storage-network"
-                checked={requirements.networkRequirements.dedicatedStorageNetwork || false}
-                onCheckedChange={(checked) => handleInputChange('networkRequirements', 'dedicatedStorageNetwork', checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between space-y-0 pt-1">
-              <Label htmlFor="dedicated-network-core-racks">Dedicated Network Core Racks</Label>
-              <Switch
-                id="dedicated-network-core-racks"
-                checked={requirements.networkRequirements.dedicatedNetworkCoreRacks || false}
-                onCheckedChange={(checked) => handleInputChange('networkRequirements', 'dedicatedNetworkCoreRacks', checked)}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="storage">
+          <StorageRequirementsForm 
+            requirements={requirements.storageRequirements}
+            onUpdate={(storageRequirements) => 
+              updateRequirements({ storageRequirements })
+            }
+          />
+        </TabsContent>
         
-        {/* Physical Constraints */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Physical Constraints</CardTitle>
-            <CardDescription>Define your physical infrastructure limits</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="rack-quantity">Compute/Storage Rack Quantity</Label>
-              <Input
-                id="rack-quantity"
-                type="number"
-                value={requirements.physicalConstraints.computeStorageRackQuantity || ''}
-                onChange={(e) => handleInputChange('physicalConstraints', 'computeStorageRackQuantity', Number(e.target.value))}
-              />
-            </div>
+        <TabsContent value="network">
+          <NetworkRequirementsForm 
+            requirements={requirements.networkRequirements}
+            onUpdate={(networkRequirements) => 
+              updateRequirements({ networkRequirements })
+            }
+          />
+        </TabsContent>
+        
+        <TabsContent value="physical">
+          <div className="space-y-6">
+            <PhysicalConstraintsForm 
+              requirements={requirements.physicalConstraints}
+              onUpdate={(physicalConstraints) => 
+                updateRequirements({ physicalConstraints })
+              }
+            />
             
-            <div className="space-y-2">
-              <Label htmlFor="total-azs">Total Availability Zones</Label>
-              <Input
-                id="total-azs"
-                type="number"
-                min={1}
-                value={requirements.physicalConstraints.totalAvailabilityZones || ''}
-                onChange={(e) => handleInputChange('physicalConstraints', 'totalAvailabilityZones', Number(e.target.value))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="racks-per-az" className="flex items-center">
-                <span>Racks per Availability Zone</span>
-                <span className="ml-2 text-muted-foreground text-xs">(calculated)</span>
-              </Label>
-              <div className="h-10 px-3 py-2 rounded-md border border-input bg-muted/50 text-base md:text-sm flex items-center">
-                {racksPerAZ}
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="rack-units">Rack Units per Rack</Label>
-              <Input
-                id="rack-units"
-                type="number"
-                value={requirements.physicalConstraints.rackUnitsPerRack || ''}
-                onChange={(e) => handleInputChange('physicalConstraints', 'rackUnitsPerRack', Number(e.target.value))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="power">Power per Rack (Watts)</Label>
-              <Input
-                id="power"
-                type="number"
-                value={requirements.physicalConstraints.powerPerRackWatts || ''}
-                onChange={(e) => handleInputChange('physicalConstraints', 'powerPerRackWatts', Number(e.target.value))}
-              />
-            </div>
-          </CardContent>
-        </Card>
+            {/* Derived values card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Derived Values</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">Racks per Availability Zone</span>
+                    <span className="text-lg font-medium text-gray-500">{racksPerAZ}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+      
+      <div className="mt-8 flex justify-end">
+        <Button onClick={handleSaveRequirements}>
+          Save Requirements
+        </Button>
       </div>
     </div>
   );
