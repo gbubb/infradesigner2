@@ -88,8 +88,10 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground mt-1">
-              Determines additional compute capacity beyond what's needed for basic operations. 
-              N+1 adds one AZ worth of redundancy, N+2 adds two AZs worth.
+              Determines additional compute capacity beyond what's needed for core operations. 
+              First, compute is distributed evenly across all AZs. Then, N+1 adds one extra AZ 
+              worth of capacity, N+2 adds two extra AZs worth of capacity. Total node count will 
+              always be divisible by the number of AZs.
             </p>
           </div>
 

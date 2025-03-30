@@ -1,3 +1,4 @@
+
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -114,11 +115,17 @@ export const createRequirementsSlice: StateCreator<
         }
       ];
       
-      // For compute nodes, we need to calculate the base amount and then apply AZ redundancy
-      // The compute needed is total vCPUs / overcommit ratio, distributed across AZs
+      // For compute nodes, calculate the base amount correctly:
+      // 1. Total physical cores needed = vCPUs / overcommit ratio
       const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
       
-      // Calculate additional nodes based on redundancy policy
+      // 2. Calculate the base nodes per AZ (rounded up to ensure we have enough capacity)
+      const nodesPerAZ = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones);
+      
+      // 3. Base compute node count is nodes per AZ multiplied by number of AZs
+      const baseComputeNodeCount = nodesPerAZ * totalAvailabilityZones;
+      
+      // 4. Calculate additional nodes based on redundancy policy
       let additionalAZs = 0;
       if (availabilityZoneRedundancy === 'N+1') {
         additionalAZs = 1;
@@ -126,9 +133,8 @@ export const createRequirementsSlice: StateCreator<
         additionalAZs = 2;
       }
       
-      // Calculate the total compute node count based on AZs and redundancy
-      const baseComputeNodeCount = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones) * totalAvailabilityZones;
-      const totalComputeNodeCount = baseComputeNodeCount + (additionalAZs * Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones));
+      // 5. Calculate total compute nodes: base count + (additional AZs * nodes per AZ)
+      const totalComputeNodeCount = baseComputeNodeCount + (additionalAZs * nodesPerAZ);
       
       newRoles.push({
         id: uuidv4(),
@@ -239,15 +245,41 @@ export const createRequirementsSlice: StateCreator<
       if (role.role === 'computeNode') {
         const totalVCPUs = requirements.computeRequirements?.totalVCPUs || 5000;
         const totalMemoryTB = requirements.computeRequirements?.totalMemoryTB || 30;
+        const overcommitRatio = requirements.computeRequirements?.overcommitRatio || 2;
+        const totalAvailabilityZones = requirements.physicalConstraints?.totalAvailabilityZones || 2;
+        const availabilityZoneRedundancy = requirements.computeRequirements?.availabilityZoneRedundancy || 'N+1';
         
         if ('cpuCount' in component && 'coreCount' in component && 'memoryGB' in component) {
-          const vCPUsPerNode = component.cpuCount * component.coreCount;
+          const coresPerNode = component.cpuCount * component.coreCount;
           const memoryGBPerNode = component.memoryGB;
           
-          const requiredNodesByCPU = Math.ceil(totalVCPUs / vCPUsPerNode);
-          const requiredNodesByMemory = Math.ceil((totalMemoryTB * 1024) / memoryGBPerNode);
+          // Calculate physical cores needed
+          const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
+          const totalMemoryGBNeeded = totalMemoryTB * 1024;
           
-          requiredQuantity = Math.max(requiredNodesByCPU, requiredNodesByMemory);
+          // Calculate nodes needed per AZ for CPU and memory
+          const nodesPerAZForCPU = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones);
+          const nodesPerAZForMemory = Math.ceil(totalMemoryGBNeeded / (memoryGBPerNode * totalAvailabilityZones));
+          
+          // Take the maximum of CPU and memory requirements per AZ
+          const nodesPerAZ = Math.max(
+            Math.ceil(nodesPerAZForCPU / coresPerNode), 
+            Math.ceil(nodesPerAZForMemory)
+          );
+          
+          // Calculate base node count (evenly distributed across AZs)
+          const baseNodeCount = nodesPerAZ * totalAvailabilityZones;
+          
+          // Add redundancy nodes based on policy
+          let additionalAZs = 0;
+          if (availabilityZoneRedundancy === 'N+1') {
+            additionalAZs = 1;
+          } else if (availabilityZoneRedundancy === 'N+2') {
+            additionalAZs = 2;
+          }
+          
+          // Final node count with redundancy
+          requiredQuantity = baseNodeCount + (additionalAZs * nodesPerAZ);
         }
       } else if (role.role === 'storageNode') {
         const totalCapacityTB = requirements.storageRequirements?.totalCapacityTB || 100;
