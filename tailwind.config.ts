@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,25 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Infrastructure design tool specific colors
+				infra: {
+					blue: {
+						DEFAULT: '#1A3A5F',
+						light: '#3e78b2'
+					},
+					gray: {
+						light: '#F6F8FA',
+						medium: '#E1E5E9',
+						dark: '#4A5568'
+					},
+					component: {
+						server: '#4299E1',
+						network: '#48BB78',
+						storage: '#ED8936',
+						security: '#F56565',
+						rack: '#805AD5'
+					}
 				}
 			},
 			borderRadius: {
@@ -84,11 +104,21 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'fade-in': {
+					from: { opacity: '0' },
+					to: { opacity: '1' }
+				},
+				'fade-out': {
+					from: { opacity: '1' },
+					to: { opacity: '0' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.3s ease-in-out',
+				'fade-out': 'fade-out 0.3s ease-in-out'
 			}
 		}
 	},
