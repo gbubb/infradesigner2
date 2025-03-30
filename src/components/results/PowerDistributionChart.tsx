@@ -15,7 +15,12 @@ interface ResourceUtilizationProps {
     used: number;
     total: number;
   };
-  networkUtilization: {
+  leafNetworkUtilization: {
+    percentage: number;
+    used: number;
+    total: number;
+  };
+  mgmtNetworkUtilization: {
     percentage: number;
     used: number;
     total: number;
@@ -25,7 +30,8 @@ interface ResourceUtilizationProps {
 export const ResourceUtilizationChart: React.FC<ResourceUtilizationProps> = ({ 
   powerUtilization, 
   spaceUtilization, 
-  networkUtilization 
+  leafNetworkUtilization,
+  mgmtNetworkUtilization
 }) => {
   // Function to determine if a utilization is over capacity
   const isOverCapacity = (percentage: number) => percentage > 100;
@@ -86,24 +92,45 @@ export const ResourceUtilizationChart: React.FC<ResourceUtilizationProps> = ({
           />
         </div>
         
-        {/* Network Utilization */}
-        <div className="mb-2">
+        {/* Leaf Network Utilization */}
+        <div className="mb-6">
           <div className="flex justify-between mb-1">
-            <span className="text-sm font-medium">Network Port Utilization</span>
+            <span className="text-sm font-medium">Leaf Network Port Utilization</span>
             <div className="flex items-center">
               <span className="text-sm text-muted-foreground mr-2">
-                {networkUtilization.used} Ports / {networkUtilization.total} Ports
-                ({Math.round(networkUtilization.percentage)}%)
+                {leafNetworkUtilization.used} Ports / {leafNetworkUtilization.total} Ports
+                ({Math.round(leafNetworkUtilization.percentage)}%)
               </span>
-              {isOverCapacity(networkUtilization.percentage) && (
+              {isOverCapacity(leafNetworkUtilization.percentage) && (
                 <AlertCircle className="h-4 w-4 text-red-500" />
               )}
             </div>
           </div>
           <Progress 
-            value={Math.min(networkUtilization.percentage, 100)}
+            value={Math.min(leafNetworkUtilization.percentage, 100)}
             className="h-2" 
-            indicatorClassName={getIndicatorClass(networkUtilization.percentage)}
+            indicatorClassName={getIndicatorClass(leafNetworkUtilization.percentage)}
+          />
+        </div>
+        
+        {/* Management Network Utilization */}
+        <div className="mb-2">
+          <div className="flex justify-between mb-1">
+            <span className="text-sm font-medium">Management Network Port Utilization</span>
+            <div className="flex items-center">
+              <span className="text-sm text-muted-foreground mr-2">
+                {mgmtNetworkUtilization.used} Ports / {mgmtNetworkUtilization.total} Ports
+                ({Math.round(mgmtNetworkUtilization.percentage)}%)
+              </span>
+              {isOverCapacity(mgmtNetworkUtilization.percentage) && (
+                <AlertCircle className="h-4 w-4 text-red-500" />
+              )}
+            </div>
+          </div>
+          <Progress 
+            value={Math.min(mgmtNetworkUtilization.percentage, 100)}
+            className="h-2" 
+            indicatorClassName={getIndicatorClass(mgmtNetworkUtilization.percentage)}
           />
         </div>
       </CardContent>

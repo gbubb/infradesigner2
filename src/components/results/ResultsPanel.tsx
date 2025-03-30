@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType, InfrastructureComponent, DeviceRoleType } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent, DeviceRoleType, SwitchRole } from '@/types/infrastructure';
 import { ResourceUtilizationChart } from './PowerDistributionChart';
 
 export const ResultsPanel: React.FC = () => {
@@ -39,14 +39,6 @@ export const ResultsPanel: React.FC = () => {
     }, 0);
   }, [activeDesign]);
   
-  // Average power per rack
-  const powerPerRack = useMemo(() => {
-    if (!requirements.physicalConstraints.rackQuantity || requirements.physicalConstraints.rackQuantity === 0) {
-      return 0;
-    }
-    return totalPower / requirements.physicalConstraints.rackQuantity;
-  }, [totalPower, requirements.physicalConstraints.rackQuantity]);
-  
   // Component types grouping
   const componentsByType = useMemo(() => {
     if (!activeDesign?.components) return {};
@@ -72,93 +64,118 @@ export const ResultsPanel: React.FC = () => {
     return totalCost / requirements.storageRequirements.totalCapacityTB;
   }, [requirements.storageRequirements.totalCapacityTB, totalCost]);
   
-  // Calculate average metrics per AZ to simplify display
-  const averageMetricsPerAZ = useMemo(() => {
-    if (!activeDesign?.components || !requirements.physicalConstraints.totalAvailabilityZones) {
+  // Calculate resource metrics for the whole design
+  const resourceMetrics = useMemo(() => {
+    if (!activeDesign?.components) {
       return {
         totalRackUnits: 0,
         totalPower: 0,
         totalServers: 0,
-        totalSwitches: 0,
-        totalPorts: 0,
-        availablePorts: 0,
-        usedPorts: 0,
+        totalLeafSwitches: 0,
+        totalMgmtSwitches: 0,
+        leafPortsUsed: 0,
+        leafPortsAvailable: 0,
+        mgmtPortsUsed: 0,
+        mgmtPortsAvailable: 0,
+        totalAvailableRU: 0,
+        totalAvailablePower: 0
       };
     }
     
-    const azCount = requirements.physicalConstraints.totalAvailabilityZones;
-    const racksPerAZ = requirements.physicalConstraints.racksPerAvailabilityZone || 1;
+    // Calculate total available resources from requirements
+    const totalRacks = requirements.physicalConstraints.rackQuantity || 0;
     const ruPerRack = requirements.physicalConstraints.rackUnitsPerRack || 42; // Default 42U rack
     const powerPerRack = requirements.physicalConstraints.powerPerRackWatts || 0;
     
-    // Calculate total available RU per AZ
-    const totalAvailableRUPerAZ = racksPerAZ * ruPerRack;
-    
-    // Calculate total available power per AZ
-    const totalAvailablePowerPerAZ = racksPerAZ * powerPerRack;
-    
-    // Evenly distribute components across AZs
-    const totalRUPerAZ = Math.ceil(totalRackUnits / azCount);
-    const totalPowerPerAZ = Math.ceil(totalPower / azCount);
+    // Calculate total available RU and power
+    const totalAvailableRU = totalRacks * ruPerRack;
+    const totalAvailablePower = totalRacks * powerPerRack;
     
     // Count servers and network devices
     let totalServers = 0;
-    let totalSwitches = 0;
-    let totalUsedPorts = 0;
-    let totalAvailablePorts = 0;
+    let totalLeafSwitches = 0;
+    let totalMgmtSwitches = 0;
+    let leafPortsUsed = 0;
+    let leafPortsAvailable = 0;
+    let mgmtPortsUsed = 0;
+    let mgmtPortsAvailable = 0;
     
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
       
       if (component.type === ComponentType.Server) {
         totalServers += quantity;
-        // Each server consumes network ports
+        // Each server consumes network ports (both leaf and management)
         if ('portsConsumedQuantity' in component) {
-          totalUsedPorts += (component as any).portsConsumedQuantity * quantity;
+          leafPortsUsed += (component as any).portsConsumedQuantity * quantity;
+          // Assume each server uses 1 management port
+          mgmtPortsUsed += quantity;
         } else {
-          // Default assumption: 2 ports per server if not specified
-          totalUsedPorts += 2 * quantity;
+          // Default assumption: 2 ports per server if not specified for leaf
+          leafPortsUsed += 2 * quantity;
+          // 1 port for management
+          mgmtPortsUsed += quantity;
         }
       } else if (component.type === ComponentType.Switch) {
-        totalSwitches += quantity;
-        // Each switch provides network ports
-        if ('portsProvidedQuantity' in component) {
-          totalAvailablePorts += (component as any).portsProvidedQuantity * quantity;
-        } else if ('portCount' in component) {
-          // Use portCount as fallback
-          totalAvailablePorts += (component as any).portCount * quantity;
+        // Check switch role to categorize
+        if ('switchRole' in component) {
+          const switchRole = (component as any).switchRole;
+          
+          if (switchRole === SwitchRole.Management) {
+            totalMgmtSwitches += quantity;
+            // Management switch provides ports
+            if ('portsProvidedQuantity' in component) {
+              mgmtPortsAvailable += (component as any).portsProvidedQuantity * quantity;
+            } else if ('portCount' in component) {
+              mgmtPortsAvailable += (component as any).portCount * quantity;
+            }
+          } else {
+            // All other switch types counted as leaf/compute switches
+            totalLeafSwitches += quantity;
+            // Leaf switch provides ports
+            if ('portsProvidedQuantity' in component) {
+              leafPortsAvailable += (component as any).portsProvidedQuantity * quantity;
+            } else if ('portCount' in component) {
+              leafPortsAvailable += (component as any).portCount * quantity;
+            }
+          }
+        } else {
+          // If no role specified, count as a leaf switch by default
+          totalLeafSwitches += quantity;
+          if ('portCount' in component) {
+            leafPortsAvailable += (component as any).portCount * quantity;
+          }
         }
       }
     });
     
-    // Evenly distribute across AZs
-    const serversPerAZ = Math.ceil(totalServers / azCount);
-    const switchesPerAZ = Math.ceil(totalSwitches / azCount);
-    const portsUsedPerAZ = Math.ceil(totalUsedPorts / azCount);
-    const portsAvailablePerAZ = Math.ceil(totalAvailablePorts / azCount);
-    
     return {
-      totalRackUnits: totalRUPerAZ,
-      totalPower: totalPowerPerAZ,
-      totalServers: serversPerAZ,
-      totalSwitches: switchesPerAZ,
-      usedPorts: portsUsedPerAZ,
-      availablePorts: portsAvailablePerAZ,
-      totalAvailableRU: totalAvailableRUPerAZ,
-      totalAvailablePower: totalAvailablePowerPerAZ
+      totalRackUnits,
+      totalPower,
+      totalServers,
+      totalLeafSwitches,
+      totalMgmtSwitches,
+      leafPortsUsed,
+      leafPortsAvailable,
+      mgmtPortsUsed,
+      mgmtPortsAvailable,
+      totalAvailableRU,
+      totalAvailablePower
     };
   }, [activeDesign, requirements.physicalConstraints, totalRackUnits, totalPower]);
   
   // Calculate resource utilization percentages
   const resourceUtilization = useMemo(() => {
     const {
-      totalRackUnits, 
       totalPower, 
-      usedPorts, 
-      availablePorts,
+      totalRackUnits, 
+      leafPortsUsed, 
+      leafPortsAvailable,
+      mgmtPortsUsed,
+      mgmtPortsAvailable,
       totalAvailableRU,
       totalAvailablePower
-    } = averageMetricsPerAZ;
+    } = resourceMetrics;
     
     return {
       powerUtilization: {
@@ -171,13 +188,18 @@ export const ResultsPanel: React.FC = () => {
         used: totalRackUnits,
         total: totalAvailableRU
       },
-      networkUtilization: {
-        percentage: availablePorts > 0 ? (usedPorts / availablePorts) * 100 : 0,
-        used: usedPorts,
-        total: availablePorts
+      leafNetworkUtilization: {
+        percentage: leafPortsAvailable > 0 ? (leafPortsUsed / leafPortsAvailable) * 100 : 0,
+        used: leafPortsUsed,
+        total: leafPortsAvailable
+      },
+      mgmtNetworkUtilization: {
+        percentage: mgmtPortsAvailable > 0 ? (mgmtPortsUsed / mgmtPortsAvailable) * 100 : 0,
+        used: mgmtPortsUsed,
+        total: mgmtPortsAvailable
       }
     };
-  }, [averageMetricsPerAZ]);
+  }, [resourceMetrics]);
   
   // Check for implausible scenarios
   const designErrors = useMemo(() => {
@@ -188,7 +210,7 @@ export const ResultsPanel: React.FC = () => {
       errors.push({
         id: 'ru-exceeded',
         title: 'Rack Space Exceeded',
-        description: `The design requires ${resourceUtilization.spaceUtilization.used} RU per AZ, but only ${resourceUtilization.spaceUtilization.total} RU are available.`
+        description: `The design requires ${resourceUtilization.spaceUtilization.used} RU total, but only ${resourceUtilization.spaceUtilization.total} RU are available.`
       });
     }
     
@@ -197,16 +219,25 @@ export const ResultsPanel: React.FC = () => {
       errors.push({
         id: 'power-exceeded',
         title: 'Power Capacity Exceeded',
-        description: `The design requires ${resourceUtilization.powerUtilization.used.toLocaleString()} Watts per AZ, but only ${resourceUtilization.powerUtilization.total.toLocaleString()} Watts are available.`
+        description: `The design requires ${resourceUtilization.powerUtilization.used.toLocaleString()} Watts total, but only ${resourceUtilization.powerUtilization.total.toLocaleString()} Watts are available.`
       });
     }
     
-    // Check if we're exceeding network port capacity
-    if (resourceUtilization.networkUtilization.percentage > 100) {
+    // Check if we're exceeding leaf network port capacity
+    if (resourceUtilization.leafNetworkUtilization.percentage > 100) {
       errors.push({
-        id: 'network-exceeded',
-        title: 'Network Port Capacity Exceeded',
-        description: `The design requires ${resourceUtilization.networkUtilization.used} network ports per AZ, but only ${resourceUtilization.networkUtilization.total} ports are available.`
+        id: 'leaf-network-exceeded',
+        title: 'Leaf Network Port Capacity Exceeded',
+        description: `The design requires ${resourceUtilization.leafNetworkUtilization.used} leaf network ports, but only ${resourceUtilization.leafNetworkUtilization.total} ports are available.`
+      });
+    }
+    
+    // Check if we're exceeding management network port capacity
+    if (resourceUtilization.mgmtNetworkUtilization.percentage > 100) {
+      errors.push({
+        id: 'mgmt-network-exceeded',
+        title: 'Management Network Port Capacity Exceeded',
+        description: `The design requires ${resourceUtilization.mgmtNetworkUtilization.used} management network ports, but only ${resourceUtilization.mgmtNetworkUtilization.total} ports are available.`
       });
     }
     
@@ -260,7 +291,10 @@ export const ResultsPanel: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Power per Rack:</span>
-                <span className="font-medium">{powerPerRack.toLocaleString(undefined, { maximumFractionDigits: 0 })} W</span>
+                <span className="font-medium">
+                  {requirements.physicalConstraints.rackQuantity ? 
+                    (totalPower / requirements.physicalConstraints.rackQuantity).toLocaleString(undefined, { maximumFractionDigits: 0 }) : 0} W
+                </span>
               </div>
             </div>
           </CardContent>
@@ -294,32 +328,37 @@ export const ResultsPanel: React.FC = () => {
         <ResourceUtilizationChart 
           powerUtilization={resourceUtilization.powerUtilization}
           spaceUtilization={resourceUtilization.spaceUtilization}
-          networkUtilization={resourceUtilization.networkUtilization}
+          leafNetworkUtilization={resourceUtilization.leafNetworkUtilization}
+          mgmtNetworkUtilization={resourceUtilization.mgmtNetworkUtilization}
         />
       </div>
       
-      {/* AZ Resource Breakdown */}
+      {/* Infrastructure Summary */}
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Availability Zone Distribution</CardTitle>
+          <CardTitle>Infrastructure Summary</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Servers per AZ:</span>
-              <span className="font-medium">{averageMetricsPerAZ.totalServers}</span>
+              <span className="text-muted-foreground">Total Servers:</span>
+              <span className="font-medium">{resourceMetrics.totalServers}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Network Devices per AZ:</span>
-              <span className="font-medium">{averageMetricsPerAZ.totalSwitches}</span>
+              <span className="text-muted-foreground">Total Leaf/Compute Switches:</span>
+              <span className="font-medium">{resourceMetrics.totalLeafSwitches}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Rack Units per AZ:</span>
-              <span className="font-medium">{averageMetricsPerAZ.totalRackUnits} RU</span>
+              <span className="text-muted-foreground">Total Management Switches:</span>
+              <span className="font-medium">{resourceMetrics.totalMgmtSwitches}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Power per AZ:</span>
-              <span className="font-medium">{averageMetricsPerAZ.totalPower.toLocaleString()} W</span>
+              <span className="text-muted-foreground">Total Rack Units:</span>
+              <span className="font-medium">{resourceMetrics.totalRackUnits} RU</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total Power:</span>
+              <span className="font-medium">{resourceMetrics.totalPower.toLocaleString()} W</span>
             </div>
           </div>
         </CardContent>

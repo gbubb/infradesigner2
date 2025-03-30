@@ -17,6 +17,9 @@ export interface DesignSlice {
   
   // Create a new design
   createNewDesign: (name: string, description?: string) => void;
+  
+  // Get all available components for selection
+  getAvailableComponents: () => InfrastructureComponent[];
 }
 
 export const createDesignSlice: StateCreator<
@@ -108,4 +111,10 @@ export const createDesignSlice: StateCreator<
       }
     });
   },
+
+  // Add this new method to get all available components
+  getAvailableComponents: () => {
+    // Combine all custom components and template components
+    return [...allComponentTemplates];
+  }
 });

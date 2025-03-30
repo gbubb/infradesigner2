@@ -10,7 +10,7 @@ import { ComponentType, InfrastructureComponent, ServerRole, SwitchRole } from '
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-// Use the function to get components by role
+// Use the function to get components by role or get all components
 import { getComponentsByRole, getComponentsByType } from '@/data/componentData';
 
 export const DesignPanel: React.FC = () => {
@@ -19,7 +19,8 @@ export const DesignPanel: React.FC = () => {
     calculateComponentRoles, 
     assignComponentToRole,
     saveDesign,
-    calculateRequiredQuantity
+    calculateRequiredQuantity,
+    getAvailableComponents
   } = useDesignStore();
   
   useEffect(() => {
@@ -29,33 +30,68 @@ export const DesignPanel: React.FC = () => {
 
   // Function to get appropriate components for a role
   const getComponentOptionsForRole = (role: string): InfrastructureComponent[] => {
+    // Get all available components first (including custom and template components)
+    const allComponents = getAvailableComponents();
+    
     // Map design roles to component types and roles
     switch(role) {
       case 'controllerNode':
-        return getComponentsByRole(ComponentType.Server, ServerRole.Controller);
+        return allComponents.filter(c => 
+          c.type === ComponentType.Server && 
+          'serverRole' in c && 
+          c.serverRole === ServerRole.Controller
+        );
       case 'computeNode':
-        return getComponentsByRole(ComponentType.Server, ServerRole.Compute);
+        return allComponents.filter(c => 
+          c.type === ComponentType.Server && 
+          'serverRole' in c && 
+          c.serverRole === ServerRole.Compute
+        );
       case 'storageNode':
-        return getComponentsByRole(ComponentType.Server, ServerRole.Storage);
+        return allComponents.filter(c => 
+          c.type === ComponentType.Server && 
+          'serverRole' in c && 
+          c.serverRole === ServerRole.Storage
+        );
       case 'managementSwitch':
-        return getComponentsByRole(ComponentType.Switch, SwitchRole.Management);
+        return allComponents.filter(c => 
+          c.type === ComponentType.Switch && 
+          'switchRole' in c && 
+          c.switchRole === SwitchRole.Management
+        );
       case 'computeSwitch':
       case 'storageSwitch':
-        return getComponentsByRole(ComponentType.Switch, SwitchRole.Access);
+        return allComponents.filter(c => 
+          c.type === ComponentType.Switch && 
+          'switchRole' in c && 
+          c.switchRole === SwitchRole.Access
+        );
       case 'borderLeafSwitch':
-        return getComponentsByRole(ComponentType.Switch, SwitchRole.Edge);
+        return allComponents.filter(c => 
+          c.type === ComponentType.Switch && 
+          'switchRole' in c && 
+          c.switchRole === SwitchRole.Edge
+        );
       case 'spineSwitch':
-        return getComponentsByRole(ComponentType.Switch, SwitchRole.Spine);
+        return allComponents.filter(c => 
+          c.type === ComponentType.Switch && 
+          'switchRole' in c && 
+          c.switchRole === SwitchRole.Spine
+        );
       case 'torSwitch':
-        return getComponentsByRole(ComponentType.Switch, SwitchRole.Leaf);
+        return allComponents.filter(c => 
+          c.type === ComponentType.Switch && 
+          'switchRole' in c && 
+          c.switchRole === SwitchRole.Leaf
+        );
       case 'firewall':
-        return getComponentsByType(ComponentType.Firewall);
+        return allComponents.filter(c => c.type === ComponentType.Firewall);
       default:
         // If no specific role mapping, get components by matching type
         if (role.toLowerCase().includes('switch')) {
-          return getComponentsByType(ComponentType.Switch);
+          return allComponents.filter(c => c.type === ComponentType.Switch);
         } else if (role.toLowerCase().includes('node')) {
-          return getComponentsByType(ComponentType.Server);
+          return allComponents.filter(c => c.type === ComponentType.Server);
         }
         return [];
     }
@@ -144,8 +180,8 @@ export const DesignPanel: React.FC = () => {
                   role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
                   role.requiredCount;
                 
-                // Special handling for compute nodes - don't show base quantity until component selected
-                const showBaseQuantity = !(role.role === 'computeNode' && !role.assignedComponentId);
+                // Don't show base quantity for compute nodes until component selected
+                const showBaseQuantity = role.role !== 'computeNode' || (role.role === 'computeNode' && role.assignedComponentId);
                 
                 return (
                   <TableRow key={role.id}>
@@ -220,7 +256,7 @@ export const DesignPanel: React.FC = () => {
                 const component = findComponentById(role.id, role.assignedComponentId);
                 if (!component) return null;
                 
-                const actualQuantity = role.adjustedRequiredCount || role.requiredCount;
+                const actualQuantity = role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId!);
                 const totalCost = component.cost * actualQuantity;
                 const totalPower = component.powerRequired * actualQuantity;
                 
