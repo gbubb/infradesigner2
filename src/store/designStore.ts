@@ -44,7 +44,16 @@ export const initializeStore = () => {
 // Call initialization once
 initializeStore();
 
-// Export a function to recalculate when needed - but don't trigger it automatically
+// Export a function to recalculate when needed - with flag to prevent loops
+let isRecalculating = false;
 export const recalculateDesign = () => {
-  useDesignStore.getState().calculateComponentRoles();
+  // Prevent concurrent recalculations that can cause infinite loops
+  if (isRecalculating) return;
+  
+  try {
+    isRecalculating = true;
+    useDesignStore.getState().calculateComponentRoles();
+  } finally {
+    isRecalculating = false;
+  }
 };

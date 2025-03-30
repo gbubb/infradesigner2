@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -27,17 +26,12 @@ export const ResultsPanel: React.FC = () => {
     }
   }, [componentRoles, activeDesign, calculateComponentRoles]);
   
-  // Recalculate when the component mounts or when key properties change
+  // Only recalculate when the component mounts
   useEffect(() => {
+    // This runs once on mount
     recalculateDesign();
-  }, []);
-  
-  // Track significant changes that should trigger updates
-  useEffect(() => {
-    if (componentRoles.some(role => role.assignedComponentId)) {
-      recalculateDesign();
-    }
-  }, [componentRoles]);
+    // Don't add recalculateDesign to the dependency array to avoid loops
+  }, []); 
   
   // Calculate total cost
   const totalCost = useMemo(() => {
