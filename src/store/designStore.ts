@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -426,10 +425,9 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     set((state) => {
       const componentId = uuidv4();
       
-      // Ensure we're adding a proper InfrastructureComponent
-      const newComponent: InfrastructureComponent = { ...component };
+      // Use type assertion to ensure we're working with a proper InfrastructureComponent
+      const newComponent = { ...component } as InfrastructureComponent;
       
-      // Update state with properly typed components
       const updatedPlacedComponents: Record<string, InfrastructureComponent> = {
         ...state.placedComponents,
         [componentId]: newComponent,
@@ -482,19 +480,17 @@ export const useDesignStore = create<DesignState>((set, get) => ({
       const component = state.placedComponents[id];
       if (!component) return state;
       
-      // Create updated component with proper typing
-      const updatedComponent: InfrastructureComponent = {
+      // Ensure proper typing with type assertion
+      const updatedComponent = {
         ...component,
         ...updates
-      };
+      } as InfrastructureComponent;
       
-      // Update the placed components with proper typing
       const updatedPlacedComponents: Record<string, InfrastructureComponent> = {
         ...state.placedComponents,
         [id]: updatedComponent
       };
       
-      // Update workspace components with proper typing
       const updatedWorkspaceComponents: ComponentWithPosition[] = state.workspaceComponents.map(comp => 
         comp.id === id ? { ...comp, component: updatedComponent } : comp
       );
@@ -519,18 +515,16 @@ export const useDesignStore = create<DesignState>((set, get) => ({
         y: componentToClone.position.y + 20,
       };
       
-      // Create a properly typed copy of the component
-      const componentCopy: InfrastructureComponent = { 
+      // Use type assertion to ensure proper typing
+      const componentCopy = { 
         ...componentToClone.component 
-      };
+      } as InfrastructureComponent;
       
-      // Update the placed components with proper typing
       const updatedPlacedComponents: Record<string, InfrastructureComponent> = {
         ...state.placedComponents,
         [newComponentId]: componentCopy,
       };
       
-      // Update workspace components with proper typing
       const updatedWorkspaceComponents: ComponentWithPosition[] = [
         ...state.workspaceComponents,
         {
