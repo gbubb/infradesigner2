@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calculator, Save } from 'lucide-react';
 import { ComponentType, InfrastructureComponent, ServerRole, SwitchRole } from '@/types/infrastructure';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 // Use the function to get components by role
 import { getComponentsByRole, getComponentsByType } from '@/data/componentData';
@@ -89,6 +90,11 @@ export const DesignPanel: React.FC = () => {
       roleName.slice(1).replace(/([A-Z])/g, ' $1');
   };
 
+  // Check if all required roles have components assigned
+  const hasAllRequiredComponents = componentRoles
+    .filter(role => role.requiredCount > 0) // Only check required roles
+    .every(role => role.assignedComponentId);
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -98,12 +104,20 @@ export const DesignPanel: React.FC = () => {
             <Calculator className="h-4 w-4 mr-2" />
             Recalculate
           </Button>
-          <Button onClick={handleSaveDesign}>
+          <Button onClick={handleSaveDesign} disabled={!hasAllRequiredComponents}>
             <Save className="h-4 w-4 mr-2" />
             Save Design
           </Button>
         </div>
       </div>
+      
+      {!hasAllRequiredComponents && (
+        <Alert variant="warning" className="mb-6">
+          <AlertDescription>
+            Please assign components to all required roles to save your design.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <Card className="mb-6">
         <CardHeader>
@@ -125,11 +139,13 @@ export const DesignPanel: React.FC = () => {
             </TableHeader>
             <TableBody>
               {componentRoles.map((role) => {
+                const componentsForRole = getComponentOptionsForRole(role.role);
                 const actualQuantity = role.assignedComponentId ? 
                   role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
                   role.requiredCount;
                 
-                const componentOptions = getComponentOptionsForRole(role.role);
+                // Special handling for compute nodes - don't show base quantity until component selected
+                const showBaseQuantity = !(role.role === 'computeNode' && !role.assignedComponentId);
                 
                 return (
                   <TableRow key={role.id}>
@@ -138,7 +154,11 @@ export const DesignPanel: React.FC = () => {
                     </TableCell>
                     <TableCell>{role.description}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{role.requiredCount}</Badge>
+                      {showBaseQuantity ? (
+                        <Badge variant="outline">{role.requiredCount}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Select a component first</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Select
@@ -149,8 +169,8 @@ export const DesignPanel: React.FC = () => {
                           <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
-                          {componentOptions.length > 0 ? (
-                            componentOptions.map((component) => (
+                          {componentsForRole.length > 0 ? (
+                            componentsForRole.map((component) => (
                               <SelectItem key={component.id} value={component.id}>
                                 {component.manufacturer} {component.model} - ${component.cost}
                               </SelectItem>

@@ -50,16 +50,17 @@ export const createDesignSlice: StateCreator<
   saveDesign: () => {
     set((state) => {
       try {
-        // Here, we need to properly type the components
+        // Filter out component roles that don't have an assigned component
         const assignedComponents: InfrastructureComponent[] = state.componentRoles
-          .filter(role => role.assignedComponentId)
+          .filter(role => role.assignedComponentId && role.adjustedRequiredCount > 0)
           .map(role => {
             const componentTemplate = allComponentTemplates.find(
               c => c.id === role.assignedComponentId
             );
             
             if (!componentTemplate) {
-              throw new Error(`Component not found for role: ${role.role}`);
+              console.error(`Component not found for role: ${role.role}`);
+              return null;
             }
 
             // Clone and return with proper typing - add role to the component
@@ -70,7 +71,8 @@ export const createDesignSlice: StateCreator<
             };
             
             return component;
-          });
+          })
+          .filter(Boolean) as InfrastructureComponent[]; // Filter out any null values
 
         // Create or update activeDesign
         let designToSave: InfrastructureDesign;

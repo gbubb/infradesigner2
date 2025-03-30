@@ -2,82 +2,110 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { AlertCircle } from 'lucide-react';
 
-interface PowerDistributionProps {
-  distribution: {
-    name: string;
-    powerWatts: number;
-    totalAvailable: number;
-    powerUtilization: number;
-  }[];
+interface ResourceUtilizationProps {
+  powerUtilization: {
+    percentage: number;
+    used: number;
+    total: number;
+  };
+  spaceUtilization: {
+    percentage: number;
+    used: number;
+    total: number;
+  };
+  networkUtilization: {
+    percentage: number;
+    used: number;
+    total: number;
+  };
 }
 
-export const PowerDistributionChart: React.FC<PowerDistributionProps> = ({ distribution }) => {
+export const ResourceUtilizationChart: React.FC<ResourceUtilizationProps> = ({ 
+  powerUtilization, 
+  spaceUtilization, 
+  networkUtilization 
+}) => {
+  // Function to determine if a utilization is over capacity
+  const isOverCapacity = (percentage: number) => percentage > 100;
+  
+  // Function to determine indicator color based on utilization percentage
+  const getIndicatorClass = (percentage: number) => {
+    if (percentage > 100) return 'bg-red-500';
+    if (percentage > 90) return 'bg-amber-500';
+    if (percentage > 75) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Power Utilization</CardTitle>
+        <CardTitle>Resource Utilization</CardTitle>
       </CardHeader>
       <CardContent>
-        {distribution.map((item) => (
-          <div key={item.name} className="mb-4">
-            <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium">{item.name}</span>
-              <span className="text-sm text-muted-foreground">
-                {item.powerWatts.toLocaleString()} W / {item.totalAvailable.toLocaleString()} W
-                ({Math.round(item.powerUtilization)}%)
+        {/* Power Utilization */}
+        <div className="mb-6">
+          <div className="flex justify-between mb-1">
+            <span className="text-sm font-medium">Power Utilization</span>
+            <div className="flex items-center">
+              <span className="text-sm text-muted-foreground mr-2">
+                {powerUtilization.used.toLocaleString()} W / {powerUtilization.total.toLocaleString()} W
+                ({Math.round(powerUtilization.percentage)}%)
               </span>
+              {isOverCapacity(powerUtilization.percentage) && (
+                <AlertCircle className="h-4 w-4 text-red-500" />
+              )}
             </div>
-            <Progress 
-              value={item.powerUtilization} 
-              className="h-2" 
-              // Add color warning when close to max
-              indicatorClassName={
-                item.powerUtilization > 90 ? 'bg-red-500' : 
-                item.powerUtilization > 75 ? 'bg-amber-500' : 
-                'bg-green-500'
-              }
-            />
           </div>
-        ))}
+          <Progress 
+            value={Math.min(powerUtilization.percentage, 100)} 
+            className="h-2" 
+            indicatorClassName={getIndicatorClass(powerUtilization.percentage)}
+          />
+        </div>
         
-        {distribution.length > 0 && (
-          <div className="mt-6 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={distribution} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis
-                  label={{ 
-                    value: "Power (W)", 
-                    angle: -90, 
-                    position: "insideLeft",
-                    style: { textAnchor: "middle" } 
-                  }}
-                />
-                <Tooltip 
-                  formatter={(value, name) => {
-                    if (name === "powerWatts") return [`${Number(value).toLocaleString()} W`, "Used Power"];
-                    return [value, name];
-                  }}
-                />
-                <Bar dataKey="powerWatts" name="Used Power">
-                  {distribution.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={
-                        entry.powerUtilization > 90 ? '#ef4444' : 
-                        entry.powerUtilization > 75 ? '#f59e0b' : 
-                        '#22c55e'
-                      } 
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+        {/* Space Utilization */}
+        <div className="mb-6">
+          <div className="flex justify-between mb-1">
+            <span className="text-sm font-medium">Rack Space Utilization</span>
+            <div className="flex items-center">
+              <span className="text-sm text-muted-foreground mr-2">
+                {spaceUtilization.used} RU / {spaceUtilization.total} RU
+                ({Math.round(spaceUtilization.percentage)}%)
+              </span>
+              {isOverCapacity(spaceUtilization.percentage) && (
+                <AlertCircle className="h-4 w-4 text-red-500" />
+              )}
+            </div>
           </div>
-        )}
+          <Progress 
+            value={Math.min(spaceUtilization.percentage, 100)} 
+            className="h-2" 
+            indicatorClassName={getIndicatorClass(spaceUtilization.percentage)}
+          />
+        </div>
+        
+        {/* Network Utilization */}
+        <div className="mb-2">
+          <div className="flex justify-between mb-1">
+            <span className="text-sm font-medium">Network Port Utilization</span>
+            <div className="flex items-center">
+              <span className="text-sm text-muted-foreground mr-2">
+                {networkUtilization.used} Ports / {networkUtilization.total} Ports
+                ({Math.round(networkUtilization.percentage)}%)
+              </span>
+              {isOverCapacity(networkUtilization.percentage) && (
+                <AlertCircle className="h-4 w-4 text-red-500" />
+              )}
+            </div>
+          </div>
+          <Progress 
+            value={Math.min(networkUtilization.percentage, 100)}
+            className="h-2" 
+            indicatorClassName={getIndicatorClass(networkUtilization.percentage)}
+          />
+        </div>
       </CardContent>
     </Card>
   );

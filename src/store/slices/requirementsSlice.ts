@@ -1,3 +1,4 @@
+
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { ComponentRole, DesignRequirements, ServerRole, SwitchRole } from '@/types/infrastructure';
@@ -277,16 +278,15 @@ export const createRequirementsSlice: StateCreator<
           adjustedRequiredCount: 3,
         });
         
-        // Calculate compute nodes
+        // Calculate compute nodes - but only if we have requirements
+        // Don't set a default count without component selection
         if (requirements.computeRequirements.totalVCPUs) {
-          // Use a standard ratio of 10 vCPUs per node as default if no component selected
-          const computeCount = Math.ceil(requirements.computeRequirements.totalVCPUs / 10);
           roles.push({
             id: uuidv4(),
             role: 'computeNode',
             description: 'Compute nodes provide CPU and memory resources',
-            requiredCount: computeCount,
-            adjustedRequiredCount: computeCount,
+            requiredCount: 0, // Don't predefine a count, it will be calculated when component is selected
+            adjustedRequiredCount: 0,
           });
         }
         

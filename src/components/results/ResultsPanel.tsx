@@ -1,16 +1,18 @@
+
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 import { useDesignStore } from '@/store/designStore';
 import { ComponentType, InfrastructureComponent, DeviceRoleType } from '@/types/infrastructure';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Database, Server, Network, Shield, HardDrive } from 'lucide-react';
+import { ResourceUtilizationChart } from './PowerDistributionChart';
 
 export const ResultsPanel: React.FC = () => {
   const { activeDesign, requirements } = useDesignStore();
   
+  // Calculate total cost
   const totalCost = useMemo(() => {
     if (!activeDesign?.components) return 0;
     return activeDesign.components.reduce((total, component) => {
@@ -18,6 +20,7 @@ export const ResultsPanel: React.FC = () => {
     }, 0);
   }, [activeDesign]);
   
+  // Calculate total power
   const totalPower = useMemo(() => {
     if (!activeDesign?.components) return 0;
     return activeDesign.components.reduce((total, component) => {
@@ -25,6 +28,7 @@ export const ResultsPanel: React.FC = () => {
     }, 0);
   }, [activeDesign]);
   
+  // Calculate total rack units
   const totalRackUnits = useMemo(() => {
     if (!activeDesign?.components) return 0;
     return activeDesign.components.reduce((total, component) => {
@@ -35,6 +39,7 @@ export const ResultsPanel: React.FC = () => {
     }, 0);
   }, [activeDesign]);
   
+  // Average power per rack
   const powerPerRack = useMemo(() => {
     if (!requirements.physicalConstraints.rackQuantity || requirements.physicalConstraints.rackQuantity === 0) {
       return 0;
@@ -42,6 +47,7 @@ export const ResultsPanel: React.FC = () => {
     return totalPower / requirements.physicalConstraints.rackQuantity;
   }, [totalPower, requirements.physicalConstraints.rackQuantity]);
   
+  // Component types grouping
   const componentsByType = useMemo(() => {
     if (!activeDesign?.components) return {};
     
@@ -55,6 +61,7 @@ export const ResultsPanel: React.FC = () => {
     }, {} as Record<string, InfrastructureComponent[]>);
   }, [activeDesign]);
   
+  // Cost metrics
   const costPerVCPU = useMemo(() => {
     if (!requirements.computeRequirements.totalVCPUs || !totalCost) return 0;
     return totalCost / requirements.computeRequirements.totalVCPUs;
@@ -65,109 +72,165 @@ export const ResultsPanel: React.FC = () => {
     return totalCost / requirements.storageRequirements.totalCapacityTB;
   }, [requirements.storageRequirements.totalCapacityTB, totalCost]);
   
-  const deviceDistribution = useMemo(() => {
+  // Calculate average metrics per AZ to simplify display
+  const averageMetricsPerAZ = useMemo(() => {
     if (!activeDesign?.components || !requirements.physicalConstraints.totalAvailabilityZones) {
-      return [];
+      return {
+        totalRackUnits: 0,
+        totalPower: 0,
+        totalServers: 0,
+        totalSwitches: 0,
+        totalPorts: 0,
+        availablePorts: 0,
+        usedPorts: 0,
+      };
     }
     
-    const azCount = requirements.physicalConstraints.totalAvailabilityZones || 1;
+    const azCount = requirements.physicalConstraints.totalAvailabilityZones;
     const racksPerAZ = requirements.physicalConstraints.racksPerAvailabilityZone || 1;
+    const ruPerRack = requirements.physicalConstraints.rackUnitsPerRack || 42; // Default 42U rack
+    const powerPerRack = requirements.physicalConstraints.powerPerRackWatts || 0;
     
-    const distribution = Array(azCount).fill(0).map((_, i) => ({
-      name: `AZ-${i + 1}`,
-      servers: 0,
-      switches: 0,
-      storage: 0,
-      other: 0,
-      totalRackUnits: 0,
-      totalPower: 0
-    }));
+    // Calculate total available RU per AZ
+    const totalAvailableRUPerAZ = racksPerAZ * ruPerRack;
+    
+    // Calculate total available power per AZ
+    const totalAvailablePowerPerAZ = racksPerAZ * powerPerRack;
+    
+    // Evenly distribute components across AZs
+    const totalRUPerAZ = Math.ceil(totalRackUnits / azCount);
+    const totalPowerPerAZ = Math.ceil(totalPower / azCount);
+    
+    // Count servers and network devices
+    let totalServers = 0;
+    let totalSwitches = 0;
+    let totalUsedPorts = 0;
+    let totalAvailablePorts = 0;
     
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
-      const componentRU = 'rackUnitsConsumed' in component ? (component as any).rackUnitsConsumed : 0;
-      const totalComponentRU = componentRU * quantity;
-      const totalComponentPower = component.powerRequired * quantity;
       
-      if (component.role === 'controllerNode') {
-        const perAZ = Math.ceil(quantity / azCount);
-        for (let i = 0; i < azCount; i++) {
-          const azAllocation = i < azCount - 1 ? perAZ : quantity - (perAZ * (azCount - 1));
-          if (azAllocation > 0) {
-            distribution[i].servers += azAllocation;
-            distribution[i].totalRackUnits += componentRU * azAllocation;
-            distribution[i].totalPower += component.powerRequired * azAllocation;
-          }
+      if (component.type === ComponentType.Server) {
+        totalServers += quantity;
+        // Each server consumes network ports
+        if ('portsConsumedQuantity' in component) {
+          totalUsedPorts += (component as any).portsConsumedQuantity * quantity;
+        } else {
+          // Default assumption: 2 ports per server if not specified
+          totalUsedPorts += 2 * quantity;
         }
-      } else if (component.role === 'computeNode') {
-        const perAZ = Math.ceil(quantity / azCount);
-        for (let i = 0; i < azCount; i++) {
-          const azAllocation = i < azCount - 1 ? perAZ : quantity - (perAZ * (azCount - 1));
-          if (azAllocation > 0) {
-            distribution[i].servers += azAllocation;
-            distribution[i].totalRackUnits += componentRU * azAllocation;
-            distribution[i].totalPower += component.powerRequired * azAllocation;
-          }
-        }
-      } else if (component.role === 'storageNode') {
-        const perAZ = Math.ceil(quantity / azCount);
-        for (let i = 0; i < azCount; i++) {
-          const azAllocation = i < azCount - 1 ? perAZ : quantity - (perAZ * (azCount - 1));
-          if (azAllocation > 0) {
-            distribution[i].storage += azAllocation;
-            distribution[i].totalRackUnits += componentRU * azAllocation;
-            distribution[i].totalPower += component.powerRequired * azAllocation;
-          }
-        }
-      } else if (component.role?.includes('Switch') || component.type === ComponentType.Switch) {
-        const perAZ = Math.ceil(quantity / azCount);
-        for (let i = 0; i < azCount; i++) {
-          const azAllocation = i < azCount - 1 ? perAZ : quantity - (perAZ * (azCount - 1));
-          if (azAllocation > 0) {
-            distribution[i].switches += azAllocation;
-            distribution[i].totalRackUnits += componentRU * azAllocation;
-            distribution[i].totalPower += component.powerRequired * azAllocation;
-          }
-        }
-      } else {
-        const perAZ = Math.ceil(quantity / azCount);
-        for (let i = 0; i < azCount; i++) {
-          const azAllocation = i < azCount - 1 ? perAZ : quantity - (perAZ * (azCount - 1));
-          if (azAllocation > 0) {
-            distribution[i].other += azAllocation;
-            distribution[i].totalRackUnits += componentRU * azAllocation;
-            distribution[i].totalPower += component.powerRequired * azAllocation;
-          }
+      } else if (component.type === ComponentType.Switch) {
+        totalSwitches += quantity;
+        // Each switch provides network ports
+        if ('portsProvidedQuantity' in component) {
+          totalAvailablePorts += (component as any).portsProvidedQuantity * quantity;
+        } else if ('portCount' in component) {
+          // Use portCount as fallback
+          totalAvailablePorts += (component as any).portCount * quantity;
         }
       }
     });
     
-    return distribution;
-  }, [activeDesign, requirements.physicalConstraints.totalAvailabilityZones, requirements.physicalConstraints.racksPerAvailabilityZone]);
+    // Evenly distribute across AZs
+    const serversPerAZ = Math.ceil(totalServers / azCount);
+    const switchesPerAZ = Math.ceil(totalSwitches / azCount);
+    const portsUsedPerAZ = Math.ceil(totalUsedPorts / azCount);
+    const portsAvailablePerAZ = Math.ceil(totalAvailablePorts / azCount);
+    
+    return {
+      totalRackUnits: totalRUPerAZ,
+      totalPower: totalPowerPerAZ,
+      totalServers: serversPerAZ,
+      totalSwitches: switchesPerAZ,
+      usedPorts: portsUsedPerAZ,
+      availablePorts: portsAvailablePerAZ,
+      totalAvailableRU: totalAvailableRUPerAZ,
+      totalAvailablePower: totalAvailablePowerPerAZ
+    };
+  }, [activeDesign, requirements.physicalConstraints, totalRackUnits, totalPower]);
   
-  const powerUtilization = useMemo(() => {
-    return deviceDistribution.map(az => {
-      const racksPerAZ = requirements.physicalConstraints.racksPerAvailabilityZone || 1;
-      const powerPerRack = requirements.physicalConstraints.powerPerRackWatts || 0;
-      const totalAvailablePower = racksPerAZ * powerPerRack;
-      
-      const utilizationPercentage = totalAvailablePower > 0 
-        ? (az.totalPower / totalAvailablePower) * 100 
-        : 0;
-        
-      return {
-        name: az.name,
-        powerUtilization: Math.min(utilizationPercentage, 100),
-        powerWatts: az.totalPower,
-        totalAvailable: totalAvailablePower
-      };
-    });
-  }, [deviceDistribution, requirements.physicalConstraints.racksPerAvailabilityZone, requirements.physicalConstraints.powerPerRackWatts]);
+  // Calculate resource utilization percentages
+  const resourceUtilization = useMemo(() => {
+    const {
+      totalRackUnits, 
+      totalPower, 
+      usedPorts, 
+      availablePorts,
+      totalAvailableRU,
+      totalAvailablePower
+    } = averageMetricsPerAZ;
+    
+    return {
+      powerUtilization: {
+        percentage: totalAvailablePower > 0 ? (totalPower / totalAvailablePower) * 100 : 0,
+        used: totalPower,
+        total: totalAvailablePower
+      },
+      spaceUtilization: {
+        percentage: totalAvailableRU > 0 ? (totalRackUnits / totalAvailableRU) * 100 : 0,
+        used: totalRackUnits,
+        total: totalAvailableRU
+      },
+      networkUtilization: {
+        percentage: availablePorts > 0 ? (usedPorts / availablePorts) * 100 : 0,
+        used: usedPorts,
+        total: availablePorts
+      }
+    };
+  }, [averageMetricsPerAZ]);
   
+  // Check for implausible scenarios
+  const designErrors = useMemo(() => {
+    const errors = [];
+    
+    // Check if we have more RU than available
+    if (resourceUtilization.spaceUtilization.percentage > 100) {
+      errors.push({
+        id: 'ru-exceeded',
+        title: 'Rack Space Exceeded',
+        description: `The design requires ${resourceUtilization.spaceUtilization.used} RU per AZ, but only ${resourceUtilization.spaceUtilization.total} RU are available.`
+      });
+    }
+    
+    // Check if we're exceeding power capacity
+    if (resourceUtilization.powerUtilization.percentage > 100) {
+      errors.push({
+        id: 'power-exceeded',
+        title: 'Power Capacity Exceeded',
+        description: `The design requires ${resourceUtilization.powerUtilization.used.toLocaleString()} Watts per AZ, but only ${resourceUtilization.powerUtilization.total.toLocaleString()} Watts are available.`
+      });
+    }
+    
+    // Check if we're exceeding network port capacity
+    if (resourceUtilization.networkUtilization.percentage > 100) {
+      errors.push({
+        id: 'network-exceeded',
+        title: 'Network Port Capacity Exceeded',
+        description: `The design requires ${resourceUtilization.networkUtilization.used} network ports per AZ, but only ${resourceUtilization.networkUtilization.total} ports are available.`
+      });
+    }
+    
+    return errors;
+  }, [resourceUtilization]);
+
   return (
     <div className="max-w-4xl mx-auto">
       <h2 className="text-2xl font-semibold mb-6">Design Results</h2>
       
+      {/* Error alerts for implausible scenarios */}
+      {designErrors.length > 0 && (
+        <div className="mb-6 space-y-4">
+          {designErrors.map(error => (
+            <Alert key={error.id} variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>{error.title}</AlertTitle>
+              <AlertDescription>{error.description}</AlertDescription>
+            </Alert>
+          ))}
+        </div>
+      )}
+      
+      {/* Resource metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card>
           <CardHeader>
@@ -226,83 +289,43 @@ export const ResultsPanel: React.FC = () => {
         </Card>
       </div>
       
-      {deviceDistribution.length > 0 && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Device Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Availability Zone</TableHead>
-                  <TableHead>Servers</TableHead>
-                  <TableHead>Storage Nodes</TableHead>
-                  <TableHead>Network Devices</TableHead>
-                  <TableHead>Total RU</TableHead>
-                  <TableHead>Power Used</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {deviceDistribution.map((az, index) => (
-                  <TableRow key={az.name}>
-                    <TableCell className="font-medium">{az.name}</TableCell>
-                    <TableCell>{az.servers}</TableCell>
-                    <TableCell>{az.storage}</TableCell>
-                    <TableCell>{az.switches}</TableCell>
-                    <TableCell>{az.totalRackUnits} RU</TableCell>
-                    <TableCell>{az.totalPower.toLocaleString()} W</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            
-            <div className="mt-8">
-              <h3 className="text-lg font-medium mb-4">Power Utilization per Availability Zone</h3>
-              
-              {powerUtilization.map((item) => (
-                <div key={item.name} className="mb-4">
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm font-medium">{item.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {item.powerWatts.toLocaleString()} W / {item.totalAvailable.toLocaleString()} W
-                      ({Math.round(item.powerUtilization)}%)
-                    </span>
-                  </div>
-                  <Progress value={item.powerUtilization} className="h-2" />
-                </div>
-              ))}
-              
-              {powerUtilization.length > 0 && (
-                <div className="mt-6 h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={powerUtilization} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" />
-                      <YAxis
-                        label={{ 
-                          value: "Power (W)", 
-                          angle: -90, 
-                          position: "insideLeft",
-                          style: { textAnchor: "middle" } 
-                        }}
-                      />
-                      <Tooltip 
-                        formatter={(value, name) => {
-                          if (name === "powerWatts") return [`${Number(value).toLocaleString()} W`, "Used Power"];
-                          return [value, name];
-                        }}
-                      />
-                      <Bar dataKey="powerWatts" name="Used Power" fill="#8884d8" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Resource Utilization Chart */}
+      <div className="mb-8">
+        <ResourceUtilizationChart 
+          powerUtilization={resourceUtilization.powerUtilization}
+          spaceUtilization={resourceUtilization.spaceUtilization}
+          networkUtilization={resourceUtilization.networkUtilization}
+        />
+      </div>
       
+      {/* AZ Resource Breakdown */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Availability Zone Distribution</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Servers per AZ:</span>
+              <span className="font-medium">{averageMetricsPerAZ.totalServers}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Network Devices per AZ:</span>
+              <span className="font-medium">{averageMetricsPerAZ.totalSwitches}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Rack Units per AZ:</span>
+              <span className="font-medium">{averageMetricsPerAZ.totalRackUnits} RU</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Power per AZ:</span>
+              <span className="font-medium">{averageMetricsPerAZ.totalPower.toLocaleString()} W</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Required Components Table */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Required Components</CardTitle>
@@ -359,6 +382,7 @@ export const ResultsPanel: React.FC = () => {
         </CardContent>
       </Card>
       
+      {/* Component Type Summary */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Component Type Summary</CardTitle>
