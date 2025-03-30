@@ -1,3 +1,4 @@
+
 // Common properties shared by all component types
 export interface BaseComponent {
   id: string;
@@ -26,6 +27,12 @@ export enum ComponentType {
   UPS = 'ups',  // Uninterruptible Power Supply
   NetworkCard = 'networkCard',
   Other = 'other'
+}
+
+// Position interface for component placement
+export interface Position {
+  x: number;
+  y: number;
 }
 
 // Category groupings for components
@@ -233,7 +240,7 @@ export interface ComponentRole {
   requiredCount: number;
   assignedComponentId?: string;
   assignedComponent?: InfrastructureComponent;
-  adjustedRequiredCount?: number; // Add the missing property
+  adjustedRequiredCount?: number;
 }
 
 // Device role types

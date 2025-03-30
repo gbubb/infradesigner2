@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
 import { 
-  Server, 
+  Server as ServerIcon, 
   Network, 
   HardDrive, 
-  Router, 
+  Router as RouterIcon, 
   Shield, 
   Database,
   LayoutGrid,
@@ -26,7 +26,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import { ComponentType, componentTypeToCategory, ComponentCategory, InfrastructureComponent } from '@/types/infrastructure';
+import { 
+  ComponentType, 
+  componentTypeToCategory, 
+  ComponentCategory, 
+  InfrastructureComponent,
+  Server,
+  Switch,
+  Router,
+  Firewall,
+  StorageArray,
+  Disk,
+  Rack
+} from '@/types/infrastructure';
 import { 
   allComponentTemplates
 } from '@/data/componentData';
@@ -125,7 +137,7 @@ export const ComponentLibrary: React.FC = () => {
           cpuCount: 1,
           coreCount: 8,
           memoryGB: 32
-        } as Server;
+        };
         break;
       case ComponentType.Switch:
         component = {
@@ -135,7 +147,7 @@ export const ComponentLibrary: React.FC = () => {
           portCount: 24,
           portSpeed: 10,
           layer: 2
-        } as Switch;
+        };
         break;
       case ComponentType.Router:
         component = {
@@ -146,7 +158,7 @@ export const ComponentLibrary: React.FC = () => {
           portSpeed: 10,
           throughput: 40,
           supportedProtocols: ['BGP', 'OSPF']
-        } as Router;
+        };
         break;
       case ComponentType.Firewall:
         component = {
@@ -157,7 +169,7 @@ export const ComponentLibrary: React.FC = () => {
           portSpeed: 10,
           throughput: 10,
           features: ['IPS', 'VPN']
-        } as Firewall;
+        };
         break;
       case ComponentType.StorageArray:
         component = {
@@ -170,7 +182,7 @@ export const ComponentLibrary: React.FC = () => {
           raidSupport: ['RAID5', 'RAID6'],
           networkPorts: 4,
           networkPortSpeed: 10
-        } as StorageArray;
+        };
         break;
       case ComponentType.Disk:
         component = {
@@ -179,7 +191,7 @@ export const ComponentLibrary: React.FC = () => {
           capacityTB: 1,
           formFactor: '2.5"',
           interface: 'SATA'
-        } as Disk;
+        };
         break;
       case ComponentType.Rack:
         component = {
@@ -190,7 +202,7 @@ export const ComponentLibrary: React.FC = () => {
           depth: 1000,
           height: 2000,
           maxWeight: 1000
-        } as Rack;
+        };
         break;
       default:
         // Use Other type for any other component types

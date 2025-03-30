@@ -35,6 +35,8 @@ interface DesignState {
   workspaceComponents: ComponentWithPosition[];
   // Currently editing component ID
   editingComponentId: string | null;
+  // Currently selected component ID
+  selectedComponentId: string | null;
 
   // Define requirements and constraints
   updateRequirements: (requirements: Partial<DesignRequirements>) => void;
@@ -54,14 +56,38 @@ interface DesignState {
   // Save the current design
   saveDesign: () => void;
   
-  // Select a component for editing
+  // Create a new design
+  createNewDesign: (name: string, description?: string) => void;
+  
+  // Update component position
+  updateComponentPosition: (id: string, position: Position) => void;
+  
+  // Select component
+  selectComponent: (id: string | null) => void;
+  
+  // Select component for editing
   selectComponentForEditing: (id: string | null) => void;
+  
+  // Start editing a component
+  startEditingComponent: (id: string) => void;
+  
+  // Cancel editing a component
+  cancelEditingComponent: () => void;
+  
+  // Update a component's properties
+  updateComponent: (id: string, updates: Partial<InfrastructureComponent>) => void;
   
   // Clone a component in the workspace
   cloneComponent: (id: string) => void;
   
+  // Duplicate a component
+  duplicateComponent: (id: string) => void;
+  
   // Delete a component from the workspace
   deleteComponent: (id: string) => void;
+  
+  // Remove a component
+  removeComponent: (id: string) => void;
 }
 
 export const useDesignStore = create<DesignState>((set, get) => ({
@@ -79,6 +105,26 @@ export const useDesignStore = create<DesignState>((set, get) => ({
   placedComponents: {},
   workspaceComponents: [],
   editingComponentId: null,
+  selectedComponentId: null,
+
+  createNewDesign: (name, description) => {
+    const newDesign: InfrastructureDesign = {
+      id: uuidv4(),
+      name: name || `Design ${get().savedDesigns.length + 1}`,
+      description,
+      createdAt: new Date(),
+      requirements: get().requirements,
+      components: []
+    };
+    
+    set({
+      activeDesign: newDesign,
+      placedComponents: {},
+      workspaceComponents: []
+    });
+    
+    toast.success("New design created");
+  },
 
   saveDesign: () => {
     set((state) => {
@@ -104,22 +150,26 @@ export const useDesignStore = create<DesignState>((set, get) => ({
           });
 
         // Create or update activeDesign
-        const designToSave = state.activeDesign ? 
-          { ...state.activeDesign, components: assignedComponents } : 
-          {
+        let designToSave: InfrastructureDesign;
+        
+        if (state.activeDesign) {
+          designToSave = { 
+            ...state.activeDesign, 
+            components: assignedComponents,
+            updatedAt: new Date()
+          };
+        } else {
+          designToSave = {
             id: uuidv4(),
             name: `Design ${state.savedDesigns.length + 1}`,
+            createdAt: new Date(),
+            requirements: state.requirements,
             components: assignedComponents
           };
+        }
 
         // Save the design - now with properly typed components
-        const updatedDesigns = [...state.savedDesigns, {
-          id: designToSave.id,
-          name: designToSave.name,
-          createdAt: new Date(),
-          requirements: state.requirements,
-          components: assignedComponents
-        }];
+        const updatedDesigns = [...state.savedDesigns, designToSave];
         
         toast.success("Design saved successfully!");
         return { 
@@ -401,8 +451,56 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     });
   },
   
+  updateComponentPosition: (id, position) => {
+    set((state) => {
+      const updatedWorkspaceComponents = state.workspaceComponents.map(comp => 
+        comp.id === id ? { ...comp, position } : comp
+      );
+      
+      return { workspaceComponents: updatedWorkspaceComponents };
+    });
+  },
+  
+  selectComponent: (id) => {
+    set({ selectedComponentId: id });
+  },
+  
   selectComponentForEditing: (id) => {
     set({ editingComponentId: id });
+  },
+  
+  startEditingComponent: (id) => {
+    set({ editingComponentId: id });
+  },
+  
+  cancelEditingComponent: () => {
+    set({ editingComponentId: null });
+  },
+  
+  updateComponent: (id, updates) => {
+    set((state) => {
+      if (!state.placedComponents[id]) return state;
+      
+      const updatedComponent = {
+        ...state.placedComponents[id],
+        ...updates
+      };
+      
+      const updatedPlacedComponents = {
+        ...state.placedComponents,
+        [id]: updatedComponent
+      };
+      
+      const updatedWorkspaceComponents = state.workspaceComponents.map(comp => 
+        comp.id === id ? { ...comp, component: updatedComponent } : comp
+      );
+      
+      return {
+        placedComponents: updatedPlacedComponents,
+        workspaceComponents: updatedWorkspaceComponents,
+        editingComponentId: null
+      };
+    });
   },
   
   cloneComponent: (id) => {
@@ -438,6 +536,11 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     });
   },
   
+  duplicateComponent: (id) => {
+    // Implementation is the same as cloneComponent
+    get().cloneComponent(id);
+  },
+  
   deleteComponent: (id) => {
     set((state) => {
       const updatedWorkspaceComponents = state.workspaceComponents.filter(
@@ -450,12 +553,20 @@ export const useDesignStore = create<DesignState>((set, get) => ({
       // If the deleted component was being edited, clear the editing ID
       const editingComponentId = 
         state.editingComponentId === id ? null : state.editingComponentId;
+      const selectedComponentId = 
+        state.selectedComponentId === id ? null : state.selectedComponentId;
       
       return {
         placedComponents: updatedPlacedComponents,
         workspaceComponents: updatedWorkspaceComponents,
         editingComponentId,
+        selectedComponentId
       };
     });
   },
+  
+  removeComponent: (id) => {
+    // Implementation is the same as deleteComponent
+    get().deleteComponent(id);
+  }
 }));
