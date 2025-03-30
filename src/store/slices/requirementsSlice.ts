@@ -29,186 +29,9 @@ export const createRequirementsSlice: StateCreator<
   [],
   [],
   RequirementsSlice
-> = (set, get) => ({
-  requirements: {
-    computeRequirements: {},
-    storageRequirements: {},
-    networkRequirements: {
-      physicalFirewalls: false,
-    },
-    physicalConstraints: {},
-  },
-  componentRoles: [],
-
-  updateRequirements: (newRequirements) => {
-    set((state) => ({
-      requirements: {
-        ...state.requirements,
-        computeRequirements: {
-          ...state.requirements.computeRequirements,
-          ...newRequirements.computeRequirements,
-        },
-        storageRequirements: {
-          ...state.requirements.storageRequirements,
-          ...newRequirements.storageRequirements,
-        },
-        networkRequirements: {
-          ...state.requirements.networkRequirements,
-          ...newRequirements.networkRequirements,
-        },
-        physicalConstraints: {
-          ...state.requirements.physicalConstraints,
-          ...newRequirements.physicalConstraints,
-        },
-      },
-    }));
-  },
-  
-  calculateComponentRoles: () => {
-    set((state) => {
-      const { requirements } = state;
-      const roles: ComponentRole[] = [];
-      
-      // Define control nodes (always 3 for HA)
-      roles.push({
-        id: uuidv4(),
-        role: 'controllerNode',
-        description: 'Controller nodes run management services',
-        requiredCount: 3,
-        adjustedRequiredCount: 3,
-      });
-      
-      // Calculate compute nodes
-      if (requirements.computeRequirements.totalVCPUs) {
-        // Use a standard ratio of 10 vCPUs per node as default if no component selected
-        const computeCount = Math.ceil(requirements.computeRequirements.totalVCPUs / 10);
-        roles.push({
-          id: uuidv4(),
-          role: 'computeNode',
-          description: 'Compute nodes provide CPU and memory resources',
-          requiredCount: computeCount,
-          adjustedRequiredCount: computeCount,
-        });
-      }
-      
-      // Calculate storage nodes
-      if (requirements.storageRequirements.totalCapacityTB) {
-        // Use a standard ratio of 10TB per node as default if no component selected
-        const storageCount = Math.ceil(requirements.storageRequirements.totalCapacityTB / 10);
-        roles.push({
-          id: uuidv4(),
-          role: 'storageNode',
-          description: 'Storage nodes provide distributed storage capacity',
-          requiredCount: storageCount,
-          adjustedRequiredCount: storageCount,
-        });
-      }
-      
-      // Network switches - simple topology with redundancy
-      // Management switch pair (always have 2 for redundancy)
-      roles.push({
-        id: uuidv4(),
-        role: 'managementSwitch',
-        description: 'Switches for management network traffic',
-        requiredCount: 2,
-        adjustedRequiredCount: 2,
-      });
-      
-      // Compute switches
-      if (requirements.computeRequirements.totalVCPUs) {
-        roles.push({
-          id: uuidv4(),
-          role: 'computeSwitch',
-          description: 'Switches for compute network traffic',
-          requiredCount: 2, // Always redundant
-          adjustedRequiredCount: 2,
-        });
-      }
-      
-      // Storage switches
-      if (requirements.storageRequirements.totalCapacityTB) {
-        roles.push({
-          id: uuidv4(),
-          role: 'storageSwitch',
-          description: 'Switches for storage network traffic',
-          requiredCount: 2, // Always redundant
-          adjustedRequiredCount: 2,
-        });
-      }
-      
-      // If spine-leaf topology is selected
-      if (requirements.networkRequirements.networkTopology === 'Spine-Leaf') {
-        // Add spine switches
-        roles.push({
-          id: uuidv4(),
-          role: 'spineSwitch',
-          description: 'Core spine switches for network fabric',
-          requiredCount: 2, // Redundant spine switches
-          adjustedRequiredCount: 2,
-        });
-        
-        // Add border leaf switches for external connectivity
-        roles.push({
-          id: uuidv4(),
-          role: 'borderLeafSwitch',
-          description: 'Border leaf switches for external connectivity',
-          requiredCount: 2, // Redundant border switches
-          adjustedRequiredCount: 2,
-        });
-      }
-      
-      // Add firewalls if required
-      if (requirements.networkRequirements.physicalFirewalls) {
-        roles.push({
-          id: uuidv4(),
-          role: 'firewall',
-          description: 'Physical firewall appliances',
-          requiredCount: 2, // Redundant firewalls
-          adjustedRequiredCount: 2,
-        });
-      }
-      
-      // If existing roles exist with assigned components, preserve those assignments
-      if (state.componentRoles.length > 0) {
-        roles.forEach(newRole => {
-          const existingRole = state.componentRoles.find(r => r.role === newRole.role);
-          if (existingRole && existingRole.assignedComponentId) {
-            newRole.assignedComponentId = existingRole.assignedComponentId;
-            // Recalculate the adjusted required count based on assigned component
-            if (existingRole.assignedComponentId) {
-              newRole.adjustedRequiredCount = get().calculateRequiredQuantity(
-                newRole.id, 
-                existingRole.assignedComponentId
-              );
-            }
-          }
-        });
-      }
-      
-      return { componentRoles: roles };
-    });
-  },
-  
-  assignComponentToRole: (roleId, componentId) => {
-    set((state) => {
-      const updatedRoles = state.componentRoles.map(role => {
-        if (role.id === roleId) {
-          const adjustedCount = get().calculateRequiredQuantity(roleId, componentId);
-          return { 
-            ...role, 
-            assignedComponentId: componentId,
-            adjustedRequiredCount: adjustedCount
-          };
-        }
-        return role;
-      });
-      
-      return { componentRoles: updatedRoles };
-    });
-  },
-  
-  calculateRequiredQuantity: (roleId, componentId) => {
-    const state = get();
+> = (set, get) => {
+  // Define the calculateRequiredQuantity function separately to avoid circular references
+  const calculateRequiredQuantity = (roleId: string, componentId: string, state: StoreState): number => {
     const role = state.componentRoles.find(r => r.id === roleId);
     const component = allComponentTemplates.find(c => c.id === componentId);
     
@@ -281,5 +104,190 @@ export const createRequirementsSlice: StateCreator<
     // Always ensure a minimum of the original required count
     // This handles cases where calculations might result in fewer components than needed
     return Math.max(adjustedCount, role.requiredCount);
-  },
-});
+  };
+
+  return {
+    requirements: {
+      computeRequirements: {},
+      storageRequirements: {},
+      networkRequirements: {
+        physicalFirewalls: false,
+      },
+      physicalConstraints: {},
+    },
+    componentRoles: [],
+
+    updateRequirements: (newRequirements) => {
+      set((state) => ({
+        requirements: {
+          ...state.requirements,
+          computeRequirements: {
+            ...state.requirements.computeRequirements,
+            ...newRequirements.computeRequirements,
+          },
+          storageRequirements: {
+            ...state.requirements.storageRequirements,
+            ...newRequirements.storageRequirements,
+          },
+          networkRequirements: {
+            ...state.requirements.networkRequirements,
+            ...newRequirements.networkRequirements,
+          },
+          physicalConstraints: {
+            ...state.requirements.physicalConstraints,
+            ...newRequirements.physicalConstraints,
+          },
+        },
+      }));
+    },
+    
+    calculateComponentRoles: () => {
+      set((state) => {
+        const { requirements } = state;
+        const roles: ComponentRole[] = [];
+        
+        // Define control nodes (always 3 for HA)
+        roles.push({
+          id: uuidv4(),
+          role: 'controllerNode',
+          description: 'Controller nodes run management services',
+          requiredCount: 3,
+          adjustedRequiredCount: 3,
+        });
+        
+        // Calculate compute nodes
+        if (requirements.computeRequirements.totalVCPUs) {
+          // Use a standard ratio of 10 vCPUs per node as default if no component selected
+          const computeCount = Math.ceil(requirements.computeRequirements.totalVCPUs / 10);
+          roles.push({
+            id: uuidv4(),
+            role: 'computeNode',
+            description: 'Compute nodes provide CPU and memory resources',
+            requiredCount: computeCount,
+            adjustedRequiredCount: computeCount,
+          });
+        }
+        
+        // Calculate storage nodes
+        if (requirements.storageRequirements.totalCapacityTB) {
+          // Use a standard ratio of 10TB per node as default if no component selected
+          const storageCount = Math.ceil(requirements.storageRequirements.totalCapacityTB / 10);
+          roles.push({
+            id: uuidv4(),
+            role: 'storageNode',
+            description: 'Storage nodes provide distributed storage capacity',
+            requiredCount: storageCount,
+            adjustedRequiredCount: storageCount,
+          });
+        }
+        
+        // Network switches - simple topology with redundancy
+        // Management switch pair (always have 2 for redundancy)
+        roles.push({
+          id: uuidv4(),
+          role: 'managementSwitch',
+          description: 'Switches for management network traffic',
+          requiredCount: 2,
+          adjustedRequiredCount: 2,
+        });
+        
+        // Compute switches
+        if (requirements.computeRequirements.totalVCPUs) {
+          roles.push({
+            id: uuidv4(),
+            role: 'computeSwitch',
+            description: 'Switches for compute network traffic',
+            requiredCount: 2, // Always redundant
+            adjustedRequiredCount: 2,
+          });
+        }
+        
+        // Storage switches
+        if (requirements.storageRequirements.totalCapacityTB) {
+          roles.push({
+            id: uuidv4(),
+            role: 'storageSwitch',
+            description: 'Switches for storage network traffic',
+            requiredCount: 2, // Always redundant
+            adjustedRequiredCount: 2,
+          });
+        }
+        
+        // If spine-leaf topology is selected
+        if (requirements.networkRequirements.networkTopology === 'Spine-Leaf') {
+          // Add spine switches
+          roles.push({
+            id: uuidv4(),
+            role: 'spineSwitch',
+            description: 'Core spine switches for network fabric',
+            requiredCount: 2, // Redundant spine switches
+            adjustedRequiredCount: 2,
+          });
+          
+          // Add border leaf switches for external connectivity
+          roles.push({
+            id: uuidv4(),
+            role: 'borderLeafSwitch',
+            description: 'Border leaf switches for external connectivity',
+            requiredCount: 2, // Redundant border switches
+            adjustedRequiredCount: 2,
+          });
+        }
+        
+        // Add firewalls if required
+        if (requirements.networkRequirements.physicalFirewalls) {
+          roles.push({
+            id: uuidv4(),
+            role: 'firewall',
+            description: 'Physical firewall appliances',
+            requiredCount: 2, // Redundant firewalls
+            adjustedRequiredCount: 2,
+          });
+        }
+        
+        // If existing roles exist with assigned components, preserve those assignments
+        if (state.componentRoles.length > 0) {
+          roles.forEach(newRole => {
+            const existingRole = state.componentRoles.find(r => r.role === newRole.role);
+            if (existingRole && existingRole.assignedComponentId) {
+              newRole.assignedComponentId = existingRole.assignedComponentId;
+              // Recalculate the adjusted required count based on assigned component
+              if (existingRole.assignedComponentId) {
+                newRole.adjustedRequiredCount = calculateRequiredQuantity(
+                  newRole.id, 
+                  existingRole.assignedComponentId,
+                  state
+                );
+              }
+            }
+          });
+        }
+        
+        return { componentRoles: roles };
+      });
+    },
+    
+    assignComponentToRole: (roleId, componentId) => {
+      set((state) => {
+        const updatedRoles = state.componentRoles.map(role => {
+          if (role.id === roleId) {
+            const adjustedCount = calculateRequiredQuantity(roleId, componentId, state);
+            return { 
+              ...role, 
+              assignedComponentId: componentId,
+              adjustedRequiredCount: adjustedCount
+            };
+          }
+          return role;
+        });
+        
+        return { componentRoles: updatedRoles };
+      });
+    },
+    
+    calculateRequiredQuantity: (roleId, componentId) => {
+      const state = get();
+      return calculateRequiredQuantity(roleId, componentId, state);
+    },
+  };
+};

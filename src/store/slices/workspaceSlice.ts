@@ -181,8 +181,38 @@ export const createWorkspaceSlice: StateCreator<
   },
   
   duplicateComponent: (id) => {
-    // Implementation is the same as cloneComponent
-    get().cloneComponent(id);
+    // Use the cloneComponent implementation directly instead of calling get().cloneComponent
+    // which would try to access the method before it's fully defined
+    const { workspaceComponents, placedComponents } = get();
+    
+    const componentToClone = workspaceComponents.find(c => c.id === id);
+    if (!componentToClone) return;
+    
+    const newComponentId = uuidv4();
+    const newPosition = {
+      x: componentToClone.position.x + 20,
+      y: componentToClone.position.y + 20,
+    };
+    
+    // Use type assertion to ensure proper typing
+    const componentCopy = { 
+      ...componentToClone.component 
+    } as InfrastructureComponent;
+    
+    set({
+      placedComponents: {
+        ...placedComponents,
+        [newComponentId]: componentCopy,
+      },
+      workspaceComponents: [
+        ...workspaceComponents,
+        {
+          component: componentCopy,
+          id: newComponentId,
+          position: newPosition,
+        },
+      ]
+    });
   },
   
   deleteComponent: (id) => {
@@ -210,7 +240,28 @@ export const createWorkspaceSlice: StateCreator<
   },
   
   removeComponent: (id) => {
-    // Implementation is the same as deleteComponent
-    get().deleteComponent(id);
+    // Fixed: Use the deleteComponent implementation directly rather than trying
+    // to call the method through get() which created a circular reference
+    set((state) => {
+      const updatedWorkspaceComponents = state.workspaceComponents.filter(
+        (component) => component.id !== id
+      );
+      
+      const updatedPlacedComponents = { ...state.placedComponents };
+      delete updatedPlacedComponents[id];
+      
+      // If the deleted component was being edited, clear the editing ID
+      const editingComponentId = 
+        state.editingComponentId === id ? null : state.editingComponentId;
+      const selectedComponentId = 
+        state.selectedComponentId === id ? null : state.selectedComponentId;
+      
+      return {
+        placedComponents: updatedPlacedComponents,
+        workspaceComponents: updatedWorkspaceComponents,
+        editingComponentId,
+        selectedComponentId
+      };
+    });
   }
 });
