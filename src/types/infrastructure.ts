@@ -10,6 +10,7 @@ export interface BaseComponent {
   description?: string;
   quantity?: number;
   capacityFactor?: number; // Factor for calculating required quantity
+  role?: string; // Add role property to base component
 }
 
 // Enum for all component types
@@ -232,6 +233,7 @@ export interface ComponentRole {
   requiredCount: number;
   assignedComponentId?: string;
   assignedComponent?: InfrastructureComponent;
+  adjustedRequiredCount?: number; // Add the missing property
 }
 
 // Device role types

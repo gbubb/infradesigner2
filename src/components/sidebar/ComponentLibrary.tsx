@@ -98,15 +98,107 @@ export const ComponentLibrary: React.FC = () => {
     }
 
     // Create new component with a unique ID
-    const component: InfrastructureComponent = {
+    const componentType = newComponent.type || ComponentType.Server;
+    
+    // Create the base component properties
+    const baseComponent = {
       id: uuidv4(),
-      type: newComponent.type || ComponentType.Server,
+      type: componentType,
       name: newComponent.name,
       manufacturer: newComponent.manufacturer,
       model: newComponent.model,
       cost: newComponent.cost || 0,
       powerRequired: newComponent.powerRequired || 0,
     };
+    
+    // Create the appropriate component type
+    let component: InfrastructureComponent;
+    
+    // Handle different component types
+    switch (componentType) {
+      case ComponentType.Server:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Server,
+          rackUnitsConsumed: 1,
+          cpuModel: "Generic CPU",
+          cpuCount: 1,
+          coreCount: 8,
+          memoryGB: 32
+        } as Server;
+        break;
+      case ComponentType.Switch:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Switch,
+          rackUnitsConsumed: 1,
+          portCount: 24,
+          portSpeed: 10,
+          layer: 2
+        } as Switch;
+        break;
+      case ComponentType.Router:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Router,
+          rackUnitsConsumed: 1,
+          portCount: 8,
+          portSpeed: 10,
+          throughput: 40,
+          supportedProtocols: ['BGP', 'OSPF']
+        } as Router;
+        break;
+      case ComponentType.Firewall:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Firewall,
+          rackUnitsConsumed: 1,
+          portCount: 8,
+          portSpeed: 10,
+          throughput: 10,
+          features: ['IPS', 'VPN']
+        } as Firewall;
+        break;
+      case ComponentType.StorageArray:
+        component = {
+          ...baseComponent,
+          type: ComponentType.StorageArray,
+          rackUnitsConsumed: 2,
+          driveCapacity: 20,
+          driveSlots: 24,
+          controllerCount: 2,
+          raidSupport: ['RAID5', 'RAID6'],
+          networkPorts: 4,
+          networkPortSpeed: 10
+        } as StorageArray;
+        break;
+      case ComponentType.Disk:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Disk,
+          capacityTB: 1,
+          formFactor: '2.5"',
+          interface: 'SATA'
+        } as Disk;
+        break;
+      case ComponentType.Rack:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Rack,
+          rackUnits: 42,
+          width: 600,
+          depth: 1000,
+          height: 2000,
+          maxWeight: 1000
+        } as Rack;
+        break;
+      default:
+        // Use Other type for any other component types
+        component = {
+          ...baseComponent,
+          type: ComponentType.Other
+        };
+    }
 
     // Add component to library
     // Note: In a real app, you'd update the component library data

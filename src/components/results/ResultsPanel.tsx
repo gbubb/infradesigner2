@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -33,7 +32,6 @@ export const ResultsPanel: React.FC = () => {
     }, 0);
   }, [activeDesign]);
   
-  // Calculate power per rack
   const powerPerRack = useMemo(() => {
     if (!requirements.physicalConstraints.rackQuantity || requirements.physicalConstraints.rackQuantity === 0) {
       return 0;
@@ -41,7 +39,6 @@ export const ResultsPanel: React.FC = () => {
     return totalPower / requirements.physicalConstraints.rackQuantity;
   }, [totalPower, requirements.physicalConstraints.rackQuantity]);
   
-  // Group components by type
   const componentsByType = useMemo(() => {
     if (!activeDesign?.components) return {};
     
@@ -55,7 +52,6 @@ export const ResultsPanel: React.FC = () => {
     }, {} as Record<string, InfrastructureComponent[]>);
   }, [activeDesign]);
   
-  // Calculate cost per vCPU and cost per TB
   const costPerVCPU = useMemo(() => {
     if (!requirements.computeRequirements.totalVCPUs || !totalCost) return 0;
     return totalCost / requirements.computeRequirements.totalVCPUs;
@@ -154,9 +150,10 @@ export const ResultsPanel: React.FC = () => {
                   ? (component as any).rackUnitsConsumed * quantity
                   : '-';
                 
-                // Get role name from component if available
-                const roleName = component.role?.charAt(0).toUpperCase() + 
-                  component.role?.slice(1).replace(/([A-Z])/g, ' $1') || '';
+                const roleName = component.role 
+                  ? component.role.charAt(0).toUpperCase() + 
+                    component.role.slice(1).replace(/([A-Z])/g, ' $1') 
+                  : '';
                   
                 return (
                   <TableRow key={`${component.id}-${index}`}>
@@ -183,7 +180,6 @@ export const ResultsPanel: React.FC = () => {
         </CardContent>
       </Card>
       
-      {/* Component Type Summary */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Component Type Summary</CardTitle>
