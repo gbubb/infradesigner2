@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calculator, Save } from 'lucide-react';
-import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent, ServerRole, SwitchRole } from '@/types/infrastructure';
 import { Badge } from '@/components/ui/badge';
 
-// Change import to use the correct export name
-import { allComponentTemplates } from '@/data/componentData';
+// Use the function to get components by role
+import { getComponentsByRole, getComponentsByType } from '@/data/componentData';
 
 export const DesignPanel: React.FC = () => {
   const { 
@@ -26,36 +26,49 @@ export const DesignPanel: React.FC = () => {
     calculateComponentRoles();
   }, [calculateComponentRoles]);
 
-  // Function to get components of a specific type
-  const getComponentsByType = (type: ComponentType): InfrastructureComponent[] => {
-    return allComponentTemplates.filter(component => component.type === type);
-  };
-
-  // Get appropriate components for a role
+  // Function to get appropriate components for a role
   const getComponentOptionsForRole = (role: string): InfrastructureComponent[] => {
+    // Map design roles to component types and roles
     switch(role) {
       case 'controllerNode':
+        return getComponentsByRole(ComponentType.Server, ServerRole.Controller);
       case 'computeNode':
+        return getComponentsByRole(ComponentType.Server, ServerRole.Compute);
       case 'storageNode':
-        return getComponentsByType(ComponentType.Server);
+        return getComponentsByRole(ComponentType.Server, ServerRole.Storage);
       case 'managementSwitch':
+        return getComponentsByRole(ComponentType.Switch, SwitchRole.Management);
       case 'computeSwitch':
       case 'storageSwitch':
+        return getComponentsByRole(ComponentType.Switch, SwitchRole.Access);
       case 'borderLeafSwitch':
+        return getComponentsByRole(ComponentType.Switch, SwitchRole.Edge);
       case 'spineSwitch':
+        return getComponentsByRole(ComponentType.Switch, SwitchRole.Spine);
       case 'torSwitch':
-        return getComponentsByType(ComponentType.Switch);
+        return getComponentsByRole(ComponentType.Switch, SwitchRole.Leaf);
       case 'firewall':
         return getComponentsByType(ComponentType.Firewall);
       default:
+        // If no specific role mapping, get components by matching type
+        if (role.toLowerCase().includes('switch')) {
+          return getComponentsByType(ComponentType.Switch);
+        } else if (role.toLowerCase().includes('node')) {
+          return getComponentsByType(ComponentType.Server);
+        }
         return [];
     }
   };
   
-  // Find component by ID
-  const findComponentById = (id: string | undefined): InfrastructureComponent | undefined => {
-    if (!id) return undefined;
-    return allComponentTemplates.find(component => component.id === id);
+  // Find component by ID - looking only at the filtered components for each role
+  const findComponentById = (roleId: string, componentId: string | undefined): InfrastructureComponent | undefined => {
+    if (!componentId) return undefined;
+    
+    const role = componentRoles.find(r => r.id === roleId);
+    if (!role) return undefined;
+    
+    const componentsForRole = getComponentOptionsForRole(role.role);
+    return componentsForRole.find(component => component.id === componentId);
   };
   
   const handleComponentSelect = (roleId: string, componentId: string) => {
@@ -116,6 +129,8 @@ export const DesignPanel: React.FC = () => {
                   role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
                   role.requiredCount;
                 
+                const componentOptions = getComponentOptionsForRole(role.role);
+                
                 return (
                   <TableRow key={role.id}>
                     <TableCell className="font-medium">
@@ -134,11 +149,17 @@ export const DesignPanel: React.FC = () => {
                           <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getComponentOptionsForRole(role.role).map((component) => (
-                            <SelectItem key={component.id} value={component.id}>
-                              {component.manufacturer} {component.model} - ${component.cost}
+                          {componentOptions.length > 0 ? (
+                            componentOptions.map((component) => (
+                              <SelectItem key={component.id} value={component.id}>
+                                {component.manufacturer} {component.model} - ${component.cost}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="none" disabled>
+                              No compatible components available
                             </SelectItem>
-                          ))}
+                          )}
                         </SelectContent>
                       </Select>
                     </TableCell>
@@ -176,7 +197,7 @@ export const DesignPanel: React.FC = () => {
             </TableHeader>
             <TableBody>
               {componentRoles.filter(role => role.assignedComponentId).map((role) => {
-                const component = findComponentById(role.assignedComponentId);
+                const component = findComponentById(role.id, role.assignedComponentId);
                 if (!component) return null;
                 
                 const actualQuantity = role.adjustedRequiredCount || role.requiredCount;

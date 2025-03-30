@@ -101,17 +101,42 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
           return (
             <>
               <div className="grid grid-cols-2 gap-2 text-sm">
+                {component.serverRole && (
+                  <>
+                    <div className="text-gray-500">Server Role</div>
+                    <div>{component.serverRole}</div>
+                  </>
+                )}
+                
                 <div className="text-gray-500">CPU Model</div>
                 <div>{component.cpuModel}</div>
                 
-                <div className="text-gray-500">CPU Count</div>
-                <div>{component.cpuCount}</div>
+                {component.cpuSockets && (
+                  <>
+                    <div className="text-gray-500">CPU Sockets</div>
+                    <div>{component.cpuSockets}</div>
+                  </>
+                )}
                 
-                <div className="text-gray-500">Cores</div>
+                {component.cpuCoresPerSocket && (
+                  <>
+                    <div className="text-gray-500">Cores per Socket</div>
+                    <div>{component.cpuCoresPerSocket}</div>
+                  </>
+                )}
+                
+                <div className="text-gray-500">Total Cores</div>
                 <div>{component.coreCount}</div>
                 
                 <div className="text-gray-500">Memory</div>
                 <div>{component.memoryGB} GB</div>
+                
+                {component.diskSlotType && component.diskSlotQuantity && (
+                  <>
+                    <div className="text-gray-500">Disk Slots</div>
+                    <div>{component.diskSlotQuantity}x {component.diskSlotType}</div>
+                  </>
+                )}
                 
                 {component.storageCapacityTB && (
                   <>
@@ -120,15 +145,15 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
                   </>
                 )}
                 
-                {component.networkPorts && component.networkPortSpeed && (
+                {component.networkPortType && component.portsConsumedQuantity && (
                   <>
-                    <div className="text-gray-500">Network</div>
-                    <div>{component.networkPorts} ports @ {component.networkPortSpeed} Gbps</div>
+                    <div className="text-gray-500">Network Ports</div>
+                    <div>{component.portsConsumedQuantity}x {component.networkPortType}</div>
                   </>
                 )}
                 
                 <div className="text-gray-500">Rack Units</div>
-                <div>{component.rackUnitsConsumed} RU</div>
+                <div>{component.ruSize || component.rackUnitsConsumed} RU</div>
               </div>
             </>
           );
@@ -136,6 +161,35 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
         break;
       
       case ComponentType.Switch:
+        // Check if component has network device properties
+        if ('portCount' in component && 'portSpeed' in component && 'rackUnitsConsumed' in component) {
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {component.switchRole && (
+                  <>
+                    <div className="text-gray-500">Switch Role</div>
+                    <div>{component.switchRole}</div>
+                  </>
+                )}
+                
+                <div className="text-gray-500">Layer</div>
+                <div>{component.layer}</div>
+                
+                <div className="text-gray-500">Ports</div>
+                <div>{component.portsProvidedQuantity || component.portCount}</div>
+                
+                <div className="text-gray-500">Port Speed</div>
+                <div>{component.portSpeedType || component.portSpeed} Gbps</div>
+                
+                <div className="text-gray-500">Rack Units</div>
+                <div>{component.ruSize || component.rackUnitsConsumed} RU</div>
+              </div>
+            </>
+          );
+        }
+        break;
+      
       case ComponentType.Router:
         // Check if component has network device properties
         if ('portCount' in component && 'portSpeed' in component && 'rackUnitsConsumed' in component) {
@@ -148,18 +202,14 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
                 <div className="text-gray-500">Port Speed</div>
                 <div>{component.portSpeed} Gbps</div>
                 
+                <div className="text-gray-500">Throughput</div>
+                <div>{component.throughput} Gbps</div>
+                
+                <div className="text-gray-500">Protocols</div>
+                <div>{component.supportedProtocols.join(', ')}</div>
+                
                 <div className="text-gray-500">Rack Units</div>
                 <div>{component.rackUnitsConsumed} RU</div>
-
-                {component.type === ComponentType.Router && 'throughput' in component && 'supportedProtocols' in component && (
-                  <>
-                    <div className="text-gray-500">Throughput</div>
-                    <div>{component.throughput} Gbps</div>
-                    
-                    <div className="text-gray-500">Protocols</div>
-                    <div>{component.supportedProtocols.join(', ')}</div>
-                  </>
-                )}
               </div>
             </>
           );

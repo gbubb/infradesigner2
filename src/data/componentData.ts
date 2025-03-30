@@ -6,12 +6,12 @@ import {
   Switch, 
   Router, 
   Firewall, 
-  StorageArray, 
-  Disk, 
-  Rack, 
-  PDU, 
-  UPS, 
-  NetworkCard 
+  Disk,
+  ServerRole,
+  DiskSlotType,
+  NetworkPortType,
+  SwitchRole,
+  PortSpeed
 } from '../types/infrastructure';
 
 // Sample server templates
@@ -31,7 +31,17 @@ export const serverTemplates: Server[] = [
     memoryGB: 64,
     storageCapacityTB: 4,
     networkPorts: 4,
-    networkPortSpeed: 10
+    networkPortSpeed: 10,
+    // New fields
+    serverRole: ServerRole.Compute,
+    cpuSockets: 2,
+    cpuCoresPerSocket: 8,
+    memoryCapacity: 64,
+    diskSlotType: DiskSlotType.TwoPointFive,
+    diskSlotQuantity: 8,
+    ruSize: 1,
+    networkPortType: NetworkPortType.SFP,
+    portsConsumedQuantity: 2
   },
   {
     id: 'srv-2',
@@ -48,23 +58,71 @@ export const serverTemplates: Server[] = [
     memoryGB: 384,
     storageCapacityTB: 12,
     networkPorts: 4,
-    networkPortSpeed: 25
+    networkPortSpeed: 25,
+    // New fields
+    serverRole: ServerRole.Compute,
+    cpuSockets: 2,
+    cpuCoresPerSocket: 20,
+    memoryCapacity: 384,
+    diskSlotType: DiskSlotType.TwoPointFive,
+    diskSlotQuantity: 24,
+    ruSize: 2,
+    networkPortType: NetworkPortType.SFP,
+    portsConsumedQuantity: 4
   },
   {
     id: 'srv-3',
     type: ComponentType.Server,
-    name: 'Blade Server',
-    manufacturer: 'Cisco',
-    model: 'UCS B200 M5',
-    cost: 4800,
-    powerRequired: 450,
-    rackUnitsConsumed: 1,
-    cpuModel: 'Intel Xeon Platinum 8280',
+    name: 'Storage Server',
+    manufacturer: 'Dell',
+    model: 'PowerEdge R740xd',
+    cost: 9200,
+    powerRequired: 750,
+    rackUnitsConsumed: 2,
+    cpuModel: 'Intel Xeon Silver 4210',
     cpuCount: 2,
-    coreCount: 56,
-    memoryGB: 768,
+    coreCount: 20,
+    memoryGB: 128,
+    storageCapacityTB: 96,
+    networkPorts: 4,
+    networkPortSpeed: 25,
+    // New fields
+    serverRole: ServerRole.Storage,
+    cpuSockets: 2,
+    cpuCoresPerSocket: 10,
+    memoryCapacity: 128,
+    diskSlotType: DiskSlotType.ThreePointFive,
+    diskSlotQuantity: 24,
+    ruSize: 2,
+    networkPortType: NetworkPortType.SFP,
+    portsConsumedQuantity: 4
+  },
+  {
+    id: 'srv-4',
+    type: ComponentType.Server,
+    name: 'Control Server',
+    manufacturer: 'Cisco',
+    model: 'UCS C220 M5',
+    cost: 6800,
+    powerRequired: 650,
+    rackUnitsConsumed: 1,
+    cpuModel: 'Intel Xeon Gold 5218',
+    cpuCount: 2,
+    coreCount: 32,
+    memoryGB: 192,
+    storageCapacityTB: 2,
     networkPorts: 2,
-    networkPortSpeed: 40
+    networkPortSpeed: 10,
+    // New fields
+    serverRole: ServerRole.Controller,
+    cpuSockets: 2,
+    cpuCoresPerSocket: 16,
+    memoryCapacity: 192,
+    diskSlotType: DiskSlotType.TwoPointFive,
+    diskSlotQuantity: 8,
+    ruSize: 1,
+    networkPortType: NetworkPortType.SFP,
+    portsConsumedQuantity: 2
   }
 ];
 
@@ -81,7 +139,12 @@ export const switchTemplates: Switch[] = [
     rackUnitsConsumed: 1,
     portCount: 36,
     portSpeed: 100,
-    layer: 3
+    layer: 3,
+    // New fields
+    switchRole: SwitchRole.Leaf,
+    ruSize: 1,
+    portSpeedType: PortSpeed.HundredG,
+    portsProvidedQuantity: 36
   },
   {
     id: 'sw-2',
@@ -94,7 +157,12 @@ export const switchTemplates: Switch[] = [
     rackUnitsConsumed: 1,
     portCount: 48,
     portSpeed: 10,
-    layer: 2
+    layer: 2,
+    // New fields
+    switchRole: SwitchRole.Access,
+    ruSize: 1,
+    portSpeedType: PortSpeed.TenG,
+    portsProvidedQuantity: 48
   },
   {
     id: 'sw-3',
@@ -107,7 +175,30 @@ export const switchTemplates: Switch[] = [
     rackUnitsConsumed: 2,
     portCount: 72,
     portSpeed: 40,
-    layer: 3
+    layer: 3,
+    // New fields
+    switchRole: SwitchRole.Spine,
+    ruSize: 2,
+    portSpeedType: PortSpeed.FortyG,
+    portsProvidedQuantity: 72
+  },
+  {
+    id: 'sw-4',
+    type: ComponentType.Switch,
+    name: 'Management Switch',
+    manufacturer: 'Cisco',
+    model: 'Catalyst 3850-48T',
+    cost: 6500,
+    powerRequired: 350,
+    rackUnitsConsumed: 1,
+    portCount: 48,
+    portSpeed: 1,
+    layer: 3,
+    // New fields
+    switchRole: SwitchRole.Management,
+    ruSize: 1,
+    portSpeedType: PortSpeed.OneG,
+    portsProvidedQuantity: 48
   }
 ];
 
@@ -175,42 +266,6 @@ export const firewallTemplates: Firewall[] = [
   }
 ];
 
-// Sample storage array templates
-export const storageArrayTemplates: StorageArray[] = [
-  {
-    id: 'str-1',
-    type: ComponentType.StorageArray,
-    name: 'Enterprise SAN',
-    manufacturer: 'Dell EMC',
-    model: 'Unity 650F',
-    cost: 150000,
-    powerRequired: 2200,
-    rackUnitsConsumed: 4,
-    driveCapacity: 500,
-    driveSlots: 25,
-    controllerCount: 2,
-    raidSupport: ['RAID1', 'RAID5', 'RAID6', 'RAID10'],
-    networkPorts: 8,
-    networkPortSpeed: 32
-  },
-  {
-    id: 'str-2',
-    type: ComponentType.StorageArray,
-    name: 'All-Flash Array',
-    manufacturer: 'Pure Storage',
-    model: 'FlashArray//X50',
-    cost: 300000,
-    powerRequired: 1800,
-    rackUnitsConsumed: 3,
-    driveCapacity: 1000,
-    driveSlots: 20,
-    controllerCount: 2,
-    raidSupport: ['RAID3D'],
-    networkPorts: 8,
-    networkPortSpeed: 32
-  }
-];
-
 // Sample disk templates
 export const diskTemplates: Disk[] = [
   {
@@ -246,143 +301,33 @@ export const diskTemplates: Disk[] = [
   }
 ];
 
-// Sample rack templates
-export const rackTemplates: Rack[] = [
-  {
-    id: 'rack-1',
-    type: ComponentType.Rack,
-    name: 'Standard Data Center Rack',
-    manufacturer: 'APC',
-    model: 'NetShelter SX',
-    cost: 2800,
-    powerRequired: 0,
-    rackUnits: 42,
-    width: 600,
-    depth: 1070,
-    height: 1991,
-    maxWeight: 1361,
-    maxPower: 10000
-  },
-  {
-    id: 'rack-2',
-    type: ComponentType.Rack,
-    name: 'Heavy Duty Rack',
-    manufacturer: 'Rittal',
-    model: 'TS IT',
-    cost: 3500,
-    powerRequired: 0,
-    rackUnits: 48,
-    width: 800,
-    depth: 1200,
-    height: 2200,
-    maxWeight: 1500,
-    maxPower: 15000
-  }
-];
-
-// Sample PDU templates
-export const pduTemplates: PDU[] = [
-  {
-    id: 'pdu-1',
-    type: ComponentType.PDU,
-    name: 'Metered PDU',
-    manufacturer: 'Raritan',
-    model: 'PX3-5190CR',
-    cost: 1200,
-    powerRequired: 0,
-    rackUnitsConsumed: 0, // Zero-U mounting
-    outputVoltage: 230,
-    maxOutput: 7.4,
-    outlets: 36
-  },
-  {
-    id: 'pdu-2',
-    type: ComponentType.PDU,
-    name: 'Switched PDU',
-    manufacturer: 'APC',
-    model: 'AP8959',
-    cost: 1800,
-    powerRequired: 0,
-    rackUnitsConsumed: 0, // Zero-U mounting
-    outputVoltage: 230,
-    maxOutput: 11,
-    outlets: 24
-  }
-];
-
-// Sample UPS templates
-export const upsTemplates: UPS[] = [
-  {
-    id: 'ups-1',
-    type: ComponentType.UPS,
-    name: 'Rack UPS',
-    manufacturer: 'APC',
-    model: 'Smart-UPS SRT 5000VA',
-    cost: 4500,
-    powerRequired: 0,
-    rackUnitsConsumed: 3,
-    capacity: 4500,
-    runtime: 30,
-    outputVoltage: 230
-  },
-  {
-    id: 'ups-2',
-    type: ComponentType.UPS,
-    name: 'Large UPS',
-    manufacturer: 'Eaton',
-    model: '9PX 11kVA',
-    cost: 9800,
-    powerRequired: 0,
-    rackUnitsConsumed: 6,
-    capacity: 10000,
-    runtime: 60,
-    outputVoltage: 230
-  }
-];
-
-// Sample network card templates
-export const networkCardTemplates: NetworkCard[] = [
-  {
-    id: 'nic-1',
-    type: ComponentType.NetworkCard,
-    name: 'Dual-port 10G NIC',
-    manufacturer: 'Intel',
-    model: 'X710-DA2',
-    cost: 430,
-    powerRequired: 11,
-    portCount: 2,
-    portSpeed: 10,
-    interface: 'PCIe'
-  },
-  {
-    id: 'nic-2',
-    type: ComponentType.NetworkCard,
-    name: 'Quad-port 25G NIC',
-    manufacturer: 'Mellanox',
-    model: 'ConnectX-4 Lx',
-    cost: 850,
-    powerRequired: 13,
-    portCount: 4,
-    portSpeed: 25,
-    interface: 'PCIe'
-  }
-];
-
 // All component templates combined
 export const allComponentTemplates: InfrastructureComponent[] = [
   ...serverTemplates,
   ...switchTemplates,
   ...routerTemplates,
   ...firewallTemplates,
-  ...storageArrayTemplates,
-  ...diskTemplates,
-  ...rackTemplates,
-  ...pduTemplates,
-  ...upsTemplates,
-  ...networkCardTemplates
+  ...diskTemplates
 ];
 
 // Function to get components by type
 export const getComponentsByType = (type: ComponentType): InfrastructureComponent[] => {
   return allComponentTemplates.filter(component => component.type === type);
+};
+
+// Function to get components by role
+export const getComponentsByRole = (type: ComponentType, role: string): InfrastructureComponent[] => {
+  return allComponentTemplates.filter(component => {
+    if (component.type !== type) return false;
+    
+    if (type === ComponentType.Server && 'serverRole' in component) {
+      return component.serverRole?.toString() === role;
+    }
+    
+    if (type === ComponentType.Switch && 'switchRole' in component) {
+      return component.switchRole?.toString() === role;
+    }
+    
+    return false;
+  });
 };

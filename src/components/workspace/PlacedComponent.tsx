@@ -7,13 +7,7 @@ import {
   Network, 
   HardDrive, 
   Router,
-  Shield, 
-  Database,
-  Box,
-  Zap,
-  Cpu,
-  Power,
-  Grid3X3
+  Shield
 } from 'lucide-react';
 
 interface PlacedComponentProps {
@@ -34,19 +28,10 @@ const getComponentIcon = (type: ComponentType) => {
       return <Router className="h-10 w-10 text-infra-component-network" />;
     case ComponentType.Firewall:
       return <Shield className="h-10 w-10 text-infra-component-security" />;
-    case ComponentType.StorageArray:
-      return <Database className="h-10 w-10 text-infra-component-storage" />;
     case ComponentType.Disk:
       return <HardDrive className="h-10 w-10 text-infra-component-storage" />;
-    case ComponentType.Rack:
-      return <Grid3X3 className="h-10 w-10 text-infra-component-rack" />;
-    case ComponentType.PDU:
-    case ComponentType.UPS:
-      return <Power className="h-10 w-10 text-infra-component-server" />;
-    case ComponentType.NetworkCard:
-      return <Cpu className="h-10 w-10 text-infra-component-network" />;
     default:
-      return <Box className="h-10 w-10 text-gray-400" />;
+      return <Server className="h-10 w-10 text-gray-400" />;
   }
 };
 
@@ -119,6 +104,17 @@ export const PlacedComponent: React.FC<PlacedComponentProps> = ({
     };
   }, [dragging, position]);
 
+  // Get role information
+  const getRoleInfo = (component: InfrastructureComponent) => {
+    if (component.type === ComponentType.Server && 'serverRole' in component && component.serverRole) {
+      return `${component.serverRole} Server`;
+    }
+    if (component.type === ComponentType.Switch && 'switchRole' in component && component.switchRole) {
+      return `${component.switchRole} Switch`;
+    }
+    return component.type;
+  };
+
   return (
     <div
       ref={componentRef}
@@ -136,6 +132,7 @@ export const PlacedComponent: React.FC<PlacedComponentProps> = ({
       <div className="mb-2">{getComponentIcon(component.component.type)}</div>
       <h3 className="text-sm font-medium truncate w-full text-center">{component.component.name}</h3>
       <p className="text-xs text-gray-500 mt-1">{component.component.manufacturer} {component.component.model}</p>
+      <p className="text-xs text-blue-500 mt-0.5">{getRoleInfo(component.component)}</p>
       <div className="mt-2 text-xs text-gray-500 flex justify-between w-full">
         <span>${component.component.cost}</span>
         <span>{component.component.powerRequired}W</span>

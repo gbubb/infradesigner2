@@ -9,7 +9,6 @@ import {
   Database,
   LayoutGrid,
   Cpu,
-  Power,
   Plus,
   Pencil,
   Trash,
@@ -29,7 +28,12 @@ import {
   ComponentType, 
   componentTypeToCategory, 
   ComponentCategory, 
-  InfrastructureComponent
+  InfrastructureComponent,
+  ServerRole,
+  DiskSlotType,
+  NetworkPortType,
+  SwitchRole,
+  PortSpeed
 } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
 
@@ -74,8 +78,6 @@ export const ComponentLibrary: React.FC = () => {
     [ComponentCategory.Compute]: <Cpu className="h-5 w-5" />,
     [ComponentCategory.Network]: <Network className="h-5 w-5" />,
     [ComponentCategory.Storage]: <Database className="h-5 w-5" />,
-    [ComponentCategory.Power]: <Power className="h-5 w-5" />,
-    [ComponentCategory.Physical]: <LayoutGrid className="h-5 w-5" />,
     [ComponentCategory.Security]: <Shield className="h-5 w-5" />,
     all: <LayoutGrid className="h-5 w-5" />
   };
@@ -85,13 +87,22 @@ export const ComponentLibrary: React.FC = () => {
     let parsedValue: string | number = value;
     
     // Convert number fields from string to number
-    if (name === 'cost' || name === 'powerRequired') {
+    if (['cost', 'powerRequired', 'cpuSockets', 'cpuCoresPerSocket', 'memoryCapacity', 
+         'diskSlotQuantity', 'ruSize', 'portsConsumedQuantity', 'portCount', 'portSpeed', 
+         'portsProvidedQuantity'].includes(name)) {
       parsedValue = parseFloat(value) || 0;
     }
     
     setComponentForm({
       ...componentForm,
       [name]: parsedValue
+    });
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setComponentForm({
+      ...componentForm,
+      [name]: value
     });
   };
 
@@ -152,31 +163,46 @@ export const ComponentLibrary: React.FC = () => {
         component = {
           ...baseComponent,
           type: ComponentType.Server,
-          rackUnitsConsumed: 1,
-          cpuModel: "Generic CPU",
-          cpuCount: 1,
-          coreCount: 8,
-          memoryGB: 32
+          rackUnitsConsumed: componentForm.ruSize || 1,
+          cpuModel: componentForm.cpuModel || "Generic CPU",
+          cpuCount: componentForm.cpuCount || 1,
+          coreCount: componentForm.coreCount || 8,
+          memoryGB: componentForm.memoryGB || 32,
+          // New fields
+          serverRole: componentForm.serverRole || ServerRole.Compute,
+          cpuSockets: componentForm.cpuSockets || 1,
+          cpuCoresPerSocket: componentForm.cpuCoresPerSocket || 4,
+          memoryCapacity: componentForm.memoryCapacity || 32,
+          diskSlotType: componentForm.diskSlotType || DiskSlotType.TwoPointFive,
+          diskSlotQuantity: componentForm.diskSlotQuantity || 8,
+          ruSize: componentForm.ruSize || 1,
+          networkPortType: componentForm.networkPortType || NetworkPortType.SFP,
+          portsConsumedQuantity: componentForm.portsConsumedQuantity || 2
         } as InfrastructureComponent;
         break;
       case ComponentType.Switch:
         component = {
           ...baseComponent,
           type: ComponentType.Switch,
-          rackUnitsConsumed: 1,
-          portCount: 24,
-          portSpeed: 10,
-          layer: 2
+          rackUnitsConsumed: componentForm.ruSize || 1,
+          portCount: componentForm.portCount || 24,
+          portSpeed: componentForm.portSpeed || 10,
+          layer: 2,
+          // New fields
+          switchRole: componentForm.switchRole || SwitchRole.Access,
+          ruSize: componentForm.ruSize || 1,
+          portSpeedType: componentForm.portSpeedType || PortSpeed.TenG,
+          portsProvidedQuantity: componentForm.portsProvidedQuantity || 24
         } as InfrastructureComponent;
         break;
       case ComponentType.Router:
         component = {
           ...baseComponent,
           type: ComponentType.Router,
-          rackUnitsConsumed: 1,
-          portCount: 8,
-          portSpeed: 10,
-          throughput: 40,
+          rackUnitsConsumed: componentForm.rackUnitsConsumed || 1,
+          portCount: componentForm.portCount || 8,
+          portSpeed: componentForm.portSpeed || 10,
+          throughput: componentForm.throughput || 40,
           supportedProtocols: ['BGP', 'OSPF']
         } as InfrastructureComponent;
         break;
@@ -184,51 +210,26 @@ export const ComponentLibrary: React.FC = () => {
         component = {
           ...baseComponent,
           type: ComponentType.Firewall,
-          rackUnitsConsumed: 1,
-          portCount: 8,
-          portSpeed: 10,
-          throughput: 10,
+          rackUnitsConsumed: componentForm.rackUnitsConsumed || 1,
+          portCount: componentForm.portCount || 8,
+          portSpeed: componentForm.portSpeed || 10,
+          throughput: componentForm.throughput || 10,
           features: ['IPS', 'VPN']
-        } as InfrastructureComponent;
-        break;
-      case ComponentType.StorageArray:
-        component = {
-          ...baseComponent,
-          type: ComponentType.StorageArray,
-          rackUnitsConsumed: 2,
-          driveCapacity: 20,
-          driveSlots: 24,
-          controllerCount: 2,
-          raidSupport: ['RAID5', 'RAID6'],
-          networkPorts: 4,
-          networkPortSpeed: 10
         } as InfrastructureComponent;
         break;
       case ComponentType.Disk:
         component = {
           ...baseComponent,
           type: ComponentType.Disk,
-          capacityTB: 1,
-          formFactor: '2.5"',
-          interface: 'SATA'
-        } as InfrastructureComponent;
-        break;
-      case ComponentType.Rack:
-        component = {
-          ...baseComponent,
-          type: ComponentType.Rack,
-          rackUnits: 42,
-          width: 600,
-          depth: 1000,
-          height: 2000,
-          maxWeight: 1000
+          capacityTB: componentForm.capacityTB || 1,
+          formFactor: componentForm.formFactor || '2.5"',
+          interface: componentForm.interface || 'SATA'
         } as InfrastructureComponent;
         break;
       default:
-        // Use Other type for any other component types
+        // Fallback for any other component types
         component = {
-          ...baseComponent,
-          type: ComponentType.Other
+          ...baseComponent
         } as InfrastructureComponent;
     }
 
@@ -262,6 +263,262 @@ export const ComponentLibrary: React.FC = () => {
     }
   };
 
+  // Render server specific form fields
+  const renderServerFormFields = () => {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="serverRole">Server Role</Label>
+          <Select
+            value={componentForm.serverRole?.toString() || ''}
+            onValueChange={(value) => handleSelectChange('serverRole', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(ServerRole).map((role) => (
+                <SelectItem key={role} value={role}>
+                  {role.charAt(0).toUpperCase() + role.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="cpuModel">CPU Model</Label>
+            <Input
+              id="cpuModel"
+              name="cpuModel"
+              value={componentForm.cpuModel || ''}
+              onChange={handleInputChange}
+              placeholder="CPU Model"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="cpuSockets">CPU Sockets</Label>
+            <Input
+              id="cpuSockets"
+              name="cpuSockets"
+              type="number"
+              value={componentForm.cpuSockets || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="cpuCoresPerSocket">Cores per Socket</Label>
+            <Input
+              id="cpuCoresPerSocket"
+              name="cpuCoresPerSocket"
+              type="number"
+              value={componentForm.cpuCoresPerSocket || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="memoryCapacity">Memory (GB)</Label>
+            <Input
+              id="memoryCapacity"
+              name="memoryCapacity"
+              type="number"
+              value={componentForm.memoryCapacity || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="diskSlotType">Disk Slot Type</Label>
+            <Select
+              value={componentForm.diskSlotType?.toString() || ''}
+              onValueChange={(value) => handleSelectChange('diskSlotType', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(DiskSlotType).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="diskSlotQuantity">Disk Slots</Label>
+            <Input
+              id="diskSlotQuantity"
+              name="diskSlotQuantity"
+              type="number"
+              value={componentForm.diskSlotQuantity || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="ruSize">RU Size</Label>
+            <Input
+              id="ruSize"
+              name="ruSize"
+              type="number"
+              value={componentForm.ruSize || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="networkPortType">Network Port Type</Label>
+            <Select
+              value={componentForm.networkPortType?.toString() || ''}
+              onValueChange={(value) => handleSelectChange('networkPortType', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(NetworkPortType).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="portsConsumedQuantity">Ports Consumed</Label>
+            <Input
+              id="portsConsumedQuantity"
+              name="portsConsumedQuantity"
+              type="number"
+              value={componentForm.portsConsumedQuantity || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  // Render switch specific form fields
+  const renderSwitchFormFields = () => {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="switchRole">Switch Role</Label>
+          <Select
+            value={componentForm.switchRole?.toString() || ''}
+            onValueChange={(value) => handleSelectChange('switchRole', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(SwitchRole).map((role) => (
+                <SelectItem key={role} value={role}>
+                  {role.charAt(0).toUpperCase() + role.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="ruSize">RU Size</Label>
+            <Input
+              id="ruSize"
+              name="ruSize"
+              type="number"
+              value={componentForm.ruSize || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="portSpeedType">Port Speed</Label>
+            <Select
+              value={componentForm.portSpeedType?.toString() || ''}
+              onValueChange={(value) => handleSelectChange('portSpeedType', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select speed" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(PortSpeed).map((speed) => (
+                  <SelectItem key={speed} value={speed}>
+                    {speed}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="portsProvidedQuantity">Ports Provided</Label>
+            <Input
+              id="portsProvidedQuantity"
+              name="portsProvidedQuantity"
+              type="number"
+              value={componentForm.portsProvidedQuantity || 0}
+              onChange={handleInputChange}
+              placeholder="0"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="layer">Switch Layer</Label>
+            <Select
+              value={componentForm.layer?.toString() || ''}
+              onValueChange={(value) => handleSelectChange('layer', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select layer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2">Layer 2</SelectItem>
+                <SelectItem value="3">Layer 3</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render type-specific form fields based on selected component type
+  const renderTypeSpecificFormFields = () => {
+    switch(componentForm.type) {
+      case ComponentType.Server:
+        return renderServerFormFields();
+      case ComponentType.Switch:
+        return renderSwitchFormFields();
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="container mx-auto py-4">
       <div className="flex justify-between items-center mb-6">
@@ -273,7 +530,7 @@ export const ComponentLibrary: React.FC = () => {
               Add Component
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Component</DialogTitle>
               <DialogDescription>
@@ -358,6 +615,9 @@ export const ComponentLibrary: React.FC = () => {
                   />
                 </div>
               </div>
+              
+              {/* Render type-specific form fields */}
+              {renderTypeSpecificFormFields()}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => {
@@ -462,7 +722,7 @@ export const ComponentLibrary: React.FC = () => {
 
       {/* Edit Component Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Component</DialogTitle>
             <DialogDescription>
@@ -528,6 +788,9 @@ export const ComponentLibrary: React.FC = () => {
                 />
               </div>
             </div>
+            
+            {/* Render type-specific form fields for editing */}
+            {renderTypeSpecificFormFields()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {

@@ -20,13 +20,7 @@ export enum ComponentType {
   Switch = 'switch',
   Router = 'router',
   Firewall = 'firewall',
-  StorageArray = 'storageArray',
-  Disk = 'disk',
-  Rack = 'rack',
-  PDU = 'pdu',  // Power Distribution Unit
-  UPS = 'ups',  // Uninterruptible Power Supply
-  NetworkCard = 'networkCard',
-  Other = 'other'
+  Disk = 'disk'
 }
 
 // Position interface for component placement
@@ -40,8 +34,6 @@ export enum ComponentCategory {
   Compute = 'compute',
   Network = 'network',
   Storage = 'storage',
-  Power = 'power',
-  Physical = 'physical',
   Security = 'security'
 }
 
@@ -51,13 +43,7 @@ export const componentTypeToCategory: Record<ComponentType, ComponentCategory> =
   [ComponentType.Switch]: ComponentCategory.Network,
   [ComponentType.Router]: ComponentCategory.Network,
   [ComponentType.Firewall]: ComponentCategory.Security,
-  [ComponentType.StorageArray]: ComponentCategory.Storage,
-  [ComponentType.Disk]: ComponentCategory.Storage,
-  [ComponentType.Rack]: ComponentCategory.Physical,
-  [ComponentType.PDU]: ComponentCategory.Power,
-  [ComponentType.UPS]: ComponentCategory.Power,
-  [ComponentType.NetworkCard]: ComponentCategory.Network,
-  [ComponentType.Other]: ComponentCategory.Physical
+  [ComponentType.Disk]: ComponentCategory.Storage
 };
 
 // Interface for rack-mountable components
@@ -65,6 +51,48 @@ export interface RackMountable {
   rackUnitsConsumed: number;  // Height in rack units (RU)
   rackPosition?: number;      // Position in the rack (from bottom)
   rackId?: string;            // Which rack this component is installed in
+}
+
+// Server role types
+export enum ServerRole {
+  Compute = 'compute',
+  Storage = 'storage',
+  Controller = 'controller',
+  Infrastructure = 'infrastructure',
+  GPU = 'gpu'
+}
+
+// Disk slot types
+export enum DiskSlotType {
+  TwoPointFive = '2.5"',
+  ThreePointFive = '3.5"'
+}
+
+// Network port types
+export enum NetworkPortType {
+  Ethernet = 'ethernet',
+  Fiber = 'fiber',
+  SFP = 'sfp',
+  QSFP = 'qsfp'
+}
+
+// Switch role types
+export enum SwitchRole {
+  Spine = 'spine',
+  Leaf = 'leaf',
+  Edge = 'edge',
+  Management = 'management',
+  Core = 'core',
+  Access = 'access'
+}
+
+// Port speed types
+export enum PortSpeed {
+  OneG = '1g',
+  TenG = '10g',
+  TwentyFiveG = '25g',
+  FortyG = '40g',
+  HundredG = '100g'
 }
 
 // Server specific properties
@@ -77,6 +105,17 @@ export interface Server extends BaseComponent, RackMountable {
   storageCapacityTB?: number;
   networkPorts?: number;
   networkPortSpeed?: number;  // in Gbps
+  
+  // New fields
+  serverRole?: ServerRole;
+  cpuSockets?: number;
+  cpuCoresPerSocket?: number;
+  memoryCapacity?: number; // in GB
+  diskSlotType?: DiskSlotType;
+  diskSlotQuantity?: number;
+  ruSize?: number;
+  networkPortType?: NetworkPortType;
+  portsConsumedQuantity?: number;
 }
 
 // Switch specific properties
@@ -86,6 +125,12 @@ export interface Switch extends BaseComponent, RackMountable {
   portSpeed: number;  // in Gbps
   managementInterface?: string;
   layer: 2 | 3;  // Layer 2 or Layer 3 switch
+  
+  // New fields
+  switchRole?: SwitchRole;
+  ruSize?: number;
+  portSpeedType?: PortSpeed;
+  portsProvidedQuantity?: number;
 }
 
 // Router specific properties
@@ -106,17 +151,6 @@ export interface Firewall extends BaseComponent, RackMountable {
   features: string[];  // e.g., ["IPS", "VPN"]
 }
 
-// Storage Array specific properties
-export interface StorageArray extends BaseComponent, RackMountable {
-  type: ComponentType.StorageArray;
-  driveCapacity: number;  // Total raw capacity in TB
-  driveSlots: number;     // Total number of drive slots
-  controllerCount: number;
-  raidSupport: string[];  // e.g., ["RAID0", "RAID1", "RAID5"]
-  networkPorts: number;
-  networkPortSpeed: number;  // in Gbps
-}
-
 // Disk specific properties
 export interface Disk extends BaseComponent {
   type: ComponentType.Disk;
@@ -129,54 +163,13 @@ export interface Disk extends BaseComponent {
   writeSpeed?: number; // in MB/s
 }
 
-// Rack specific properties
-export interface Rack extends BaseComponent {
-  type: ComponentType.Rack;
-  rackUnits: number;     // Total rack units available
-  width: number;         // in mm
-  depth: number;         // in mm
-  height: number;        // in mm
-  maxWeight: number;     // in kg
-  maxPower?: number;     // in watts
-}
-
-// PDU specific properties
-export interface PDU extends BaseComponent, RackMountable {
-  type: ComponentType.PDU;
-  outputVoltage: number;  // in volts
-  maxOutput: number;      // in watts
-  outlets: number;
-}
-
-// UPS specific properties
-export interface UPS extends BaseComponent, RackMountable {
-  type: ComponentType.UPS;
-  capacity: number;       // in watts
-  runtime: number;        // in minutes at full load
-  outputVoltage: number;  // in volts
-}
-
-// Network Card specific properties
-export interface NetworkCard extends BaseComponent {
-  type: ComponentType.NetworkCard;
-  portCount: number;
-  portSpeed: number;  // in Gbps
-  interface: string;  // e.g., "PCIe", "mezzanine"
-}
-
 // Union type of all possible components
 export type InfrastructureComponent =
   | Server
   | Switch
   | Router
   | Firewall
-  | StorageArray
-  | Disk
-  | Rack
-  | PDU
-  | UPS
-  | NetworkCard
-  | (BaseComponent & { type: ComponentType.Other });
+  | Disk;
 
 // Updated Design requirements specification
 export interface DesignRequirements {
