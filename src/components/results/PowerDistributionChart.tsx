@@ -33,7 +33,7 @@ export const PowerDistributionChart: React.FC<PowerDistributionProps> = ({ distr
               value={item.powerUtilization} 
               className="h-2" 
               // Add color warning when close to max
-              indicatorColor={
+              indicatorClassName={
                 item.powerUtilization > 90 ? 'bg-red-500' : 
                 item.powerUtilization > 75 ? 'bg-amber-500' : 
                 'bg-green-500'
