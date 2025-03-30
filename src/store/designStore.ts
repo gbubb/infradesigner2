@@ -41,7 +41,7 @@ interface DesignState {
   updateComponentPosition: (id: string, position: Position) => void;
   removeComponentFromWorkspace: (id: string) => void;
   selectComponent: (id: string | null) => void;
-  addComponent: (component: InfrastructureComponent) => void;
+  addComponent: (component: InfrastructureComponent, position: Position) => void;
   removeComponent: (id: string) => void;
 }
 
@@ -411,19 +411,31 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     set({ selectedComponentId: id });
   },
 
-  addComponent: (component) => {
+  addComponent: (component, position) => {
+    const id = uuidv4();
     set((state) => ({
       placedComponents: {
         ...state.placedComponents,
-        [uuidv4()]: component
-      }
+        [id]: component
+      },
+      workspaceComponents: [
+        ...state.workspaceComponents,
+        {
+          id,
+          component,
+          position
+        }
+      ]
     }));
   },
 
   removeComponent: (id) => {
     set((state) => {
       const { [id]: _, ...rest } = state.placedComponents;
-      return { placedComponents: rest };
+      return { 
+        placedComponents: rest,
+        workspaceComponents: state.workspaceComponents.filter(comp => comp.id !== id)
+      };
     });
   }
 }));

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
-import { ComponentWithPosition, Position } from '@/types/workspace';
+import { ComponentWithPosition } from '@/types/workspace';
 import { 
   Server, 
   Network, 
@@ -16,16 +16,11 @@ import {
   Grid3X3
 } from 'lucide-react';
 
-interface Position {
-  x: number;
-  y: number;
-}
-
 interface PlacedComponentProps {
   component: ComponentWithPosition;
   isSelected: boolean;
   onClick: (e: React.MouseEvent) => void;
-  onPositionChange: (position: Position) => void;
+  onPositionChange: (position: { x: number; y: number }) => void;
 }
 
 // Helper function to get the icon based on component type
@@ -62,8 +57,8 @@ export const PlacedComponent: React.FC<PlacedComponentProps> = ({
   onPositionChange
 }) => {
   const [dragging, setDragging] = useState(false);
-  const [position, setPosition] = useState<Position>(component.position);
-  const [offset, setOffset] = useState<Position>({ x: 0, y: 0 });
+  const [position, setPosition] = useState<{ x: number; y: number }>(component.position);
+  const [offset, setOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   
   const componentRef = useRef<HTMLDivElement>(null);
 
@@ -138,12 +133,12 @@ export const PlacedComponent: React.FC<PlacedComponentProps> = ({
       onClick={onClick}
       onMouseDown={handleMouseDown}
     >
-      <div className="mb-2">{getComponentIcon(component.type)}</div>
-      <h3 className="text-sm font-medium truncate w-full text-center">{component.name}</h3>
-      <p className="text-xs text-gray-500 mt-1">{component.manufacturer} {component.model}</p>
+      <div className="mb-2">{getComponentIcon(component.component.type)}</div>
+      <h3 className="text-sm font-medium truncate w-full text-center">{component.component.name}</h3>
+      <p className="text-xs text-gray-500 mt-1">{component.component.manufacturer} {component.component.model}</p>
       <div className="mt-2 text-xs text-gray-500 flex justify-between w-full">
-        <span>${component.cost}</span>
-        <span>{component.powerRequired}W</span>
+        <span>${component.component.cost}</span>
+        <span>{component.component.powerRequired}W</span>
       </div>
     </div>
   );

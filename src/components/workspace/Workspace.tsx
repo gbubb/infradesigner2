@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { useDesignStore, ComponentWithPosition } from '@/store/designStore';
+import { useDesignStore } from '@/store/designStore';
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { PlacedComponent } from './PlacedComponent';
 import { ComponentDetails } from './ComponentDetails';
@@ -66,7 +66,7 @@ export const Workspace: React.FC = () => {
         {Object.entries(placedComponents).map(([id, component]) => (
           <PlacedComponent 
             key={id}
-            component={component}
+            component={{ id, component, position: { x: 0, y: 0 } }} // Default position, should be updated
             isSelected={selectedComponentId === id}
             onClick={(e) => {
               e.stopPropagation();
