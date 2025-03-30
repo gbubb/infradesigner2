@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback } from 'react';
 import { useDesignStore, recalculateDesign } from '@/store/designStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +18,8 @@ export const DesignPanel: React.FC = () => {
     saveDesign,
     calculateRequiredQuantity,
     getAvailableComponents,
-    activeDesign
+    activeDesign,
+    requirements
   } = useDesignStore();
   
   // Ensure roles are calculated when component mounts - but only once
@@ -46,6 +48,9 @@ export const DesignPanel: React.FC = () => {
   const getComponentOptionsForRole = (role: string): InfrastructureComponent[] => {
     // Get all available components including custom and template components
     const allComponents = getAvailableComponents();
+    
+    // Get current network topology from requirements
+    const networkTopology = requirements?.networkRequirements?.networkTopology || 'Spine-Leaf';
     
     // Map design roles to component types and roles
     switch(role) {
@@ -78,7 +83,7 @@ export const DesignPanel: React.FC = () => {
         return allComponents.filter(c => 
           c.type === ComponentType.Switch && 
           'switchRole' in c && 
-          c.switchRole === SwitchRole.Access
+          (c.switchRole === SwitchRole.Access || c.switchRole === SwitchRole.Leaf)
         );
       case 'borderLeafSwitch':
         return allComponents.filter(c => 
@@ -87,17 +92,33 @@ export const DesignPanel: React.FC = () => {
           c.switchRole === SwitchRole.Edge
         );
       case 'spineSwitch':
-        return allComponents.filter(c => 
-          c.type === ComponentType.Switch && 
-          'switchRole' in c && 
-          c.switchRole === SwitchRole.Spine
-        );
+        if (networkTopology === 'Spine-Leaf') {
+          return allComponents.filter(c => 
+            c.type === ComponentType.Switch && 
+            'switchRole' in c && 
+            c.switchRole === SwitchRole.Spine
+          );
+        } else {
+          return allComponents.filter(c => 
+            c.type === ComponentType.Switch && 
+            'switchRole' in c && 
+            c.switchRole === SwitchRole.Core
+          );
+        }
       case 'torSwitch':
-        return allComponents.filter(c => 
-          c.type === ComponentType.Switch && 
-          'switchRole' in c && 
-          c.switchRole === SwitchRole.Leaf
-        );
+        if (networkTopology === 'Spine-Leaf') {
+          return allComponents.filter(c => 
+            c.type === ComponentType.Switch && 
+            'switchRole' in c && 
+            c.switchRole === SwitchRole.Leaf
+          );
+        } else {
+          return allComponents.filter(c => 
+            c.type === ComponentType.Switch && 
+            'switchRole' in c && 
+            c.switchRole === SwitchRole.Access
+          );
+        }
       case 'firewall':
         return allComponents.filter(c => c.type === ComponentType.Firewall);
       default:

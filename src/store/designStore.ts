@@ -5,6 +5,7 @@ import { createRequirementsSlice, RequirementsSlice } from './slices/requirement
 import { createDesignSlice, DesignSlice } from './slices/designSlice';
 import { createWorkspaceSlice, WorkspaceSlice } from './slices/workspaceSlice';
 import { createComponentLibrarySlice, ComponentLibrarySlice } from './slices/componentLibrarySlice';
+import { toast } from 'sonner';
 
 // Combined store type
 export type DesignStoreState = RequirementsSlice & DesignSlice & WorkspaceSlice & ComponentLibrarySlice;
@@ -86,12 +87,15 @@ export const recalculateDesign = () => {
         console.log(`Updated design with ${updatedComponents.length} components`);
       } else {
         console.warn("No components found to update design with");
+        toast.warning("No components found to update design with. Please assign components to roles first.");
       }
     } else {
       console.warn("No active design to update");
+      toast.warning("No active design to update. Please create a new design first.");
     }
   } catch (error) {
     console.error("Error during design recalculation:", error);
+    toast.error("Error during design recalculation. Please try again.");
   } finally {
     isRecalculating = false;
   }
