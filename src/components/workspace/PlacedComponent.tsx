@@ -20,8 +20,16 @@ interface Position {
   y: number;
 }
 
-interface ComponentWithPosition extends InfrastructureComponent {
+interface ComponentWithPosition {
+  id: string;
   position: Position;
+  type: ComponentType;
+  name: string;
+  manufacturer: string;
+  model: string;
+  cost: number;
+  powerRequired: number;
+  description?: string;
 }
 
 interface PlacedComponentProps {
