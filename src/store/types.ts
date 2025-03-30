@@ -6,7 +6,6 @@ import {
   InfrastructureDesign
 } from '@/types/infrastructure';
 import { ComponentWithPosition } from '@/types/workspace';
-import { RequirementsSlice } from './slices/requirementsSlice';
 
 // Base state shared by all store slices
 export interface BaseState {
@@ -20,8 +19,6 @@ export interface BaseState {
 export interface DesignState extends BaseState {
   // Design requirements
   requirements: DesignRequirements;
-  // Component roles based on requirements
-  componentRoles: ComponentRole[];
   // Saved designs
   savedDesigns: InfrastructureDesign[];
   // Currently active design
@@ -42,9 +39,17 @@ export interface ComponentLibraryState {
   componentTemplates: InfrastructureComponent[];
 }
 
+// Requirements slice interface - needed to define the structure
+export interface RequirementsState {
+  // Component roles based on requirements
+  componentRoles: ComponentRole[];
+}
+
 // Combined store state
 export interface StoreState extends 
   DesignState, 
   WorkspaceState, 
-  ComponentLibraryState, 
-  RequirementsSlice {}
+  ComponentLibraryState,
+  RequirementsState {
+    // Add any additional properties that need to be combined
+}

@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { DesignRequirements, DeviceRoleType, NetworkTopology } from '@/types/infrastructure';
-import { StoreState } from '../types';
+import { StoreState, RequirementsState } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface RequirementsSlice {
