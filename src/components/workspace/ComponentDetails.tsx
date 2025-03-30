@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/com
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Trash2, Copy, Edit } from 'lucide-react';
-import { useDesignStore } from '@/store/designStore';
+import { useDesignStore, ComponentWithPosition } from '@/store/designStore';
 import { ComponentType, Server, Switch, Router, Disk } from '@/types/infrastructure';
 
 interface ComponentDetailsProps {
@@ -26,99 +26,116 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
   const renderComponentSpecificDetails = () => {
     switch (component.type) {
       case ComponentType.Server:
-        const server = component as Server;
-        return (
-          <>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="text-gray-500">CPU Model</div>
-              <div>{server.cpuModel}</div>
-              
-              <div className="text-gray-500">CPU Count</div>
-              <div>{server.cpuCount}</div>
-              
-              <div className="text-gray-500">Cores</div>
-              <div>{server.coreCount}</div>
-              
-              <div className="text-gray-500">Memory</div>
-              <div>{server.memoryGB} GB</div>
-              
-              <div className="text-gray-500">Storage</div>
-              <div>{server.storageCapacityTB} TB</div>
-              
-              <div className="text-gray-500">Network</div>
-              <div>{server.networkPorts} ports @ {server.networkPortSpeed} Gbps</div>
-              
-              <div className="text-gray-500">Rack Units</div>
-              <div>{server.rackUnitsConsumed} RU</div>
-            </div>
-          </>
-        );
+        // Check if component has server properties
+        if ('cpuModel' in component && 'coreCount' in component && 'memoryGB' in component) {
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-500">CPU Model</div>
+                <div>{component.cpuModel}</div>
+                
+                <div className="text-gray-500">CPU Count</div>
+                <div>{component.cpuCount}</div>
+                
+                <div className="text-gray-500">Cores</div>
+                <div>{component.coreCount}</div>
+                
+                <div className="text-gray-500">Memory</div>
+                <div>{component.memoryGB} GB</div>
+                
+                {component.storageCapacityTB && (
+                  <>
+                    <div className="text-gray-500">Storage</div>
+                    <div>{component.storageCapacityTB} TB</div>
+                  </>
+                )}
+                
+                {component.networkPorts && component.networkPortSpeed && (
+                  <>
+                    <div className="text-gray-500">Network</div>
+                    <div>{component.networkPorts} ports @ {component.networkPortSpeed} Gbps</div>
+                  </>
+                )}
+                
+                <div className="text-gray-500">Rack Units</div>
+                <div>{component.rackUnitsConsumed} RU</div>
+              </div>
+            </>
+          );
+        }
+        break;
       
       case ComponentType.Switch:
       case ComponentType.Router:
-        const networkDevice = component as Switch | Router;
-        return (
-          <>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="text-gray-500">Ports</div>
-              <div>{networkDevice.portCount}</div>
-              
-              <div className="text-gray-500">Port Speed</div>
-              <div>{networkDevice.portSpeed} Gbps</div>
-              
-              <div className="text-gray-500">Rack Units</div>
-              <div>{networkDevice.rackUnitsConsumed} RU</div>
+        // Check if component has network device properties
+        if ('portCount' in component && 'portSpeed' in component && 'rackUnitsConsumed' in component) {
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-500">Ports</div>
+                <div>{component.portCount}</div>
+                
+                <div className="text-gray-500">Port Speed</div>
+                <div>{component.portSpeed} Gbps</div>
+                
+                <div className="text-gray-500">Rack Units</div>
+                <div>{component.rackUnitsConsumed} RU</div>
 
-              {component.type === ComponentType.Router && (
-                <>
-                  <div className="text-gray-500">Throughput</div>
-                  <div>{(component as Router).throughput} Gbps</div>
-                  
-                  <div className="text-gray-500">Protocols</div>
-                  <div>{(component as Router).supportedProtocols.join(', ')}</div>
-                </>
-              )}
-            </div>
-          </>
-        );
+                {component.type === ComponentType.Router && 'throughput' in component && 'supportedProtocols' in component && (
+                  <>
+                    <div className="text-gray-500">Throughput</div>
+                    <div>{component.throughput} Gbps</div>
+                    
+                    <div className="text-gray-500">Protocols</div>
+                    <div>{component.supportedProtocols.join(', ')}</div>
+                  </>
+                )}
+              </div>
+            </>
+          );
+        }
+        break;
       
       case ComponentType.Disk:
-        const disk = component as Disk;
-        return (
-          <>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="text-gray-500">Capacity</div>
-              <div>{disk.capacityTB} TB</div>
-              
-              <div className="text-gray-500">Form Factor</div>
-              <div>{disk.formFactor}</div>
-              
-              <div className="text-gray-500">Interface</div>
-              <div>{disk.interface}</div>
-              
-              {disk.iops && (
-                <>
-                  <div className="text-gray-500">IOPS</div>
-                  <div>{disk.iops.toLocaleString()}</div>
-                </>
-              )}
-              
-              {disk.readSpeed && (
-                <>
-                  <div className="text-gray-500">Read Speed</div>
-                  <div>{disk.readSpeed} MB/s</div>
-                </>
-              )}
-              
-              {disk.writeSpeed && (
-                <>
-                  <div className="text-gray-500">Write Speed</div>
-                  <div>{disk.writeSpeed} MB/s</div>
-                </>
-              )}
-            </div>
-          </>
-        );
+        // Check if component has disk properties
+        if ('capacityTB' in component && 'formFactor' in component && 'interface' in component) {
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-500">Capacity</div>
+                <div>{component.capacityTB} TB</div>
+                
+                <div className="text-gray-500">Form Factor</div>
+                <div>{component.formFactor}</div>
+                
+                <div className="text-gray-500">Interface</div>
+                <div>{component.interface}</div>
+                
+                {component.iops && (
+                  <>
+                    <div className="text-gray-500">IOPS</div>
+                    <div>{component.iops.toLocaleString()}</div>
+                  </>
+                )}
+                
+                {component.readSpeed && (
+                  <>
+                    <div className="text-gray-500">Read Speed</div>
+                    <div>{component.readSpeed} MB/s</div>
+                  </>
+                )}
+                
+                {component.writeSpeed && (
+                  <>
+                    <div className="text-gray-500">Write Speed</div>
+                    <div>{component.writeSpeed} MB/s</div>
+                  </>
+                )}
+              </div>
+            </>
+          );
+        }
+        break;
       
       default:
         return (
@@ -127,6 +144,12 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
           </div>
         );
     }
+    
+    return (
+      <div className="text-sm text-gray-500">
+        No specific details available for this component.
+      </div>
+    );
   };
 
   return (

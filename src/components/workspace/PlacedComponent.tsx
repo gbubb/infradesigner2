@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
+import { ComponentWithPosition } from '@/store/designStore';
 import { 
   Server, 
   Network, 
@@ -18,18 +18,6 @@ import {
 interface Position {
   x: number;
   y: number;
-}
-
-interface ComponentWithPosition {
-  id: string;
-  position: Position;
-  type: ComponentType;
-  name: string;
-  manufacturer: string;
-  model: string;
-  cost: number;
-  powerRequired: number;
-  description?: string;
 }
 
 interface PlacedComponentProps {

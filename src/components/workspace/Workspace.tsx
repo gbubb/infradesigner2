@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { useDesignStore } from '@/store/designStore';
+import { useDesignStore, ComponentWithPosition } from '@/store/designStore';
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { PlacedComponent } from './PlacedComponent';
 import { ComponentDetails } from './ComponentDetails';

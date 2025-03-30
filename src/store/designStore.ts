@@ -13,18 +13,10 @@ interface Position {
   y: number;
 }
 
-interface ComponentWithPosition {
-  id: string;
+// Define ComponentWithPosition as InfrastructureComponent plus position
+export type ComponentWithPosition = InfrastructureComponent & {
   position: Position;
-  type: ComponentType;
-  name: string;
-  manufacturer: string;
-  model: string;
-  cost: number;
-  powerRequired: number;
-  description?: string;
-  [key: string]: any; // Allow for additional component-specific properties
-}
+};
 
 interface DesignState {
   activeDesign: InfrastructureDesign | null;
@@ -118,11 +110,11 @@ export const useDesignStore = create<DesignState>((set, get) => ({
   // Add a component to the design
   addComponent: (component, position) => {
     const id = uuidv4();
-    const componentWithPosition: ComponentWithPosition = {
+    const componentWithPosition = {
       ...component,
       id,
       position
-    };
+    } as ComponentWithPosition;
     
     set((state) => ({
       placedComponents: {
@@ -184,7 +176,7 @@ export const useDesignStore = create<DesignState>((set, get) => ({
       ...activeDesign,
       updatedAt: new Date(),
       requirements,
-      components: Object.values(placedComponents).map(({ position, ...component }) => component)
+      components: Object.values(placedComponents).map(({ position, ...component }) => component as InfrastructureComponent)
     };
 
     set({ activeDesign: updatedDesign });
