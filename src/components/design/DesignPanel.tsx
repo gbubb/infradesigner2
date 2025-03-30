@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { useDesignStore } from '@/store/designStore';
+import { useDesignStore, recalculateDesign } from '@/store/designStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,13 +17,26 @@ export const DesignPanel: React.FC = () => {
     assignComponentToRole,
     saveDesign,
     calculateRequiredQuantity,
-    getAvailableComponents
+    getAvailableComponents,
+    activeDesign
   } = useDesignStore();
   
+  // Ensure roles are calculated when component mounts
   useEffect(() => {
-    // Calculate roles when component mounts
     calculateComponentRoles();
   }, [calculateComponentRoles]);
+
+  // Recalculate when component assignments change
+  useEffect(() => {
+    // Track any changes to assigned components
+    const assignedComponents = componentRoles
+      .filter(role => role.assignedComponentId)
+      .map(role => `${role.id}:${role.assignedComponentId}`);
+      
+    if (assignedComponents.length > 0) {
+      recalculateDesign();
+    }
+  }, [componentRoles]);
 
   // Function to get appropriate components for a role
   const getComponentOptionsForRole = (role: string): InfrastructureComponent[] => {
@@ -104,6 +117,10 @@ export const DesignPanel: React.FC = () => {
   
   const handleComponentSelect = (roleId: string, componentId: string) => {
     assignComponentToRole(roleId, componentId);
+    // Force recalculation after component assignment
+    setTimeout(() => {
+      recalculateDesign();
+    }, 0);
   };
 
   const handleRecalculate = () => {

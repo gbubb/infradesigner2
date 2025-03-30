@@ -17,10 +17,25 @@ export const useDesignStore = create<DesignStoreState>()((...a) => ({
   ...createComponentLibrarySlice(...a),
 }));
 
-// Initialize component templates
-useDesignStore.getState().initializeComponentTemplates();
+// Initialize component templates - this should run only once
+const initializeStore = () => {
+  const state = useDesignStore.getState();
+  
+  // Only initialize if not already initialized
+  if (state.componentTemplates.length === 0) {
+    state.initializeComponentTemplates();
+  }
+  
+  // Calculate component roles if needed
+  if (state.componentRoles.length === 0) {
+    state.calculateComponentRoles();
+  }
+};
 
-// Initialize device roles based on requirements
-setTimeout(() => {
+// Call initialization once
+initializeStore();
+
+// Export a function to recalculate when needed
+export const recalculateDesign = () => {
   useDesignStore.getState().calculateComponentRoles();
-}, 100);
+};

@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
@@ -19,6 +18,9 @@ export interface DesignSlice {
   
   // Get all available components for selection
   getAvailableComponents: () => InfrastructureComponent[];
+  
+  // Update the active design
+  updateActiveDesign: (components: InfrastructureComponent[]) => void;
 }
 
 export const createDesignSlice: StateCreator<
@@ -97,9 +99,6 @@ export const createDesignSlice: StateCreator<
           };
         }
 
-        // Calculate additional racks for network core if needed
-        const additionalRacks = state.requirements.networkRequirements.dedicatedNetworkCoreRacks ? 2 : 0;
-        
         // Save the design - now with properly typed components
         const updatedDesigns = [...state.savedDesigns, designToSave];
         
@@ -116,7 +115,24 @@ export const createDesignSlice: StateCreator<
     });
   },
 
-  // Method to get all available components - include both templates and custom components
+  // New method to directly update the active design
+  updateActiveDesign: (components) => {
+    set((state) => {
+      if (!state.activeDesign) return state;
+      
+      const updatedDesign = {
+        ...state.activeDesign,
+        components,
+        updatedAt: new Date()
+      };
+      
+      return {
+        activeDesign: updatedDesign
+      };
+    });
+  },
+
+  // Method to get all available components
   getAvailableComponents: () => {
     const state = get();
     // Combine all component sources - custom components and template components

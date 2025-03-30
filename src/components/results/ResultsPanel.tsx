@@ -1,16 +1,27 @@
-
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { useDesignStore } from '@/store/designStore';
+import { useDesignStore, recalculateDesign } from '@/store/designStore';
 import { ComponentType, InfrastructureComponent, DeviceRoleType, SwitchRole } from '@/types/infrastructure';
 import { ResourceUtilizationChart } from './PowerDistributionChart';
 
 export const ResultsPanel: React.FC = () => {
-  const { activeDesign, requirements } = useDesignStore();
+  const { activeDesign, requirements, componentRoles } = useDesignStore();
+  
+  // Recalculate when the component mounts or when key properties change
+  useEffect(() => {
+    recalculateDesign();
+  }, []);
+  
+  // Track significant changes that should trigger updates
+  useEffect(() => {
+    if (componentRoles.some(role => role.assignedComponentId)) {
+      recalculateDesign();
+    }
+  }, [componentRoles]);
   
   // Calculate total cost
   const totalCost = useMemo(() => {
