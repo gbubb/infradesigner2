@@ -331,14 +331,14 @@ export const createRequirementsSlice: StateCreator<
   return {
     requirements: {
       computeRequirements: {
-        totalVCPUs: 512,
-        totalMemoryTB: 4,
-        availabilityZoneRedundancy: 'None',
+        totalVCPUs: 5000, // Updated from 512 to 5000
+        totalMemoryTB: 30, // Updated from 4 to 30
+        availabilityZoneRedundancy: 'N+1', // Updated from 'None' to 'N+1'
         overcommitRatio: 2.0
       },
       storageRequirements: {
-        totalCapacityTB: 1000,
-        availabilityZoneQuantity: 3,
+        totalCapacityTB: 100, // Updated from 1000 to 100
+        availabilityZoneQuantity: 3, // Kept at 3 (not specified in request)
         poolType: '3 Replica',
         maxFillFactor: 80,
         selectedDiskIds: [],
@@ -350,14 +350,14 @@ export const createRequirementsSlice: StateCreator<
         ipmiNetwork: 'Management converged',
         physicalFirewalls: false,
         dedicatedStorageNetwork: false,
-        dedicatedNetworkCoreRacks: false,
+        dedicatedNetworkCoreRacks: true, // Updated from false to true
         leafSwitchesPerAZ: 2,
       },
       physicalConstraints: {
         computeStorageRackQuantity: 16,
-        totalAvailabilityZones: 3,
+        totalAvailabilityZones: 8, // Updated from 3 to 8
         rackUnitsPerRack: 42,
-        powerPerRackWatts: 10000
+        powerPerRackWatts: 5000, // Updated from 10000 to 5000
       },
     },
     componentRoles: [],
