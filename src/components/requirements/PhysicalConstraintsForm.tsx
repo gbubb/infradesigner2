@@ -51,10 +51,14 @@ export const PhysicalConstraintsForm: React.FC<PhysicalConstraintsProps> = ({
               name="totalAvailabilityZones"
               type="number"
               min="1"
-              placeholder="e.g., 3"
+              placeholder="e.g., 8"
               value={requirements.totalAvailabilityZones || ''}
               onChange={handleInputChange}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              The number of availability zones resources will be distributed across.
+              Compute nodes will be evenly distributed across all AZs.
+            </p>
           </div>
 
           <div className="space-y-2">

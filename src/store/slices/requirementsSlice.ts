@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -15,6 +14,7 @@ export interface RequirementsSlice {
   requirements: DesignRequirements;
   componentRoles: any[];
   selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>;
+  calculationBreakdowns: Record<string, string[]>;
   
   updateRequirements: (newRequirements: Partial<DesignRequirements>) => void;
   calculateComponentRoles: () => void;
@@ -23,6 +23,7 @@ export interface RequirementsSlice {
   addDiskToStorageNode: (roleId: string, diskId: string, quantity: number) => void;
   removeDiskFromStorageNode: (roleId: string, diskId: string) => void;
   calculateStorageNodeCapacity: (roleId: string) => number;
+  getCalculationBreakdown: (roleId: string) => string[];
 }
 
 const defaultRequirements: DesignRequirements = {
@@ -53,8 +54,8 @@ const defaultRequirements: DesignRequirements = {
     dedicatedNetworkCoreRacks: true
   },
   physicalConstraints: {
-    computeStorageRackQuantity: 2,
-    totalAvailabilityZones: 2,
+    computeStorageRackQuantity: 16,
+    totalAvailabilityZones: 8,
     rackUnitsPerRack: 42,
     powerPerRackWatts: 5000
   }
@@ -82,30 +83,25 @@ export const createRequirementsSlice: StateCreator<
       const totalMemoryTB = getValue(requirements, 'computeRequirements.totalMemoryTB', 30) || 30;
       const availabilityZoneRedundancy = getValue(requirements, 'computeRequirements.availabilityZoneRedundancy', 'N+1') || 'N+1';
       const overcommitRatio = getValue(requirements, 'computeRequirements.overcommitRatio', 2) || 2;
-      const totalAvailabilityZones = getValue(requirements, 'physicalConstraints.totalAvailabilityZones', 2) || 2;
+      const totalAvailabilityZones = getValue(requirements, 'physicalConstraints.totalAvailabilityZones', 8) || 8;
       const controllerNodeCount = getValue(requirements, 'computeRequirements.controllerNodeCount', 3) || 3;
       const infrastructureClusterRequired = getValue(requirements, 'computeRequirements.infrastructureClusterRequired', false) || false;
       const infrastructureNodeCount = getValue(requirements, 'computeRequirements.infrastructureNodeCount', 3) || 3;
       
-      // Get the total capacity for storage
       const totalCapacityTB = getValue(requirements, 'storageRequirements.totalCapacityTB', 100) || 100;
       const storageAvailabilityZoneQuantity = getValue(requirements, 'storageRequirements.availabilityZoneQuantity', 3) || 3;
       
-      // Get network requirements
       const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', 'Spine-Leaf') || 'Spine-Leaf';
       const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false) || false;
       const leafSwitchesPerAZ = getValue(requirements, 'networkRequirements.leafSwitchesPerAZ', 2) || 2;
       const dedicatedStorageNetwork = getValue(requirements, 'networkRequirements.dedicatedStorageNetwork', false) || false;
       const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', 'Dual Home') || 'Dual Home';
       
-      // Calculate number of management switches based on availability zones and network type
       const mgmtSwitchesPerAZ = managementNetwork === 'Dual Home' ? 2 : 1;
       const managementSwitchCount = totalAvailabilityZones * mgmtSwitchesPerAZ;
       
-      // Calculate number of leaf switches based on AZs and switches per AZ setting
       const leafSwitchCount = totalAvailabilityZones * leafSwitchesPerAZ;
       
-      // Initialize roles array with controller nodes
       const newRoles = [
         {
           id: uuidv4(),
@@ -115,17 +111,10 @@ export const createRequirementsSlice: StateCreator<
         }
       ];
       
-      // For compute nodes, calculate the base amount correctly:
-      // 1. Total physical cores needed = vCPUs / overcommit ratio
       const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
-      
-      // 2. Calculate the base nodes per AZ (rounded up to ensure we have enough capacity)
       const nodesPerAZ = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones);
-      
-      // 3. Base compute node count is nodes per AZ multiplied by number of AZs
       const baseComputeNodeCount = nodesPerAZ * totalAvailabilityZones;
       
-      // 4. Calculate additional nodes based on redundancy policy
       let additionalAZs = 0;
       if (availabilityZoneRedundancy === 'N+1') {
         additionalAZs = 1;
@@ -133,7 +122,6 @@ export const createRequirementsSlice: StateCreator<
         additionalAZs = 2;
       }
       
-      // 5. Calculate total compute nodes: base count + (additional AZs * nodes per AZ)
       const totalComputeNodeCount = baseComputeNodeCount + (additionalAZs * nodesPerAZ);
       
       newRoles.push({
@@ -143,7 +131,6 @@ export const createRequirementsSlice: StateCreator<
         requiredCount: totalComputeNodeCount
       });
       
-      // Only add storage nodes if there's storage capacity needed
       if (totalCapacityTB > 0) {
         newRoles.push({
           id: uuidv4(),
@@ -162,7 +149,6 @@ export const createRequirementsSlice: StateCreator<
         });
       }
       
-      // Add management switches
       newRoles.push({
         id: uuidv4(),
         role: 'managementSwitch',
@@ -170,9 +156,7 @@ export const createRequirementsSlice: StateCreator<
         requiredCount: managementSwitchCount
       });
       
-      // Add appropriate network components based on network topology
       if (networkTopology === 'Spine-Leaf') {
-        // Add leaf switches for compute - rename based on topology
         newRoles.push({
           id: uuidv4(),
           role: 'leafSwitch',
@@ -180,17 +164,15 @@ export const createRequirementsSlice: StateCreator<
           requiredCount: leafSwitchCount
         });
         
-        // Only add storage switches if dedicated storage network is enabled
         if (dedicatedStorageNetwork) {
           newRoles.push({
             id: uuidv4(),
             role: 'storageSwitch',
             description: 'Provides network connectivity for storage nodes',
-            requiredCount: storageAvailabilityZoneQuantity * 2 // 2 switches per AZ for redundancy
+            requiredCount: storageAvailabilityZoneQuantity * 2
           });
         }
         
-        // Add border leaf switches
         newRoles.push({
           id: uuidv4(),
           role: 'borderLeafSwitch',
@@ -198,7 +180,6 @@ export const createRequirementsSlice: StateCreator<
           requiredCount: 2
         });
         
-        // Add spine switches
         newRoles.push({
           id: uuidv4(),
           role: 'spineSwitch',
@@ -206,17 +187,14 @@ export const createRequirementsSlice: StateCreator<
           requiredCount: 2
         });
       } else {
-        // For other topologies like three-tier, we would have different switch types
-        // Only add these when network topology is not Spine-Leaf
         newRoles.push({
           id: uuidv4(),
           role: 'torSwitch',
           description: 'Provides top-of-rack switching for servers',
-          requiredCount: Math.ceil(totalComputeNodeCount / 2) // Assuming 2 servers per ToR switch
+          requiredCount: Math.ceil(totalComputeNodeCount / 2)
         });
       }
       
-      // Only add firewalls if physical firewalls are required
       if (physicalFirewalls) {
         newRoles.push({
           id: uuidv4(),
@@ -241,80 +219,91 @@ export const createRequirementsSlice: StateCreator<
       if (!component) return 0;
       
       let requiredQuantity = role.requiredCount || 1;
+      let calculationSteps: string[] = [];
       
       if (role.role === 'computeNode') {
         const totalVCPUs = requirements.computeRequirements?.totalVCPUs || 5000;
         const totalMemoryTB = requirements.computeRequirements?.totalMemoryTB || 30;
         const overcommitRatio = requirements.computeRequirements?.overcommitRatio || 2;
-        const totalAvailabilityZones = requirements.physicalConstraints?.totalAvailabilityZones || 2;
+        const totalAvailabilityZones = requirements.physicalConstraints?.totalAvailabilityZones || 8;
         const availabilityZoneRedundancy = requirements.computeRequirements?.availabilityZoneRedundancy || 'N+1';
         
         if ('cpuCount' in component && 'coreCount' in component && 'memoryGB' in component) {
-          // Calculate cores per compute node
           const coresPerNode = component.cpuCount * component.coreCount;
           const memoryGBPerNode = component.memoryGB;
           
-          // Calculate physical cores needed
           const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
           const totalMemoryGBNeeded = totalMemoryTB * 1024;
           
-          // Calculate nodes needed for CPU and memory
+          calculationSteps.push(`Total vCPU requirement: ${totalVCPUs}`);
+          calculationSteps.push(`CPU overcommit ratio: ${overcommitRatio}`);
+          calculationSteps.push(`Physical cores needed: ${totalVCPUs} / ${overcommitRatio} = ${totalPhysicalCoresNeeded}`);
+          calculationSteps.push(`Cores per node: ${component.cpuCount} CPUs × ${component.coreCount} cores = ${coresPerNode} cores`);
+          calculationSteps.push(`Memory per node: ${memoryGBPerNode} GB`);
+          
           const nodesNeededForCPU = Math.ceil(totalPhysicalCoresNeeded / coresPerNode);
           const nodesNeededForMemory = Math.ceil(totalMemoryGBNeeded / memoryGBPerNode);
           
-          // Take the maximum of CPU and memory requirements
+          calculationSteps.push(`Nodes needed for CPU: ${totalPhysicalCoresNeeded} / ${coresPerNode} = ${nodesNeededForCPU}`);
+          calculationSteps.push(`Nodes needed for memory: ${totalMemoryGBNeeded} GB / ${memoryGBPerNode} GB = ${nodesNeededForMemory}`);
+          
           const totalNodesNeeded = Math.max(nodesNeededForCPU, nodesNeededForMemory);
+          calculationSteps.push(`Total nodes needed (max of CPU/Memory): ${totalNodesNeeded}`);
           
-          // Calculate nodes per AZ (rounded up)
-          // We need to ensure this is an integer to guarantee even distribution
-          const nodesPerAZ = Math.ceil(totalNodesNeeded / totalAvailabilityZones);
+          let nodesPerAZ = Math.ceil(totalNodesNeeded / totalAvailabilityZones);
+          nodesPerAZ = Math.max(1, nodesPerAZ);
           
-          // Make sure the base node count is exactly divisible by the number of AZs
+          calculationSteps.push(`Number of availability zones: ${totalAvailabilityZones}`);
+          calculationSteps.push(`Minimum nodes per AZ: ${totalNodesNeeded} / ${totalAvailabilityZones} = ${nodesPerAZ} (rounded up)`);
+          
           const baseNodeCount = nodesPerAZ * totalAvailabilityZones;
+          calculationSteps.push(`Base node count: ${nodesPerAZ} × ${totalAvailabilityZones} = ${baseNodeCount}`);
           
-          // Add redundancy nodes based on policy
           let additionalNodesCount = 0;
           if (availabilityZoneRedundancy === 'N+1') {
             additionalNodesCount = nodesPerAZ;
+            calculationSteps.push(`N+1 redundancy: Adding ${nodesPerAZ} nodes (1 AZ worth)`);
           } else if (availabilityZoneRedundancy === 'N+2') {
             additionalNodesCount = nodesPerAZ * 2;
+            calculationSteps.push(`N+2 redundancy: Adding ${nodesPerAZ * 2} nodes (2 AZs worth)`);
+          } else {
+            calculationSteps.push(`No redundancy: Adding 0 additional nodes`);
           }
           
-          // Final node count with redundancy
           requiredQuantity = baseNodeCount + additionalNodesCount;
+          calculationSteps.push(`Final node count: ${baseNodeCount} + ${additionalNodesCount} = ${requiredQuantity}`);
         }
       } else if (role.role === 'storageNode') {
         const totalCapacityTB = requirements.storageRequirements?.totalCapacityTB || 100;
         const poolType = requirements.storageRequirements?.poolType || '3 Replica';
         const maxFillFactor = requirements.storageRequirements?.maxFillFactor || 80;
         
-        // If we have disks assigned to this storage node
         const roleDiskConfigs = selectedDisksByRole[roleId] || [];
         
         if (roleDiskConfigs.length > 0) {
-          // Calculate total usable capacity per node
           const storageNodeCapacityTiB = sliceMethods.calculateStorageNodeCapacity(roleId);
           
           if (storageNodeCapacityTiB > 0) {
-            // Calculate how many nodes we need to meet the total capacity requirement
-            // Apply efficiency factors for replication/EC and fill factor
             const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);
             const fillFactorAdjustment = maxFillFactor / 100;
             
-            // Convert total required capacity from TB to TiB
             const totalRequiredCapacityTiB = totalCapacityTB * TB_TO_TIB_FACTOR;
             
-            // Calculate effective capacity per node after all adjustments
             const effectiveCapacityPerNodeTiB = storageNodeCapacityTiB * poolEfficiencyFactor * fillFactorAdjustment;
             
-            // Calculate required node count
             const requiredNodeCount = Math.ceil(totalRequiredCapacityTiB / effectiveCapacityPerNodeTiB);
             
-            // Return at least the minimum number of nodes specified by role.requiredCount
             requiredQuantity = Math.max(requiredNodeCount, role.requiredCount);
           }
         }
       }
+      
+      set(state => ({
+        calculationBreakdowns: {
+          ...state.calculationBreakdowns,
+          [roleId]: calculationSteps
+        }
+      }));
       
       return requiredQuantity;
     },
@@ -326,17 +315,19 @@ export const createRequirementsSlice: StateCreator<
       const roleDiskConfigs = selectedDisksByRole[roleId] || [];
       let totalCapacityTiB = 0;
       
-      // Calculate raw capacity in TiB
       roleDiskConfigs.forEach(diskConfig => {
         const disk = componentTemplates.find(c => c.id === diskConfig.diskId);
         if (disk && disk.type === ComponentType.Disk && 'capacityTB' in disk) {
-          // Convert TB to TiB and multiply by quantity
           const diskCapacityTiB = disk.capacityTB * TB_TO_TIB_FACTOR * diskConfig.quantity;
           totalCapacityTiB += diskCapacityTiB;
         }
       });
       
       return totalCapacityTiB;
+    },
+    
+    getCalculationBreakdown: (roleId: string): string[] => {
+      return get().calculationBreakdowns[roleId] || [];
     }
   };
   
@@ -344,6 +335,7 @@ export const createRequirementsSlice: StateCreator<
     requirements: defaultRequirements,
     componentRoles: [],
     selectedDisksByRole: {},
+    calculationBreakdowns: {},
     
     updateRequirements: (newRequirements) => {
       set((state) => ({
@@ -377,6 +369,8 @@ export const createRequirementsSlice: StateCreator<
     calculateRequiredQuantity: sliceMethods.calculateRequiredQuantity,
     
     calculateStorageNodeCapacity: sliceMethods.calculateStorageNodeCapacity,
+    
+    getCalculationBreakdown: sliceMethods.getCalculationBreakdown,
     
     assignComponentToRole: (roleId: string, componentId: string) => {
       set((state) => {
@@ -416,20 +410,17 @@ export const createRequirementsSlice: StateCreator<
     
     addDiskToStorageNode: (roleId: string, diskId: string, quantity: number) => {
       set((state) => {
-        // Find if this disk is already added to this role
         const currentDisks = state.selectedDisksByRole[roleId] || [];
         const existingDiskIndex = currentDisks.findIndex(d => d.diskId === diskId);
         
         let updatedDisks;
         if (existingDiskIndex >= 0) {
-          // Update existing disk quantity
           updatedDisks = [...currentDisks];
           updatedDisks[existingDiskIndex] = { 
             ...updatedDisks[existingDiskIndex], 
             quantity 
           };
         } else {
-          // Add new disk
           updatedDisks = [...currentDisks, { diskId, quantity }];
         }
         
@@ -441,7 +432,6 @@ export const createRequirementsSlice: StateCreator<
         return { selectedDisksByRole: updatedSelectedDisks };
       });
       
-      // Recalculate storage node quantities after disk changes
       const state = get();
       const role = state.componentRoles.find(r => r.id === roleId);
       
@@ -475,7 +465,6 @@ export const createRequirementsSlice: StateCreator<
         return { selectedDisksByRole: updatedSelectedDisks };
       });
       
-      // Recalculate storage node quantities after disk changes
       const state = get();
       const role = state.componentRoles.find(r => r.id === roleId);
       

@@ -89,8 +89,8 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
             </Select>
             <p className="text-xs text-muted-foreground mt-1">
               This setting determines additional compute capacity beyond what's needed for normal operations.
-              Compute nodes will be distributed evenly across all AZs. The total number of nodes will
-              always be divisible by the number of AZs to ensure balanced distribution.
+              Compute nodes will be distributed evenly across all AZs, with equal number of nodes per AZ.
+              N+1 adds one extra AZ worth of nodes, N+2 adds two extra AZs worth of nodes.
             </p>
           </div>
 
@@ -121,7 +121,7 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
               name="controllerNodeCount"
               type="number"
               min="1"
-              placeholder="e.g., 3"
+              placeholder="e.g.,, 3"
               value={requirements.controllerNodeCount || ''}
               onChange={handleInputChange}
             />
