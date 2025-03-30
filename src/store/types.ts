@@ -35,5 +35,11 @@ export interface WorkspaceState extends BaseState {
   workspaceComponents: ComponentWithPosition[];
 }
 
+// Component Library state slice
+export interface ComponentLibraryState {
+  // All available component templates
+  componentTemplates: InfrastructureComponent[];
+}
+
 // Combined store state
-export interface StoreState extends DesignState, WorkspaceState {}
+export interface StoreState extends DesignState, WorkspaceState, ComponentLibraryState {}
