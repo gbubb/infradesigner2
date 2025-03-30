@@ -1,0 +1,103 @@
+
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+interface ComputeRequirementsProps {
+  requirements: {
+    totalVCPUs?: number;
+    totalMemoryTB?: number;
+    availabilityZoneRedundancy?: 'None' | 'N+1' | 'N+2';
+    overcommitRatio?: number;
+  };
+  onUpdate: (computeRequirements: any) => void;
+}
+
+export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
+  requirements,
+  onUpdate,
+}) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const numericValue = name === 'overcommitRatio' ? 
+      parseFloat(value) :
+      parseInt(value, 10);
+      
+    onUpdate({ [name]: isNaN(numericValue) ? undefined : numericValue });
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    onUpdate({ [name]: value });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Compute Requirements</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="totalVCPUs">Total vCPUs</Label>
+            <Input
+              id="totalVCPUs"
+              name="totalVCPUs"
+              type="number"
+              placeholder="e.g., 512"
+              value={requirements.totalVCPUs || ''}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="totalMemoryTB">Total Memory (TB)</Label>
+            <Input
+              id="totalMemoryTB"
+              name="totalMemoryTB"
+              type="number"
+              placeholder="e.g., 32"
+              value={requirements.totalMemoryTB || ''}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="availabilityZoneRedundancy">Availability Zone Redundancy</Label>
+            <Select
+              value={requirements.availabilityZoneRedundancy || 'None'}
+              onValueChange={(value) => handleSelectChange('availabilityZoneRedundancy', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select redundancy level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="None">None</SelectItem>
+                <SelectItem value="N+1">N+1 (One extra node per AZ)</SelectItem>
+                <SelectItem value="N+2">N+2 (Two extra nodes per AZ)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="overcommitRatio">
+              CPU Overcommit Ratio (vCPU:Core)
+            </Label>
+            <Input
+              id="overcommitRatio"
+              name="overcommitRatio"
+              type="number"
+              min="1"
+              max="10"
+              step="0.5"
+              placeholder="e.g., 2.0"
+              value={requirements.overcommitRatio || ''}
+              onChange={handleInputChange}
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
