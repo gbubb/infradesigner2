@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useState } from 'react';
 import { useDesignStore, recalculateDesign } from '@/store/designStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { QuantityDisplay } from './QuantityDisplay';
 
 export const DesignPanel: React.FC = () => {
   const { 
@@ -39,25 +39,19 @@ export const DesignPanel: React.FC = () => {
     calculateStorageNodeCapacity
   } = useDesignStore();
   
-  // State for tracking which storage node's disk config is open
   const [openStorageNodeId, setOpenStorageNodeId] = useState<string | null>(null);
   const [selectedDiskId, setSelectedDiskId] = useState<string>('');
   const [diskQuantity, setDiskQuantity] = useState<number>(1);
   
-  // Ensure roles are calculated when component mounts - but only once
   useEffect(() => {
-    // Only calculate if we don't already have roles
     if (componentRoles.length === 0) {
       calculateComponentRoles();
     }
   }, [calculateComponentRoles, componentRoles.length]);
 
-  // Using a more stable approach to recalculate when assignments change
-  // We'll use a callback to handle component selection to avoid recreating functions
   const handleComponentSelect = useCallback((roleId: string, componentId: string) => {
     assignComponentToRole(roleId, componentId);
     
-    // If this is a storage node, open the disk configuration panel
     const role = componentRoles.find(r => r.id === roleId);
     if (role && role.role === 'storageNode') {
       setOpenStorageNodeId(roleId);
@@ -72,15 +66,10 @@ export const DesignPanel: React.FC = () => {
     saveDesign();
   }, [saveDesign]);
 
-  // Function to get appropriate components for a role
   const getComponentOptionsForRole = (role: string): InfrastructureComponent[] => {
-    // Get all available components including custom and template components
     const allComponents = getAvailableComponents();
-    
-    // Get current network topology from requirements
     const networkTopology = requirements?.networkRequirements?.networkTopology || 'Spine-Leaf';
     
-    // Map design roles to component types and roles
     switch(role) {
       case 'controllerNode':
         return allComponents.filter(c => 
@@ -153,7 +142,6 @@ export const DesignPanel: React.FC = () => {
       case 'firewall':
         return allComponents.filter(c => c.type === ComponentType.Firewall);
       default:
-        // If no specific role mapping, get components by matching type
         if (role.toLowerCase().includes('switch')) {
           return allComponents.filter(c => c.type === ComponentType.Switch);
         } else if (role.toLowerCase().includes('node')) {
@@ -162,35 +150,29 @@ export const DesignPanel: React.FC = () => {
         return [];
     }
   };
-  
-  // Function to get available disks for storage nodes
+
   const getAvailableDisks = (): Disk[] => {
     const allComponents = getAvailableComponents();
     return allComponents.filter(c => 
       c.type === ComponentType.Disk
     ) as Disk[];
   };
-  
-  // Find component by ID - looking at all available components
+
   const findComponentById = (componentId: string | undefined): InfrastructureComponent | undefined => {
     if (!componentId) return undefined;
     
-    // Use the store's getAvailableComponents to get all components
     return getAvailableComponents().find(component => component.id === componentId);
   };
 
-  // Format role name for display
   const formatRoleName = (roleName: string): string => {
     return roleName.charAt(0).toUpperCase() + 
       roleName.slice(1).replace(/([A-Z])/g, ' $1');
   };
 
-  // Check if all required roles have components assigned
   const hasAllRequiredComponents = componentRoles
-    .filter(role => role.requiredCount > 0) // Only check required roles
+    .filter(role => role.requiredCount > 0)
     .every(role => role.assignedComponentId);
 
-  // Handle disk selection for storage node
   const handleAddDisk = (roleId: string) => {
     if (!selectedDiskId) {
       toast.error("Please select a disk model");
@@ -202,35 +184,25 @@ export const DesignPanel: React.FC = () => {
       return;
     }
     
-    // Add disk to storage node
     addDiskToStorageNode(roleId, selectedDiskId, diskQuantity);
     toast.success(`Added disk configuration to storage node`);
     
-    // Reset form
     setSelectedDiskId('');
     setDiskQuantity(1);
   };
-  
-  // Handle removing a disk from storage node
+
   const handleRemoveDisk = (roleId: string, diskId: string) => {
     removeDiskFromStorageNode(roleId, diskId);
     toast.success("Removed disk from storage node");
   };
-  
-  // Calculate the effective storage capacity for a node with selected disks
+
   const calculateEffectiveStorageCapacity = (roleId: string) => {
-    // Get raw capacity of the node
     const rawCapacityTiB = calculateStorageNodeCapacity(roleId);
-    
-    // Apply storage pool efficiency factor
     const poolType = requirements?.storageRequirements?.poolType || '3 Replica';
     const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);
-    
-    // Apply fill factor
     const maxFillFactor = requirements?.storageRequirements?.maxFillFactor || 80;
     const fillFactorAdjustment = maxFillFactor / 100;
     
-    // Calculate effective capacity
     const effectiveCapacityTiB = rawCapacityTiB * poolEfficiencyFactor * fillFactorAdjustment;
     
     return {
@@ -288,7 +260,6 @@ export const DesignPanel: React.FC = () => {
                   role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
                   role.requiredCount;
                 
-                // Don't show base quantity for compute nodes until component selected
                 const showBaseQuantity = role.role !== 'computeNode' || (role.role === 'computeNode' && role.assignedComponentId);
                 
                 return (
@@ -330,12 +301,15 @@ export const DesignPanel: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {role.assignedComponentId && (
-                          <Badge>{actualQuantity}</Badge>
+                          <QuantityDisplay 
+                            roleId={role.id}
+                            roleName={formatRoleName(role.role)}
+                            quantity={actualQuantity}
+                          />
                         )}
                       </TableCell>
                     </TableRow>
                     
-                    {/* Storage Node Disk Configuration */}
                     {role.role === 'storageNode' && role.assignedComponentId && (
                       <TableRow className="bg-muted/20">
                         <TableCell colSpan={5} className="p-0">
@@ -356,7 +330,6 @@ export const DesignPanel: React.FC = () => {
                               </Button>
                             </CollapsibleTrigger>
                             <CollapsibleContent className="p-4 space-y-4 border-t">
-                              {/* Add disk form */}
                               <div className="grid grid-cols-3 gap-4">
                                 <div>
                                   <Label htmlFor="disk-model">Disk Model</Label>
@@ -398,7 +371,6 @@ export const DesignPanel: React.FC = () => {
                                 </div>
                               </div>
                               
-                              {/* Disk configuration summary */}
                               <div className="border rounded-md">
                                 <Table>
                                   <TableHeader>
@@ -453,7 +425,6 @@ export const DesignPanel: React.FC = () => {
                                 </Table>
                               </div>
                               
-                              {/* Storage capacity summary */}
                               {selectedDisksByRole[role.id]?.length > 0 && (
                                 <div className="bg-muted p-4 rounded-md">
                                   <h4 className="text-sm font-medium mb-2">Storage Capacity Summary</h4>
@@ -529,11 +500,9 @@ export const DesignPanel: React.FC = () => {
                 
                 const actualQuantity = role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId!);
                 
-                // Calculate cost and power based on the component type
                 let componentCost = component.cost;
                 let componentPower = component.powerRequired;
                 
-                // For storage nodes, add the cost and power of attached disks
                 if (role.role === 'storageNode') {
                   const disks = selectedDisksByRole[role.id] || [];
                   disks.forEach(diskConfig => {
@@ -548,7 +517,6 @@ export const DesignPanel: React.FC = () => {
                 const totalCost = componentCost * actualQuantity;
                 const totalPower = componentPower * actualQuantity;
                 
-                // Calculate rack units if the component has them
                 const rackUnits = 'rackUnitsConsumed' in component 
                   ? (component as any).rackUnitsConsumed * actualQuantity 
                   : 0;
@@ -561,7 +529,13 @@ export const DesignPanel: React.FC = () => {
                     <TableCell>
                       {component.manufacturer} {component.model}
                     </TableCell>
-                    <TableCell>{actualQuantity}</TableCell>
+                    <TableCell>
+                      <QuantityDisplay 
+                        roleId={role.id}
+                        roleName={formatRoleName(role.role)}
+                        quantity={actualQuantity}
+                      />
+                    </TableCell>
                     <TableCell>${totalCost.toLocaleString()}</TableCell>
                     <TableCell>{totalPower.toLocaleString()} W</TableCell>
                     <TableCell>{rackUnits} RU</TableCell>
