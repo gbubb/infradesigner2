@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
-import { ComponentWithPosition } from '@/store/designStore';
+import { ComponentWithPosition, Position } from '@/types/workspace';
 import { 
   Server, 
   Network, 

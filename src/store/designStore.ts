@@ -11,6 +11,8 @@ import { ComponentWithPosition, Position } from '@/types/workspace';
 import { toast } from 'sonner';
 import { allComponentTemplates } from '@/data/componentData';
 
+export type { ComponentWithPosition, Position };
+
 interface DesignState {
   requirements: DesignRequirements;
   componentRoles: ComponentRole[];
@@ -22,13 +24,25 @@ interface DesignState {
     components: InfrastructureComponent[];
   }[];
   workspaceComponents: ComponentWithPosition[];
+  activeDesign: {
+    id: string;
+    name: string;
+    components: InfrastructureComponent[];
+  } | null;
+  selectedComponentId: string | null;
+  placedComponents: Record<string, InfrastructureComponent>;
   setRequirements: (requirements: Partial<DesignRequirements>) => void;
+  updateRequirements: (requirements: Partial<DesignRequirements>) => void;
   calculateComponentRoles: () => void;
   assignComponentToRole: (roleId: string, componentId: string) => void;
   saveDesign: () => void;
+  createNewDesign: (name: string, description?: string) => void;
   addComponentToWorkspace: (component: InfrastructureComponent, position: Position) => void;
   updateComponentPosition: (id: string, position: Position) => void;
   removeComponentFromWorkspace: (id: string) => void;
+  selectComponent: (id: string | null) => void;
+  addComponent: (component: InfrastructureComponent) => void;
+  removeComponent: (id: string) => void;
 }
 
 export const useDesignStore = create<DesignState>((set, get) => ({
@@ -60,8 +74,34 @@ export const useDesignStore = create<DesignState>((set, get) => ({
   componentRoles: [],
   savedDesigns: [],
   workspaceComponents: [],
+  activeDesign: null,
+  selectedComponentId: null,
+  placedComponents: {},
 
   setRequirements: (newRequirements) => 
+    set((state) => ({
+      requirements: {
+        ...state.requirements,
+        computeRequirements: {
+          ...state.requirements.computeRequirements,
+          ...newRequirements.computeRequirements,
+        },
+        storageRequirements: {
+          ...state.requirements.storageRequirements,
+          ...newRequirements.storageRequirements,
+        },
+        networkRequirements: {
+          ...state.requirements.networkRequirements,
+          ...newRequirements.networkRequirements,
+        },
+        physicalConstraints: {
+          ...state.requirements.physicalConstraints,
+          ...newRequirements.physicalConstraints,
+        },
+      },
+    })),
+
+  updateRequirements: (newRequirements) => 
     set((state) => ({
       requirements: {
         ...state.requirements,
@@ -270,6 +310,17 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     });
   },
 
+  createNewDesign: (name, description) => {
+    set({
+      activeDesign: {
+        id: uuidv4(),
+        name,
+        components: []
+      }
+    });
+    toast.success(`Created new design: ${name}`);
+  },
+
   saveDesign: () => {
     set((state) => {
       try {
@@ -277,9 +328,9 @@ export const useDesignStore = create<DesignState>((set, get) => ({
         const assignedComponents: InfrastructureComponent[] = state.componentRoles
           .filter(role => role.assignedComponentId)
           .map(role => {
-            const componentTemplate = state.componentRoles.find(
-              r => r.id === role.id
-            )?.assignedComponent;
+            const componentTemplate = allComponentTemplates.find(
+              c => c.id === role.assignedComponentId
+            );
             
             if (!componentTemplate) {
               throw new Error(`Component not found for role: ${role.role}`);
@@ -292,17 +343,29 @@ export const useDesignStore = create<DesignState>((set, get) => ({
             } as InfrastructureComponent;
           });
 
+        // Create or update activeDesign
+        const designToSave = state.activeDesign ? 
+          { ...state.activeDesign, components: assignedComponents } : 
+          {
+            id: uuidv4(),
+            name: `Design ${state.savedDesigns.length + 1}`,
+            components: assignedComponents
+          };
+
         // Save the design - now with properly typed components
         const updatedDesigns = [...state.savedDesigns, {
-          id: uuidv4(),
-          name: `Design ${state.savedDesigns.length + 1}`,
+          id: designToSave.id,
+          name: designToSave.name,
           createdAt: new Date(),
           requirements: state.requirements,
           components: assignedComponents
         }];
         
         toast.success("Design saved successfully!");
-        return { savedDesigns: updatedDesigns };
+        return { 
+          savedDesigns: updatedDesigns,
+          activeDesign: designToSave
+        };
       } catch (error) {
         console.error("Failed to save design:", error);
         toast.error("Failed to save design");
@@ -342,5 +405,25 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     set((state) => ({
       workspaceComponents: state.workspaceComponents.filter((comp) => comp.id !== id)
     }));
+  },
+
+  selectComponent: (id) => {
+    set({ selectedComponentId: id });
+  },
+
+  addComponent: (component) => {
+    set((state) => ({
+      placedComponents: {
+        ...state.placedComponents,
+        [uuidv4()]: component
+      }
+    }));
+  },
+
+  removeComponent: (id) => {
+    set((state) => {
+      const { [id]: _, ...rest } = state.placedComponents;
+      return { placedComponents: rest };
+    });
   }
 }));

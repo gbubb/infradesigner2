@@ -4,8 +4,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/com
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Trash2, Copy, Edit } from 'lucide-react';
-import { useDesignStore, ComponentWithPosition } from '@/store/designStore';
-import { ComponentType, Server, Switch, Router, Disk } from '@/types/infrastructure';
+import { useDesignStore } from '@/store/designStore';
+import { ComponentType } from '@/types/infrastructure';
+import { ComponentWithPosition } from '@/types/workspace';
 
 interface ComponentDetailsProps {
   open: boolean;
