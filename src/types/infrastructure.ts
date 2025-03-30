@@ -1,4 +1,3 @@
-
 // Common properties shared by all component types
 export interface BaseComponent {
   id: string;
@@ -194,9 +193,7 @@ export interface DesignRequirements {
     networkTopology?: 
       | 'Spine-Leaf' 
       | 'Three-Tier' 
-      | 'Core-Distribution-Access' 
-      | 'Full Mesh' 
-      | 'Partial Mesh';  // Changed from redundancyLevel
+      | 'Core-Distribution-Access';
     managementNetwork?: 
       | 'Single connection' 
       | 'Dual Home';
@@ -204,13 +201,15 @@ export interface DesignRequirements {
       | 'Management converged' 
       | 'Dedicated IPMI switch';
     physicalFirewalls?: boolean; // Added physical firewalls option
+    leafSwitchesPerAZ?: number; // New field for spine-leaf topology
+    dedicatedStorageNetwork?: boolean; // New field for storage network
+    dedicatedNetworkCoreRacks?: boolean; // New field for network core racks
   };
   physicalConstraints: {
-    rackQuantity?: number; // Changed from availableRacks
-    totalAvailabilityZones?: number; // New field
-    racksPerAvailabilityZone?: number; // New field
+    computeStorageRackQuantity?: number; // Renamed from rackQuantity
+    totalAvailabilityZones?: number; 
     rackUnitsPerRack?: number;
-    powerPerRackWatts?: number;  // Kept, cooling removed
+    powerPerRackWatts?: number;
   };
 }
 

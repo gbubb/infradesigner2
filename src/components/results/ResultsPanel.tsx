@@ -53,16 +53,91 @@ export const ResultsPanel: React.FC = () => {
     }, {} as Record<string, InfrastructureComponent[]>);
   }, [activeDesign]);
   
+  // Calculate actual hardware totals (including redundancy)
+  const actualHardwareTotals = useMemo(() => {
+    if (!activeDesign?.components) {
+      return {
+        totalVCPUs: 0,
+        totalMemoryTB: 0,
+        totalStorageTB: 0
+      };
+    }
+    
+    let totalVCPUs = 0;
+    let totalMemoryGB = 0;
+    let totalStorageTB = 0;
+    
+    activeDesign.components.forEach(component => {
+      const quantity = component.quantity || 1;
+      
+      if (component.type === ComponentType.Server) {
+        // Add CPU capacity
+        if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
+          const coresPerServer = (component as any).cpuSockets * (component as any).cpuCoresPerSocket;
+          // Apply overcommit ratio
+          const overcommitRatio = requirements.computeRequirements.overcommitRatio || 1;
+          totalVCPUs += coresPerServer * quantity * overcommitRatio;
+        } else if ('cpuCount' in component && 'coreCount' in component) {
+          const coresPerServer = (component as any).cpuCount * (component as any).coreCount;
+          // Apply overcommit ratio
+          const overcommitRatio = requirements.computeRequirements.overcommitRatio || 1;
+          totalVCPUs += coresPerServer * quantity * overcommitRatio;
+        }
+        
+        // Add memory capacity
+        if ('memoryGB' in component) {
+          totalMemoryGB += (component as any).memoryGB * quantity;
+        } else if ('memoryCapacity' in component) {
+          totalMemoryGB += (component as any).memoryCapacity * quantity;
+        }
+        
+        // Add storage capacity for storage servers
+        if (component.role === 'storageNode' && 'storageCapacityTB' in component) {
+          totalStorageTB += (component as any).storageCapacityTB * quantity;
+        }
+      }
+    });
+    
+    // Convert memory from GB to TB
+    const totalMemoryTB = totalMemoryGB / 1024;
+    
+    // Apply storage pooling overhead reduction
+    const poolType = requirements.storageRequirements.poolType;
+    let usableStorageFactor = 1;
+    
+    if (poolType === '3 Replica') {
+      usableStorageFactor = 1/3; // Only 1/3 of raw capacity is usable
+    } else if (poolType === '2 Replica') {
+      usableStorageFactor = 1/2; // Only 1/2 of raw capacity is usable
+    } else if (poolType === 'Erasure Coding 4+2') {
+      usableStorageFactor = 4/6; // EC 4+2 has 4/6 usable capacity
+    } else if (poolType === 'Erasure Coding 8+3') {
+      usableStorageFactor = 8/11; // EC 8+3 has 8/11 usable capacity
+    } else if (poolType === 'Erasure Coding 8+4') {
+      usableStorageFactor = 8/12; // EC 8+4 has 8/12 usable capacity
+    } else if (poolType === 'Erasure Coding 10+4') {
+      usableStorageFactor = 10/14; // EC 10+4 has 10/14 usable capacity
+    }
+    
+    const usableStorageTB = totalStorageTB * usableStorageFactor;
+    
+    return {
+      totalVCPUs,
+      totalMemoryTB,
+      totalStorageTB: usableStorageTB
+    };
+  }, [activeDesign, requirements]);
+  
   // Cost metrics
   const costPerVCPU = useMemo(() => {
-    if (!requirements.computeRequirements.totalVCPUs || !totalCost) return 0;
-    return totalCost / requirements.computeRequirements.totalVCPUs;
-  }, [requirements.computeRequirements.totalVCPUs, totalCost]);
+    if (!actualHardwareTotals.totalVCPUs || !totalCost) return 0;
+    return totalCost / actualHardwareTotals.totalVCPUs;
+  }, [actualHardwareTotals.totalVCPUs, totalCost]);
   
   const costPerTB = useMemo(() => {
-    if (!requirements.storageRequirements.totalCapacityTB || !totalCost) return 0;
-    return totalCost / requirements.storageRequirements.totalCapacityTB;
-  }, [requirements.storageRequirements.totalCapacityTB, totalCost]);
+    if (!actualHardwareTotals.totalStorageTB || !totalCost) return 0;
+    return totalCost / actualHardwareTotals.totalStorageTB;
+  }, [actualHardwareTotals.totalStorageTB, totalCost]);
   
   // Calculate resource metrics for the whole design
   const resourceMetrics = useMemo(() => {
@@ -78,18 +153,23 @@ export const ResultsPanel: React.FC = () => {
         mgmtPortsUsed: 0,
         mgmtPortsAvailable: 0,
         totalAvailableRU: 0,
-        totalAvailablePower: 0
+        totalAvailablePower: 0,
+        totalRackQuantity: 0
       };
     }
     
+    // Calculate total racks, including network core racks if enabled
+    const computeStorageRacks = requirements.physicalConstraints.computeStorageRackQuantity || 0;
+    const networkCoreRacks = requirements.networkRequirements.dedicatedNetworkCoreRacks ? 2 : 0;
+    const totalRackQuantity = computeStorageRacks + networkCoreRacks;
+    
     // Calculate total available resources from requirements
-    const totalRacks = requirements.physicalConstraints.rackQuantity || 0;
     const ruPerRack = requirements.physicalConstraints.rackUnitsPerRack || 42; // Default 42U rack
     const powerPerRack = requirements.physicalConstraints.powerPerRackWatts || 0;
     
     // Calculate total available RU and power
-    const totalAvailableRU = totalRacks * ruPerRack;
-    const totalAvailablePower = totalRacks * powerPerRack;
+    const totalAvailableRU = totalRackQuantity * ruPerRack;
+    const totalAvailablePower = totalRackQuantity * powerPerRack;
     
     // Count servers and network devices
     let totalServers = 0;
@@ -160,9 +240,10 @@ export const ResultsPanel: React.FC = () => {
       mgmtPortsUsed,
       mgmtPortsAvailable,
       totalAvailableRU,
-      totalAvailablePower
+      totalAvailablePower,
+      totalRackQuantity
     };
-  }, [activeDesign, requirements.physicalConstraints, totalRackUnits, totalPower]);
+  }, [activeDesign, requirements, totalRackUnits, totalPower]);
   
   // Calculate resource utilization percentages
   const resourceUtilization = useMemo(() => {
@@ -271,15 +352,15 @@ export const ResultsPanel: React.FC = () => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Compute:</span>
-                <span className="font-medium">{requirements.computeRequirements.totalVCPUs || 0} vCPUs, {(requirements.computeRequirements.totalMemoryTB || 0).toFixed(2)} TB</span>
+                <span className="font-medium">{Math.round(actualHardwareTotals.totalVCPUs)} vCPUs, {actualHardwareTotals.totalMemoryTB.toFixed(2)} TB</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Storage:</span>
-                <span className="font-medium">{requirements.storageRequirements.totalCapacityTB || 0} TiB</span>
+                <span className="font-medium">{actualHardwareTotals.totalStorageTB.toFixed(2)} TiB</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Required Racks:</span>
-                <span className="font-medium">{requirements.physicalConstraints.rackQuantity || 0}</span>
+                <span className="text-muted-foreground">Total Rack Quantity:</span>
+                <span className="font-medium">{resourceMetrics.totalRackQuantity}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Rack Units:</span>
@@ -292,8 +373,8 @@ export const ResultsPanel: React.FC = () => {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Power per Rack:</span>
                 <span className="font-medium">
-                  {requirements.physicalConstraints.rackQuantity ? 
-                    (totalPower / requirements.physicalConstraints.rackQuantity).toLocaleString(undefined, { maximumFractionDigits: 0 }) : 0} W
+                  {resourceMetrics.totalRackQuantity ? 
+                    (totalPower / resourceMetrics.totalRackQuantity).toLocaleString(undefined, { maximumFractionDigits: 0 }) : 0} W
                 </span>
               </div>
             </div>

@@ -84,6 +84,7 @@ export const createDesignSlice: StateCreator<
           designToSave = { 
             ...state.activeDesign, 
             components: assignedComponents,
+            requirements: state.requirements,
             updatedAt: new Date()
           };
         } else {
@@ -96,6 +97,9 @@ export const createDesignSlice: StateCreator<
           };
         }
 
+        // Calculate additional racks for network core if needed
+        const additionalRacks = state.requirements.networkRequirements.dedicatedNetworkCoreRacks ? 2 : 0;
+        
         // Save the design - now with properly typed components
         const updatedDesigns = [...state.savedDesigns, designToSave];
         

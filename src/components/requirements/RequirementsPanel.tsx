@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useDesignStore } from '@/store/designStore';
 import { Slider } from '@/components/ui/slider';
 import { Calculator, Save } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 export const RequirementsPanel: React.FC = () => {
   const { requirements, updateRequirements } = useDesignStore();
@@ -29,11 +30,19 @@ export const RequirementsPanel: React.FC = () => {
         availabilityZoneQuantity: requirements.storageRequirements.availabilityZoneQuantity || 3,
         poolType: requirements.storageRequirements.poolType || '3 Replica'
       },
+      networkRequirements: {
+        ...requirements.networkRequirements,
+        networkTopology: requirements.networkRequirements.networkTopology || 'Spine-Leaf',
+        managementNetwork: requirements.networkRequirements.managementNetwork || 'Single connection',
+        ipmiNetwork: requirements.networkRequirements.ipmiNetwork || 'Management converged',
+        leafSwitchesPerAZ: requirements.networkRequirements.leafSwitchesPerAZ || 2,
+        dedicatedStorageNetwork: requirements.networkRequirements.dedicatedStorageNetwork || false,
+        dedicatedNetworkCoreRacks: requirements.networkRequirements.dedicatedNetworkCoreRacks || false
+      },
       physicalConstraints: {
         ...requirements.physicalConstraints,
-        rackQuantity: requirements.physicalConstraints.rackQuantity || 16,
+        computeStorageRackQuantity: requirements.physicalConstraints.computeStorageRackQuantity || 16,
         totalAvailabilityZones: requirements.physicalConstraints.totalAvailabilityZones || 8,
-        racksPerAvailabilityZone: requirements.physicalConstraints.racksPerAvailabilityZone || 2,
         rackUnitsPerRack: requirements.physicalConstraints.rackUnitsPerRack || 42,
         powerPerRackWatts: requirements.physicalConstraints.powerPerRackWatts || 5000
       }
@@ -50,6 +59,20 @@ export const RequirementsPanel: React.FC = () => {
       [section]: sectionData
     } as any);
   };
+  
+  // Calculate racks per AZ based on other inputs
+  const racksPerAZ = useMemo(() => {
+    const totalAZs = requirements.physicalConstraints.totalAvailabilityZones || 1;
+    const computeStorageRacks = requirements.physicalConstraints.computeStorageRackQuantity || 0;
+    const dedicatedNetworkRacks = requirements.networkRequirements.dedicatedNetworkCoreRacks ? 2 : 0;
+    const totalRacks = computeStorageRacks + dedicatedNetworkRacks;
+    
+    return totalAZs > 0 ? Math.ceil(totalRacks / totalAZs) : 0;
+  }, [
+    requirements.physicalConstraints.totalAvailabilityZones,
+    requirements.physicalConstraints.computeStorageRackQuantity,
+    requirements.networkRequirements.dedicatedNetworkCoreRacks
+  ]);
   
   return (
     <div className="max-w-4xl mx-auto">
@@ -203,6 +226,20 @@ export const RequirementsPanel: React.FC = () => {
               </Select>
             </div>
             
+            {/* Conditional input for Spine-Leaf topology */}
+            {requirements.networkRequirements.networkTopology === 'Spine-Leaf' && (
+              <div className="space-y-2">
+                <Label htmlFor="leaf-switches-per-az">Leaf Switches per AZ</Label>
+                <Input
+                  id="leaf-switches-per-az"
+                  type="number"
+                  min={2}
+                  value={requirements.networkRequirements.leafSwitchesPerAZ || 2}
+                  onChange={(e) => handleInputChange('networkRequirements', 'leafSwitchesPerAZ', Number(e.target.value))}
+                />
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="management-network">Management Network</Label>
               <Select
@@ -234,6 +271,24 @@ export const RequirementsPanel: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+            
+            <div className="flex items-center justify-between space-y-0 pt-1">
+              <Label htmlFor="dedicated-storage-network">Dedicated Storage Network</Label>
+              <Switch
+                id="dedicated-storage-network"
+                checked={requirements.networkRequirements.dedicatedStorageNetwork || false}
+                onCheckedChange={(checked) => handleInputChange('networkRequirements', 'dedicatedStorageNetwork', checked)}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between space-y-0 pt-1">
+              <Label htmlFor="dedicated-network-core-racks">Dedicated Network Core Racks</Label>
+              <Switch
+                id="dedicated-network-core-racks"
+                checked={requirements.networkRequirements.dedicatedNetworkCoreRacks || false}
+                onCheckedChange={(checked) => handleInputChange('networkRequirements', 'dedicatedNetworkCoreRacks', checked)}
+              />
+            </div>
           </CardContent>
         </Card>
         
@@ -245,12 +300,12 @@ export const RequirementsPanel: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="rack-quantity">Rack Quantity</Label>
+              <Label htmlFor="rack-quantity">Compute/Storage Rack Quantity</Label>
               <Input
                 id="rack-quantity"
                 type="number"
-                value={requirements.physicalConstraints.rackQuantity || ''}
-                onChange={(e) => handleInputChange('physicalConstraints', 'rackQuantity', Number(e.target.value))}
+                value={requirements.physicalConstraints.computeStorageRackQuantity || ''}
+                onChange={(e) => handleInputChange('physicalConstraints', 'computeStorageRackQuantity', Number(e.target.value))}
               />
             </div>
             
@@ -266,14 +321,13 @@ export const RequirementsPanel: React.FC = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="racks-per-az">Racks per Availability Zone</Label>
-              <Input
-                id="racks-per-az"
-                type="number"
-                min={1}
-                value={requirements.physicalConstraints.racksPerAvailabilityZone || ''}
-                onChange={(e) => handleInputChange('physicalConstraints', 'racksPerAvailabilityZone', Number(e.target.value))}
-              />
+              <Label htmlFor="racks-per-az" className="flex items-center">
+                <span>Racks per Availability Zone</span>
+                <span className="ml-2 text-muted-foreground text-xs">(calculated)</span>
+              </Label>
+              <div className="h-10 px-3 py-2 rounded-md border border-input bg-muted/50 text-base md:text-sm flex items-center">
+                {racksPerAZ}
+              </div>
             </div>
             
             <div className="space-y-2">
