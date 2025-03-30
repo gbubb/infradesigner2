@@ -1,4 +1,3 @@
-
 // Common properties shared by all component types
 export interface BaseComponent {
   id: string;
@@ -22,6 +21,9 @@ export enum ComponentType {
   Firewall = 'firewall',
   Disk = 'disk'
 }
+
+// Define network topology type for stronger type checking
+export type NetworkTopology = 'Spine-Leaf' | 'Three-Tier' | 'Core-Distribution-Access';
 
 // Position interface for component placement
 export interface Position {
@@ -194,10 +196,7 @@ export interface DesignRequirements {
     diskQuantities?: Record<string, number>; // Quantity of each disk type
   };
   networkRequirements: {
-    networkTopology?: 
-      | 'Spine-Leaf' 
-      | 'Three-Tier' 
-      | 'Core-Distribution-Access';
+    networkTopology?: NetworkTopology;
     managementNetwork?: 
       | 'Single connection' 
       | 'Dual Home';

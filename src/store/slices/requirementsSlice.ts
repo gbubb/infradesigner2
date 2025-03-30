@@ -1,5 +1,6 @@
+
 import { StateCreator } from 'zustand';
-import { DesignRequirements } from '@/types/infrastructure';
+import { DesignRequirements, DeviceRoleType, NetworkTopology } from '@/types/infrastructure';
 import { StoreState } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -77,7 +78,8 @@ export const createRequirementsSlice: StateCreator<
         }
       }
     }));
-    get().calculateComponentRoles(); // Recalculate roles when requirements change
+    // Call the local calculateComponentRoles method from this slice
+    get().calculateComponentRoles();
   },
   
   calculateComponentRoles: () => {
@@ -168,7 +170,7 @@ export const createRequirementsSlice: StateCreator<
         id: uuidv4(),
         role: 'torSwitch',
         description: 'Provides top-of-rack switching for servers',
-        requiredCount: networkTopology === 'Three-Tier' ? computeNodeCount : 0 // One ToR switch per server in three-tier topology
+        requiredCount: networkTopology !== 'Spine-Leaf' ? computeNodeCount : 0 // One ToR switch per server in three-tier topology
       },
       {
         id: uuidv4(),
@@ -242,11 +244,13 @@ export const createRequirementsSlice: StateCreator<
       return { componentRoles: updatedRoles };
     });
     
-    // Trigger recalculation of quantities
-    const state = get();
-    const role = state.componentRoles.find(r => r.id === roleId);
+    // Get state after update
+    const updatedState = get();
+    const role = updatedState.componentRoles.find(r => r.id === roleId);
+    
     if (role) {
-      const newQuantity = state.calculateRequiredQuantity(roleId, componentId);
+      // Calculate the new quantity using the local method
+      const newQuantity = updatedState.calculateRequiredQuantity(roleId, componentId);
       
       // Update the role with the new quantity
       set((state) => ({
