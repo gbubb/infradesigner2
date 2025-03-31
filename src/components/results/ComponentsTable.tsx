@@ -34,6 +34,7 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
           </TableHeader>
           <TableBody>
             {components.map((component, index) => {
+              // Ensure we have valid quantity
               const quantity = component.quantity || 1;
               const totalComponentCost = component.cost * quantity;
               const totalComponentPower = component.powerRequired * quantity;
@@ -41,10 +42,11 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                 ? (component as any).rackUnitsConsumed * quantity
                 : '-';
               
+              // Format role name for display (camelCase to Title Case with spaces)
               const roleName = component.role 
                 ? component.role.charAt(0).toUpperCase() + 
                   component.role.slice(1).replace(/([A-Z])/g, ' $1') 
-                : '';
+                : 'Unknown';
                 
               return (
                 <TableRow key={`${component.id}-${index}`}>

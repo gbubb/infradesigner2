@@ -72,6 +72,7 @@ export const recalculateDesign = () => {
   
   try {
     isRecalculating = true;
+    console.log("Starting design recalculation");
     
     // Get the current state
     const state = useDesignStore.getState();
@@ -177,10 +178,12 @@ export const recalculateDesign = () => {
         .filter(Boolean);
       
       // Only update if we have components to update with
-      if (updatedComponents.length > 0) {
+      if (updatedComponents && updatedComponents.length > 0) {
+        // Print debug info
+        console.log(`Updating active design with ${updatedComponents.length} components`);
+        
         // Update the active design with new components
         state.updateActiveDesign(updatedComponents);
-        console.log(`Updated design with ${updatedComponents.length} components`);
       } else {
         console.warn("No components found to update design with");
         toast.warning("No components found to update design with. Please assign components to roles first.");
@@ -196,6 +199,7 @@ export const recalculateDesign = () => {
     toast.error("Error during design recalculation. Please try again.");
   } finally {
     isRecalculating = false;
+    console.log("Design recalculation completed");
   }
 };
 

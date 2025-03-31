@@ -11,6 +11,7 @@ import { ComponentsTable } from './ComponentsTable';
 import { ComponentTypeSummaryTable } from './ComponentTypeSummaryTable';
 import { DesignAlerts } from './DesignAlerts';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
+import { toast } from 'sonner';
 
 export const ResultsPanel: React.FC = () => {
   const { activeDesign, saveDesign } = useDesignStore();
@@ -28,55 +29,69 @@ export const ResultsPanel: React.FC = () => {
     resourceUtilization,
     costPerVCPU,
     costPerTB,
-    designErrors
+    designErrors,
+    hasValidDesign
   } = useDesignCalculations();
   
-  // Auto-recalculate when the component mounts to ensure fresh data
+  // Force recalculation when the component mounts
   useEffect(() => {
-    if (activeDesign && !hasCalculated) {
+    if (!hasCalculated) {
       setIsLoading(true);
+      
+      // Use a short delay to ensure store is fully initialized
       const timer = setTimeout(() => {
         try {
+          // Force recalculation of the design
           manualRecalculateDesign();
-          // Save the design after calculating to ensure all selections are preserved
-          saveDesign();
+          
+          // Save the design to ensure it's persisted
+          if (activeDesign) {
+            saveDesign();
+          }
+          
           setHasCalculated(true);
         } catch (error) {
-          console.error("Error during auto-recalculation:", error);
+          console.error("Error during initial calculation:", error);
+          toast.error("Failed to calculate design. Please try again.");
         } finally {
           setIsLoading(false);
         }
-      }, 200);
+      }, 300);
       
       return () => clearTimeout(timer);
-    } else {
-      setIsLoading(false);
     }
-  }, [activeDesign?.id, hasCalculated, saveDesign]); // Only depend on the design ID to prevent excessive recalculations
+  }, [activeDesign?.id, hasCalculated, saveDesign]);
   
-  // Recalculate handler - this will update the design when clicked
+  // Handle manual recalculation
   const handleRecalculate = useCallback(() => {
     setIsLoading(true);
+    
     try {
       manualRecalculateDesign();
-      // Save the design after recalculating
-      saveDesign();
+      
+      if (activeDesign) {
+        saveDesign();
+      }
+      
       setHasCalculated(true);
+      toast.success("Design recalculated successfully");
     } catch (error) {
       console.error("Error during manual recalculation:", error);
+      toast.error("Failed to recalculate design. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  }, [saveDesign]);
+  }, [activeDesign, saveDesign]);
 
-  // Check if there's no design data - the components must exist AND have length > 0
-  const hasNoDesign = !activeDesign || !activeDesign.components || activeDesign.components.length === 0;
-
-  // Calculate power per rack value for the resource summary card
+  // Derived state
+  const hasNoDesign = !hasValidDesign;
+  
+  // Calculate power per rack value
   const powerPerRack = resourceMetrics?.totalRackQuantity 
     ? (totalPower / resourceMetrics.totalRackQuantity)
     : 0;
 
+  // Show loading state while calculating
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto p-6">
@@ -150,7 +165,9 @@ export const ResultsPanel: React.FC = () => {
             totalPower={resourceMetrics.totalPower}
           />
           
-          <ComponentsTable components={activeDesign?.components || []} />
+          {activeDesign?.components && (
+            <ComponentsTable components={activeDesign.components} />
+          )}
           
           <ComponentTypeSummaryTable componentsByType={componentsByType} />
         </>

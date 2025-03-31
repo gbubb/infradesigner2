@@ -50,11 +50,24 @@ export const createDesignSlice: StateCreator<
     });
     
     toast.success("New design created");
+    
+    // Calculate roles immediately after creating a new design
+    setTimeout(() => {
+      try {
+        const state = get();
+        if (state.calculateComponentRoles) {
+          state.calculateComponentRoles();
+        }
+      } catch (error) {
+        console.error("Error calculating roles for new design:", error);
+      }
+    }, 100);
   },
 
   saveDesign: () => {
     set((state) => {
       try {
+        console.log("Saving current design");
         // Get the current state of component roles and selected components
         const assignedComponents: InfrastructureComponent[] = state.componentRoles
           .filter(role => role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
@@ -154,13 +167,15 @@ export const createDesignSlice: StateCreator<
           })
           .filter(Boolean) as InfrastructureComponent[]; // Filter out any null values
 
+        console.log(`Generated ${assignedComponents.length} components for design save`);
+
         // Create or update activeDesign
         let designToSave: InfrastructureDesign;
         
         if (state.activeDesign) {
           designToSave = { 
             ...state.activeDesign, 
-            components: assignedComponents,
+            components: assignedComponents.length > 0 ? assignedComponents : state.activeDesign.components,
             requirements: state.requirements,
             updatedAt: new Date()
           };
@@ -187,6 +202,7 @@ export const createDesignSlice: StateCreator<
           updatedDesigns = [...state.savedDesigns, designToSave];
         }
         
+        console.log("Design saved successfully");
         toast.success("Design saved successfully!");
         return { 
           savedDesigns: updatedDesigns,
@@ -214,14 +230,14 @@ export const createDesignSlice: StateCreator<
         return state; // Return state unchanged
       }
       
+      console.log(`Updating active design with ${components.length} components`);
+      
       // Create updated design with new components
       const updatedDesign = {
         ...state.activeDesign,
         components,
         updatedAt: new Date()
       };
-      
-      console.log(`Updated design with ${components.length} components`);
       
       return {
         activeDesign: updatedDesign

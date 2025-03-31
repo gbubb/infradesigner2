@@ -25,6 +25,11 @@ export const useDesignCalculations = () => {
   // Calculate total power (extracted from resourceMetrics for convenience)
   const totalPower = useMemo(() => resourceMetrics.totalPower, [resourceMetrics.totalPower]);
 
+  // Check if we have a valid design with components
+  const hasValidDesign = useMemo(() => {
+    return Boolean(activeDesign && activeDesign.components && activeDesign.components.length > 0);
+  }, [activeDesign]);
+
   return {
     totalCost,
     totalPower,
@@ -36,6 +41,7 @@ export const useDesignCalculations = () => {
     resourceUtilization,
     costPerVCPU,
     costPerTB,
-    designErrors
+    designErrors,
+    hasValidDesign
   };
 };
