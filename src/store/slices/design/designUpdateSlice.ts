@@ -13,7 +13,7 @@ export const createDesignUpdateSlice: StateCreator<
   [],
   [],
   DesignUpdateSlice
-> = (set, get) => ({
+> = (set, get, api) => ({
   updateActiveDesign: (components) => {
     set((state) => {
       if (!state.activeDesign) {

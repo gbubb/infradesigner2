@@ -13,7 +13,7 @@ export const createDesignComponentsSlice: StateCreator<
   [],
   [],
   DesignComponentsSlice
-> = (set, get) => ({
+> = (set, get, api) => ({
   // Method to get all available components
   getAvailableComponents: () => {
     const state = get();

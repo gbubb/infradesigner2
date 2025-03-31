@@ -15,7 +15,7 @@ export const createDesignSavingSlice: StateCreator<
   [],
   [],
   DesignSavingSlice
-> = (set, get) => ({
+> = (set, get, api) => ({
   saveDesign: () => {
     set((state) => {
       try {

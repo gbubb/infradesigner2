@@ -15,7 +15,7 @@ export const createDesignCreationSlice: StateCreator<
   [],
   [],
   DesignCreationSlice
-> = (set, get) => ({
+> = (set, get, api) => ({
   createNewDesign: (name, description) => {
     const newDesign: InfrastructureDesign = {
       id: uuidv4(),

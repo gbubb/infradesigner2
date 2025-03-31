@@ -24,13 +24,13 @@ export const createDesignSlice: StateCreator<
   [],
   [],
   DesignSlice
-> = (set, get) => ({
+> = (set, get, api) => ({
   savedDesigns: [],
   activeDesign: null,
   
   // Include all sub-slices
-  ...createDesignCreationSlice(set, get),
-  ...createDesignSavingSlice(set, get),
-  ...createDesignUpdateSlice(set, get),
-  ...createDesignComponentsSlice(set, get)
+  ...createDesignCreationSlice(set, get, api),
+  ...createDesignSavingSlice(set, get, api),
+  ...createDesignUpdateSlice(set, get, api),
+  ...createDesignComponentsSlice(set, get, api)
 });
