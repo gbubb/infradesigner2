@@ -37,10 +37,10 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Core Infrastructure</CardTitle>
+          <CardTitle className="text-lg">Core Infrastructure</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -84,10 +84,13 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
         </CardContent>
       </Card>
 
-      <ComputeClusterForm 
-        clusters={requirements.computeClusters || []}
-        onUpdate={handleClustersUpdate}
-      />
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold pl-2">Compute Clusters</h2>
+        <ComputeClusterForm 
+          clusters={requirements.computeClusters || []}
+          onUpdate={handleClustersUpdate}
+        />
+      </div>
     </div>
   );
 };

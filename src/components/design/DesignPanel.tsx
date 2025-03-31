@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { CustomTabsList, CustomTabsTrigger } from '@/components/ui/custom-tabs';
 import { useDesignStore, manualRecalculateDesign } from '@/store/designStore';
 import { toast } from 'sonner';
 import { Info, LayoutGrid, RotateCw, Save } from 'lucide-react';
@@ -34,11 +35,11 @@ export const DesignPanel: React.FC = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Design Configuration</h2>
         <div className="flex space-x-2">
-          <Button variant="secondary" onClick={handleRecalculateDesign}>
+          <Button variant="secondary" onClick={handleRecalculateDesign} size="lg">
             <RotateCw className="h-4 w-4 mr-2" />
             Recalculate
           </Button>
-          <Button variant="default" onClick={handleSaveDesign}>
+          <Button variant="default" onClick={handleSaveDesign} size="lg">
             <Save className="h-4 w-4 mr-2" />
             Save Design
           </Button>
@@ -46,22 +47,22 @@ export const DesignPanel: React.FC = () => {
       </div>
       
       <Tabs defaultValue="roles" value={activePage} onValueChange={setActivePage}>
-        <TabsList>
-          <TabsTrigger value="roles">
+        <CustomTabsList>
+          <CustomTabsTrigger value="roles">
             <LayoutGrid className="h-4 w-4 mr-2" />
             Component Roles
-          </TabsTrigger>
-          <TabsTrigger value="properties">
+          </CustomTabsTrigger>
+          <CustomTabsTrigger value="properties">
             <Info className="h-4 w-4 mr-2" />
             Design Properties
-          </TabsTrigger>
-        </TabsList>
+          </CustomTabsTrigger>
+        </CustomTabsList>
         
-        <TabsContent value="roles" className="space-y-6">
+        <TabsContent value="roles" className="space-y-6 mt-4">
           <ComponentRoleSelection />
         </TabsContent>
         
-        <TabsContent value="properties">
+        <TabsContent value="properties" className="mt-4">
           <DesignProperties />
         </TabsContent>
       </Tabs>
