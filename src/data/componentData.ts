@@ -364,3 +364,8 @@ export const getComponentsByRole = (type: ComponentType, role: string): Infrastr
     return false;
   });
 };
+
+// Add the missing loadComponentsData function
+export const loadComponentsData = (): InfrastructureComponent[] => {
+  return allComponentTemplates;
+};

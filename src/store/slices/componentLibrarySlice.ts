@@ -63,11 +63,11 @@ export const createComponentLibrarySlice: StateCreator<
       const index = state.componentTemplates.findIndex(c => c.id === id);
       if (index === -1) return state;
       
+      const component = state.componentTemplates[index];
+      const updatedComponent = { ...component, ...updates };
+
       const updatedTemplates = [...state.componentTemplates];
-      updatedTemplates[index] = {
-        ...updatedTemplates[index],
-        ...updates
-      };
+      updatedTemplates[index] = updatedComponent;
       
       // Persist components to database
       persistComponents(updatedTemplates).catch(err => {
