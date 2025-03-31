@@ -2,11 +2,11 @@
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-// Table names
+// Table names - Use string literals that match the actual table names in Supabase
 export const TABLES = {
   COMPONENTS: 'components',
   DESIGNS: 'designs',
-};
+} as const;  // Use const assertion to ensure TypeScript recognizes these as literal types
 
 // Error handler utility
 export const handleSupabaseError = (error: Error | null, operation: string) => {

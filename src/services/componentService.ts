@@ -15,19 +15,27 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
     }
     
     // Convert database format to application format with proper type assertion
-    return (data?.map(component => ({
-      id: component.id,
-      name: component.name,
-      type: component.type as ComponentType,
-      manufacturer: component.manufacturer || '',
-      model: component.model || '',
-      description: component.description || '',
-      cost: Number(component.cost) || 0,
-      powerRequired: Number(component.powerrequired) || 0,
-      serverRole: component.serverrole,
-      switchRole: component.switchrole,
-      isDefault: component.isdefault || false,
-    })) || []) as unknown as InfrastructureComponent[];
+    return (data?.map(component => {
+      // Make sure we're only processing component rows by checking for required properties
+      if ('type' in component) {
+        return {
+          id: component.id,
+          name: component.name,
+          type: component.type as ComponentType,
+          manufacturer: component.manufacturer || '',
+          model: component.model || '',
+          description: component.description || '',
+          cost: Number(component.cost) || 0,
+          powerRequired: Number(component.powerrequired) || 0,
+          serverRole: component.serverrole,
+          switchRole: component.switchrole,
+          isDefault: component.isdefault || false,
+        };
+      }
+      // This should never happen if database is properly set up
+      console.error('Invalid component data:', component);
+      return null;
+    }).filter(Boolean) || []) as InfrastructureComponent[];
   } catch (err) {
     console.error('Error loading components:', err);
     toast.error('Failed to load components from the database');
