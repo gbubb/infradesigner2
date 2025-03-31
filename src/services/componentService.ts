@@ -14,7 +14,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
       return [];
     }
     
-    // Convert database format to application format and use type assertion
+    // Convert database format to application format with proper type assertion
     return (data?.map(component => ({
       id: component.id,
       name: component.name,
@@ -27,7 +27,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
       serverRole: component.serverrole,
       switchRole: component.switchrole,
       isDefault: component.isdefault || false,
-    })) || []) as InfrastructureComponent[];
+    })) || []) as unknown as InfrastructureComponent[];
   } catch (err) {
     console.error('Error loading components:', err);
     toast.error('Failed to load components from the database');

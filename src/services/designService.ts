@@ -80,3 +80,79 @@ export const deleteDesign = async (id: string): Promise<boolean> => {
     return false;
   }
 };
+
+// Export a design to a JSON file
+export const exportDesign = (design: InfrastructureDesign): void => {
+  try {
+    // Create a JSON blob from the design object
+    const designJson = JSON.stringify(design, null, 2);
+    const blob = new Blob([designJson], { type: 'application/json' });
+    
+    // Create a temporary download link
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${design.name.replace(/\s+/g, '_')}_design.json`;
+    
+    // Trigger the download
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast.success(`Design "${design.name}" exported successfully`);
+  } catch (err) {
+    console.error('Error exporting design:', err);
+    toast.error('Failed to export design');
+  }
+};
+
+// Import a design from a JSON file
+export const importDesign = async (file: File): Promise<InfrastructureDesign | null> => {
+  return new Promise((resolve) => {
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        try {
+          const fileContent = event.target?.result as string;
+          const importedDesign = JSON.parse(fileContent) as InfrastructureDesign;
+          
+          // Validate the imported design has the required properties
+          if (!importedDesign.id || !importedDesign.name || !importedDesign.components) {
+            toast.error('Invalid design file format');
+            resolve(null);
+            return;
+          }
+          
+          // Convert date strings back to Date objects
+          importedDesign.createdAt = new Date(importedDesign.createdAt);
+          importedDesign.updatedAt = importedDesign.updatedAt 
+            ? new Date(importedDesign.updatedAt) 
+            : new Date();
+          
+          toast.success(`Design "${importedDesign.name}" imported successfully`);
+          resolve(importedDesign);
+        } catch (parseErr) {
+          console.error('Error parsing design file:', parseErr);
+          toast.error('Failed to parse design file');
+          resolve(null);
+        }
+      };
+      
+      reader.onerror = () => {
+        console.error('Error reading design file');
+        toast.error('Failed to read design file');
+        resolve(null);
+      };
+      
+      reader.readAsText(file);
+    } catch (err) {
+      console.error('Error importing design:', err);
+      toast.error('Failed to import design');
+      resolve(null);
+    }
+  });
+};

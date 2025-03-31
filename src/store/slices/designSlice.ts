@@ -1,10 +1,15 @@
-
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { InfrastructureComponent, InfrastructureDesign } from '@/types/infrastructure';
 import { StoreState } from '../types';
-import { saveDesign as saveDesignToDb, deleteDesign as deleteDesignFromDb, loadDesigns } from '@/services/designService';
+import { 
+  saveDesign as saveDesignToDb, 
+  deleteDesign as deleteDesignFromDb, 
+  loadDesigns,
+  exportDesign as exportDesignToFile,
+  importDesign as importDesignFromFile
+} from '@/services/designService';
 
 export interface DesignSlice {
   // All saved designs
@@ -30,6 +35,12 @@ export interface DesignSlice {
   
   // Save design to database
   saveDesign: () => void;
+  
+  // Export design to a file
+  exportDesign: () => void;
+  
+  // Import design from a file
+  importDesign: (file: File) => Promise<void>;
   
   // Load designs from database
   loadDesignsFromDB: () => Promise<void>;
@@ -206,6 +217,54 @@ export const createDesignSlice: StateCreator<
     });
   },
   
+  exportDesign: () => {
+    const state = get();
+    if (!state.activeDesign) {
+      toast.error("No active design to export");
+      return;
+    }
+    
+    exportDesignToFile(state.activeDesign);
+  },
+  
+  importDesign: async (file: File) => {
+    const importedDesign = await importDesignFromFile(file);
+    
+    if (!importedDesign) {
+      return;
+    }
+    
+    set((state) => {
+      // Check if a design with the same ID already exists
+      const existingDesignIndex = state.savedDesigns.findIndex(d => d.id === importedDesign.id);
+      
+      if (existingDesignIndex !== -1) {
+        // Update the existing design in the list
+        const updatedDesigns = [...state.savedDesigns];
+        updatedDesigns[existingDesignIndex] = importedDesign;
+        
+        // Save to Supabase
+        saveDesignToDb(importedDesign);
+        
+        return {
+          savedDesigns: updatedDesigns,
+          activeDesign: importedDesign
+        };
+      } else {
+        // Add as a new design
+        const updatedDesigns = [...state.savedDesigns, importedDesign];
+        
+        // Save to Supabase
+        saveDesignToDb(importedDesign);
+        
+        return {
+          savedDesigns: updatedDesigns,
+          activeDesign: importedDesign
+        };
+      }
+    });
+  },
+  
   loadDesignsFromDB: async () => {
     try {
       const designs = await loadDesigns();
@@ -217,12 +276,9 @@ export const createDesignSlice: StateCreator<
         });
         console.log(`Loaded ${designs.length} designs from database`);
       }
-      
-      return designs;
     } catch (error) {
       console.error("Error loading designs from database:", error);
       toast.error("Failed to load designs");
-      return [];
     }
   }
 });
