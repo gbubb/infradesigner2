@@ -31,13 +31,17 @@ export const ResultsPanel: React.FC = () => {
   // Auto-recalculate when the component mounts to ensure fresh data
   // Save design after recalculating to ensure all selections are preserved
   useEffect(() => {
-    // Only recalculate if we have an active design
+    // Only recalculate if we have an active design and this is the first render
     if (activeDesign) {
-      manualRecalculateDesign();
-      // Save the design after calculating to ensure all selections are preserved
-      saveDesign();
+      const timer = setTimeout(() => {
+        manualRecalculateDesign();
+        // Save the design after calculating to ensure all selections are preserved
+        saveDesign();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [activeDesign, saveDesign]);
+  }, [activeDesign?.id]); // Only depend on the design ID to prevent excessive recalculations
   
   // Recalculate handler - this will update the design when clicked
   // Save after recalculating to preserve selections

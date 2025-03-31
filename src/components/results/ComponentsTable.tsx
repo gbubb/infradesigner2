@@ -52,7 +52,7 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                     {roleName}
                   </TableCell>
                   <TableCell>
-                    {component.name}
+                    <div className="font-medium">{component.name}</div>
                     <div className="text-xs text-muted-foreground mt-1">
                       <Badge variant="outline" className="mr-1">{component.type}</Badge>
                       {component.manufacturer} {component.model}

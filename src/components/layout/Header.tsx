@@ -16,12 +16,13 @@ export const Header: React.FC = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   
-  // Update the local state when activeDesign changes
+  // Update the local state only when activeDesign changes or isEditingName is false
+  // This prevents the infinite loop by not updating state during the render cycle
   useEffect(() => {
-    if (activeDesign) {
+    if (activeDesign && !isEditingName) {
       setEditedName(activeDesign.name);
     }
-  }, [activeDesign]);
+  }, [activeDesign?.id, isEditingName]); // Only depend on the design ID, not the whole object
   
   const handleCreateDesign = () => {
     if (newDesignName.trim()) {
