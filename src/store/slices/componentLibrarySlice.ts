@@ -2,7 +2,7 @@
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
+import { InfrastructureComponent, ComponentType, Server, Switch } from '@/types/infrastructure';
 import { StoreState } from '../types';
 import { allComponentTemplates } from '@/data/componentData';
 
@@ -47,13 +47,27 @@ export const createComponentLibrarySlice: StateCreator<
     const typeRoleCombos = new Map();
     
     templates.forEach(template => {
-      // Ensure role property exists (may be undefined)
-      if (!template.role) {
-        template.role = template.serverRole || template.switchRole || 'default';
+      // Determine the role based on component type
+      let role = template.role || 'default';
+      
+      // For servers, check serverRole
+      if (template.type === ComponentType.Server) {
+        const serverComponent = template as Server;
+        if (serverComponent.serverRole) {
+          role = serverComponent.serverRole;
+        }
+      }
+      
+      // For switches, check switchRole
+      if (template.type === ComponentType.Switch) {
+        const switchComponent = template as Switch;
+        if (switchComponent.switchRole) {
+          role = switchComponent.switchRole;
+        }
       }
       
       // Create a unique key for the type-role combination
-      const key = `${template.type}-${template.role || 'default'}`;
+      const key = `${template.type}-${role}`;
       
       if (!typeRoleCombos.has(key)) {
         typeRoleCombos.set(key, template.id);
@@ -74,18 +88,50 @@ export const createComponentLibrarySlice: StateCreator<
         id: component.id || uuidv4(),
       } as InfrastructureComponent;
       
-      // Ensure role is set
-      if (!newComponent.role) {
-        newComponent.role = (newComponent as any).serverRole || 
-                            (newComponent as any).switchRole || 'default';
+      // Determine the role based on component type
+      let role = newComponent.role || 'default';
+      
+      if (newComponent.type === ComponentType.Server) {
+        const serverComponent = newComponent as Server;
+        if (serverComponent.serverRole) {
+          role = serverComponent.serverRole;
+        }
+      }
+      
+      if (newComponent.type === ComponentType.Switch) {
+        const switchComponent = newComponent as Switch;
+        if (switchComponent.switchRole) {
+          role = switchComponent.switchRole;
+        }
       }
       
       // If the component is set as default, clear any existing defaults for this type/role
       let updatedTemplates = [...state.componentTemplates];
       if (newComponent.isDefault) {
         updatedTemplates = updatedTemplates.map(c => {
-          if (c.type === newComponent.type && c.role === newComponent.role && c.id !== newComponent.id) {
-            return { ...c, isDefault: false };
+          // Check type first
+          if (c.type === newComponent.type) {
+            // Then determine the role of the existing component
+            let existingRole = c.role || 'default';
+            
+            if (c.type === ComponentType.Server) {
+              const serverComponent = c as Server;
+              if (serverComponent.serverRole) {
+                existingRole = serverComponent.serverRole;
+              }
+            }
+            
+            if (c.type === ComponentType.Switch) {
+              const switchComponent = c as Switch;
+              if (switchComponent.switchRole) {
+                existingRole = switchComponent.switchRole;
+              }
+            }
+            
+            // If roles match, ensure only the new component is default
+            if (existingRole === role && c.id !== newComponent.id) {
+              return { ...c, isDefault: false };
+            }
           }
           return c;
         });
@@ -114,10 +160,21 @@ export const createComponentLibrarySlice: StateCreator<
         ...updates
       } as InfrastructureComponent;
       
-      // Ensure role is set
-      if (!updatedComponent.role) {
-        updatedComponent.role = (updatedComponent as any).serverRole || 
-                               (updatedComponent as any).switchRole || 'default';
+      // Determine roles for comparison
+      let updatedRole = updatedComponent.role || 'default';
+      
+      if (updatedComponent.type === ComponentType.Server) {
+        const serverComponent = updatedComponent as Server;
+        if (serverComponent.serverRole) {
+          updatedRole = serverComponent.serverRole;
+        }
+      }
+      
+      if (updatedComponent.type === ComponentType.Switch) {
+        const switchComponent = updatedComponent as Switch;
+        if (switchComponent.switchRole) {
+          updatedRole = switchComponent.switchRole;
+        }
       }
       
       let updatedTemplates = [...state.componentTemplates];
@@ -126,8 +183,28 @@ export const createComponentLibrarySlice: StateCreator<
       // If this component is being set as default, clear other defaults for same type/role
       if (updates.isDefault) {
         updatedTemplates = updatedTemplates.map(c => {
-          if (c.id !== id && c.type === updatedComponent.type && c.role === updatedComponent.role) {
-            return { ...c, isDefault: false };
+          if (c.id !== id) {
+            // Determine the role of the existing component
+            let existingRole = c.role || 'default';
+            
+            if (c.type === ComponentType.Server && updatedComponent.type === ComponentType.Server) {
+              const serverComponent = c as Server;
+              if (serverComponent.serverRole) {
+                existingRole = serverComponent.serverRole;
+              }
+            }
+            
+            if (c.type === ComponentType.Switch && updatedComponent.type === ComponentType.Switch) {
+              const switchComponent = c as Switch;
+              if (switchComponent.switchRole) {
+                existingRole = switchComponent.switchRole;
+              }
+            }
+            
+            // If types and roles match, ensure only the updated component is default
+            if (c.type === updatedComponent.type && existingRole === updatedRole) {
+              return { ...c, isDefault: false };
+            }
           }
           return c;
         });
@@ -184,7 +261,24 @@ export const createComponentLibrarySlice: StateCreator<
     set((state) => {
       // First, clear the default flag for any component with the same type/role
       let updatedTemplates = state.componentTemplates.map(c => {
-        if (c.type === type && c.role === role) {
+        // Determine the role of the existing component
+        let componentRole = c.role || 'default';
+        
+        if (c.type === ComponentType.Server && type === ComponentType.Server) {
+          const serverComponent = c as Server;
+          if (serverComponent.serverRole) {
+            componentRole = serverComponent.serverRole;
+          }
+        }
+        
+        if (c.type === ComponentType.Switch && type === ComponentType.Switch) {
+          const switchComponent = c as Switch;
+          if (switchComponent.switchRole) {
+            componentRole = switchComponent.switchRole;
+          }
+        }
+        
+        if (c.type === type && componentRole === role) {
           return { ...c, isDefault: c.id === id };
         }
         return c;
@@ -198,8 +292,28 @@ export const createComponentLibrarySlice: StateCreator<
   
   getDefaultComponent: (type, role) => {
     const state = get();
-    return state.componentTemplates.find(c => 
-      c.type === type && c.role === role && c.isDefault
-    );
+    return state.componentTemplates.find(c => {
+      // Check if the component is of the requested type
+      if (c.type !== type) return false;
+      
+      // Determine the role of the component
+      let componentRole = c.role || 'default';
+      
+      if (c.type === ComponentType.Server) {
+        const serverComponent = c as Server;
+        if (serverComponent.serverRole) {
+          componentRole = serverComponent.serverRole;
+        }
+      }
+      
+      if (c.type === ComponentType.Switch) {
+        const switchComponent = c as Switch;
+        if (switchComponent.switchRole) {
+          componentRole = switchComponent.switchRole;
+        }
+      }
+      
+      return componentRole === role && c.isDefault;
+    });
   }
 });

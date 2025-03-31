@@ -1,7 +1,7 @@
 
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType } from '@/types/infrastructure';
+import { ComponentType, Server, Switch } from '@/types/infrastructure';
 
 export const useComponentsByType = () => {
   const { activeDesign, componentTemplates } = useDesignStore();
@@ -38,7 +38,7 @@ export const useComponentsByType = () => {
       
       // For servers, check serverRole
       if (type === ComponentType.Server) {
-        const server = component as any;
+        const server = component as Server;
         // Map DeviceRoleType to ServerRole
         const serverRoleMap: Record<string, string> = {
           'computeNode': 'compute',
@@ -52,7 +52,7 @@ export const useComponentsByType = () => {
       
       // For switches, check switchRole
       if (type === ComponentType.Switch) {
-        const networkSwitch = component as any;
+        const networkSwitch = component as Switch;
         // Map DeviceRoleType to SwitchRole
         const switchRoleMap: Record<string, string> = {
           'managementSwitch': 'management',
@@ -74,7 +74,7 @@ export const useComponentsByType = () => {
       if (component.type !== type) return false;
       
       if (type === ComponentType.Server) {
-        const server = component as any;
+        const server = component as Server;
         const serverRoleMap: Record<string, string> = {
           'computeNode': 'compute',
           'gpuNode': 'gpu',
@@ -86,7 +86,7 @@ export const useComponentsByType = () => {
       }
       
       if (type === ComponentType.Switch) {
-        const networkSwitch = component as any;
+        const networkSwitch = component as Switch;
         const switchRoleMap: Record<string, string> = {
           'managementSwitch': 'management',
           'leafSwitch': 'leaf',
@@ -111,19 +111,46 @@ export const useComponentsByType = () => {
     // First check if this component has isDefault flag set
     if (component.isDefault) return true;
     
-    // Determine role from component properties if not explicitly set
-    const role = component.role || 
-                (component as any).serverRole || 
-                (component as any).switchRole || 
-                'default';
+    // Determine role based on component type
+    let role = component.role || 'default';
+    
+    if (component.type === ComponentType.Server) {
+      const serverComponent = component as Server;
+      if (serverComponent.serverRole) {
+        role = serverComponent.serverRole;
+      }
+    }
+    
+    if (component.type === ComponentType.Switch) {
+      const switchComponent = component as Switch;
+      if (switchComponent.switchRole) {
+        role = switchComponent.switchRole;
+      }
+    }
     
     // Find all components with the same type and role
-    const sameTypeAndRole = componentTemplates.filter(
-      c => c.type === component.type && 
-           (c.role === role || 
-            (c as any).serverRole === (component as any).serverRole ||
-            (c as any).switchRole === (component as any).switchRole)
-    );
+    const sameTypeAndRole = componentTemplates.filter(c => {
+      if (c.type !== component.type) return false;
+      
+      // Determine role of the component being compared
+      let compareRole = c.role || 'default';
+      
+      if (c.type === ComponentType.Server) {
+        const serverComponent = c as Server;
+        if (serverComponent.serverRole) {
+          compareRole = serverComponent.serverRole;
+        }
+      }
+      
+      if (c.type === ComponentType.Switch) {
+        const switchComponent = c as Switch;
+        if (switchComponent.switchRole) {
+          compareRole = switchComponent.switchRole;
+        }
+      }
+      
+      return compareRole === role;
+    });
     
     // If there's only one of this type+role, it's effectively the default
     if (sameTypeAndRole.length === 1) return true;
