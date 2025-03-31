@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { useDesignStore, manualRecalculateDesign } from '@/store/designStore';
-import { ComponentType, InfrastructureComponent, DeviceRoleType, SwitchRole, StoragePoolEfficiencyFactors } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent, DeviceRoleType, SwitchRole, StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR, IPMINetworkType } from '@/types/infrastructure';
 import { ResourceUtilizationChart } from './PowerDistributionChart';
 
 export const ResultsPanel: React.FC = () => {
@@ -57,6 +57,65 @@ export const ResultsPanel: React.FC = () => {
       return groups;
     }, {} as Record<string, InfrastructureComponent[]>);
   }, [activeDesign]);
+  
+  // Calculate storage clusters metrics
+  const storageClustersMetrics = useMemo(() => {
+    if (!activeDesign?.components || !requirements.storageRequirements.storageClusters) {
+      return [];
+    }
+
+    return requirements.storageRequirements.storageClusters.map(cluster => {
+      // Find storage nodes for this cluster
+      const clusterNodes = activeDesign.components.filter(
+        component => component.role === 'storageNode' && 
+        (component as any).clusterInfo?.clusterId === cluster.id
+      );
+      
+      // Calculate total raw capacity
+      let totalRawCapacityTB = 0;
+      let totalNodeCost = 0;
+      
+      clusterNodes.forEach(node => {
+        const quantity = node.quantity || 1;
+        totalNodeCost += node.cost * quantity;
+        
+        // Add attached disks capacity if available
+        if ('attachedDisks' in node) {
+          const disks = (node as any).attachedDisks || [];
+          disks.forEach((disk: any) => {
+            if (disk && 'capacityTB' in disk) {
+              totalRawCapacityTB += disk.capacityTB * (disk.quantity || 1) * quantity;
+            }
+          });
+        }
+      });
+      
+      // Calculate usable capacity based on pool type
+      const poolEfficiencyFactor = StoragePoolEfficiencyFactors[cluster.poolType || '3 Replica'] || (1/3);
+      const maxFillFactor = (cluster.maxFillFactor || 80) / 100;
+      
+      const usableCapacityTB = totalRawCapacityTB * poolEfficiencyFactor;
+      const usableCapacityTiB = usableCapacityTB * TB_TO_TIB_FACTOR;
+      const effectiveCapacityTiB = usableCapacityTiB * maxFillFactor;
+      
+      // Calculate cost per TiB
+      const costPerTiB = usableCapacityTiB > 0 ? totalNodeCost / usableCapacityTiB : 0;
+      
+      return {
+        id: cluster.id,
+        name: cluster.name,
+        poolType: cluster.poolType,
+        maxFillFactor: cluster.maxFillFactor,
+        totalRawCapacityTB,
+        usableCapacityTB,
+        usableCapacityTiB,
+        effectiveCapacityTiB,
+        totalNodeCost,
+        costPerTiB,
+        nodeCount: clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0)
+      };
+    });
+  }, [activeDesign, requirements]);
   
   // Calculate actual hardware totals (including redundancy)
   const actualHardwareTotals = useMemo(() => {
@@ -109,9 +168,6 @@ export const ResultsPanel: React.FC = () => {
     
     const totalMemoryTB = totalMemoryGB / 1024;
     const computeMemoryTB = computeMemoryGB / 1024;
-    
-    // For storage calculations, we now need to handle multiple clusters with different pool types
-    // Just calculate total raw storage for now as usable storage is per-cluster
     
     return {
       totalVCPUs,
@@ -169,18 +225,27 @@ export const ResultsPanel: React.FC = () => {
     let mgmtPortsUsed = 0;
     let mgmtPortsAvailable = 0;
     
+    const ipmiNetwork = requirements.networkRequirements.ipmiNetwork || 'Management converged';
+    
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
       
       if (component.type === ComponentType.Server) {
         totalServers += quantity;
+        
         if ('portsConsumedQuantity' in component) {
           leafPortsUsed += (component as any).portsConsumedQuantity * quantity;
-          mgmtPortsUsed += quantity;
         } else {
           leafPortsUsed += 2 * quantity;
+        }
+        
+        if (requirements.networkRequirements.managementNetwork === 'Dual Home') {
+          mgmtPortsUsed += 2 * quantity;
+        } else {
           mgmtPortsUsed += quantity;
         }
+        
+        mgmtPortsUsed += quantity;
       } else if (component.type === ComponentType.Switch) {
         if (component.role === 'managementSwitch') {
           totalMgmtSwitches += quantity;
@@ -391,6 +456,40 @@ export const ResultsPanel: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {storageClustersMetrics.length > 0 && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Storage Clusters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cluster Name</TableHead>
+                  <TableHead>Pool Type</TableHead>
+                  <TableHead>Raw Capacity</TableHead>
+                  <TableHead>Usable Capacity</TableHead>
+                  <TableHead>Cost per TiB</TableHead>
+                  <TableHead>Nodes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {storageClustersMetrics.map((cluster) => (
+                  <TableRow key={cluster.id}>
+                    <TableCell className="font-medium">{cluster.name}</TableCell>
+                    <TableCell>{cluster.poolType}</TableCell>
+                    <TableCell>{cluster.totalRawCapacityTB.toFixed(2)} TB</TableCell>
+                    <TableCell>{cluster.usableCapacityTiB.toFixed(2)} TiB</TableCell>
+                    <TableCell>${cluster.costPerTiB.toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                    <TableCell>{cluster.nodeCount}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
       
       <div className="mb-8">
         <ResourceUtilizationChart 

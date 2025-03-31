@@ -25,6 +25,9 @@ export enum ComponentType {
 // Define network topology type for stronger type checking
 export type NetworkTopology = 'Spine-Leaf' | 'Three-Tier' | 'Core-Distribution-Access';
 
+// Define IPMI Network types for stronger type checking
+export type IPMINetworkType = 'Management converged' | 'Dedicated IPMI switch';
+
 // Position interface for component placement
 export interface Position {
   x: number;
@@ -200,9 +203,7 @@ export interface DesignRequirements {
     managementNetwork?: 
       | 'Single connection' 
       | 'Dual Home';
-    ipmiNetwork?: 
-      | 'Management converged' 
-      | 'Dedicated IPMI switch';
+    ipmiNetwork?: IPMINetworkType;
     physicalFirewalls?: boolean; // Added physical firewalls option
     leafSwitchesPerAZ?: number; // New field for spine-leaf topology
     dedicatedStorageNetwork?: boolean; // New field for storage network

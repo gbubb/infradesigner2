@@ -115,6 +115,11 @@ export const recalculateDesign = () => {
                 };
               }).filter(Boolean);
             }
+            
+            // Add cluster info to the storage node
+            if (role.clusterInfo) {
+              (component as any).clusterInfo = role.clusterInfo;
+            }
           }
           
           return component;

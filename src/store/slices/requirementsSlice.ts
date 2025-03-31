@@ -1,3 +1,4 @@
+
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -8,7 +9,8 @@ import {
   ComponentType,
   StorageClusterRequirement,
   ClusterInfo,
-  ComponentRole
+  ComponentRole,
+  IPMINetworkType
 } from '@/types/infrastructure';
 import { StoreState, RequirementsState } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -95,7 +97,15 @@ export const createRequirementsSlice: StateCreator<
       const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', 'Dual Home') || 'Dual Home';
       
       const mgmtSwitchesPerAZ = managementNetwork === 'Dual Home' ? 2 : 1;
-      const managementSwitchCount = totalAvailabilityZones * mgmtSwitchesPerAZ;
+      const ipmiNetwork = getValue(requirements, 'networkRequirements.ipmiNetwork', 'Management converged') as IPMINetworkType;
+      
+      let managementSwitchCount = totalAvailabilityZones * mgmtSwitchesPerAZ;
+      
+      // Add dedicated IPMI switches if needed
+      if (ipmiNetwork === 'Dedicated IPMI switch') {
+        // Add one IPMI switch per AZ
+        managementSwitchCount += totalAvailabilityZones;
+      }
       
       const leafSwitchCount = totalAvailabilityZones * leafSwitchesPerAZ;
       
