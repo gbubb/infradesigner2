@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { InfrastructureComponent, ComponentType, Server, Switch } from '@/types/infrastructure';
 import { StoreState } from '../types';
 import { allComponentTemplates } from '@/data/componentData';
+import { saveComponent, deleteComponent, loadComponents, saveComponents } from '@/services/componentService';
 
 export interface ComponentLibrarySlice {
   // All available component templates
@@ -12,6 +13,12 @@ export interface ComponentLibrarySlice {
   
   // Initialize component templates
   initializeComponentTemplates: () => void;
+  
+  // Load components from database
+  loadComponentsFromDB: () => Promise<void>;
+  
+  // Save all components to database
+  saveAllComponentsToDB: () => Promise<void>;
   
   // Add a component template
   addComponentTemplate: (component: InfrastructureComponent) => void;
@@ -78,6 +85,34 @@ export const createComponentLibrarySlice: StateCreator<
     });
     
     set({ componentTemplates: templates });
+    
+    // Save initialized templates to database
+    const state = get();
+    state.saveAllComponentsToDB();
+  },
+  
+  loadComponentsFromDB: async () => {
+    const components = await loadComponents();
+    
+    if (components && components.length > 0) {
+      set({ componentTemplates: components });
+      toast.success(`Loaded ${components.length} components from database`);
+    } else {
+      // If no components in DB, initialize with default data
+      const state = get();
+      if (state.componentTemplates.length === 0) {
+        state.initializeComponentTemplates();
+      }
+    }
+  },
+  
+  saveAllComponentsToDB: async () => {
+    const state = get();
+    const success = await saveComponents(state.componentTemplates);
+    
+    if (success) {
+      toast.success(`Saved ${state.componentTemplates.length} components to database`);
+    }
   },
   
   addComponentTemplate: (component) => {
@@ -139,6 +174,9 @@ export const createComponentLibrarySlice: StateCreator<
       
       updatedTemplates.push(newComponent);
       
+      // Save the new component to database
+      saveComponent(newComponent);
+      
       toast.success(`Added ${newComponent.name} to library`);
       
       return { componentTemplates: updatedTemplates };
@@ -155,9 +193,14 @@ export const createComponentLibrarySlice: StateCreator<
       }
       
       const existingComponent = state.componentTemplates[existingIndex];
+      
+      // Ensure type stays the same during update
+      const type = existingComponent.type;
+      
       const updatedComponent = {
         ...existingComponent,
-        ...updates
+        ...updates,
+        type // Explicitly preserve the original type
       } as InfrastructureComponent;
       
       // Determine roles for comparison
@@ -210,6 +253,9 @@ export const createComponentLibrarySlice: StateCreator<
         });
       }
       
+      // Save the updated component to database
+      saveComponent(updatedComponent);
+      
       toast.success(`Updated ${updatedComponent.name}`);
       
       return { componentTemplates: updatedTemplates };
@@ -234,6 +280,9 @@ export const createComponentLibrarySlice: StateCreator<
       
       const updatedTemplates = [...state.componentTemplates, newComponent];
       
+      // Save the cloned component to database
+      saveComponent(newComponent);
+      
       toast.success(`Cloned ${componentToClone.name}`);
       
       return { componentTemplates: updatedTemplates };
@@ -250,6 +299,9 @@ export const createComponentLibrarySlice: StateCreator<
       }
       
       const updatedTemplates = state.componentTemplates.filter(c => c.id !== id);
+      
+      // Delete the component from database
+      deleteComponent(id);
       
       toast.success(`Deleted ${componentToDelete.name}`);
       
@@ -317,3 +369,4 @@ export const createComponentLibrarySlice: StateCreator<
     });
   }
 });
+

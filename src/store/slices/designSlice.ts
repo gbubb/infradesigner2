@@ -2,26 +2,31 @@
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import { InfrastructureDesign, InfrastructureComponent } from '@/types/infrastructure';
+import { InfrastructureComponent, InfrastructureDesign } from '@/types/infrastructure';
 import { StoreState } from '../types';
+import { saveDesign, deleteDesign } from '@/services/designService';
 
 export interface DesignSlice {
-  // Saved designs
+  // All saved designs
   savedDesigns: InfrastructureDesign[];
+  
   // Currently active design
   activeDesign: InfrastructureDesign | null;
-  
-  // Save the current design
-  saveDesign: () => void;
   
   // Create a new design
   createNewDesign: (name: string, description?: string) => void;
   
-  // Get all available components for selection
-  getAvailableComponents: () => InfrastructureComponent[];
-  
-  // Update the active design
+  // Update the active design components
   updateActiveDesign: (components: InfrastructureComponent[]) => void;
+  
+  // Update an existing design
+  updateDesign: (id: string, updates: Partial<InfrastructureDesign>) => void;
+  
+  // Delete a design
+  deleteDesign: (id: string) => void;
+  
+  // Set active design
+  setActiveDesign: (id: string) => void;
 }
 
 export const createDesignSlice: StateCreator<
@@ -34,221 +39,139 @@ export const createDesignSlice: StateCreator<
   activeDesign: null,
   
   createNewDesign: (name, description) => {
-    const newDesign: InfrastructureDesign = {
-      id: uuidv4(),
-      name: name || `Design ${get().savedDesigns.length + 1}`,
-      description,
-      createdAt: new Date(),
-      requirements: get().requirements,
-      components: []
-    };
-    
-    set({
-      activeDesign: newDesign,
-      placedComponents: {},
-      workspaceComponents: []
-    });
-    
-    toast.success("New design created");
-    
-    // Calculate roles immediately after creating a new design
-    setTimeout(() => {
-      try {
-        const state = get();
-        if (state.calculateComponentRoles) {
-          state.calculateComponentRoles();
-        }
-      } catch (error) {
-        console.error("Error calculating roles for new design:", error);
-      }
-    }, 100);
-  },
-
-  saveDesign: () => {
     set((state) => {
-      try {
-        console.log("Saving current design");
-        // Get the current state of component roles and selected components
-        const assignedComponents: InfrastructureComponent[] = state.componentRoles
-          .filter(role => role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
-          .map(role => {
-            // Look in all component sources (templates and custom components)
-            const componentTemplate = state.componentTemplates.find(
-              c => c.id === role.assignedComponentId
-            );
-            
-            if (!componentTemplate) {
-              console.error(`Component not found for role: ${role.role}`);
-              return null;
-            }
-
-            // Clone and return with proper typing - add role to the component
-            const component: InfrastructureComponent = {
-              ...componentTemplate,
-              quantity: role.adjustedRequiredCount || role.requiredCount,
-              role: role.role // Add the role to the component
-            };
-            
-            // For storage nodes, calculate additional properties based on disk configuration
-            if (role.role === 'storageNode') {
-              const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
-              
-              // Calculate the total cost and power with attached disks
-              let totalComponentCost = component.cost;
-              let totalComponentPower = component.powerRequired;
-              
-              // Add disk details if we have them
-              if (roleDiskConfigs.length > 0) {
-                roleDiskConfigs.forEach(diskConfig => {
-                  const disk = state.componentTemplates.find(c => c.id === diskConfig.diskId);
-                  if (disk) {
-                    totalComponentCost += disk.cost * diskConfig.quantity;
-                    totalComponentPower += disk.powerRequired * diskConfig.quantity;
-                  }
-                });
-                
-                component.cost = totalComponentCost;
-                component.powerRequired = totalComponentPower;
-                
-                // Add attached disks to the component for reference
-                (component as any).attachedDisks = roleDiskConfigs.map(diskConfig => {
-                  const disk = state.componentTemplates.find(c => c.id === diskConfig.diskId);
-                  return {
-                    ...disk,
-                    quantity: diskConfig.quantity
-                  };
-                }).filter(Boolean);
-              }
-              
-              // Add cluster info to the storage node
-              if (role.clusterInfo) {
-                (component as any).clusterInfo = role.clusterInfo;
-              }
-            }
-            
-            // For GPU nodes, calculate additional properties based on GPU configuration
-            if (role.role === 'gpuNode') {
-              const roleGPUConfigs = state.selectedGPUsByRole[role.id] || [];
-              
-              // Calculate the total cost and power with attached GPUs
-              let totalComponentCost = component.cost;
-              let totalComponentPower = component.powerRequired;
-              
-              // Add GPU details if we have them
-              if (roleGPUConfigs.length > 0) {
-                roleGPUConfigs.forEach(gpuConfig => {
-                  const gpu = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
-                  if (gpu) {
-                    totalComponentCost += gpu.cost * gpuConfig.quantity;
-                    totalComponentPower += gpu.powerRequired * gpuConfig.quantity;
-                  }
-                });
-                
-                component.cost = totalComponentCost;
-                component.powerRequired = totalComponentPower;
-                
-                // Add attached GPUs to the component for reference
-                (component as any).attachedGPUs = roleGPUConfigs.map(gpuConfig => {
-                  const gpu = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
-                  return {
-                    ...gpu,
-                    quantity: gpuConfig.quantity
-                  };
-                }).filter(Boolean);
-              }
-              
-              // Add cluster info to the GPU node
-              if (role.clusterInfo) {
-                (component as any).clusterInfo = role.clusterInfo;
-              }
-            }
-            
-            return component;
-          })
-          .filter(Boolean) as InfrastructureComponent[]; // Filter out any null values
-
-        console.log(`Generated ${assignedComponents.length} components for design save`);
-
-        // Create or update activeDesign
-        let designToSave: InfrastructureDesign;
-        
-        if (state.activeDesign) {
-          designToSave = { 
-            ...state.activeDesign, 
-            components: assignedComponents.length > 0 ? assignedComponents : state.activeDesign.components,
-            requirements: state.requirements,
-            updatedAt: new Date()
-          };
-        } else {
-          designToSave = {
-            id: uuidv4(),
-            name: `Design ${state.savedDesigns.length + 1}`,
-            createdAt: new Date(),
-            requirements: state.requirements,
-            components: assignedComponents
-          };
-        }
-
-        // Find if the design already exists in savedDesigns
-        const existingDesignIndex = state.savedDesigns.findIndex(d => d.id === designToSave.id);
-        
-        let updatedDesigns;
-        if (existingDesignIndex >= 0) {
-          // Update existing design
-          updatedDesigns = [...state.savedDesigns];
-          updatedDesigns[existingDesignIndex] = designToSave;
-        } else {
-          // Add new design
-          updatedDesigns = [...state.savedDesigns, designToSave];
-        }
-        
-        console.log("Design saved successfully");
-        toast.success("Design saved successfully!");
-        return { 
-          savedDesigns: updatedDesigns,
-          activeDesign: designToSave
-        };
-      } catch (error) {
-        console.error("Failed to save design:", error);
-        toast.error("Failed to save design");
-        return state;
-      }
+      const requirements = { ...state.requirements };
+      
+      const newDesign: InfrastructureDesign = {
+        id: uuidv4(),
+        name,
+        description: description || '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        requirements,
+        components: []
+      };
+      
+      const updatedDesigns = [...state.savedDesigns, newDesign];
+      
+      // Save to Supabase
+      saveDesign(newDesign);
+      
+      toast.success(`Created new design: ${name}`);
+      
+      return {
+        savedDesigns: updatedDesigns,
+        activeDesign: newDesign
+      };
     });
   },
-
-  // Method to directly update the active design
+  
   updateActiveDesign: (components) => {
     set((state) => {
       if (!state.activeDesign) {
-        console.warn("Cannot update: No active design");
+        toast.error("No active design to update");
         return state;
       }
       
-      // Make sure components isn't empty - if it is, preserve the existing components
-      if (!components || components.length === 0) {
-        console.warn("No components provided for update - preserving existing components");
-        return state; // Return state unchanged
-      }
-      
-      console.log(`Updating active design with ${components.length} components`);
-      
-      // Create updated design with new components
-      const updatedDesign = {
+      const updatedDesign: InfrastructureDesign = {
         ...state.activeDesign,
         components,
         updatedAt: new Date()
       };
       
+      // Update in the saved designs list
+      const updatedDesigns = state.savedDesigns.map(design => 
+        design.id === updatedDesign.id ? updatedDesign : design
+      );
+      
+      // Save to Supabase
+      saveDesign(updatedDesign);
+      
       return {
+        savedDesigns: updatedDesigns,
         activeDesign: updatedDesign
       };
     });
   },
-
-  // Method to get all available components
-  getAvailableComponents: () => {
-    const state = get();
-    // Combine all component sources - custom components and template components
-    return [...state.componentTemplates];
+  
+  updateDesign: (id, updates) => {
+    set((state) => {
+      const existingDesignIndex = state.savedDesigns.findIndex(d => d.id === id);
+      
+      if (existingDesignIndex === -1) {
+        toast.error("Design not found");
+        return state;
+      }
+      
+      const existingDesign = state.savedDesigns[existingDesignIndex];
+      const updatedDesign = {
+        ...existingDesign,
+        ...updates,
+        updatedAt: new Date()
+      };
+      
+      const updatedDesigns = [...state.savedDesigns];
+      updatedDesigns[existingDesignIndex] = updatedDesign;
+      
+      // If this was the active design, update that too
+      const newActiveDesign = 
+        state.activeDesign && state.activeDesign.id === id 
+          ? updatedDesign 
+          : state.activeDesign;
+      
+      // Save to Supabase
+      saveDesign(updatedDesign);
+      
+      toast.success(`Updated design: ${updatedDesign.name}`);
+      
+      return {
+        savedDesigns: updatedDesigns,
+        activeDesign: newActiveDesign
+      };
+    });
+  },
+  
+  deleteDesign: (id) => {
+    set((state) => {
+      const designToDelete = state.savedDesigns.find(d => d.id === id);
+      
+      if (!designToDelete) {
+        toast.error("Design not found");
+        return state;
+      }
+      
+      const updatedDesigns = state.savedDesigns.filter(d => d.id !== id);
+      
+      // If this was the active design, set active to null or the first available
+      let newActiveDesign = state.activeDesign;
+      if (state.activeDesign && state.activeDesign.id === id) {
+        newActiveDesign = updatedDesigns.length > 0 ? updatedDesigns[0] : null;
+      }
+      
+      // Delete from Supabase
+      deleteDesign(id);
+      
+      toast.success(`Deleted design: ${designToDelete.name}`);
+      
+      return {
+        savedDesigns: updatedDesigns,
+        activeDesign: newActiveDesign
+      };
+    });
+  },
+  
+  setActiveDesign: (id) => {
+    set((state) => {
+      const design = state.savedDesigns.find(d => d.id === id);
+      
+      if (!design) {
+        toast.error("Design not found");
+        return state;
+      }
+      
+      toast.success(`Switched to design: ${design.name}`);
+      
+      return { activeDesign: design };
+    });
   }
 });

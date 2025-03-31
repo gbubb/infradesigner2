@@ -6,6 +6,7 @@ import { createDesignSlice, DesignSlice } from './slices/designSlice';
 import { createWorkspaceSlice, WorkspaceSlice } from './slices/workspaceSlice';
 import { createComponentLibrarySlice, ComponentLibrarySlice } from './slices/componentLibrarySlice';
 import { toast } from 'sonner';
+import { loadDesigns, saveDesign } from '@/services/designService';
 
 // Combined store type
 export type DesignStoreState = RequirementsSlice & DesignSlice & WorkspaceSlice & ComponentLibrarySlice;
@@ -22,43 +23,72 @@ export const useDesignStore = create<DesignStoreState>()((...a) => ({
 let storeInitialized = false;
 
 // Initialize component templates - this should run only once
-export const initializeStore = () => {
+export const initializeStore = async () => {
   // Skip if already initialized
   if (storeInitialized) return;
   
   const state = useDesignStore.getState();
   
-  // Only initialize if not already initialized
-  if (state.componentTemplates.length === 0) {
-    console.log("Initializing component templates");
-    state.initializeComponentTemplates();
+  try {
+    // First try to load components from database
+    await state.loadComponentsFromDB();
+    
+    // Calculate component roles if needed
+    if (state.componentRoles.length === 0) {
+      state.calculateComponentRoles();
+    }
+    
+    // Initialize selectedDisksByRole if it's empty
+    if (Object.keys(state.selectedDisksByRole).length === 0) {
+      state.selectedDisksByRole = {};
+    }
+    
+    // Initialize selectedGPUsByRole if it's empty
+    if (Object.keys(state.selectedGPUsByRole).length === 0) {
+      state.selectedGPUsByRole = {};
+    }
+    
+    // Try to load designs from the database
+    const loadedDesigns = await loadDesigns();
+    
+    if (loadedDesigns && loadedDesigns.length > 0) {
+      state.savedDesigns = loadedDesigns;
+      
+      // Set the most recently updated design as active
+      const mostRecentDesign = loadedDesigns.reduce((latest, design) => {
+        const latestUpdate = latest.updatedAt || latest.createdAt;
+        const thisUpdate = design.updatedAt || design.createdAt;
+        return thisUpdate > latestUpdate ? design : latest;
+      }, loadedDesigns[0]);
+      
+      state.activeDesign = mostRecentDesign;
+      console.log("Loaded design from database:", mostRecentDesign.name);
+    } else {
+      // Auto-create a default design if no designs exist
+      if (!state.activeDesign) {
+        console.log("Creating default design");
+        state.createNewDesign("Scenario A", "Auto-generated design based on requirements");
+      }
+    }
+    
+    // Mark as initialized
+    storeInitialized = true;
+    console.log("Store initialized");
+  } catch (error) {
+    console.error("Error during store initialization:", error);
+    toast.error("Error initializing application data");
+    
+    // Even if there's an error, initialize with defaults
+    if (state.componentTemplates.length === 0) {
+      state.initializeComponentTemplates();
+    }
+    
+    if (!state.activeDesign) {
+      state.createNewDesign("Scenario A", "Auto-generated design based on requirements");
+    }
+    
+    storeInitialized = true;
   }
-  
-  // Calculate component roles if needed
-  if (state.componentRoles.length === 0) {
-    state.calculateComponentRoles();
-  }
-  
-  // Initialize selectedDisksByRole if it's empty
-  if (Object.keys(state.selectedDisksByRole).length === 0) {
-    // This is already an empty object, but making sure it's initialized
-    state.selectedDisksByRole = {};
-  }
-  
-  // Initialize selectedGPUsByRole if it's empty
-  if (Object.keys(state.selectedGPUsByRole).length === 0) {
-    state.selectedGPUsByRole = {};
-  }
-  
-  // Auto-create a default design if none exists
-  if (!state.activeDesign) {
-    console.log("Creating default design");
-    state.createNewDesign("Scenario A", "Auto-generated design based on requirements");
-  }
-  
-  // Mark as initialized
-  storeInitialized = true;
-  console.log("Store initialized");
 };
 
 // Call initialization once
