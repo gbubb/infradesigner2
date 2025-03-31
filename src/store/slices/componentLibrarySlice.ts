@@ -64,7 +64,13 @@ export const createComponentLibrarySlice: StateCreator<
       if (index === -1) return state;
       
       const component = state.componentTemplates[index];
-      const updatedComponent = { ...component, ...updates };
+      
+      // Ensure we preserve the component type when updating
+      const updatedComponent = {
+        ...component,
+        ...updates,
+        type: component.type // Explicitly preserve the original type
+      } as InfrastructureComponent; // Type assertion to ensure it's the correct type
 
       const updatedTemplates = [...state.componentTemplates];
       updatedTemplates[index] = updatedComponent;
