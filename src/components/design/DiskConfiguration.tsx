@@ -18,7 +18,9 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
   const { 
     componentTemplates, 
     selectedDisksByRole,
-    updateSelectedDisksForRole,
+    // Get the updater function from the requirements slice
+    addDiskToStorageNode,
+    removeDiskFromStorageNode,
   } = useDesignStore();
   
   // Get available disks
@@ -31,41 +33,39 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
   const handleAddDisk = () => {
     if (availableDisks.length === 0) return;
     
-    const newSelectedDisks = [
-      ...selectedDisks,
-      { diskId: availableDisks[0].id, quantity: 1 }
-    ];
-    
-    updateSelectedDisksForRole(roleId, newSelectedDisks);
+    // Use addDiskToStorageNode instead of updateSelectedDisksForRole
+    addDiskToStorageNode(roleId, availableDisks[0].id, 1);
   };
   
   // Remove a disk from the configuration
   const handleRemoveDisk = (index: number) => {
-    const newSelectedDisks = [...selectedDisks];
-    newSelectedDisks.splice(index, 1);
-    updateSelectedDisksForRole(roleId, newSelectedDisks);
+    const diskConfig = selectedDisks[index];
+    if (diskConfig) {
+      // Use removeDiskFromStorageNode instead
+      removeDiskFromStorageNode(roleId, diskConfig.diskId);
+    }
   };
   
   // Update disk selection
   const handleDiskChange = (index: number, diskId: string) => {
     const newSelectedDisks = [...selectedDisks];
-    newSelectedDisks[index] = { 
-      ...newSelectedDisks[index],
-      diskId
-    };
-    updateSelectedDisksForRole(roleId, newSelectedDisks);
+    const quantity = newSelectedDisks[index]?.quantity || 1;
+    
+    // Remove the old disk and add the new one
+    if (newSelectedDisks[index]) {
+      removeDiskFromStorageNode(roleId, newSelectedDisks[index].diskId);
+    }
+    addDiskToStorageNode(roleId, diskId, quantity);
   };
   
   // Update disk quantity
   const handleQuantityChange = (index: number, quantity: number) => {
     if (isNaN(quantity) || quantity < 1) quantity = 1;
     
-    const newSelectedDisks = [...selectedDisks];
-    newSelectedDisks[index] = { 
-      ...newSelectedDisks[index],
-      quantity
-    };
-    updateSelectedDisksForRole(roleId, newSelectedDisks);
+    const diskConfig = selectedDisks[index];
+    if (diskConfig) {
+      addDiskToStorageNode(roleId, diskConfig.diskId, quantity);
+    }
   };
   
   return (

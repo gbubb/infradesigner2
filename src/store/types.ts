@@ -31,6 +31,9 @@ export interface StoreState {
   
   // Editing state
   editingComponentId: string | null;
+  
+  // Function to update selected disks for a role
+  updateSelectedDisksForRole: (roleId: string, disks: { diskId: string, quantity: number }[]) => void;
 }
 
 // Define individual slice states if needed

@@ -1,4 +1,3 @@
-
 // Common properties shared by all component types
 export interface BaseComponent {
   id: string;
@@ -155,6 +154,7 @@ export interface Server extends BaseComponent, RackMountable {
   networkPortType?: NetworkPortType;
   portsConsumedQuantity?: number;
   gpuSlots?: number;  // Number of GPU slots available
+  clusterInfo?: ClusterInfo; // Add this property for cluster information
 }
 
 // Switch specific properties
