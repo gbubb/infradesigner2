@@ -22,6 +22,23 @@ const ensureValidUUID = (component: InfrastructureComponent): InfrastructureComp
   return component;
 };
 
+// Define type for database component row
+interface ComponentRow {
+  id: string;
+  name: string;
+  type: string;
+  manufacturer: string | null;
+  model: string | null;
+  description: string | null;
+  cost: number | null;
+  powerrequired: number | null;
+  serverrole: string | null;
+  switchrole: string | null;
+  isdefault: boolean | null;
+  details: any | null;
+  created_at?: string | null;
+}
+
 // Load all components from Supabase
 export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
   try {
@@ -34,7 +51,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
     }
     
     // Convert database format to application format with proper type assertion
-    const components = (data?.map(component => {
+    const components = (data?.map((component: ComponentRow) => {
       // Make sure we're only processing component rows by checking for required properties
       if ('type' in component) {
         // Get base component fields
