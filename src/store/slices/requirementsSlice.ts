@@ -1,3 +1,4 @@
+
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -5,7 +6,8 @@ import {
   NetworkTopology, 
   StoragePoolEfficiencyFactors, 
   TB_TO_TIB_FACTOR,
-  ComponentType 
+  ComponentType,
+  StorageClusterRequirement
 } from '@/types/infrastructure';
 import { StoreState, RequirementsState } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -37,12 +39,7 @@ const defaultRequirements: DesignRequirements = {
     infrastructureNodeCount: 3
   },
   storageRequirements: {
-    totalCapacityTB: 100,
-    availabilityZoneQuantity: 3,
-    poolType: '3 Replica',
-    maxFillFactor: 80,
-    selectedDiskIds: [],
-    diskQuantities: {}
+    storageClusters: []
   },
   networkRequirements: {
     networkTopology: 'Spine-Leaf',
@@ -88,8 +85,7 @@ export const createRequirementsSlice: StateCreator<
       const infrastructureClusterRequired = getValue(requirements, 'computeRequirements.infrastructureClusterRequired', false) || false;
       const infrastructureNodeCount = getValue(requirements, 'computeRequirements.infrastructureNodeCount', 3) || 3;
       
-      const totalCapacityTB = getValue(requirements, 'storageRequirements.totalCapacityTB', 100) || 100;
-      const storageAvailabilityZoneQuantity = getValue(requirements, 'storageRequirements.availabilityZoneQuantity', 3) || 3;
+      const storageClusters = getValue(requirements, 'storageRequirements.storageClusters', []) || [];
       
       const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', 'Spine-Leaf') || 'Spine-Leaf';
       const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false) || false;
@@ -131,14 +127,20 @@ export const createRequirementsSlice: StateCreator<
         requiredCount: totalComputeNodeCount
       });
       
-      if (totalCapacityTB > 0) {
+      // Add storage roles for each storage cluster
+      storageClusters.forEach((cluster, index) => {
         newRoles.push({
-          id: uuidv4(),
+          id: cluster.id || uuidv4(),
           role: 'storageNode',
-          description: 'Provides storage resources for the cluster',
-          requiredCount: storageAvailabilityZoneQuantity
+          description: `Provides storage resources for ${cluster.name}`,
+          requiredCount: cluster.availabilityZoneQuantity || 3,
+          clusterInfo: {
+            clusterId: cluster.id,
+            clusterName: cluster.name,
+            clusterIndex: index
+          }
         });
-      }
+      });
       
       if (infrastructureClusterRequired) {
         newRoles.push({
@@ -164,12 +166,17 @@ export const createRequirementsSlice: StateCreator<
           requiredCount: leafSwitchCount
         });
         
-        if (dedicatedStorageNetwork) {
+        // Add dedicated storage switches if needed
+        if (dedicatedStorageNetwork && storageClusters.length > 0) {
+          // Calculate total storage AZs
+          const totalStorageAZs = storageClusters.reduce((sum, cluster) => 
+            sum + (cluster.availabilityZoneQuantity || 3), 0);
+          
           newRoles.push({
             id: uuidv4(),
             role: 'storageSwitch',
             description: 'Provides network connectivity for storage nodes',
-            requiredCount: storageAvailabilityZoneQuantity * 2
+            requiredCount: totalStorageAZs * 2
           });
         }
         
@@ -276,31 +283,65 @@ export const createRequirementsSlice: StateCreator<
           calculationSteps.push(`Final node count: ${baseNodeCount} + ${additionalNodesCount} = ${requiredQuantity}`);
         }
       } else if (role.role === 'storageNode') {
-        const totalCapacityTB = requirements.storageRequirements?.totalCapacityTB || 100;
-        const poolType = requirements.storageRequirements?.poolType || '3 Replica';
-        const maxFillFactor = requirements.storageRequirements?.maxFillFactor || 80;
-        
-        const roleDiskConfigs = selectedDisksByRole[roleId] || [];
-        
-        if (roleDiskConfigs.length > 0) {
-          const storageNodeCapacityTiB = sliceMethods.calculateStorageNodeCapacity(roleId);
+        // Get the specific storage cluster for this role
+        if (role.clusterInfo && role.clusterInfo.clusterId) {
+          const storageCluster = requirements.storageRequirements?.storageClusters.find(
+            cluster => cluster.id === role.clusterInfo.clusterId
+          );
           
-          if (storageNodeCapacityTiB > 0) {
-            const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);
-            const fillFactorAdjustment = maxFillFactor / 100;
+          if (storageCluster) {
+            const totalCapacityTB = storageCluster.totalCapacityTB || 100;
+            const poolType = storageCluster.poolType || '3 Replica';
+            const maxFillFactor = storageCluster.maxFillFactor || 80;
+            const availabilityZoneQuantity = storageCluster.availabilityZoneQuantity || 3;
             
-            const totalRequiredCapacityTiB = totalCapacityTB * TB_TO_TIB_FACTOR;
+            calculationSteps.push(`Storage Cluster: ${storageCluster.name}`);
+            calculationSteps.push(`Required Usable Capacity: ${totalCapacityTB} TB (${(totalCapacityTB * TB_TO_TIB_FACTOR).toFixed(2)} TiB)`);
+            calculationSteps.push(`Storage Pool Type: ${poolType}`);
+            calculationSteps.push(`Maximum Fill Factor: ${maxFillFactor}%`);
+            calculationSteps.push(`Availability Zone Quantity: ${availabilityZoneQuantity}`);
             
-            const effectiveCapacityPerNodeTiB = storageNodeCapacityTiB * poolEfficiencyFactor * fillFactorAdjustment;
+            const roleDiskConfigs = selectedDisksByRole[roleId] || [];
             
-            const requiredNodeCount = Math.ceil(totalRequiredCapacityTiB / effectiveCapacityPerNodeTiB);
-            
-            requiredQuantity = Math.max(requiredNodeCount, role.requiredCount);
+            if (roleDiskConfigs.length > 0) {
+              const storageNodeCapacityTiB = sliceMethods.calculateStorageNodeCapacity(roleId);
+              
+              if (storageNodeCapacityTiB > 0) {
+                calculationSteps.push(`Raw Capacity per Node: ${storageNodeCapacityTiB.toFixed(2)} TiB`);
+                
+                const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);
+                const fillFactorAdjustment = maxFillFactor / 100;
+                
+                calculationSteps.push(`Pool Efficiency Factor: ${poolEfficiencyFactor.toFixed(2)}`);
+                calculationSteps.push(`Fill Factor Adjustment: ${fillFactorAdjustment.toFixed(2)}`);
+                
+                const totalRequiredCapacityTiB = totalCapacityTB * TB_TO_TIB_FACTOR;
+                
+                const effectiveCapacityPerNodeTiB = storageNodeCapacityTiB * poolEfficiencyFactor * fillFactorAdjustment;
+                calculationSteps.push(`Effective Capacity per Node: ${storageNodeCapacityTiB.toFixed(2)} TiB × ${poolEfficiencyFactor.toFixed(2)} × ${fillFactorAdjustment.toFixed(2)} = ${effectiveCapacityPerNodeTiB.toFixed(2)} TiB`);
+                
+                const requiredNodeCount = Math.ceil(totalRequiredCapacityTiB / effectiveCapacityPerNodeTiB);
+                calculationSteps.push(`Minimum Nodes Needed: ${totalRequiredCapacityTiB.toFixed(2)} TiB / ${effectiveCapacityPerNodeTiB.toFixed(2)} TiB = ${requiredNodeCount} nodes`);
+                
+                // Ensure we have at least the specified number of availability zones
+                requiredQuantity = Math.max(requiredNodeCount, availabilityZoneQuantity);
+                
+                if (requiredQuantity > requiredNodeCount) {
+                  calculationSteps.push(`Final Node Count: ${requiredQuantity} (increased from ${requiredNodeCount} to ensure minimum of ${availabilityZoneQuantity} AZs)`);
+                } else {
+                  calculationSteps.push(`Final Node Count: ${requiredQuantity}`);
+                }
+              } else {
+                calculationSteps.push(`No capacity calculation available - using default count of ${requiredQuantity} nodes`);
+              }
+            } else {
+              calculationSteps.push(`No disks configured - using default count of ${requiredQuantity} nodes`);
+            }
           }
         }
       }
       
-      set((state) => ({
+      set(state => ({
         calculationBreakdowns: {
           ...state.calculationBreakdowns,
           [roleId]: calculationSteps

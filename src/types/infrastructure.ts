@@ -193,18 +193,7 @@ export interface DesignRequirements {
     infrastructureNodeCount?: number; // Number of infrastructure nodes
   };
   storageRequirements: {
-    totalCapacityTB?: number;  // Changed to "Usable Capacity (TiB)" in UI
-    availabilityZoneQuantity?: number; // New field
-    poolType?: 
-      | '3 Replica' 
-      | '2 Replica' 
-      | 'Erasure Coding 4+2' 
-      | 'Erasure Coding 8+3' 
-      | 'Erasure Coding 8+4' 
-      | 'Erasure Coding 10+4';  // Changed from redundancyLevel
-    maxFillFactor?: number; // Max fill factor as a percentage (1-100)
-    selectedDiskIds?: string[]; // IDs of disks selected for storage nodes
-    diskQuantities?: Record<string, number>; // Quantity of each disk type
+    storageClusters: StorageClusterRequirement[];
   };
   networkRequirements: {
     networkTopology?: NetworkTopology;
@@ -225,6 +214,22 @@ export interface DesignRequirements {
     rackUnitsPerRack?: number;
     powerPerRackWatts?: number;
   };
+}
+
+// New storage cluster type
+export interface StorageClusterRequirement {
+  id: string;
+  name: string;
+  totalCapacityTB?: number;
+  availabilityZoneQuantity?: number;
+  poolType?: 
+    | '3 Replica' 
+    | '2 Replica' 
+    | 'Erasure Coding 4+2' 
+    | 'Erasure Coding 8+3' 
+    | 'Erasure Coding 8+4' 
+    | 'Erasure Coding 10+4';
+  maxFillFactor?: number;
 }
 
 // Define pool efficiency factors

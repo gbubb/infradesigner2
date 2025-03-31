@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useState } from 'react';
 import { useDesignStore, recalculateDesign } from '@/store/designStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -197,19 +198,43 @@ export const DesignPanel: React.FC = () => {
   };
 
   const calculateEffectiveStorageCapacity = (roleId: string) => {
+    // Find the role to get cluster info
+    const role = componentRoles.find(r => r.id === roleId);
+    if (!role || !role.clusterInfo) return { rawCapacityTiB: 0, effectiveCapacityTiB: 0 };
+    
+    // Find the specific cluster
+    const cluster = requirements?.storageRequirements?.storageClusters.find(
+      c => c.id === role.clusterInfo.clusterId
+    );
+    if (!cluster) return { rawCapacityTiB: 0, effectiveCapacityTiB: 0 };
+    
     const rawCapacityTiB = calculateStorageNodeCapacity(roleId);
-    const poolType = requirements?.storageRequirements?.poolType || '3 Replica';
+    const poolType = cluster.poolType || '3 Replica';
     const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);
-    const maxFillFactor = requirements?.storageRequirements?.maxFillFactor || 80;
+    const maxFillFactor = cluster.maxFillFactor || 80;
     const fillFactorAdjustment = maxFillFactor / 100;
     
     const effectiveCapacityTiB = rawCapacityTiB * poolEfficiencyFactor * fillFactorAdjustment;
     
     return {
       rawCapacityTiB,
-      effectiveCapacityTiB
+      effectiveCapacityTiB,
+      clusterName: cluster.name
     };
   };
+
+  // Group roles by type for better organization
+  const groupedRoles = componentRoles.reduce((groups, role) => {
+    const group = role.role === 'storageNode' 
+      ? 'storageNodes' 
+      : role.role.includes('Node') 
+        ? 'computeNodes' 
+        : 'networkDevices';
+    
+    if (!groups[group]) groups[group] = [];
+    groups[group].push(role);
+    return groups;
+  }, {} as Record<string, typeof componentRoles>);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -235,36 +260,37 @@ export const DesignPanel: React.FC = () => {
         </Alert>
       )}
       
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Required Devices</CardTitle>
-          <CardDescription>
-            Select components for each role required by your infrastructure design
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[150px]">Role</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Base Quantity</TableHead>
-                <TableHead>Component</TableHead>
-                <TableHead>Actual Quantity</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {componentRoles.map((role) => {
-                const componentsForRole = getComponentOptionsForRole(role.role);
-                const actualQuantity = role.assignedComponentId ? 
-                  role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
-                  role.requiredCount;
-                
-                const showBaseQuantity = role.role !== 'computeNode' || (role.role === 'computeNode' && role.assignedComponentId);
-                
-                return (
-                  <React.Fragment key={role.id}>
-                    <TableRow>
+      {/* Compute Nodes Section */}
+      {groupedRoles.computeNodes && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Compute Devices</CardTitle>
+            <CardDescription>
+              Controllers, compute nodes, and infrastructure nodes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[150px]">Role</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Base Quantity</TableHead>
+                  <TableHead>Component</TableHead>
+                  <TableHead>Actual Quantity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groupedRoles.computeNodes.map((role) => {
+                  const componentsForRole = getComponentOptionsForRole(role.role);
+                  const actualQuantity = role.assignedComponentId ? 
+                    role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
+                    role.requiredCount;
+                  
+                  const showBaseQuantity = role.role !== 'computeNode' || (role.role === 'computeNode' && role.assignedComponentId);
+                  
+                  return (
+                    <TableRow key={role.id}>
                       <TableCell className="font-medium">
                         {formatRoleName(role.role)}
                       </TableCell>
@@ -309,170 +335,337 @@ export const DesignPanel: React.FC = () => {
                         )}
                       </TableCell>
                     </TableRow>
-                    
-                    {role.role === 'storageNode' && role.assignedComponentId && (
-                      <TableRow className="bg-muted/20">
-                        <TableCell colSpan={5} className="p-0">
-                          <Collapsible 
-                            open={openStorageNodeId === role.id}
-                            onOpenChange={(open) => setOpenStorageNodeId(open ? role.id : null)}
-                            className="p-2"
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Storage Nodes Section */}
+      {groupedRoles.storageNodes && groupedRoles.storageNodes.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Storage Devices</CardTitle>
+            <CardDescription>
+              Storage nodes and their disk configurations
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Storage Cluster</TableHead>
+                  <TableHead>Base Quantity</TableHead>
+                  <TableHead>Component</TableHead>
+                  <TableHead>Actual Quantity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groupedRoles.storageNodes.map((role) => {
+                  const componentsForRole = getComponentOptionsForRole(role.role);
+                  const actualQuantity = role.assignedComponentId ? 
+                    role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
+                    role.requiredCount;
+                  
+                  const clusterName = role.clusterInfo?.clusterName || "Unknown Cluster";
+                  
+                  return (
+                    <React.Fragment key={role.id}>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          {clusterName}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{role.requiredCount}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={role.assignedComponentId}
+                            onValueChange={(value) => handleComponentSelect(role.id, value)}
                           >
-                            <CollapsibleTrigger asChild>
-                              <Button variant="ghost" size="sm" className="w-full flex items-center justify-between px-4">
-                                <span className="flex items-center">
-                                  <HardDrive className="h-4 w-4 mr-2" />
-                                  Configure Storage Disks
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  (Required for accurate capacity calculation)
-                                </span>
-                              </Button>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="p-4 space-y-4 border-t">
-                              <div className="grid grid-cols-3 gap-4">
-                                <div>
-                                  <Label htmlFor="disk-model">Disk Model</Label>
-                                  <Select
-                                    value={selectedDiskId}
-                                    onValueChange={setSelectedDiskId}
-                                  >
-                                    <SelectTrigger id="disk-model">
-                                      <SelectValue placeholder="Select disk model" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {getAvailableDisks().map((disk) => (
-                                        <SelectItem key={disk.id} value={disk.id}>
-                                          {disk.manufacturer} {disk.model} ({disk.capacityTB}TB) - ${disk.cost}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div>
-                                  <Label htmlFor="disk-quantity">Quantity per Node</Label>
-                                  <Input
-                                    id="disk-quantity"
-                                    type="number"
-                                    min="1"
-                                    value={diskQuantity}
-                                    onChange={(e) => setDiskQuantity(parseInt(e.target.value) || 1)}
-                                  />
-                                </div>
-                                <div className="flex items-end">
-                                  <Button 
-                                    onClick={() => handleAddDisk(role.id)}
-                                    disabled={!selectedDiskId}
-                                    className="w-full"
-                                  >
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Add Disks
-                                  </Button>
-                                </div>
-                              </div>
-                              
-                              <div className="border rounded-md">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Disk Model</TableHead>
-                                      <TableHead>Type</TableHead>
-                                      <TableHead>Capacity</TableHead>
-                                      <TableHead>Quantity</TableHead>
-                                      <TableHead>Actions</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {selectedDisksByRole[role.id]?.length > 0 ? (
-                                      selectedDisksByRole[role.id].map((diskConfig) => {
-                                        const disk = findComponentById(diskConfig.diskId) as Disk | undefined;
-                                        if (!disk) return null;
-                                        
-                                        return (
-                                          <TableRow key={disk.id}>
-                                            <TableCell>
-                                              {disk.manufacturer} {disk.model}
-                                            </TableCell>
-                                            <TableCell>
-                                              {disk.diskType || 'Unknown'}
-                                            </TableCell>
-                                            <TableCell>
-                                              {disk.capacityTB} TB
-                                            </TableCell>
-                                            <TableCell>
-                                              {diskConfig.quantity}
-                                            </TableCell>
-                                            <TableCell>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleRemoveDisk(role.id, disk.id)}
-                                              >
-                                                <Trash2 className="h-4 w-4" />
-                                              </Button>
-                                            </TableCell>
-                                          </TableRow>
-                                        );
-                                      })
-                                    ) : (
-                                      <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
-                                          No disks added yet. Please add at least one disk configuration.
-                                        </TableCell>
-                                      </TableRow>
-                                    )}
-                                  </TableBody>
-                                </Table>
-                              </div>
-                              
-                              {selectedDisksByRole[role.id]?.length > 0 && (
-                                <div className="bg-muted p-4 rounded-md">
-                                  <h4 className="text-sm font-medium mb-2">Storage Capacity Summary</h4>
-                                  
-                                  {(() => {
-                                    const { rawCapacityTiB, effectiveCapacityTiB } = calculateEffectiveStorageCapacity(role.id);
-                                    const poolType = requirements?.storageRequirements?.poolType || '3 Replica';
-                                    const fillFactor = requirements?.storageRequirements?.maxFillFactor || 80;
-                                    
-                                    return (
-                                      <div className="space-y-1 text-sm">
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div className="text-muted-foreground">Raw Capacity (per node):</div>
-                                          <div>{rawCapacityTiB.toFixed(2)} TiB</div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div className="text-muted-foreground">Storage Pool Type:</div>
-                                          <div>{poolType}</div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div className="text-muted-foreground">Max Fill Factor:</div>
-                                          <div>{fillFactor}%</div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 font-medium">
-                                          <div className="text-muted-foreground">Effective Capacity (per node):</div>
-                                          <div>{effectiveCapacityTiB.toFixed(2)} TiB</div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 font-medium">
-                                          <div className="text-muted-foreground">Total Effective Capacity:</div>
-                                          <div>{(effectiveCapacityTiB * actualQuantity).toFixed(2)} TiB</div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })()}
-                                </div>
+                            <SelectTrigger className="w-[300px]">
+                              <SelectValue placeholder="Select storage node" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {componentsForRole.length > 0 ? (
+                                componentsForRole.map((component) => (
+                                  <SelectItem key={component.id} value={component.id}>
+                                    {component.manufacturer} {component.model} - ${component.cost}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="none" disabled>
+                                  No compatible components available
+                                </SelectItem>
                               )}
-                            </CollapsibleContent>
-                          </Collapsible>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          {role.assignedComponentId && (
+                            <QuantityDisplay 
+                              roleId={role.id}
+                              roleName={`Storage Node (${clusterName})`}
+                              quantity={actualQuantity}
+                            />
+                          )}
                         </TableCell>
                       </TableRow>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      
+                      {role.assignedComponentId && (
+                        <TableRow className="bg-muted/20">
+                          <TableCell colSpan={4} className="p-0">
+                            <Collapsible 
+                              open={openStorageNodeId === role.id}
+                              onOpenChange={(open) => setOpenStorageNodeId(open ? role.id : null)}
+                              className="p-2"
+                            >
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="w-full flex items-center justify-between px-4">
+                                  <span className="flex items-center">
+                                    <HardDrive className="h-4 w-4 mr-2" />
+                                    Configure Storage Disks
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    (Required for accurate capacity calculation)
+                                  </span>
+                                </Button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="p-4 space-y-4 border-t">
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div>
+                                    <Label htmlFor="disk-model">Disk Model</Label>
+                                    <Select
+                                      value={selectedDiskId}
+                                      onValueChange={setSelectedDiskId}
+                                    >
+                                      <SelectTrigger id="disk-model">
+                                        <SelectValue placeholder="Select disk model" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {getAvailableDisks().map((disk) => (
+                                          <SelectItem key={disk.id} value={disk.id}>
+                                            {disk.manufacturer} {disk.model} ({disk.capacityTB}TB) - ${disk.cost}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="disk-quantity">Quantity per Node</Label>
+                                    <Input
+                                      id="disk-quantity"
+                                      type="number"
+                                      min="1"
+                                      value={diskQuantity}
+                                      onChange={(e) => setDiskQuantity(parseInt(e.target.value) || 1)}
+                                    />
+                                  </div>
+                                  <div className="flex items-end">
+                                    <Button 
+                                      onClick={() => handleAddDisk(role.id)}
+                                      disabled={!selectedDiskId}
+                                      className="w-full"
+                                    >
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Add Disks
+                                    </Button>
+                                  </div>
+                                </div>
+                                
+                                <div className="border rounded-md">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Disk Model</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead>Capacity</TableHead>
+                                        <TableHead>Quantity</TableHead>
+                                        <TableHead>Actions</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {selectedDisksByRole[role.id]?.length > 0 ? (
+                                        selectedDisksByRole[role.id].map((diskConfig) => {
+                                          const disk = findComponentById(diskConfig.diskId) as Disk | undefined;
+                                          if (!disk) return null;
+                                          
+                                          return (
+                                            <TableRow key={disk.id}>
+                                              <TableCell>
+                                                {disk.manufacturer} {disk.model}
+                                              </TableCell>
+                                              <TableCell>
+                                                {disk.diskType || 'Unknown'}
+                                              </TableCell>
+                                              <TableCell>
+                                                {disk.capacityTB} TB
+                                              </TableCell>
+                                              <TableCell>
+                                                {diskConfig.quantity}
+                                              </TableCell>
+                                              <TableCell>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  onClick={() => handleRemoveDisk(role.id, disk.id)}
+                                                >
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </TableCell>
+                                            </TableRow>
+                                          );
+                                        })
+                                      ) : (
+                                        <TableRow>
+                                          <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
+                                            No disks added yet. Please add at least one disk configuration.
+                                          </TableCell>
+                                        </TableRow>
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                                
+                                {selectedDisksByRole[role.id]?.length > 0 && (
+                                  <div className="bg-muted p-4 rounded-md">
+                                    <h4 className="text-sm font-medium mb-2">Storage Capacity Summary</h4>
+                                    
+                                    {(() => {
+                                      const { rawCapacityTiB, effectiveCapacityTiB, clusterName } = calculateEffectiveStorageCapacity(role.id);
+                                      // Find the specific cluster
+                                      const cluster = requirements?.storageRequirements?.storageClusters.find(
+                                        c => c.id === role.clusterInfo?.clusterId
+                                      );
+                                      
+                                      if (!cluster) return null;
+                                      
+                                      const poolType = cluster.poolType || '3 Replica';
+                                      const fillFactor = cluster.maxFillFactor || 80;
+                                      
+                                      return (
+                                        <div className="space-y-1 text-sm">
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <div className="text-muted-foreground">Storage Cluster:</div>
+                                            <div>{clusterName}</div>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <div className="text-muted-foreground">Raw Capacity (per node):</div>
+                                            <div>{rawCapacityTiB.toFixed(2)} TiB</div>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <div className="text-muted-foreground">Storage Pool Type:</div>
+                                            <div>{poolType}</div>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <div className="text-muted-foreground">Max Fill Factor:</div>
+                                            <div>{fillFactor}%</div>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2 font-medium">
+                                            <div className="text-muted-foreground">Effective Capacity (per node):</div>
+                                            <div>{effectiveCapacityTiB.toFixed(2)} TiB</div>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2 font-medium">
+                                            <div className="text-muted-foreground">Total Effective Capacity:</div>
+                                            <div>{(effectiveCapacityTiB * actualQuantity).toFixed(2)} TiB</div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                )}
+                              </CollapsibleContent>
+                            </Collapsible>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Network Devices Section */}
+      {groupedRoles.networkDevices && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Network Devices</CardTitle>
+            <CardDescription>
+              Switches, routers, and firewalls
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[150px]">Role</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Base Quantity</TableHead>
+                  <TableHead>Component</TableHead>
+                  <TableHead>Actual Quantity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groupedRoles.networkDevices.map((role) => {
+                  const componentsForRole = getComponentOptionsForRole(role.role);
+                  const actualQuantity = role.assignedComponentId ? 
+                    role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
+                    role.requiredCount;
+                  
+                  return (
+                    <TableRow key={role.id}>
+                      <TableCell className="font-medium">
+                        {formatRoleName(role.role)}
+                      </TableCell>
+                      <TableCell>{role.description}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{role.requiredCount}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={role.assignedComponentId}
+                          onValueChange={(value) => handleComponentSelect(role.id, value)}
+                        >
+                          <SelectTrigger className="w-[300px]">
+                            <SelectValue placeholder="Select component" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {componentsForRole.length > 0 ? (
+                              componentsForRole.map((component) => (
+                                <SelectItem key={component.id} value={component.id}>
+                                  {component.manufacturer} {component.model} - ${component.cost}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="none" disabled>
+                                No compatible components available
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        {role.assignedComponentId && (
+                          <QuantityDisplay 
+                            roleId={role.id}
+                            roleName={formatRoleName(role.role)}
+                            quantity={actualQuantity}
+                          />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
       
       <Card>
         <CardHeader>
@@ -521,10 +714,15 @@ export const DesignPanel: React.FC = () => {
                   ? (component as any).rackUnitsConsumed * actualQuantity 
                   : 0;
                 
+                // Create displayed role name
+                const displayRoleName = role.role === 'storageNode' && role.clusterInfo
+                  ? `${formatRoleName(role.role)} (${role.clusterInfo.clusterName})`
+                  : formatRoleName(role.role);
+                
                 return (
                   <TableRow key={role.id}>
                     <TableCell className="font-medium">
-                      {formatRoleName(role.role)}
+                      {displayRoleName}
                     </TableCell>
                     <TableCell>
                       {component.manufacturer} {component.model}
@@ -532,7 +730,7 @@ export const DesignPanel: React.FC = () => {
                     <TableCell>
                       <QuantityDisplay 
                         roleId={role.id}
-                        roleName={formatRoleName(role.role)}
+                        roleName={displayRoleName}
                         quantity={actualQuantity}
                       />
                     </TableCell>

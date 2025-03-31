@@ -22,9 +22,18 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   children 
 }) => {
   const getCalculationBreakdown = useDesignStore(state => state.getCalculationBreakdown);
+  const componentRoles = useDesignStore(state => state.componentRoles);
+  
+  const role = componentRoles.find(r => r.id === roleId);
+  const clusterName = role?.clusterInfo?.clusterName;
   
   const breakdownSteps = getCalculationBreakdown(roleId);
   const hasBreakdown = breakdownSteps && breakdownSteps.length > 0;
+  
+  // Build the title with cluster name if available
+  const titleText = clusterName 
+    ? `Calculation Breakdown for ${roleName} (${clusterName})` 
+    : `Calculation Breakdown for ${roleName}`;
   
   return (
     <Dialog>
@@ -33,7 +42,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Calculation Breakdown for {roleName}</DialogTitle>
+          <DialogTitle>{titleText}</DialogTitle>
           <DialogDescription>
             How the required quantity was calculated
           </DialogDescription>
