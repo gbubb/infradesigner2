@@ -38,7 +38,10 @@ export const useComponentsByType = () => {
       
       // For servers, check serverRole
       if (type === ComponentType.Server) {
+        // Use type assertion to safely access serverRole
         const server = component as Server;
+        if (!('serverRole' in server)) return false;
+        
         // Map DeviceRoleType to ServerRole
         const serverRoleMap: Record<string, string> = {
           'computeNode': 'compute',
@@ -52,7 +55,10 @@ export const useComponentsByType = () => {
       
       // For switches, check switchRole
       if (type === ComponentType.Switch) {
+        // Use type assertion to safely access switchRole
         const networkSwitch = component as Switch;
+        if (!('switchRole' in networkSwitch)) return false;
+        
         // Map DeviceRoleType to SwitchRole
         const switchRoleMap: Record<string, string> = {
           'managementSwitch': 'management',
@@ -74,7 +80,10 @@ export const useComponentsByType = () => {
       if (component.type !== type) return false;
       
       if (type === ComponentType.Server) {
+        // Use type assertion to safely access serverRole
         const server = component as Server;
+        if (!('serverRole' in server)) return false;
+        
         const serverRoleMap: Record<string, string> = {
           'computeNode': 'compute',
           'gpuNode': 'gpu',
@@ -86,7 +95,10 @@ export const useComponentsByType = () => {
       }
       
       if (type === ComponentType.Switch) {
+        // Use type assertion to safely access switchRole
         const networkSwitch = component as Switch;
+        if (!('switchRole' in networkSwitch)) return false;
+        
         const switchRoleMap: Record<string, string> = {
           'managementSwitch': 'management',
           'leafSwitch': 'leaf',
@@ -115,15 +127,17 @@ export const useComponentsByType = () => {
     let role = component.role || 'default';
     
     if (component.type === ComponentType.Server) {
+      // Use safe type checking
       const serverComponent = component as Server;
-      if (serverComponent.serverRole) {
+      if ('serverRole' in serverComponent && serverComponent.serverRole) {
         role = serverComponent.serverRole;
       }
     }
     
     if (component.type === ComponentType.Switch) {
+      // Use safe type checking
       const switchComponent = component as Switch;
-      if (switchComponent.switchRole) {
+      if ('switchRole' in switchComponent && switchComponent.switchRole) {
         role = switchComponent.switchRole;
       }
     }
@@ -137,14 +151,14 @@ export const useComponentsByType = () => {
       
       if (c.type === ComponentType.Server) {
         const serverComponent = c as Server;
-        if (serverComponent.serverRole) {
+        if ('serverRole' in serverComponent && serverComponent.serverRole) {
           compareRole = serverComponent.serverRole;
         }
       }
       
       if (c.type === ComponentType.Switch) {
         const switchComponent = c as Switch;
-        if (switchComponent.switchRole) {
+        if ('switchRole' in switchComponent && switchComponent.switchRole) {
           compareRole = switchComponent.switchRole;
         }
       }

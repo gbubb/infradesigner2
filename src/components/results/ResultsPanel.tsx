@@ -33,7 +33,7 @@ export const ResultsPanel: React.FC = () => {
     manualRecalculateDesign();
   }, []);
 
-  // Check if there's no design data
+  // Check if there's no design data - the components must exist AND have length > 0
   const hasNoDesign = !activeDesign || !activeDesign.components || activeDesign.components.length === 0;
 
   // Calculate power per rack value for the resource summary card
@@ -59,46 +59,50 @@ export const ResultsPanel: React.FC = () => {
         hasNoDesign={hasNoDesign} 
       />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <ResourceSummaryCard
-          totalVCPUs={actualHardwareTotals.totalVCPUs}
-          totalComputeMemoryTB={actualHardwareTotals.totalComputeMemoryTB}
-          totalStorageTB={actualHardwareTotals.totalStorageTB}
-          totalRackQuantity={resourceMetrics.totalRackQuantity}
-          totalRackUnits={totalRackUnits}
-          totalPower={totalPower}
-          powerPerRack={powerPerRack}
-        />
-        
-        <CostAnalysisCard
-          totalCost={totalCost}
-          costPerVCPU={costPerVCPU}
-          costPerTB={costPerTB}
-        />
-      </div>
-      
-      <StorageClustersTable clusters={storageClustersMetrics} />
-      
-      <div className="mb-8">
-        <ResourceUtilizationChart 
-          powerUtilization={resourceUtilization.powerUtilization}
-          spaceUtilization={resourceUtilization.spaceUtilization}
-          leafNetworkUtilization={resourceUtilization.leafNetworkUtilization}
-          mgmtNetworkUtilization={resourceUtilization.mgmtNetworkUtilization}
-        />
-      </div>
-      
-      <InfrastructureSummaryCard
-        totalServers={resourceMetrics.totalServers}
-        totalLeafSwitches={resourceMetrics.totalLeafSwitches}
-        totalMgmtSwitches={resourceMetrics.totalMgmtSwitches}
-        totalRackUnits={resourceMetrics.totalRackUnits}
-        totalPower={resourceMetrics.totalPower}
-      />
-      
-      <ComponentsTable components={activeDesign?.components || []} />
-      
-      <ComponentTypeSummaryTable componentsByType={componentsByType} />
+      {!hasNoDesign && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <ResourceSummaryCard
+              totalVCPUs={actualHardwareTotals.totalVCPUs}
+              totalComputeMemoryTB={actualHardwareTotals.totalComputeMemoryTB}
+              totalStorageTB={actualHardwareTotals.totalStorageTB}
+              totalRackQuantity={resourceMetrics.totalRackQuantity}
+              totalRackUnits={totalRackUnits}
+              totalPower={totalPower}
+              powerPerRack={powerPerRack}
+            />
+            
+            <CostAnalysisCard
+              totalCost={totalCost}
+              costPerVCPU={costPerVCPU}
+              costPerTB={costPerTB}
+            />
+          </div>
+          
+          <StorageClustersTable clusters={storageClustersMetrics} />
+          
+          <div className="mb-8">
+            <ResourceUtilizationChart 
+              powerUtilization={resourceUtilization.powerUtilization}
+              spaceUtilization={resourceUtilization.spaceUtilization}
+              leafNetworkUtilization={resourceUtilization.leafNetworkUtilization}
+              mgmtNetworkUtilization={resourceUtilization.mgmtNetworkUtilization}
+            />
+          </div>
+          
+          <InfrastructureSummaryCard
+            totalServers={resourceMetrics.totalServers}
+            totalLeafSwitches={resourceMetrics.totalLeafSwitches}
+            totalMgmtSwitches={resourceMetrics.totalMgmtSwitches}
+            totalRackUnits={resourceMetrics.totalRackUnits}
+            totalPower={resourceMetrics.totalPower}
+          />
+          
+          <ComponentsTable components={activeDesign?.components || []} />
+          
+          <ComponentTypeSummaryTable componentsByType={componentsByType} />
+        </>
+      )}
     </div>
   );
 };
