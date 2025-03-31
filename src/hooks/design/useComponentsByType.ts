@@ -8,7 +8,7 @@ export const useComponentsByType = () => {
   
   // Component types grouping
   const componentsByType = useMemo(() => {
-    if (!activeDesign?.components) return {};
+    if (!activeDesign?.components) return {} as Record<ComponentType, any[]>;
     
     return activeDesign.components.reduce((groups, component) => {
       const type = component.type;
@@ -17,7 +17,7 @@ export const useComponentsByType = () => {
       }
       groups[type].push(component);
       return groups;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<ComponentType, any[]>);
   }, [activeDesign]);
 
   // Find default component for each type/role combination
