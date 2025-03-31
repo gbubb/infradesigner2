@@ -18,7 +18,6 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
   const { 
     componentTemplates, 
     selectedDisksByRole,
-    // Get the updater function from the requirements slice
     addDiskToStorageNode,
     removeDiskFromStorageNode,
   } = useDesignStore();
