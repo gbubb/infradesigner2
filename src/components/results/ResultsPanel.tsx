@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { useDesignStore, manualRecalculateDesign } from '@/store/designStore';
@@ -28,6 +28,14 @@ export const ResultsPanel: React.FC = () => {
     designErrors
   } = useDesignCalculations();
   
+  // Auto-recalculate when the component mounts to ensure fresh data
+  useEffect(() => {
+    // Only recalculate if we have an active design
+    if (activeDesign) {
+      manualRecalculateDesign();
+    }
+  }, [activeDesign]);
+  
   // Recalculate handler - this will update the design when clicked
   const handleRecalculate = useCallback(() => {
     manualRecalculateDesign();
@@ -37,7 +45,7 @@ export const ResultsPanel: React.FC = () => {
   const hasNoDesign = !activeDesign || !activeDesign.components || activeDesign.components.length === 0;
 
   // Calculate power per rack value for the resource summary card
-  const powerPerRack = resourceMetrics.totalRackQuantity 
+  const powerPerRack = resourceMetrics?.totalRackQuantity 
     ? (totalPower / resourceMetrics.totalRackQuantity)
     : 0;
 

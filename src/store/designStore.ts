@@ -50,6 +50,12 @@ export const initializeStore = () => {
     state.selectedGPUsByRole = {};
   }
   
+  // Auto-create a default design if none exists
+  if (!state.activeDesign) {
+    console.log("Creating default design");
+    state.createNewDesign("Default Infrastructure Design", "Auto-generated design based on requirements");
+  }
+  
   // Mark as initialized
   storeInitialized = true;
   console.log("Store initialized");
@@ -181,7 +187,9 @@ export const recalculateDesign = () => {
       }
     } else {
       console.warn("No active design to update");
-      toast.warning("No active design to update. Please create a new design first.");
+      // Create a default design if none exists
+      state.createNewDesign("Default Infrastructure Design", "Auto-generated design based on requirements");
+      toast.info("Created a new design. Please assign components to roles.");
     }
   } catch (error) {
     console.error("Error during design recalculation:", error);

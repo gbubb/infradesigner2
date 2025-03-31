@@ -55,7 +55,7 @@ export const createDesignSlice: StateCreator<
   saveDesign: () => {
     set((state) => {
       try {
-        // Filter out component roles that don't have an assigned component
+        // Get the current state of component roles and selected components
         const assignedComponents: InfrastructureComponent[] = state.componentRoles
           .filter(role => role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
           .map(role => {
@@ -75,6 +75,80 @@ export const createDesignSlice: StateCreator<
               quantity: role.adjustedRequiredCount || role.requiredCount,
               role: role.role // Add the role to the component
             };
+            
+            // For storage nodes, calculate additional properties based on disk configuration
+            if (role.role === 'storageNode') {
+              const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
+              
+              // Calculate the total cost and power with attached disks
+              let totalComponentCost = component.cost;
+              let totalComponentPower = component.powerRequired;
+              
+              // Add disk details if we have them
+              if (roleDiskConfigs.length > 0) {
+                roleDiskConfigs.forEach(diskConfig => {
+                  const disk = state.componentTemplates.find(c => c.id === diskConfig.diskId);
+                  if (disk) {
+                    totalComponentCost += disk.cost * diskConfig.quantity;
+                    totalComponentPower += disk.powerRequired * diskConfig.quantity;
+                  }
+                });
+                
+                component.cost = totalComponentCost;
+                component.powerRequired = totalComponentPower;
+                
+                // Add attached disks to the component for reference
+                (component as any).attachedDisks = roleDiskConfigs.map(diskConfig => {
+                  const disk = state.componentTemplates.find(c => c.id === diskConfig.diskId);
+                  return {
+                    ...disk,
+                    quantity: diskConfig.quantity
+                  };
+                }).filter(Boolean);
+              }
+              
+              // Add cluster info to the storage node
+              if (role.clusterInfo) {
+                (component as any).clusterInfo = role.clusterInfo;
+              }
+            }
+            
+            // For GPU nodes, calculate additional properties based on GPU configuration
+            if (role.role === 'gpuNode') {
+              const roleGPUConfigs = state.selectedGPUsByRole[role.id] || [];
+              
+              // Calculate the total cost and power with attached GPUs
+              let totalComponentCost = component.cost;
+              let totalComponentPower = component.powerRequired;
+              
+              // Add GPU details if we have them
+              if (roleGPUConfigs.length > 0) {
+                roleGPUConfigs.forEach(gpuConfig => {
+                  const gpu = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
+                  if (gpu) {
+                    totalComponentCost += gpu.cost * gpuConfig.quantity;
+                    totalComponentPower += gpu.powerRequired * gpuConfig.quantity;
+                  }
+                });
+                
+                component.cost = totalComponentCost;
+                component.powerRequired = totalComponentPower;
+                
+                // Add attached GPUs to the component for reference
+                (component as any).attachedGPUs = roleGPUConfigs.map(gpuConfig => {
+                  const gpu = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
+                  return {
+                    ...gpu,
+                    quantity: gpuConfig.quantity
+                  };
+                }).filter(Boolean);
+              }
+              
+              // Add cluster info to the GPU node
+              if (role.clusterInfo) {
+                (component as any).clusterInfo = role.clusterInfo;
+              }
+            }
             
             return component;
           })
