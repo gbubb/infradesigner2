@@ -15,7 +15,7 @@ export const AppLayout: React.FC = () => {
       <Header />
       <main className="flex-1 flex flex-col overflow-hidden">
         <Tabs defaultValue="requirements" className="w-full h-full flex flex-col">
-          <div className="mx-6 mt-4 mb-2">
+          <div className="mx-6 mt-2 mb-1">
             <CustomTabsList className="w-full max-w-3xl mx-auto justify-between">
               <CustomTabsTrigger value="requirements">Requirements</CustomTabsTrigger>
               <CustomTabsTrigger value="components">Component Library</CustomTabsTrigger>
@@ -23,16 +23,16 @@ export const AppLayout: React.FC = () => {
               <CustomTabsTrigger value="results">Results</CustomTabsTrigger>
             </CustomTabsList>
           </div>
-          <TabsContent value="requirements" className="flex-1 overflow-auto m-0 pt-8 px-6">
+          <TabsContent value="requirements" className="flex-1 overflow-auto m-0 pt-4 px-6">
             <RequirementsPanel />
           </TabsContent>
-          <TabsContent value="components" className="flex-1 overflow-auto m-0 pt-8 px-6">
+          <TabsContent value="components" className="flex-1 overflow-auto m-0 pt-4 px-6">
             <ComponentLibrary />
           </TabsContent>
-          <TabsContent value="design" className="flex-1 overflow-auto m-0 pt-8 px-6">
+          <TabsContent value="design" className="flex-1 overflow-auto m-0 pt-4 px-6">
             <DesignPanel />
           </TabsContent>
-          <TabsContent value="results" className="flex-1 overflow-auto m-0 pt-8 px-6">
+          <TabsContent value="results" className="flex-1 overflow-auto m-0 pt-4 px-6">
             <ResultsPanel />
           </TabsContent>
         </Tabs>
