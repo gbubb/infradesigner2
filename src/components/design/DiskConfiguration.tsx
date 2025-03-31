@@ -32,7 +32,6 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
   const handleAddDisk = () => {
     if (availableDisks.length === 0) return;
     
-    // Use addDiskToStorageNode instead of updateSelectedDisksForRole
     addDiskToStorageNode(roleId, availableDisks[0].id, 1);
   };
   
@@ -40,7 +39,6 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
   const handleRemoveDisk = (index: number) => {
     const diskConfig = selectedDisks[index];
     if (diskConfig) {
-      // Use removeDiskFromStorageNode instead
       removeDiskFromStorageNode(roleId, diskConfig.diskId);
     }
   };

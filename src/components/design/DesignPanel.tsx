@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -138,13 +137,17 @@ export const DesignPanel: React.FC = () => {
               {componentRoles.map((role) => (
                 <Card key={role.id} className="h-full flex flex-col">
                   <CardHeader className="py-4 px-4">
-                    <CardTitle className="text-lg">{role.description}</CardTitle>
+                    <CardTitle className="text-lg">
+                      {role.role.charAt(0).toUpperCase() + role.role.slice(1).replace(/([A-Z])/g, ' $1')}
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {role.description}
+                      </div>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="flex-1 py-0 px-4 pb-4">
                     <div className="space-y-3">
                       <div className="grid grid-cols-1 gap-3">
                         <div className="space-y-2">
-                          <Label>Component</Label>
                           <Select 
                             value={role.assignedComponentId || ''}
                             onValueChange={(value) => {
@@ -176,13 +179,6 @@ export const DesignPanel: React.FC = () => {
                           </div>
                           
                           <Separator />
-                          
-                          <CalculationBreakdown 
-                            roleId={role.id}
-                            roleName={role.description}
-                          >
-                            <span>View Calculation</span>
-                          </CalculationBreakdown>
                           
                           {role.role === 'storageNode' && (
                             <DiskConfiguration roleId={role.id} />

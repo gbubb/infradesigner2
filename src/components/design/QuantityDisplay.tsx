@@ -19,7 +19,6 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
       <CalculationBreakdown roleId={roleId} roleName={roleName}>
         <span className="cursor-pointer underline text-primary hover:text-primary/80 flex items-center">
           {quantity}
-          <span className="ml-1 text-xs text-muted-foreground">(click for details)</span>
         </span>
       </CalculationBreakdown>
     </div>
