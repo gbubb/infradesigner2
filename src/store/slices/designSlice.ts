@@ -6,12 +6,14 @@ import { createDesignCreationSlice, DesignCreationSlice } from './design/designC
 import { createDesignSavingSlice, DesignSavingSlice } from './design/designSavingSlice';
 import { createDesignUpdateSlice, DesignUpdateSlice } from './design/designUpdateSlice';
 import { createDesignComponentsSlice, DesignComponentsSlice } from './design/designComponentsSlice';
+import { createDesignLoadingSlice, DesignLoadingSlice } from './design/designLoadingSlice';
 
 export interface DesignSlice extends 
   DesignCreationSlice,
   DesignSavingSlice,
   DesignUpdateSlice,
-  DesignComponentsSlice
+  DesignComponentsSlice,
+  DesignLoadingSlice
 {
   // Saved designs
   savedDesigns: InfrastructureDesign[];
@@ -32,5 +34,6 @@ export const createDesignSlice: StateCreator<
   ...createDesignCreationSlice(set, get, api),
   ...createDesignSavingSlice(set, get, api),
   ...createDesignUpdateSlice(set, get, api),
-  ...createDesignComponentsSlice(set, get, api)
+  ...createDesignComponentsSlice(set, get, api),
+  ...createDesignLoadingSlice(set, get, api)
 });

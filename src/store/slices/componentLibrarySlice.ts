@@ -1,17 +1,13 @@
 
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
-import { toast } from 'sonner';
-import { InfrastructureComponent, ComponentType, Server, Switch } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
 import { StoreState } from '../types';
-import { allComponentTemplates } from '@/data/componentData';
+import { persistComponents } from '@/utils/persistenceUtils';
 
 export interface ComponentLibrarySlice {
-  // All available component templates
+  // Available component templates
   componentTemplates: InfrastructureComponent[];
-  
-  // Initialize component templates
-  initializeComponentTemplates: () => void;
   
   // Add a component template
   addComponentTemplate: (component: InfrastructureComponent) => void;
@@ -25,11 +21,14 @@ export interface ComponentLibrarySlice {
   // Delete a component template
   deleteComponentTemplate: (id: string) => void;
   
-  // Set a component as the default for its type/role
+  // Set a component as default for a role and type
   setDefaultComponent: (type: ComponentType, role: string, id: string) => void;
   
-  // Get the default component for a type/role combination
+  // Get default component for a role and type
   getDefaultComponent: (type: ComponentType, role: string) => InfrastructureComponent | undefined;
+
+  // Load component templates
+  loadComponentTemplates: (components: InfrastructureComponent[]) => void;
 }
 
 export const createComponentLibrarySlice: StateCreator<
@@ -40,106 +39,20 @@ export const createComponentLibrarySlice: StateCreator<
 > = (set, get) => ({
   componentTemplates: [],
   
-  initializeComponentTemplates: () => {
-    const templates = [...allComponentTemplates];
-    
-    // Set the first component of each unique type/role combination as default
-    const typeRoleCombos = new Map();
-    
-    templates.forEach(template => {
-      // Determine the role based on component type
-      let role = template.role || 'default';
-      
-      // For servers, check serverRole
-      if (template.type === ComponentType.Server) {
-        const serverComponent = template as Server;
-        if (serverComponent.serverRole) {
-          role = serverComponent.serverRole;
-        }
-      }
-      
-      // For switches, check switchRole
-      if (template.type === ComponentType.Switch) {
-        const switchComponent = template as Switch;
-        if (switchComponent.switchRole) {
-          role = switchComponent.switchRole;
-        }
-      }
-      
-      // Create a unique key for the type-role combination
-      const key = `${template.type}-${role}`;
-      
-      if (!typeRoleCombos.has(key)) {
-        typeRoleCombos.set(key, template.id);
-        template.isDefault = true;
-      } else {
-        template.isDefault = false;
-      }
-    });
-    
-    set({ componentTemplates: templates });
-  },
-  
   addComponentTemplate: (component) => {
     set((state) => {
-      // Ensure component has all required properties
-      const newComponent = {
+      // Ensure the component has an ID
+      const componentWithId = {
         ...component,
-        id: component.id || uuidv4(),
-      } as InfrastructureComponent;
+        id: component.id || uuidv4()
+      };
       
-      // Determine the role based on component type
-      let role = newComponent.role || 'default';
+      const updatedTemplates = [...state.componentTemplates, componentWithId];
       
-      if (newComponent.type === ComponentType.Server) {
-        const serverComponent = newComponent as Server;
-        if (serverComponent.serverRole) {
-          role = serverComponent.serverRole;
-        }
-      }
-      
-      if (newComponent.type === ComponentType.Switch) {
-        const switchComponent = newComponent as Switch;
-        if (switchComponent.switchRole) {
-          role = switchComponent.switchRole;
-        }
-      }
-      
-      // If the component is set as default, clear any existing defaults for this type/role
-      let updatedTemplates = [...state.componentTemplates];
-      if (newComponent.isDefault) {
-        updatedTemplates = updatedTemplates.map(c => {
-          // Check type first
-          if (c.type === newComponent.type) {
-            // Then determine the role of the existing component
-            let existingRole = c.role || 'default';
-            
-            if (c.type === ComponentType.Server) {
-              const serverComponent = c as Server;
-              if (serverComponent.serverRole) {
-                existingRole = serverComponent.serverRole;
-              }
-            }
-            
-            if (c.type === ComponentType.Switch) {
-              const switchComponent = c as Switch;
-              if (switchComponent.switchRole) {
-                existingRole = switchComponent.switchRole;
-              }
-            }
-            
-            // If roles match, ensure only the new component is default
-            if (existingRole === role && c.id !== newComponent.id) {
-              return { ...c, isDefault: false };
-            }
-          }
-          return c;
-        });
-      }
-      
-      updatedTemplates.push(newComponent);
-      
-      toast.success(`Added ${newComponent.name} to library`);
+      // Persist components to database
+      persistComponents(updatedTemplates).catch(err => {
+        console.error('Failed to persist component addition:', err);
+      });
       
       return { componentTemplates: updatedTemplates };
     });
@@ -147,70 +60,19 @@ export const createComponentLibrarySlice: StateCreator<
   
   updateComponentTemplate: (id, updates) => {
     set((state) => {
-      const existingIndex = state.componentTemplates.findIndex(c => c.id === id);
+      const index = state.componentTemplates.findIndex(c => c.id === id);
+      if (index === -1) return state;
       
-      if (existingIndex === -1) {
-        toast.error("Component not found");
-        return state;
-      }
-      
-      const existingComponent = state.componentTemplates[existingIndex];
-      const updatedComponent = {
-        ...existingComponent,
+      const updatedTemplates = [...state.componentTemplates];
+      updatedTemplates[index] = {
+        ...updatedTemplates[index],
         ...updates
-      } as InfrastructureComponent;
+      };
       
-      // Determine roles for comparison
-      let updatedRole = updatedComponent.role || 'default';
-      
-      if (updatedComponent.type === ComponentType.Server) {
-        const serverComponent = updatedComponent as Server;
-        if (serverComponent.serverRole) {
-          updatedRole = serverComponent.serverRole;
-        }
-      }
-      
-      if (updatedComponent.type === ComponentType.Switch) {
-        const switchComponent = updatedComponent as Switch;
-        if (switchComponent.switchRole) {
-          updatedRole = switchComponent.switchRole;
-        }
-      }
-      
-      let updatedTemplates = [...state.componentTemplates];
-      updatedTemplates[existingIndex] = updatedComponent;
-      
-      // If this component is being set as default, clear other defaults for same type/role
-      if (updates.isDefault) {
-        updatedTemplates = updatedTemplates.map(c => {
-          if (c.id !== id) {
-            // Determine the role of the existing component
-            let existingRole = c.role || 'default';
-            
-            if (c.type === ComponentType.Server && updatedComponent.type === ComponentType.Server) {
-              const serverComponent = c as Server;
-              if (serverComponent.serverRole) {
-                existingRole = serverComponent.serverRole;
-              }
-            }
-            
-            if (c.type === ComponentType.Switch && updatedComponent.type === ComponentType.Switch) {
-              const switchComponent = c as Switch;
-              if (switchComponent.switchRole) {
-                existingRole = switchComponent.switchRole;
-              }
-            }
-            
-            // If types and roles match, ensure only the updated component is default
-            if (c.type === updatedComponent.type && existingRole === updatedRole) {
-              return { ...c, isDefault: false };
-            }
-          }
-          return c;
-        });
-      }
-      
-      toast.success(`Updated ${updatedComponent.name}`);
+      // Persist components to database
+      persistComponents(updatedTemplates).catch(err => {
+        console.error('Failed to persist component update:', err);
+      });
       
       return { componentTemplates: updatedTemplates };
     });
@@ -219,22 +81,21 @@ export const createComponentLibrarySlice: StateCreator<
   cloneComponentTemplate: (id) => {
     set((state) => {
       const componentToClone = state.componentTemplates.find(c => c.id === id);
+      if (!componentToClone) return state;
       
-      if (!componentToClone) {
-        toast.error("Component not found");
-        return state;
-      }
-      
-      const newComponent = {
+      const clonedComponent = {
         ...componentToClone,
         id: uuidv4(),
         name: `${componentToClone.name} (Copy)`,
-        isDefault: false, // Cloned components are never default
-      } as InfrastructureComponent;
+        isDefault: false
+      };
       
-      const updatedTemplates = [...state.componentTemplates, newComponent];
+      const updatedTemplates = [...state.componentTemplates, clonedComponent];
       
-      toast.success(`Cloned ${componentToClone.name}`);
+      // Persist components to database
+      persistComponents(updatedTemplates).catch(err => {
+        console.error('Failed to persist component clone:', err);
+      });
       
       return { componentTemplates: updatedTemplates };
     });
@@ -242,16 +103,12 @@ export const createComponentLibrarySlice: StateCreator<
   
   deleteComponentTemplate: (id) => {
     set((state) => {
-      const componentToDelete = state.componentTemplates.find(c => c.id === id);
-      
-      if (!componentToDelete) {
-        toast.error("Component not found");
-        return state;
-      }
-      
       const updatedTemplates = state.componentTemplates.filter(c => c.id !== id);
       
-      toast.success(`Deleted ${componentToDelete.name}`);
+      // Persist components to database
+      persistComponents(updatedTemplates).catch(err => {
+        console.error('Failed to persist component deletion:', err);
+      });
       
       return { componentTemplates: updatedTemplates };
     });
@@ -259,61 +116,29 @@ export const createComponentLibrarySlice: StateCreator<
   
   setDefaultComponent: (type, role, id) => {
     set((state) => {
-      // First, clear the default flag for any component with the same type/role
-      let updatedTemplates = state.componentTemplates.map(c => {
-        // Determine the role of the existing component
-        let componentRole = c.role || 'default';
-        
-        if (c.type === ComponentType.Server && type === ComponentType.Server) {
-          const serverComponent = c as Server;
-          if (serverComponent.serverRole) {
-            componentRole = serverComponent.serverRole;
-          }
-        }
-        
-        if (c.type === ComponentType.Switch && type === ComponentType.Switch) {
-          const switchComponent = c as Switch;
-          if (switchComponent.switchRole) {
-            componentRole = switchComponent.switchRole;
-          }
-        }
-        
-        if (c.type === type && componentRole === role) {
+      // First reset any existing defaults for this type and role
+      const updatedTemplates = state.componentTemplates.map(c => {
+        if (c.type === type && c.role === role) {
           return { ...c, isDefault: c.id === id };
         }
         return c;
       });
       
-      toast.success("Default component updated");
+      // Persist components to database
+      persistComponents(updatedTemplates).catch(err => {
+        console.error('Failed to persist default component change:', err);
+      });
       
       return { componentTemplates: updatedTemplates };
     });
   },
   
   getDefaultComponent: (type, role) => {
-    const state = get();
-    return state.componentTemplates.find(c => {
-      // Check if the component is of the requested type
-      if (c.type !== type) return false;
-      
-      // Determine the role of the component
-      let componentRole = c.role || 'default';
-      
-      if (c.type === ComponentType.Server) {
-        const serverComponent = c as Server;
-        if (serverComponent.serverRole) {
-          componentRole = serverComponent.serverRole;
-        }
-      }
-      
-      if (c.type === ComponentType.Switch) {
-        const switchComponent = c as Switch;
-        if (switchComponent.switchRole) {
-          componentRole = switchComponent.switchRole;
-        }
-      }
-      
-      return componentRole === role && c.isDefault;
-    });
+    const { componentTemplates } = get();
+    return componentTemplates.find(c => c.type === type && c.role === role && c.isDefault);
+  },
+  
+  loadComponentTemplates: (components) => {
+    set({ componentTemplates: components });
   }
 });

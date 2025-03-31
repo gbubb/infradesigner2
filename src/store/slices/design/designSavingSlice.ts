@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { InfrastructureDesign, InfrastructureComponent } from '@/types/infrastructure';
 import { StoreState } from '../../types';
+import { persistDesign } from '@/utils/persistenceUtils';
 
 export interface DesignSavingSlice {
   // Save the current design
@@ -153,6 +154,13 @@ export const createDesignSavingSlice: StateCreator<
           // Add new design
           updatedDesigns = [...state.savedDesigns, designToSave];
         }
+        
+        // Persist the design to the database
+        persistDesign(designToSave).then(success => {
+          if (!success) {
+            console.error("Design saved to state but failed to persist to database");
+          }
+        });
         
         console.log("Design saved successfully");
         toast.success("Design saved successfully!");

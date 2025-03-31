@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { InfrastructureDesign } from '@/types/infrastructure';
 import { StoreState } from '../../types';
+import { persistDesign } from '@/utils/persistenceUtils';
 
 export interface DesignCreationSlice {
   // Create a new design
@@ -30,6 +31,11 @@ export const createDesignCreationSlice: StateCreator<
       activeDesign: newDesign,
       placedComponents: {},
       workspaceComponents: []
+    });
+    
+    // Persist the new design
+    persistDesign(newDesign).catch(err => {
+      console.error('Failed to persist new design:', err);
     });
     
     toast.success("New design created");
