@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useDesignStore } from '@/store/designStore';
-import { Save, FileSymlink, Download, Upload, PlusCircle, Edit, Check, X } from 'lucide-react';
+import { Save, Download, Upload, PlusCircle, Edit, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const Header: React.FC = () => {
@@ -68,7 +68,11 @@ export const Header: React.FC = () => {
   return (
     <header className="bg-infra-blue px-6 py-3 flex items-center shadow-md z-10">
       <div className="flex items-center">
-        <FileSymlink className="h-6 w-6 text-white mr-2" />
+        <img 
+          src="/lovable-uploads/471a9da5-ea26-4145-ba48-e8ccd2540995.png" 
+          alt="Infrastructure Design Tool Logo" 
+          className="h-8 w-auto mr-2"
+        />
         <h1 className="text-white text-xl font-semibold">Infrastructure Design Tool</h1>
       </div>
       
