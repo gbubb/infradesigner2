@@ -40,6 +40,7 @@ import {
   DiskType
 } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
+import { useComponentsByType } from '@/hooks/design/useComponentsByType';
 
 interface ServerFormValues {
   cpuModel?: string;
@@ -114,6 +115,8 @@ export const ComponentLibrary: React.FC = () => {
     deleteComponentTemplate,
     setDefaultComponent
   } = useDesignStore();
+
+  const { isDefaultForTypeAndRole } = useComponentsByType();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ComponentCategory | 'all'>('all');
@@ -591,7 +594,19 @@ export const ComponentLibrary: React.FC = () => {
         setDefaultComponent(component.type, component.role || '', componentId);
       }
     } else {
-      updateComponentTemplate(componentId, { isDefault: false });
+      // Only allow turning off default if there are other components of same type and role
+      const component = componentTemplates.find(c => c.id === componentId);
+      if (component) {
+        const sameTypeAndRole = componentTemplates.filter(
+          c => c.type === component.type && c.role === component.role && c.id !== componentId
+        );
+        
+        if (sameTypeAndRole.length > 0) {
+          updateComponentTemplate(componentId, { isDefault: false });
+        } else {
+          toast.warning("At least one component must be default for each type/role combination");
+        }
+      }
     }
   };
 
@@ -910,7 +925,7 @@ export const ComponentLibrary: React.FC = () => {
                   <TableCell className="text-right">{component.powerRequired}W</TableCell>
                   <TableCell className="text-center">
                     <Switch
-                      checked={component.isDefault || false}
+                      checked={isDefaultForTypeAndRole(component.id)}
                       onCheckedChange={(checked) => handleToggleDefault(component.id, checked)}
                     />
                   </TableCell>
@@ -989,76 +1004,4 @@ export const ComponentLibrary: React.FC = () => {
                   id="edit-cost"
                   name="cost"
                   type="number"
-                  value={componentForm.cost || 0}
-                  onChange={handleInputChange}
-                  placeholder="0"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-powerRequired">Power (W)</Label>
-                <Input
-                  id="edit-powerRequired"
-                  name="powerRequired"
-                  type="number"
-                  value={componentForm.powerRequired || 0}
-                  onChange={handleInputChange}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="edit-isDefault"
-                name="isDefault"
-                checked={componentForm.isDefault || false}
-                onCheckedChange={(checked) => {
-                  setComponentForm({
-                    ...componentForm,
-                    isDefault: checked
-                  });
-                }}
-              />
-              <Label htmlFor="edit-isDefault">Set as default for this type/role</Label>
-            </div>
-            
-            {renderTypeSpecificFormFields()}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              resetForm();
-              setIsEditDialogOpen(false);
-            }}>
-              <X className="mr-2 h-4 w-4" />
-              Cancel
-            </Button>
-            <Button onClick={handleAddComponent}>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this component? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-between">
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
+                  value={componentForm

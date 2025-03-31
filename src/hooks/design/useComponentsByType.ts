@@ -29,8 +29,26 @@ export const useComponentsByType = () => {
     );
   };
 
+  // Check if a component is the default for its type/role combination
+  const isDefaultForTypeAndRole = (componentId: string) => {
+    const component = componentTemplates.find(c => c.id === componentId);
+    if (!component) return false;
+    
+    // Find all components with the same type and role
+    const sameTypeAndRole = componentTemplates.filter(
+      c => c.type === component.type && c.role === component.role
+    );
+    
+    // If there's only one of this type+role, it's effectively the default
+    if (sameTypeAndRole.length === 1) return true;
+    
+    // Check if this component is marked as default
+    return component.isDefault === true;
+  };
+
   return {
     componentsByType,
-    findDefaultComponent
+    findDefaultComponent,
+    isDefaultForTypeAndRole
   };
 };

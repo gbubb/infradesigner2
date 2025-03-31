@@ -30,6 +30,7 @@ export const initializeStore = () => {
   
   // Only initialize if not already initialized
   if (state.componentTemplates.length === 0) {
+    console.log("Initializing component templates");
     state.initializeComponentTemplates();
   }
   
@@ -51,6 +52,7 @@ export const initializeStore = () => {
   
   // Mark as initialized
   storeInitialized = true;
+  console.log("Store initialized");
 };
 
 // Call initialization once

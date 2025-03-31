@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,7 +58,10 @@ export const DesignPanel: React.FC = () => {
           if (componentType) {
             const defaultComponent = findDefaultComponent(componentType, role.role);
             if (defaultComponent) {
+              console.log(`Assigning default ${componentType} for role ${role.role}: ${defaultComponent.name}`);
               assignComponentToRole(role.id, defaultComponent.id);
+            } else {
+              console.log(`No default ${componentType} found for role ${role.role}`);
             }
           }
         }

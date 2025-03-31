@@ -41,7 +41,22 @@ export const createComponentLibrarySlice: StateCreator<
   componentTemplates: [],
   
   initializeComponentTemplates: () => {
-    set({ componentTemplates: [...allComponentTemplates] });
+    const templates = [...allComponentTemplates];
+    
+    // Set the first component of each unique type/role combination as default
+    const typeRoleCombos = new Map();
+    
+    templates.forEach(template => {
+      const key = `${template.type}-${template.role || 'default'}`;
+      if (!typeRoleCombos.has(key)) {
+        typeRoleCombos.set(key, template.id);
+        template.isDefault = true;
+      } else {
+        template.isDefault = false;
+      }
+    });
+    
+    set({ componentTemplates: templates });
   },
   
   addComponentTemplate: (component) => {
