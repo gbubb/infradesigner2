@@ -44,6 +44,11 @@ export const initializeStore = () => {
     state.selectedDisksByRole = {};
   }
   
+  // Initialize selectedGPUsByRole if it's empty
+  if (Object.keys(state.selectedGPUsByRole).length === 0) {
+    state.selectedGPUsByRole = {};
+  }
+  
   // Mark as initialized
   storeInitialized = true;
 };
@@ -117,6 +122,43 @@ export const recalculateDesign = () => {
             }
             
             // Add cluster info to the storage node
+            if (role.clusterInfo) {
+              (component as any).clusterInfo = role.clusterInfo;
+            }
+          }
+          
+          // For GPU nodes, calculate additional properties based on GPU configuration
+          if (role.role === 'gpuNode') {
+            const roleGPUConfigs = state.selectedGPUsByRole[role.id] || [];
+            
+            // Calculate the total cost and power with attached GPUs
+            let totalComponentCost = component.cost;
+            let totalComponentPower = component.powerRequired;
+            
+            // Add GPU details if we have them
+            if (roleGPUConfigs.length > 0) {
+              roleGPUConfigs.forEach(gpuConfig => {
+                const gpu = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
+                if (gpu) {
+                  totalComponentCost += gpu.cost * gpuConfig.quantity;
+                  totalComponentPower += gpu.powerRequired * gpuConfig.quantity;
+                }
+              });
+              
+              component.cost = totalComponentCost;
+              component.powerRequired = totalComponentPower;
+              
+              // Add attached GPUs to the component for reference
+              (component as any).attachedGPUs = roleGPUConfigs.map(gpuConfig => {
+                const gpu = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
+                return {
+                  ...gpu,
+                  quantity: gpuConfig.quantity
+                };
+              }).filter(Boolean);
+            }
+            
+            // Add cluster info to the GPU node
             if (role.clusterInfo) {
               (component as any).clusterInfo = role.clusterInfo;
             }

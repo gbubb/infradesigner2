@@ -1,3 +1,4 @@
+
 // Common properties shared by all component types
 export interface BaseComponent {
   id: string;
@@ -19,7 +20,8 @@ export enum ComponentType {
   Switch = 'switch',
   Router = 'router',
   Firewall = 'firewall',
-  Disk = 'disk'
+  Disk = 'disk',
+  GPU = 'gpu'  // Add GPU component type
 }
 
 // Define network topology type for stronger type checking
@@ -39,7 +41,8 @@ export enum ComponentCategory {
   Compute = 'compute',
   Network = 'network',
   Storage = 'storage',
-  Security = 'security'
+  Security = 'security',
+  Accelerator = 'accelerator'  // Add accelerator category for GPUs
 }
 
 // Map component types to categories for filtering
@@ -48,7 +51,8 @@ export const componentTypeToCategory: Record<ComponentType, ComponentCategory> =
   [ComponentType.Switch]: ComponentCategory.Network,
   [ComponentType.Router]: ComponentCategory.Network,
   [ComponentType.Firewall]: ComponentCategory.Security,
-  [ComponentType.Disk]: ComponentCategory.Storage
+  [ComponentType.Disk]: ComponentCategory.Storage,
+  [ComponentType.GPU]: ComponentCategory.Accelerator  // Map GPU to Accelerator category
 };
 
 // Interface for rack-mountable components
@@ -64,7 +68,7 @@ export enum ServerRole {
   Storage = 'storage',
   Controller = 'controller',
   Infrastructure = 'infrastructure',
-  GPU = 'gpu'
+  GPU = 'gpu'  // Add GPU server role
 }
 
 // Disk slot types
@@ -107,6 +111,28 @@ export enum DiskType {
   NVMeSSD = 'NVMe SSD'
 }
 
+// GPU memory type
+export enum GPUMemoryType {
+  HBM2 = 'HBM2',
+  HBM2e = 'HBM2e',
+  HBM3 = 'HBM3',
+  GDDR6 = 'GDDR6',
+  GDDR6X = 'GDDR6X'
+}
+
+// Interface for GPU components
+export interface GPU extends BaseComponent {
+  type: ComponentType.GPU;
+  modelFamily: string;
+  memoryGB: number;
+  memoryType: GPUMemoryType;
+  tdpWatts: number;
+  tensorCores?: number;
+  cudaCores?: number;
+  pcieGeneration?: number;
+  pcieWidth?: number;
+}
+
 // Server specific properties
 export interface Server extends BaseComponent, RackMountable {
   type: ComponentType.Server;
@@ -128,6 +154,7 @@ export interface Server extends BaseComponent, RackMountable {
   ruSize?: number;
   networkPortType?: NetworkPortType;
   portsConsumedQuantity?: number;
+  gpuSlots?: number;  // Number of GPU slots available
 }
 
 // Switch specific properties
@@ -182,15 +209,24 @@ export type InfrastructureComponent =
   | Switch
   | Router
   | Firewall
-  | Disk;
+  | Disk
+  | GPU;
+
+// Compute cluster requirement
+export interface ComputeClusterRequirement {
+  id: string;
+  name: string;
+  totalVCPUs?: number;
+  totalMemoryTB?: number;
+  availabilityZoneRedundancy?: 'None' | 'N+1' | 'N+2';
+  overcommitRatio?: number;
+  gpuEnabled?: boolean;
+}
 
 // Updated Design requirements specification
 export interface DesignRequirements {
   computeRequirements: {
-    totalVCPUs?: number;
-    totalMemoryTB?: number;  // Changed from GB to TB
-    availabilityZoneRedundancy?: 'None' | 'N+1' | 'N+2';  // Changed from redundancyFactor
-    overcommitRatio?: number;  // New field: between 1 and 10
+    computeClusters: ComputeClusterRequirement[];
     controllerNodeCount?: number; // Number of controller nodes
     infrastructureClusterRequired?: boolean; // Whether infrastructure cluster is required
     infrastructureNodeCount?: number; // Number of infrastructure nodes
@@ -280,6 +316,7 @@ export interface ComponentRole {
 export enum DeviceRoleType {
   ControllerNode = 'controllerNode',
   ComputeNode = 'computeNode',
+  GPUNode = 'gpuNode',  // Add GPU node role
   StorageNode = 'storageNode',
   ManagementSwitch = 'managementSwitch',
   ComputeSwitch = 'computeSwitch',

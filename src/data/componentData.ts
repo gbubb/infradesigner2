@@ -1,3 +1,4 @@
+
 import { 
   ComponentType, 
   InfrastructureComponent, 
@@ -11,7 +12,9 @@ import {
   NetworkPortType,
   SwitchRole,
   PortSpeed,
-  DiskType
+  DiskType,
+  GPU,
+  GPUMemoryType
 } from '../types/infrastructure';
 
 // Sample server templates
@@ -42,6 +45,34 @@ export const serverTemplates: Server[] = [
     ruSize: 2,
     networkPortType: NetworkPortType.SFP,
     portsConsumedQuantity: 2
+  },
+  {
+    id: 'srv-2',
+    type: ComponentType.Server,
+    name: 'GPU Node V1',
+    manufacturer: 'Supermicro',
+    model: 'SYS-421GE-TNRT',
+    cost: 14500,
+    powerRequired: 550,
+    rackUnitsConsumed: 4,
+    cpuModel: 'AMD Epyc 9554',
+    cpuCount: 2,
+    coreCount: 128,
+    memoryGB: 1024,
+    storageCapacityTB: 8,
+    networkPorts: 4,
+    networkPortSpeed: 100,
+    // New fields
+    serverRole: ServerRole.GPU,
+    cpuSockets: 2,
+    cpuCoresPerSocket: 64,
+    memoryCapacity: 1024,
+    diskSlotType: DiskSlotType.TwoPointFive,
+    diskSlotQuantity: 10,
+    ruSize: 4,
+    networkPortType: NetworkPortType.QSFP,
+    portsConsumedQuantity: 2,
+    gpuSlots: 8
   },
   {
     id: 'srv-3',
@@ -264,13 +295,52 @@ export const diskTemplates: Disk[] = [
   }
 ];
 
+// Add GPU templates
+export const gpuTemplates: GPU[] = [
+  {
+    id: 'gpu-1',
+    type: ComponentType.GPU,
+    name: 'NVIDIA L40S',
+    manufacturer: 'NVIDIA',
+    model: 'L40S',
+    modelFamily: 'Ada Lovelace',
+    cost: 9500,
+    powerRequired: 320,
+    memoryGB: 48,
+    memoryType: GPUMemoryType.GDDR6,
+    tdpWatts: 300,
+    tensorCores: 576,
+    cudaCores: 18176,
+    pcieGeneration: 4,
+    pcieWidth: 16
+  },
+  {
+    id: 'gpu-2',
+    type: ComponentType.GPU,
+    name: 'NVIDIA H100 NVL',
+    manufacturer: 'NVIDIA',
+    model: 'H100 NVL',
+    modelFamily: 'Hopper',
+    cost: 25000,
+    powerRequired: 700,
+    memoryGB: 94,
+    memoryType: GPUMemoryType.HBM3,
+    tdpWatts: 700,
+    tensorCores: 528,
+    cudaCores: 16896,
+    pcieGeneration: 5,
+    pcieWidth: 16
+  }
+];
+
 // All component templates combined
 export const allComponentTemplates: InfrastructureComponent[] = [
   ...serverTemplates,
   ...switchTemplates,
   ...routerTemplates,
   ...firewallTemplates,
-  ...diskTemplates
+  ...diskTemplates,
+  ...gpuTemplates
 ];
 
 // Function to get components by type

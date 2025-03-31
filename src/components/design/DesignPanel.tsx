@@ -1,749 +1,245 @@
 
-import React, { useEffect, useCallback, useState } from 'react';
-import { useDesignStore, recalculateDesign } from '@/store/designStore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calculator, HardDrive, Plus, Save, Trash2 } from 'lucide-react';
-import { 
-  ComponentType, 
-  InfrastructureComponent, 
-  ServerRole, 
-  SwitchRole, 
-  Disk, 
-  StoragePoolEfficiencyFactors, 
-  TB_TO_TIB_FACTOR,
-  DiskType
-} from '@/types/infrastructure';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useDesignStore, recalculateDesign, manualRecalculateDesign } from '@/store/designStore';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ComponentType, DeviceRoleType } from '@/types/infrastructure';
 import { toast } from 'sonner';
+import { CalculationBreakdown } from './CalculationBreakdown';
 import { QuantityDisplay } from './QuantityDisplay';
+import { Separator } from '@/components/ui/separator';
+import { Info, LayoutGrid, LucideProperties, RotateCw, Save } from 'lucide-react';
+import { DiskConfiguration } from './DiskConfiguration';
+import { GPUConfiguration } from './GPUConfiguration';
 
 export const DesignPanel: React.FC = () => {
-  const { 
-    componentRoles, 
-    calculateComponentRoles, 
+  const {
+    componentRoles,
+    componentTemplates,
     assignComponentToRole,
+    activeDesign,
     saveDesign,
     calculateRequiredQuantity,
-    getAvailableComponents,
-    activeDesign,
-    requirements,
-    selectedDisksByRole,
-    addDiskToStorageNode,
-    removeDiskFromStorageNode,
-    calculateStorageNodeCapacity
+    getCalculationBreakdown,
+    createNewDesign
   } = useDesignStore();
-  
-  const [openStorageNodeId, setOpenStorageNodeId] = useState<string | null>(null);
-  const [selectedDiskId, setSelectedDiskId] = useState<string>('');
-  const [diskQuantity, setDiskQuantity] = useState<number>(1);
-  
+
+  const [activePage, setActivePage] = useState('roles');
+  const [designName, setDesignName] = useState('');
+  const [designDescription, setDesignName] = useState('');
+
   useEffect(() => {
-    if (componentRoles.length === 0) {
-      calculateComponentRoles();
+    // Set design name from active design if it exists
+    if (activeDesign) {
+      setDesignName(activeDesign.name);
+      setDesignDescription(activeDesign.description || '');
     }
-  }, [calculateComponentRoles, componentRoles.length]);
+  }, [activeDesign]);
 
-  const handleComponentSelect = useCallback((roleId: string, componentId: string) => {
-    assignComponentToRole(roleId, componentId);
-    
-    const role = componentRoles.find(r => r.id === roleId);
-    if (role && role.role === 'storageNode') {
-      setOpenStorageNodeId(roleId);
-    }
-  }, [assignComponentToRole, componentRoles]);
-
-  const handleRecalculate = useCallback(() => {
-    calculateComponentRoles();
-  }, [calculateComponentRoles]);
-
-  const handleSaveDesign = useCallback(() => {
-    saveDesign();
-  }, [saveDesign]);
-
-  const getComponentOptionsForRole = (role: string): InfrastructureComponent[] => {
-    const allComponents = getAvailableComponents();
-    const networkTopology = requirements?.networkRequirements?.networkTopology || 'Spine-Leaf';
-    
-    switch(role) {
-      case 'controllerNode':
-        return allComponents.filter(c => 
-          c.type === ComponentType.Server && 
-          'serverRole' in c && 
-          c.serverRole === ServerRole.Controller
-        );
+  const getComponentsForRole = (role: string) => {
+    // Filter components based on role
+    switch (role) {
       case 'computeNode':
-        return allComponents.filter(c => 
-          c.type === ComponentType.Server && 
-          'serverRole' in c && 
-          c.serverRole === ServerRole.Compute
-        );
-      case 'infrastructureNode':
-        return allComponents.filter(c => 
-          c.type === ComponentType.Server && 
-          'serverRole' in c && 
-          c.serverRole === ServerRole.Infrastructure
-        );
+        return componentTemplates.filter(c => c.type === ComponentType.Server && (c as any).serverRole === 'compute');
+      case 'gpuNode':
+        return componentTemplates.filter(c => c.type === ComponentType.Server && (c as any).serverRole === 'gpu');
       case 'storageNode':
-        return allComponents.filter(c => 
-          c.type === ComponentType.Server && 
-          'serverRole' in c && 
-          c.serverRole === ServerRole.Storage
-        );
+        return componentTemplates.filter(c => c.type === ComponentType.Server && (c as any).serverRole === 'storage');
+      case 'controllerNode':
+      case 'infrastructureNode':
+        return componentTemplates.filter(c => c.type === ComponentType.Server && (c as any).serverRole === 'controller');
       case 'managementSwitch':
-        return allComponents.filter(c => 
-          c.type === ComponentType.Switch && 
-          'switchRole' in c && 
-          c.switchRole === SwitchRole.Management
-        );
+        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'management');
       case 'leafSwitch':
-        return allComponents.filter(c => 
-          c.type === ComponentType.Switch && 
-          'switchRole' in c && 
-          c.switchRole === SwitchRole.Leaf
-        );
-      case 'storageSwitch':
-        return allComponents.filter(c => 
-          c.type === ComponentType.Switch && 
-          'switchRole' in c && 
-          (c.switchRole === SwitchRole.Access || c.switchRole === SwitchRole.Leaf)
-        );
+        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'leaf');
       case 'borderLeafSwitch':
-        return allComponents.filter(c => 
-          c.type === ComponentType.Switch && 
-          'switchRole' in c && 
-          c.switchRole === SwitchRole.Edge
-        );
+        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'leaf');
       case 'spineSwitch':
-        if (networkTopology === 'Spine-Leaf') {
-          return allComponents.filter(c => 
-            c.type === ComponentType.Switch && 
-            'switchRole' in c && 
-            c.switchRole === SwitchRole.Spine
-          );
-        } else {
-          return allComponents.filter(c => 
-            c.type === ComponentType.Switch && 
-            'switchRole' in c && 
-            c.switchRole === SwitchRole.Core
-          );
-        }
-      case 'torSwitch':
-        return allComponents.filter(c => 
-          c.type === ComponentType.Switch && 
-          'switchRole' in c && 
-          c.switchRole === SwitchRole.Access
-        );
+        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'spine');
+      case 'storageSwitch':
+        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'leaf');
       case 'firewall':
-        return allComponents.filter(c => c.type === ComponentType.Firewall);
+        return componentTemplates.filter(c => c.type === ComponentType.Firewall);
       default:
-        if (role.toLowerCase().includes('switch')) {
-          return allComponents.filter(c => c.type === ComponentType.Switch);
-        } else if (role.toLowerCase().includes('node')) {
-          return allComponents.filter(c => c.type === ComponentType.Server);
-        }
-        return [];
+        return componentTemplates;
     }
   };
 
-  const getAvailableDisks = (): Disk[] => {
-    const allComponents = getAvailableComponents();
-    return allComponents.filter(c => 
-      c.type === ComponentType.Disk
-    ) as Disk[];
-  };
-
-  const findComponentById = (componentId: string | undefined): InfrastructureComponent | undefined => {
-    if (!componentId) return undefined;
-    
-    return getAvailableComponents().find(component => component.id === componentId);
-  };
-
-  const formatRoleName = (roleName: string): string => {
-    return roleName.charAt(0).toUpperCase() + 
-      roleName.slice(1).replace(/([A-Z])/g, ' $1');
-  };
-
-  const hasAllRequiredComponents = componentRoles
-    .filter(role => role.requiredCount > 0)
-    .every(role => role.assignedComponentId);
-
-  const handleAddDisk = (roleId: string) => {
-    if (!selectedDiskId) {
-      toast.error("Please select a disk model");
+  const handleSaveDesign = () => {
+    if (!activeDesign) {
+      toast.error("No active design to save. Create a new design first.");
       return;
     }
     
-    if (diskQuantity <= 0) {
-      toast.error("Please enter a valid disk quantity");
+    // Check that all roles have components assigned
+    const unassignedRoles = componentRoles.filter(role => !role.assignedComponentId);
+    if (unassignedRoles.length > 0) {
+      toast.warning(`Please assign components for all roles (${unassignedRoles.length} unassigned)`);
       return;
     }
     
-    addDiskToStorageNode(roleId, selectedDiskId, diskQuantity);
-    toast.success(`Added disk configuration to storage node`);
-    
-    setSelectedDiskId('');
-    setDiskQuantity(1);
+    saveDesign();
+    toast.success("Design saved!");
   };
-
-  const handleRemoveDisk = (roleId: string, diskId: string) => {
-    removeDiskFromStorageNode(roleId, diskId);
-    toast.success("Removed disk from storage node");
+  
+  const handleCreateDesign = () => {
+    createNewDesign(designName || "New Design", designDescription);
+    toast.success("New design created");
   };
-
-  const calculateEffectiveStorageCapacity = (roleId: string) => {
-    // Find the role to get cluster info
-    const role = componentRoles.find(r => r.id === roleId);
-    if (!role || !role.clusterInfo) return { rawCapacityTiB: 0, effectiveCapacityTiB: 0 };
-    
-    // Find the specific cluster
-    const cluster = requirements?.storageRequirements?.storageClusters.find(
-      c => c.id === role.clusterInfo.clusterId
-    );
-    if (!cluster) return { rawCapacityTiB: 0, effectiveCapacityTiB: 0 };
-    
-    const rawCapacityTiB = calculateStorageNodeCapacity(roleId);
-    const poolType = cluster.poolType || '3 Replica';
-    const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);
-    const maxFillFactor = cluster.maxFillFactor || 80;
-    const fillFactorAdjustment = maxFillFactor / 100;
-    
-    const effectiveCapacityTiB = rawCapacityTiB * poolEfficiencyFactor * fillFactorAdjustment;
-    
-    return {
-      rawCapacityTiB,
-      effectiveCapacityTiB,
-      clusterName: cluster.name
-    };
+  
+  const handleRecalculateDesign = () => {
+    manualRecalculateDesign();
+    toast.success("Design recalculated");
   };
-
-  // Group roles by type for better organization
-  const groupedRoles = componentRoles.reduce((groups, role) => {
-    const group = role.role === 'storageNode' 
-      ? 'storageNodes' 
-      : role.role.includes('Node') 
-        ? 'computeNodes' 
-        : 'networkDevices';
-    
-    if (!groups[group]) groups[group] = [];
-    groups[group].push(role);
-    return groups;
-  }, {} as Record<string, typeof componentRoles>);
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6 p-6 max-w-6xl mx-auto">
+      <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Design Configuration</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRecalculate}>
-            <Calculator className="h-4 w-4 mr-2" />
+        <div className="flex space-x-2">
+          <Button variant="secondary" onClick={handleRecalculateDesign}>
+            <RotateCw className="h-4 w-4 mr-2" />
             Recalculate
           </Button>
-          <Button onClick={handleSaveDesign} disabled={!hasAllRequiredComponents}>
+          <Button variant="default" onClick={handleSaveDesign}>
             <Save className="h-4 w-4 mr-2" />
             Save Design
           </Button>
         </div>
       </div>
       
-      {!hasAllRequiredComponents && (
-        <Alert variant="warning" className="mb-6">
-          <AlertDescription>
-            Please assign components to all required roles to save your design.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {/* Compute Nodes Section */}
-      {groupedRoles.computeNodes && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Compute Devices</CardTitle>
-            <CardDescription>
-              Controllers, compute nodes, and infrastructure nodes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[150px]">Role</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Base Quantity</TableHead>
-                  <TableHead>Component</TableHead>
-                  <TableHead>Actual Quantity</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {groupedRoles.computeNodes.map((role) => {
-                  const componentsForRole = getComponentOptionsForRole(role.role);
-                  const actualQuantity = role.assignedComponentId ? 
-                    role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
-                    role.requiredCount;
-                  
-                  const showBaseQuantity = role.role !== 'computeNode' || (role.role === 'computeNode' && role.assignedComponentId);
-                  
-                  return (
-                    <TableRow key={role.id}>
-                      <TableCell className="font-medium">
-                        {formatRoleName(role.role)}
-                      </TableCell>
-                      <TableCell>{role.description}</TableCell>
-                      <TableCell>
-                        {showBaseQuantity ? (
-                          <Badge variant="outline">{role.requiredCount}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">Select a component first</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={role.assignedComponentId}
-                          onValueChange={(value) => handleComponentSelect(role.id, value)}
-                        >
-                          <SelectTrigger className="w-[300px]">
-                            <SelectValue placeholder="Select component" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {componentsForRole.length > 0 ? (
-                              componentsForRole.map((component) => (
-                                <SelectItem key={component.id} value={component.id}>
-                                  {component.manufacturer} {component.model} - ${component.cost}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="none" disabled>
-                                No compatible components available
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        {role.assignedComponentId && (
-                          <QuantityDisplay 
-                            roleId={role.id}
-                            roleName={formatRoleName(role.role)}
-                            quantity={actualQuantity}
-                          />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-      
-      {/* Storage Nodes Section */}
-      {groupedRoles.storageNodes && groupedRoles.storageNodes.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Storage Devices</CardTitle>
-            <CardDescription>
-              Storage nodes and their disk configurations
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[200px]">Storage Cluster</TableHead>
-                  <TableHead>Base Quantity</TableHead>
-                  <TableHead>Component</TableHead>
-                  <TableHead>Actual Quantity</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {groupedRoles.storageNodes.map((role) => {
-                  const componentsForRole = getComponentOptionsForRole(role.role);
-                  const actualQuantity = role.assignedComponentId ? 
-                    role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
-                    role.requiredCount;
-                  
-                  const clusterName = role.clusterInfo?.clusterName || "Unknown Cluster";
-                  
-                  return (
-                    <React.Fragment key={role.id}>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          {clusterName}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{role.requiredCount}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={role.assignedComponentId}
-                            onValueChange={(value) => handleComponentSelect(role.id, value)}
+      <Tabs defaultValue="roles" value={activePage} onValueChange={setActivePage}>
+        <TabsList>
+          <TabsTrigger value="roles">
+            <LayoutGrid className="h-4 w-4 mr-2" />
+            Component Roles
+          </TabsTrigger>
+          <TabsTrigger value="properties">
+            <LucideProperties className="h-4 w-4 mr-2" />
+            Design Properties
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="roles" className="space-y-6">
+          {componentRoles.length === 0 ? (
+            <div className="rounded-md border border-dashed p-8 text-center">
+              <Info className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+              <h3 className="text-lg font-medium">No Component Roles</h3>
+              <p className="text-muted-foreground mt-1">
+                Save the requirements to generate component roles
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {componentRoles.map((role) => (
+                <Card key={role.id} className="h-full flex flex-col">
+                  <CardHeader className="py-4 px-4">
+                    <CardTitle className="text-lg">{role.description}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 py-0 px-4 pb-4">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 gap-3">
+                        <div className="space-y-2">
+                          <Label>Component</Label>
+                          <Select 
+                            value={role.assignedComponentId || ''}
+                            onValueChange={(value) => {
+                              assignComponentToRole(role.id, value);
+                            }}
                           >
-                            <SelectTrigger className="w-[300px]">
-                              <SelectValue placeholder="Select storage node" />
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select component" />
                             </SelectTrigger>
                             <SelectContent>
-                              {componentsForRole.length > 0 ? (
-                                componentsForRole.map((component) => (
-                                  <SelectItem key={component.id} value={component.id}>
-                                    {component.manufacturer} {component.model} - ${component.cost}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="none" disabled>
-                                  No compatible components available
+                              {getComponentsForRole(role.role).map((component) => (
+                                <SelectItem key={component.id} value={component.id}>
+                                  {component.name} ({component.manufacturer})
                                 </SelectItem>
-                              )}
+                              ))}
                             </SelectContent>
                           </Select>
-                        </TableCell>
-                        <TableCell>
-                          {role.assignedComponentId && (
-                            <QuantityDisplay 
-                              roleId={role.id}
-                              roleName={`Storage Node (${clusterName})`}
-                              quantity={actualQuantity}
-                            />
-                          )}
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                      </div>
                       
                       {role.assignedComponentId && (
-                        <TableRow className="bg-muted/20">
-                          <TableCell colSpan={4} className="p-0">
-                            <Collapsible 
-                              open={openStorageNodeId === role.id}
-                              onOpenChange={(open) => setOpenStorageNodeId(open ? role.id : null)}
-                              className="p-2"
-                            >
-                              <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm" className="w-full flex items-center justify-between px-4">
-                                  <span className="flex items-center">
-                                    <HardDrive className="h-4 w-4 mr-2" />
-                                    Configure Storage Disks
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    (Required for accurate capacity calculation)
-                                  </span>
-                                </Button>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent className="p-4 space-y-4 border-t">
-                                <div className="grid grid-cols-3 gap-4">
-                                  <div>
-                                    <Label htmlFor="disk-model">Disk Model</Label>
-                                    <Select
-                                      value={selectedDiskId}
-                                      onValueChange={setSelectedDiskId}
-                                    >
-                                      <SelectTrigger id="disk-model">
-                                        <SelectValue placeholder="Select disk model" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {getAvailableDisks().map((disk) => (
-                                          <SelectItem key={disk.id} value={disk.id}>
-                                            {disk.manufacturer} {disk.model} ({disk.capacityTB}TB) - ${disk.cost}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="disk-quantity">Quantity per Node</Label>
-                                    <Input
-                                      id="disk-quantity"
-                                      type="number"
-                                      min="1"
-                                      value={diskQuantity}
-                                      onChange={(e) => setDiskQuantity(parseInt(e.target.value) || 1)}
-                                    />
-                                  </div>
-                                  <div className="flex items-end">
-                                    <Button 
-                                      onClick={() => handleAddDisk(role.id)}
-                                      disabled={!selectedDiskId}
-                                      className="w-full"
-                                    >
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      Add Disks
-                                    </Button>
-                                  </div>
-                                </div>
-                                
-                                <div className="border rounded-md">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Disk Model</TableHead>
-                                        <TableHead>Type</TableHead>
-                                        <TableHead>Capacity</TableHead>
-                                        <TableHead>Quantity</TableHead>
-                                        <TableHead>Actions</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {selectedDisksByRole[role.id]?.length > 0 ? (
-                                        selectedDisksByRole[role.id].map((diskConfig) => {
-                                          const disk = findComponentById(diskConfig.diskId) as Disk | undefined;
-                                          if (!disk) return null;
-                                          
-                                          return (
-                                            <TableRow key={disk.id}>
-                                              <TableCell>
-                                                {disk.manufacturer} {disk.model}
-                                              </TableCell>
-                                              <TableCell>
-                                                {disk.diskType || 'Unknown'}
-                                              </TableCell>
-                                              <TableCell>
-                                                {disk.capacityTB} TB
-                                              </TableCell>
-                                              <TableCell>
-                                                {diskConfig.quantity}
-                                              </TableCell>
-                                              <TableCell>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  onClick={() => handleRemoveDisk(role.id, disk.id)}
-                                                >
-                                                  <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                              </TableCell>
-                                            </TableRow>
-                                          );
-                                        })
-                                      ) : (
-                                        <TableRow>
-                                          <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
-                                            No disks added yet. Please add at least one disk configuration.
-                                          </TableCell>
-                                        </TableRow>
-                                      )}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                                
-                                {selectedDisksByRole[role.id]?.length > 0 && (
-                                  <div className="bg-muted p-4 rounded-md">
-                                    <h4 className="text-sm font-medium mb-2">Storage Capacity Summary</h4>
-                                    
-                                    {(() => {
-                                      const { rawCapacityTiB, effectiveCapacityTiB, clusterName } = calculateEffectiveStorageCapacity(role.id);
-                                      // Find the specific cluster
-                                      const cluster = requirements?.storageRequirements?.storageClusters.find(
-                                        c => c.id === role.clusterInfo?.clusterId
-                                      );
-                                      
-                                      if (!cluster) return null;
-                                      
-                                      const poolType = cluster.poolType || '3 Replica';
-                                      const fillFactor = cluster.maxFillFactor || 80;
-                                      
-                                      return (
-                                        <div className="space-y-1 text-sm">
-                                          <div className="grid grid-cols-2 gap-2">
-                                            <div className="text-muted-foreground">Storage Cluster:</div>
-                                            <div>{clusterName}</div>
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-2">
-                                            <div className="text-muted-foreground">Raw Capacity (per node):</div>
-                                            <div>{rawCapacityTiB.toFixed(2)} TiB</div>
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-2">
-                                            <div className="text-muted-foreground">Storage Pool Type:</div>
-                                            <div>{poolType}</div>
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-2">
-                                            <div className="text-muted-foreground">Max Fill Factor:</div>
-                                            <div>{fillFactor}%</div>
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-2 font-medium">
-                                            <div className="text-muted-foreground">Effective Capacity (per node):</div>
-                                            <div>{effectiveCapacityTiB.toFixed(2)} TiB</div>
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-2 font-medium">
-                                            <div className="text-muted-foreground">Total Effective Capacity:</div>
-                                            <div>{(effectiveCapacityTiB * actualQuantity).toFixed(2)} TiB</div>
-                                          </div>
-                                        </div>
-                                      );
-                                    })()}
-                                  </div>
-                                )}
-                              </CollapsibleContent>
-                            </Collapsible>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-      
-      {/* Network Devices Section */}
-      {groupedRoles.networkDevices && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Network Devices</CardTitle>
-            <CardDescription>
-              Switches, routers, and firewalls
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[150px]">Role</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Base Quantity</TableHead>
-                  <TableHead>Component</TableHead>
-                  <TableHead>Actual Quantity</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {groupedRoles.networkDevices.map((role) => {
-                  const componentsForRole = getComponentOptionsForRole(role.role);
-                  const actualQuantity = role.assignedComponentId ? 
-                    role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId) : 
-                    role.requiredCount;
-                  
-                  return (
-                    <TableRow key={role.id}>
-                      <TableCell className="font-medium">
-                        {formatRoleName(role.role)}
-                      </TableCell>
-                      <TableCell>{role.description}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{role.requiredCount}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={role.assignedComponentId}
-                          onValueChange={(value) => handleComponentSelect(role.id, value)}
-                        >
-                          <SelectTrigger className="w-[300px]">
-                            <SelectValue placeholder="Select component" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {componentsForRole.length > 0 ? (
-                              componentsForRole.map((component) => (
-                                <SelectItem key={component.id} value={component.id}>
-                                  {component.manufacturer} {component.model} - ${component.cost}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="none" disabled>
-                                No compatible components available
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        {role.assignedComponentId && (
-                          <QuantityDisplay 
-                            roleId={role.id}
-                            roleName={formatRoleName(role.role)}
-                            quantity={actualQuantity}
+                        <>
+                          <div className="bg-muted rounded-md p-3">
+                            <QuantityDisplay
+                              role={role}
+                              requiredQuantity={role.adjustedRequiredCount || role.requiredCount}
+                            />
+                          </div>
+                          
+                          <Separator />
+                          
+                          <CalculationBreakdown 
+                            calculationSteps={getCalculationBreakdown(role.id)} 
                           />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Selected Components</CardTitle>
-          <CardDescription>
-            Components selected for your infrastructure design
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Role</TableHead>
-                <TableHead>Component</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Cost</TableHead>
-                <TableHead>Power (W)</TableHead>
-                <TableHead>RU</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {componentRoles.filter(role => role.assignedComponentId).map((role) => {
-                const component = findComponentById(role.assignedComponentId);
-                if (!component) return null;
+                          
+                          {role.role === 'storageNode' && (
+                            <DiskConfiguration roleId={role.id} />
+                          )}
+                          
+                          {role.role === 'gpuNode' && (
+                            <GPUConfiguration roleId={role.id} />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="properties">
+          <Card>
+            <CardHeader>
+              <CardTitle>Design Properties</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="design-name">Name</Label>
+                  <Input
+                    id="design-name"
+                    value={designName}
+                    onChange={(e) => setDesignName(e.target.value)}
+                    placeholder="Enter design name"
+                  />
+                </div>
                 
-                const actualQuantity = role.adjustedRequiredCount || calculateRequiredQuantity(role.id, role.assignedComponentId!);
+                <div className="space-y-2">
+                  <Label htmlFor="design-description">Description</Label>
+                  <Input 
+                    id="design-description"
+                    value={designDescription}
+                    onChange={(e) => setDesignDescription(e.target.value)}
+                    placeholder="Enter design description"
+                  />
+                </div>
                 
-                let componentCost = component.cost;
-                let componentPower = component.powerRequired;
-                
-                if (role.role === 'storageNode') {
-                  const disks = selectedDisksByRole[role.id] || [];
-                  disks.forEach(diskConfig => {
-                    const disk = findComponentById(diskConfig.diskId);
-                    if (disk) {
-                      componentCost += disk.cost * diskConfig.quantity;
-                      componentPower += disk.powerRequired * diskConfig.quantity;
-                    }
-                  });
-                }
-                
-                const totalCost = componentCost * actualQuantity;
-                const totalPower = componentPower * actualQuantity;
-                
-                const rackUnits = 'rackUnitsConsumed' in component 
-                  ? (component as any).rackUnitsConsumed * actualQuantity 
-                  : 0;
-                
-                // Create displayed role name
-                const displayRoleName = role.role === 'storageNode' && role.clusterInfo
-                  ? `${formatRoleName(role.role)} (${role.clusterInfo.clusterName})`
-                  : formatRoleName(role.role);
-                
-                return (
-                  <TableRow key={role.id}>
-                    <TableCell className="font-medium">
-                      {displayRoleName}
-                    </TableCell>
-                    <TableCell>
-                      {component.manufacturer} {component.model}
-                    </TableCell>
-                    <TableCell>
-                      <QuantityDisplay 
-                        roleId={role.id}
-                        roleName={displayRoleName}
-                        quantity={actualQuantity}
-                      />
-                    </TableCell>
-                    <TableCell>${totalCost.toLocaleString()}</TableCell>
-                    <TableCell>{totalPower.toLocaleString()} W</TableCell>
-                    <TableCell>{rackUnits} RU</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                <div className="pt-2">
+                  {!activeDesign ? (
+                    <Button onClick={handleCreateDesign} disabled={!designName}>
+                      Create Design
+                    </Button>
+                  ) : (
+                    <Button onClick={handleSaveDesign}>
+                      Update Design Properties
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

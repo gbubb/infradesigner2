@@ -1,5 +1,5 @@
 
-import { InfrastructureComponent, InfrastructureDesign, DesignRequirements, ComponentRole, StorageClusterRequirement, ClusterInfo } from '@/types/infrastructure';
+import { InfrastructureComponent, InfrastructureDesign, DesignRequirements, ComponentRole, StorageClusterRequirement, ClusterInfo, ComputeClusterRequirement } from '@/types/infrastructure';
 
 export interface StoreState {
   // Component templates
@@ -10,6 +10,9 @@ export interface StoreState {
   
   // Selected disks for storage nodes (key is roleId, value is array of disk configs)
   selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>;
+  
+  // Selected GPUs for compute nodes (key is roleId, value is array of GPU configs)
+  selectedGPUsByRole: Record<string, { gpuId: string, quantity: number }[]>;
   
   // Requirements
   requirements: DesignRequirements;

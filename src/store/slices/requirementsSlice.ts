@@ -10,7 +10,8 @@ import {
   StorageClusterRequirement,
   ClusterInfo,
   ComponentRole,
-  IPMINetworkType
+  IPMINetworkType,
+  ComputeClusterRequirement
 } from '@/types/infrastructure';
 import { StoreState, RequirementsState } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,6 +20,7 @@ export interface RequirementsSlice {
   requirements: DesignRequirements;
   componentRoles: ComponentRole[];
   selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>;
+  selectedGPUsByRole: Record<string, { gpuId: string, quantity: number }[]>;
   calculationBreakdowns: Record<string, string[]>;
   
   updateRequirements: (newRequirements: Partial<DesignRequirements>) => void;
@@ -27,16 +29,15 @@ export interface RequirementsSlice {
   assignComponentToRole: (roleId: string, componentId: string) => void;
   addDiskToStorageNode: (roleId: string, diskId: string, quantity: number) => void;
   removeDiskFromStorageNode: (roleId: string, diskId: string) => void;
+  addGPUToComputeNode: (roleId: string, gpuId: string, quantity: number) => void;
+  removeGPUFromComputeNode: (roleId: string, gpuId: string) => void;
   calculateStorageNodeCapacity: (roleId: string) => number;
   getCalculationBreakdown: (roleId: string) => string[];
 }
 
 const defaultRequirements: DesignRequirements = {
   computeRequirements: {
-    totalVCPUs: 5000,
-    totalMemoryTB: 30,
-    availabilityZoneRedundancy: 'N+1',
-    overcommitRatio: 2,
+    computeClusters: [],
     controllerNodeCount: 3,
     infrastructureClusterRequired: false,
     infrastructureNodeCount: 3
@@ -79,15 +80,12 @@ export const createRequirementsSlice: StateCreator<
         }
       };
       
-      const totalVCPUs = getValue(requirements, 'computeRequirements.totalVCPUs', 5000) || 5000;
-      const totalMemoryTB = getValue(requirements, 'computeRequirements.totalMemoryTB', 30) || 30;
-      const availabilityZoneRedundancy = getValue(requirements, 'computeRequirements.availabilityZoneRedundancy', 'N+1') || 'N+1';
-      const overcommitRatio = getValue(requirements, 'computeRequirements.overcommitRatio', 2) || 2;
       const totalAvailabilityZones = getValue(requirements, 'physicalConstraints.totalAvailabilityZones', 8) || 8;
       const controllerNodeCount = getValue(requirements, 'computeRequirements.controllerNodeCount', 3) || 3;
       const infrastructureClusterRequired = getValue(requirements, 'computeRequirements.infrastructureClusterRequired', false) || false;
       const infrastructureNodeCount = getValue(requirements, 'computeRequirements.infrastructureNodeCount', 3) || 3;
       
+      const computeClusters = getValue(requirements, 'computeRequirements.computeClusters', []) || [];
       const storageClusters = getValue(requirements, 'storageRequirements.storageClusters', []) || [];
       
       const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', 'Spine-Leaf') || 'Spine-Leaf';
@@ -118,26 +116,50 @@ export const createRequirementsSlice: StateCreator<
         }
       ];
       
-      const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
-      const nodesPerAZ = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones);
-      const baseComputeNodeCount = nodesPerAZ * totalAvailabilityZones;
-      
-      let additionalAZs = 0;
-      if (availabilityZoneRedundancy === 'N+1') {
-        additionalAZs = 1;
-      } else if (availabilityZoneRedundancy === 'N+2') {
-        additionalAZs = 2;
-      }
-      
-      const totalComputeNodeCount = baseComputeNodeCount + (additionalAZs * nodesPerAZ);
-      
-      newRoles.push({
-        id: uuidv4(),
-        role: 'computeNode',
-        description: 'Provides compute resources for the cluster',
-        requiredCount: totalComputeNodeCount
+      // Add compute cluster node roles
+      computeClusters.forEach((cluster, index) => {
+        const totalVCPUs = cluster.totalVCPUs || 5000;
+        const totalMemoryTB = cluster.totalMemoryTB || 30;
+        const availabilityZoneRedundancy = cluster.availabilityZoneRedundancy || 'N+1';
+        const overcommitRatio = cluster.overcommitRatio || 2;
+        const gpuEnabled = cluster.gpuEnabled || false;
+        
+        const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
+        const nodesPerAZ = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones);
+        const baseComputeNodeCount = nodesPerAZ * totalAvailabilityZones;
+        
+        let additionalAZs = 0;
+        if (availabilityZoneRedundancy === 'N+1') {
+          additionalAZs = 1;
+        } else if (availabilityZoneRedundancy === 'N+2') {
+          additionalAZs = 2;
+        }
+        
+        const totalComputeNodeCount = baseComputeNodeCount + (additionalAZs * nodesPerAZ);
+        
+        // Create a clusterInfo object for the compute cluster
+        const clusterInfo: ClusterInfo = {
+          clusterId: cluster.id,
+          clusterName: cluster.name,
+          clusterIndex: index
+        };
+        
+        // Determine the role type based on whether GPU is enabled
+        const roleType = gpuEnabled ? 'gpuNode' : 'computeNode';
+        const roleDescription = gpuEnabled 
+          ? `Provides GPU compute resources for ${cluster.name}` 
+          : `Provides compute resources for ${cluster.name}`;
+        
+        newRoles.push({
+          id: uuidv4(),
+          role: roleType,
+          description: roleDescription,
+          requiredCount: totalComputeNodeCount,
+          clusterInfo: clusterInfo
+        } as ComponentRole);
       });
       
+      // Add storage cluster node roles
       storageClusters.forEach((cluster, index) => {
         newRoles.push({
           id: cluster.id || uuidv4(),
@@ -202,11 +224,29 @@ export const createRequirementsSlice: StateCreator<
           requiredCount: 2
         });
       } else {
+        // Calculate total compute nodes from all clusters
+        const totalComputeNodes = computeClusters.reduce((sum, cluster) => {
+          const totalVCPUs = cluster.totalVCPUs || 5000;
+          const overcommitRatio = cluster.overcommitRatio || 2;
+          const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
+          const nodesPerAZ = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones);
+          const baseNodeCount = nodesPerAZ * totalAvailabilityZones;
+          
+          let additionalAZs = 0;
+          if (cluster.availabilityZoneRedundancy === 'N+1') {
+            additionalAZs = 1;
+          } else if (cluster.availabilityZoneRedundancy === 'N+2') {
+            additionalAZs = 2;
+          }
+          
+          return sum + baseNodeCount + (additionalAZs * nodesPerAZ);
+        }, 0);
+        
         newRoles.push({
           id: uuidv4(),
           role: 'torSwitch',
           description: 'Provides top-of-rack switching for servers',
-          requiredCount: Math.ceil(totalComputeNodeCount / 2)
+          requiredCount: Math.ceil(totalComputeNodes / 2)
         });
       }
       
@@ -224,7 +264,7 @@ export const createRequirementsSlice: StateCreator<
     
     calculateRequiredQuantity: (roleId: string, componentId: string): number => {
       const state = get();
-      const { requirements, componentRoles, selectedDisksByRole } = state;
+      const { requirements, componentRoles, selectedDisksByRole, selectedGPUsByRole } = state;
       const componentTemplates = state.componentTemplates || [];
       
       const role = componentRoles.find(r => r.id === roleId);
@@ -236,12 +276,25 @@ export const createRequirementsSlice: StateCreator<
       let requiredQuantity = role.requiredCount || 1;
       let calculationSteps: string[] = [];
       
-      if (role.role === 'computeNode') {
-        const totalVCPUs = requirements.computeRequirements?.totalVCPUs || 5000;
-        const totalMemoryTB = requirements.computeRequirements?.totalMemoryTB || 30;
-        const overcommitRatio = requirements.computeRequirements?.overcommitRatio || 2;
+      if (role.role === 'computeNode' || role.role === 'gpuNode') {
+        if (!role.clusterInfo) {
+          calculationSteps.push(`No cluster info available - using default count of ${requiredQuantity} nodes`);
+          return requiredQuantity;
+        }
+        
+        const computeClusters = requirements.computeRequirements?.computeClusters || [];
+        const cluster = computeClusters.find(c => c.id === role.clusterInfo?.clusterId);
+        
+        if (!cluster) {
+          calculationSteps.push(`Cluster not found - using default count of ${requiredQuantity} nodes`);
+          return requiredQuantity;
+        }
+        
+        const totalVCPUs = cluster.totalVCPUs || 5000;
+        const totalMemoryTB = cluster.totalMemoryTB || 30;
+        const overcommitRatio = cluster.overcommitRatio || 2;
         const totalAvailabilityZones = requirements.physicalConstraints?.totalAvailabilityZones || 8;
-        const availabilityZoneRedundancy = requirements.computeRequirements?.availabilityZoneRedundancy || 'N+1';
+        const availabilityZoneRedundancy = cluster.availabilityZoneRedundancy || 'N+1';
         
         if ('cpuCount' in component && 'coreCount' in component && 'memoryGB' in component) {
           const coresPerNode = component.cpuCount * component.coreCount;
@@ -250,6 +303,7 @@ export const createRequirementsSlice: StateCreator<
           const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
           const totalMemoryGBNeeded = totalMemoryTB * 1024;
           
+          calculationSteps.push(`Cluster: ${cluster.name}`);
           calculationSteps.push(`Total vCPU requirement: ${totalVCPUs}`);
           calculationSteps.push(`CPU overcommit ratio: ${overcommitRatio}`);
           calculationSteps.push(`Physical cores needed: ${totalVCPUs} / ${overcommitRatio} = ${totalPhysicalCoresNeeded}`);
@@ -384,6 +438,7 @@ export const createRequirementsSlice: StateCreator<
     requirements: defaultRequirements,
     componentRoles: [],
     selectedDisksByRole: {},
+    selectedGPUsByRole: {},
     calculationBreakdowns: {},
     
     updateRequirements: (newRequirements) => {
@@ -512,6 +567,83 @@ export const createRequirementsSlice: StateCreator<
         };
         
         return { selectedDisksByRole: updatedSelectedDisks };
+      });
+      
+      const state = get();
+      const role = state.componentRoles.find(r => r.id === roleId);
+      
+      if (role && role.assignedComponentId) {
+        const newQuantity = sliceMethods.calculateRequiredQuantity(roleId, role.assignedComponentId);
+        
+        set((state) => ({
+          componentRoles: state.componentRoles.map(r => {
+            if (r.id === roleId) {
+              return {
+                ...r,
+                adjustedRequiredCount: newQuantity
+              };
+            }
+            return r;
+          })
+        }));
+      }
+    },
+    
+    addGPUToComputeNode: (roleId: string, gpuId: string, quantity: number) => {
+      set((state) => {
+        const currentGPUs = state.selectedGPUsByRole[roleId] || [];
+        const existingGPUIndex = currentGPUs.findIndex(g => g.gpuId === gpuId);
+        
+        let updatedGPUs;
+        if (existingGPUIndex >= 0) {
+          updatedGPUs = [...currentGPUs];
+          updatedGPUs[existingGPUIndex] = { 
+            ...updatedGPUs[existingGPUIndex], 
+            quantity 
+          };
+        } else {
+          updatedGPUs = [...currentGPUs, { gpuId, quantity }];
+        }
+        
+        const updatedSelectedGPUs = {
+          ...state.selectedGPUsByRole,
+          [roleId]: updatedGPUs
+        };
+        
+        return { selectedGPUsByRole: updatedSelectedGPUs };
+      });
+      
+      const state = get();
+      const role = state.componentRoles.find(r => r.id === roleId);
+      
+      if (role && role.assignedComponentId) {
+        const newQuantity = sliceMethods.calculateRequiredQuantity(roleId, role.assignedComponentId);
+        
+        set((state) => ({
+          componentRoles: state.componentRoles.map(r => {
+            if (r.id === roleId) {
+              return {
+                ...r,
+                adjustedRequiredCount: newQuantity
+              };
+            }
+            return r;
+          })
+        }));
+      }
+    },
+    
+    removeGPUFromComputeNode: (roleId: string, gpuId: string) => {
+      set((state) => {
+        const currentGPUs = state.selectedGPUsByRole[roleId] || [];
+        const updatedGPUs = currentGPUs.filter(g => g.gpuId !== gpuId);
+        
+        const updatedSelectedGPUs = {
+          ...state.selectedGPUsByRole,
+          [roleId]: updatedGPUs
+        };
+        
+        return { selectedGPUsByRole: updatedSelectedGPUs };
       });
       
       const state = get();
