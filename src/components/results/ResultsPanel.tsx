@@ -13,7 +13,7 @@ import { DesignAlerts } from './DesignAlerts';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 
 export const ResultsPanel: React.FC = () => {
-  const { activeDesign } = useDesignStore();
+  const { activeDesign, saveDesign } = useDesignStore();
   const {
     totalCost,
     totalPower,
@@ -29,17 +29,23 @@ export const ResultsPanel: React.FC = () => {
   } = useDesignCalculations();
   
   // Auto-recalculate when the component mounts to ensure fresh data
+  // Save design after recalculating to ensure all selections are preserved
   useEffect(() => {
     // Only recalculate if we have an active design
     if (activeDesign) {
       manualRecalculateDesign();
+      // Save the design after calculating to ensure all selections are preserved
+      saveDesign();
     }
-  }, [activeDesign]);
+  }, [activeDesign, saveDesign]);
   
   // Recalculate handler - this will update the design when clicked
+  // Save after recalculating to preserve selections
   const handleRecalculate = useCallback(() => {
     manualRecalculateDesign();
-  }, []);
+    // Save the design after recalculating
+    saveDesign();
+  }, [saveDesign]);
 
   // Check if there's no design data - the components must exist AND have length > 0
   const hasNoDesign = !activeDesign || !activeDesign.components || activeDesign.components.length === 0;

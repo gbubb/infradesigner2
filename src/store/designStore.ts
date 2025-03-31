@@ -53,7 +53,7 @@ export const initializeStore = () => {
   // Auto-create a default design if none exists
   if (!state.activeDesign) {
     console.log("Creating default design");
-    state.createNewDesign("Default Infrastructure Design", "Auto-generated design based on requirements");
+    state.createNewDesign("Scenario A", "Auto-generated design based on requirements");
   }
   
   // Mark as initialized
