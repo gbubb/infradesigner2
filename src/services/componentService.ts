@@ -2,6 +2,25 @@
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
+
+// Helper function to check if string is a valid UUID
+const isValidUUID = (id: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
+
+// Ensure component has a valid UUID, generate one if not
+const ensureValidUUID = (component: InfrastructureComponent): InfrastructureComponent => {
+  // If component ID doesn't exist or isn't a valid UUID, generate a new one
+  if (!component.id || !isValidUUID(component.id)) {
+    return {
+      ...component,
+      id: uuidv4()
+    };
+  }
+  return component;
+};
 
 // Load all components from Supabase
 export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
@@ -49,19 +68,22 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
 // Save a component to Supabase
 export const saveComponent = async (component: InfrastructureComponent): Promise<boolean> => {
   try {
+    // Ensure component has a valid UUID
+    const componentWithValidID = ensureValidUUID(component);
+    
     // Format data for Supabase
     const componentToSave = {
-      id: component.id,
-      name: component.name,
-      type: component.type,
-      manufacturer: component.manufacturer,
-      model: component.model,
-      description: component.description || '',
-      cost: component.cost,
-      powerrequired: component.powerRequired,
-      serverrole: (component as any).serverRole,
-      switchrole: (component as any).switchRole,
-      isdefault: component.isDefault || false
+      id: componentWithValidID.id,
+      name: componentWithValidID.name,
+      type: componentWithValidID.type,
+      manufacturer: componentWithValidID.manufacturer,
+      model: componentWithValidID.model,
+      description: componentWithValidID.description || '',
+      cost: componentWithValidID.cost,
+      powerrequired: componentWithValidID.powerRequired,
+      serverrole: (componentWithValidID as any).serverRole,
+      switchrole: (componentWithValidID as any).switchRole,
+      isdefault: componentWithValidID.isDefault || false
     };
     
     const { error } = await supabase
@@ -83,6 +105,12 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
 // Delete a component from Supabase
 export const deleteComponent = async (id: string): Promise<boolean> => {
   try {
+    // Skip delete operation if ID is not a valid UUID
+    if (!isValidUUID(id)) {
+      console.warn('Attempted to delete component with invalid UUID:', id);
+      return true; // Return true to avoid disrupting app flow
+    }
+    
     const { error } = await supabase
       .from(TABLES.COMPONENTS)
       .delete()
@@ -103,20 +131,23 @@ export const deleteComponent = async (id: string): Promise<boolean> => {
 // Bulk save components to Supabase
 export const saveComponents = async (components: InfrastructureComponent[]): Promise<boolean> => {
   try {
-    // Format data for Supabase
-    const componentsToSave = components.map(component => ({
-      id: component.id,
-      name: component.name,
-      type: component.type,
-      manufacturer: component.manufacturer,
-      model: component.model,
-      description: component.description || '',
-      cost: component.cost,
-      powerrequired: component.powerRequired,
-      serverrole: (component as any).serverRole,
-      switchrole: (component as any).switchRole,
-      isdefault: component.isDefault || false
-    }));
+    // Format data for Supabase and ensure all IDs are valid UUIDs
+    const componentsToSave = components.map(component => {
+      const componentWithValidID = ensureValidUUID(component);
+      return {
+        id: componentWithValidID.id,
+        name: componentWithValidID.name,
+        type: componentWithValidID.type,
+        manufacturer: componentWithValidID.manufacturer,
+        model: componentWithValidID.model,
+        description: componentWithValidID.description || '',
+        cost: componentWithValidID.cost,
+        powerrequired: componentWithValidID.powerRequired,
+        serverrole: (componentWithValidID as any).serverRole,
+        switchrole: (componentWithValidID as any).switchRole,
+        isdefault: componentWithValidID.isDefault || false
+      };
+    });
     
     const { error } = await supabase
       .from(TABLES.COMPONENTS)
