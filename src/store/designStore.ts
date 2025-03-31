@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { StoreState } from './types';
 import { createRequirementsSlice, RequirementsSlice } from './slices/requirementsSlice';
@@ -6,7 +5,6 @@ import { createDesignSlice, DesignSlice } from './slices/designSlice';
 import { createWorkspaceSlice, WorkspaceSlice } from './slices/workspaceSlice';
 import { createComponentLibrarySlice, ComponentLibrarySlice } from './slices/componentLibrarySlice';
 import { toast } from 'sonner';
-import { loadDesigns, saveDesign } from '@/services/designService';
 
 // Combined store type
 export type DesignStoreState = RequirementsSlice & DesignSlice & WorkspaceSlice & ComponentLibrarySlice;
@@ -49,11 +47,9 @@ export const initializeStore = async () => {
     }
     
     // Try to load designs from the database
-    const loadedDesigns = await loadDesigns();
+    const loadedDesigns = await state.loadDesignsFromDB();
     
     if (loadedDesigns && loadedDesigns.length > 0) {
-      state.savedDesigns = loadedDesigns;
-      
       // Set the most recently updated design as active
       const mostRecentDesign = loadedDesigns.reduce((latest, design) => {
         const latestUpdate = latest.updatedAt || latest.createdAt;

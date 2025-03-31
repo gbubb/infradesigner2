@@ -1,9 +1,10 @@
+
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { InfrastructureComponent, InfrastructureDesign } from '@/types/infrastructure';
 import { StoreState } from '../types';
-import { saveDesign as saveDesignToDb, deleteDesign as deleteDesignFromDb } from '@/services/designService';
+import { saveDesign as saveDesignToDb, deleteDesign as deleteDesignFromDb, loadDesigns } from '@/services/designService';
 
 export interface DesignSlice {
   // All saved designs
@@ -29,6 +30,9 @@ export interface DesignSlice {
   
   // Save design to database
   saveDesign: () => void;
+  
+  // Load designs from database
+  loadDesignsFromDB: () => Promise<void>;
 }
 
 export const createDesignSlice: StateCreator<
@@ -200,5 +204,25 @@ export const createDesignSlice: StateCreator<
         toast.success(`Saved design: ${state.activeDesign?.name}`);
       }
     });
+  },
+  
+  loadDesignsFromDB: async () => {
+    try {
+      const designs = await loadDesigns();
+      
+      if (designs && designs.length > 0) {
+        set({ 
+          savedDesigns: designs,
+          activeDesign: designs[0] // Set first design as active
+        });
+        console.log(`Loaded ${designs.length} designs from database`);
+      }
+      
+      return designs;
+    } catch (error) {
+      console.error("Error loading designs from database:", error);
+      toast.error("Failed to load designs");
+      return [];
+    }
   }
 });

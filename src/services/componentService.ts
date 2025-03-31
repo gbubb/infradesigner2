@@ -14,7 +14,20 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
       return [];
     }
     
-    return data as InfrastructureComponent[];
+    // Convert database format to application format
+    return data?.map(component => ({
+      id: component.id,
+      name: component.name,
+      type: component.type,
+      manufacturer: component.manufacturer || '',
+      model: component.model || '',
+      description: component.description || '',
+      cost: Number(component.cost) || 0,
+      powerRequired: Number(component.powerrequired) || 0,
+      serverRole: component.serverrole,
+      switchRole: component.switchrole,
+      isDefault: component.isdefault || false,
+    })) as InfrastructureComponent[] || [];
   } catch (err) {
     console.error('Error loading components:', err);
     toast.error('Failed to load components from the database');
@@ -25,9 +38,24 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
 // Save a component to Supabase
 export const saveComponent = async (component: InfrastructureComponent): Promise<boolean> => {
   try {
+    // Format data for Supabase
+    const componentToSave = {
+      id: component.id,
+      name: component.name,
+      type: component.type,
+      manufacturer: component.manufacturer,
+      model: component.model,
+      description: component.description || '',
+      cost: component.cost,
+      powerrequired: component.powerRequired,
+      serverrole: (component as any).serverRole,
+      switchrole: (component as any).switchRole,
+      isdefault: component.isDefault || false
+    };
+    
     const { error } = await supabase
       .from(TABLES.COMPONENTS)
-      .upsert(component, { onConflict: 'id' });
+      .upsert(componentToSave, { onConflict: 'id' });
     
     if (handleSupabaseError(error, 'saving component')) {
       return false;
@@ -64,9 +92,24 @@ export const deleteComponent = async (id: string): Promise<boolean> => {
 // Bulk save components to Supabase
 export const saveComponents = async (components: InfrastructureComponent[]): Promise<boolean> => {
   try {
+    // Format data for Supabase
+    const componentsToSave = components.map(component => ({
+      id: component.id,
+      name: component.name,
+      type: component.type,
+      manufacturer: component.manufacturer,
+      model: component.model,
+      description: component.description || '',
+      cost: component.cost,
+      powerrequired: component.powerRequired,
+      serverrole: (component as any).serverRole,
+      switchrole: (component as any).switchRole,
+      isdefault: component.isDefault || false
+    }));
+    
     const { error } = await supabase
       .from(TABLES.COMPONENTS)
-      .upsert(components, { onConflict: 'id' });
+      .upsert(componentsToSave, { onConflict: 'id' });
     
     if (handleSupabaseError(error, 'bulk saving components')) {
       return false;

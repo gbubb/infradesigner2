@@ -14,11 +14,15 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
       return [];
     }
     
-    // Convert date strings back to Date objects
+    // Convert database format to application format
     return data?.map(design => ({
-      ...design,
+      id: design.id,
+      name: design.name,
+      description: design.description || '',
+      requirements: design.requirements || {},
+      components: design.components || [],
       createdAt: new Date(design.createdAt),
-      updatedAt: design.updatedAt ? new Date(design.updatedAt) : undefined
+      updatedAt: design.updatedAt ? new Date(design.updatedAt) : new Date(design.createdAt)
     })) as InfrastructureDesign[] || [];
   } catch (err) {
     console.error('Error loading designs:', err);
@@ -30,11 +34,15 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
 // Save a design to Supabase
 export const saveDesign = async (design: InfrastructureDesign): Promise<boolean> => {
   try {
-    // Make sure dates are stringified for Supabase
+    // Format data for Supabase
     const designToSave = {
-      ...design,
+      id: design.id,
+      name: design.name,
+      description: design.description,
+      requirements: design.requirements,
+      components: design.components,
       createdAt: design.createdAt.toISOString(),
-      updatedAt: design.updatedAt ? design.updatedAt.toISOString() : null
+      updatedAt: new Date().toISOString()
     };
     
     const { error } = await supabase

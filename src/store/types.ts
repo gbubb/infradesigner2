@@ -46,6 +46,7 @@ export interface StoreState {
   deleteDesign: (id: string) => void;
   setActiveDesign: (id: string) => void;
   updateActiveDesign: (components: InfrastructureComponent[]) => void;
+  loadDesignsFromDB: () => Promise<void>;
   
   // Component library methods
   initializeComponentTemplates: () => void;

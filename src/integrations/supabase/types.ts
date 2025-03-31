@@ -9,7 +9,81 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      components: {
+        Row: {
+          cost: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          isdefault: boolean | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          powerrequired: number | null
+          serverrole: string | null
+          switchrole: string | null
+          type: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          isdefault?: boolean | null
+          manufacturer?: string | null
+          model?: string | null
+          name: string
+          powerrequired?: number | null
+          serverrole?: string | null
+          switchrole?: string | null
+          type: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          isdefault?: boolean | null
+          manufacturer?: string | null
+          model?: string | null
+          name?: string
+          powerrequired?: number | null
+          serverrole?: string | null
+          switchrole?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
+      designs: {
+        Row: {
+          components: Json | null
+          createdat: string | null
+          description: string | null
+          id: string
+          name: string
+          requirements: Json | null
+          updatedat: string | null
+        }
+        Insert: {
+          components?: Json | null
+          createdat?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          requirements?: Json | null
+          updatedat?: string | null
+        }
+        Update: {
+          components?: Json | null
+          createdat?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          requirements?: Json | null
+          updatedat?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
