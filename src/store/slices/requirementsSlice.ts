@@ -7,7 +7,8 @@ import {
   StoragePoolEfficiencyFactors, 
   TB_TO_TIB_FACTOR,
   ComponentType,
-  StorageClusterRequirement
+  StorageClusterRequirement,
+  ClusterInfo
 } from '@/types/infrastructure';
 import { StoreState, RequirementsState } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -286,7 +287,7 @@ export const createRequirementsSlice: StateCreator<
         // Get the specific storage cluster for this role
         if (role.clusterInfo && role.clusterInfo.clusterId) {
           const storageCluster = requirements.storageRequirements?.storageClusters.find(
-            cluster => cluster.id === role.clusterInfo.clusterId
+            cluster => cluster.id === role.clusterInfo?.clusterId
           );
           
           if (storageCluster) {

@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { useDesignStore, manualRecalculateDesign } from '@/store/designStore';
-import { ComponentType, InfrastructureComponent, DeviceRoleType, SwitchRole } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent, DeviceRoleType, SwitchRole, StoragePoolEfficiencyFactors } from '@/types/infrastructure';
 import { ResourceUtilizationChart } from './PowerDistributionChart';
 
 export const ResultsPanel: React.FC = () => {
@@ -110,30 +110,14 @@ export const ResultsPanel: React.FC = () => {
     const totalMemoryTB = totalMemoryGB / 1024;
     const computeMemoryTB = computeMemoryGB / 1024;
     
-    const poolType = requirements.storageRequirements.poolType;
-    let usableStorageFactor = 1;
-    
-    if (poolType === '3 Replica') {
-      usableStorageFactor = 1/3;
-    } else if (poolType === '2 Replica') {
-      usableStorageFactor = 1/2;
-    } else if (poolType === 'Erasure Coding 4+2') {
-      usableStorageFactor = 4/6;
-    } else if (poolType === 'Erasure Coding 8+3') {
-      usableStorageFactor = 8/11;
-    } else if (poolType === 'Erasure Coding 8+4') {
-      usableStorageFactor = 8/12;
-    } else if (poolType === 'Erasure Coding 10+4') {
-      usableStorageFactor = 10/14;
-    }
-    
-    const usableStorageTB = totalStorageTB * usableStorageFactor;
+    // For storage calculations, we now need to handle multiple clusters with different pool types
+    // Just calculate total raw storage for now as usable storage is per-cluster
     
     return {
       totalVCPUs,
       totalMemoryTB,
       totalComputeMemoryTB: computeMemoryTB,
-      totalStorageTB: usableStorageTB
+      totalStorageTB
     };
   }, [activeDesign, requirements]);
   

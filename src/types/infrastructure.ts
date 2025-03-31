@@ -256,6 +256,13 @@ export interface InfrastructureDesign {
   components: InfrastructureComponent[];
 }
 
+// Add cluster info type for storage roles
+export interface ClusterInfo {
+  clusterId: string;
+  clusterName: string;
+  clusterIndex: number;
+}
+
 // Role-based component for design planning
 export interface ComponentRole {
   id: string;
@@ -265,6 +272,7 @@ export interface ComponentRole {
   assignedComponentId?: string;
   assignedComponent?: InfrastructureComponent;
   adjustedRequiredCount?: number;
+  clusterInfo?: ClusterInfo; // Add cluster info property for storage roles
 }
 
 // Device role types

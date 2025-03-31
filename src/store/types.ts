@@ -1,5 +1,5 @@
 
-import { InfrastructureComponent, InfrastructureDesign, DesignRequirements, ComponentRole, StorageClusterRequirement } from '@/types/infrastructure';
+import { InfrastructureComponent, InfrastructureDesign, DesignRequirements, ComponentRole, StorageClusterRequirement, ClusterInfo } from '@/types/infrastructure';
 
 export interface StoreState {
   // Component templates
