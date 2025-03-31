@@ -47,7 +47,14 @@ export const createComponentLibrarySlice: StateCreator<
     const typeRoleCombos = new Map();
     
     templates.forEach(template => {
+      // Ensure role property exists (may be undefined)
+      if (!template.role) {
+        template.role = template.serverRole || template.switchRole || 'default';
+      }
+      
+      // Create a unique key for the type-role combination
       const key = `${template.type}-${template.role || 'default'}`;
+      
       if (!typeRoleCombos.has(key)) {
         typeRoleCombos.set(key, template.id);
         template.isDefault = true;
@@ -66,6 +73,12 @@ export const createComponentLibrarySlice: StateCreator<
         ...component,
         id: component.id || uuidv4(),
       } as InfrastructureComponent;
+      
+      // Ensure role is set
+      if (!newComponent.role) {
+        newComponent.role = (newComponent as any).serverRole || 
+                            (newComponent as any).switchRole || 'default';
+      }
       
       // If the component is set as default, clear any existing defaults for this type/role
       let updatedTemplates = [...state.componentTemplates];
@@ -100,6 +113,12 @@ export const createComponentLibrarySlice: StateCreator<
         ...existingComponent,
         ...updates
       } as InfrastructureComponent;
+      
+      // Ensure role is set
+      if (!updatedComponent.role) {
+        updatedComponent.role = (updatedComponent as any).serverRole || 
+                               (updatedComponent as any).switchRole || 'default';
+      }
       
       let updatedTemplates = [...state.componentTemplates];
       updatedTemplates[existingIndex] = updatedComponent;

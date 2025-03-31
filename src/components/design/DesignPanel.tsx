@@ -39,10 +39,11 @@ export const DesignPanel: React.FC = () => {
     }
   }, [activeDesign]);
 
-  // Auto-assign default components when roles are loaded
+  // Auto-assign default components when roles are loaded or when component templates change
   useEffect(() => {
     if (componentRoles.length > 0) {
       componentRoles.forEach(role => {
+        // Only auto-assign if no component is assigned yet
         if (!role.assignedComponentId) {
           // Determine component type based on role
           let componentType: ComponentType | undefined;
@@ -61,13 +62,20 @@ export const DesignPanel: React.FC = () => {
               console.log(`Assigning default ${componentType} for role ${role.role}: ${defaultComponent.name}`);
               assignComponentToRole(role.id, defaultComponent.id);
             } else {
-              console.log(`No default ${componentType} found for role ${role.role}`);
+              // If no default found, try to find any component that matches the role
+              const matchingComponents = getComponentsForRole(role.role);
+              if (matchingComponents.length > 0) {
+                console.log(`No default ${componentType} found for role ${role.role}, using first available: ${matchingComponents[0].name}`);
+                assignComponentToRole(role.id, matchingComponents[0].id);
+              } else {
+                console.log(`No components found for role ${role.role}`);
+              }
             }
           }
         }
       });
     }
-  }, [componentRoles, findDefaultComponent, assignComponentToRole]);
+  }, [componentRoles, componentTemplates, findDefaultComponent, assignComponentToRole]);
 
   const getComponentsForRole = (role: string) => {
     // Filter components based on role
