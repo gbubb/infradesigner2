@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { StoreState } from './types';
 import { createRequirementsSlice, RequirementsSlice } from './slices/requirementsSlice';
@@ -47,7 +48,8 @@ export const initializeStore = async () => {
     }
     
     // Try to load designs from the database
-    const loadedDesigns = await state.loadDesignsFromDB();
+    await state.loadDesignsFromDB();
+    const loadedDesigns = state.savedDesigns;
     
     if (loadedDesigns && loadedDesigns.length > 0) {
       // Set the most recently updated design as active
@@ -201,7 +203,7 @@ export const recalculateDesign = () => {
           
           return component;
         })
-        .filter(Boolean);
+        .filter(Boolean) as any[];
       
       // Only update if we have components to update with
       if (updatedComponents && updatedComponents.length > 0) {

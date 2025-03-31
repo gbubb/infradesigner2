@@ -1,6 +1,6 @@
 
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
-import { InfrastructureComponent } from '@/types/infrastructure';
+import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { toast } from 'sonner';
 
 // Load all components from Supabase
@@ -14,11 +14,11 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
       return [];
     }
     
-    // Convert database format to application format
-    return data?.map(component => ({
+    // Convert database format to application format and use type assertion
+    return (data?.map(component => ({
       id: component.id,
       name: component.name,
-      type: component.type,
+      type: component.type as ComponentType,
       manufacturer: component.manufacturer || '',
       model: component.model || '',
       description: component.description || '',
@@ -27,7 +27,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
       serverRole: component.serverrole,
       switchRole: component.switchrole,
       isDefault: component.isdefault || false,
-    })) as InfrastructureComponent[] || [];
+    })) || []) as InfrastructureComponent[];
   } catch (err) {
     console.error('Error loading components:', err);
     toast.error('Failed to load components from the database');
@@ -55,7 +55,7 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
     
     const { error } = await supabase
       .from(TABLES.COMPONENTS)
-      .upsert(componentToSave, { onConflict: 'id' });
+      .upsert(componentToSave);
     
     if (handleSupabaseError(error, 'saving component')) {
       return false;
@@ -109,7 +109,7 @@ export const saveComponents = async (components: InfrastructureComponent[]): Pro
     
     const { error } = await supabase
       .from(TABLES.COMPONENTS)
-      .upsert(componentsToSave, { onConflict: 'id' });
+      .upsert(componentsToSave);
     
     if (handleSupabaseError(error, 'bulk saving components')) {
       return false;

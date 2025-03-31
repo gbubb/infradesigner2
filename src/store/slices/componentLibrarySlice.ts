@@ -88,13 +88,8 @@ export const createComponentLibrarySlice: StateCreator<
   
   saveAllComponentsToDB: async () => {
     const { componentTemplates } = get();
-    const success = await saveComponents(componentTemplates);
-    
-    if (success) {
-      console.log(`Saved ${componentTemplates.length} components to database`);
-    }
-    
-    return success;
+    await saveComponents(componentTemplates);
+    return;
   },
   
   addComponentTemplate: (component: InfrastructureComponent) => {
@@ -103,7 +98,7 @@ export const createComponentLibrarySlice: StateCreator<
       const newComponent = {
         ...component,
         id: component.id || uuidv4()
-      };
+      } as InfrastructureComponent;
       
       // Add to state
       const updatedTemplates = [...state.componentTemplates, newComponent];
@@ -131,7 +126,7 @@ export const createComponentLibrarySlice: StateCreator<
       const updatedComponent = {
         ...state.componentTemplates[index],
         ...updates
-      };
+      } as InfrastructureComponent;
       
       const updatedTemplates = [...state.componentTemplates];
       updatedTemplates[index] = updatedComponent;
@@ -161,7 +156,7 @@ export const createComponentLibrarySlice: StateCreator<
         id: uuidv4(),
         name: `${componentToClone.name} (Copy)`,
         isDefault: false
-      };
+      } as InfrastructureComponent;
       
       const updatedTemplates = [...state.componentTemplates, clonedComponent];
       

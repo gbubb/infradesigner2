@@ -343,6 +343,9 @@ export const allComponentTemplates: InfrastructureComponent[] = [
   ...gpuTemplates
 ];
 
+// Export defaultComponents for use in componentLibrarySlice
+export const defaultComponents: InfrastructureComponent[] = allComponentTemplates;
+
 // Function to get components by type
 export const getComponentsByType = (type: ComponentType): InfrastructureComponent[] => {
   return allComponentTemplates.filter(component => component.type === type);

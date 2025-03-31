@@ -15,15 +15,15 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
     }
     
     // Convert database format to application format
-    return data?.map(design => ({
+    return (data?.map(design => ({
       id: design.id,
       name: design.name,
       description: design.description || '',
       requirements: design.requirements || {},
       components: design.components || [],
-      createdAt: new Date(design.createdAt),
-      updatedAt: design.updatedAt ? new Date(design.updatedAt) : new Date(design.createdAt)
-    })) as InfrastructureDesign[] || [];
+      createdAt: new Date(design.createdat),
+      updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat)
+    })) || []) as InfrastructureDesign[];
   } catch (err) {
     console.error('Error loading designs:', err);
     toast.error('Failed to load designs from the database');
@@ -41,13 +41,13 @@ export const saveDesign = async (design: InfrastructureDesign): Promise<boolean>
       description: design.description,
       requirements: design.requirements,
       components: design.components,
-      createdAt: design.createdAt.toISOString(),
-      updatedAt: new Date().toISOString()
+      createdat: design.createdAt.toISOString(),
+      updatedat: new Date().toISOString()
     };
     
     const { error } = await supabase
       .from(TABLES.DESIGNS)
-      .upsert(designToSave, { onConflict: 'id' });
+      .upsert(designToSave);
     
     if (handleSupabaseError(error, 'saving design')) {
       return false;
