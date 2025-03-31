@@ -15,7 +15,7 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
     }
     
     // Convert database format to application format
-    return (data?.map(design => {
+    const designs = (data?.map(design => {
       // Make sure we're only processing design rows by checking for required properties
       if ('createdat' in design && 'requirements' in design) {
         return {
@@ -31,7 +31,10 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
       // This should never happen if database is properly set up
       console.error('Invalid design data:', design);
       return null;
-    }).filter(Boolean) || []) as InfrastructureDesign[];
+    }).filter(Boolean) || []);
+    
+    // Use type assertion with 'as unknown as' pattern to convert to InfrastructureDesign[]
+    return designs as unknown as InfrastructureDesign[];
   } catch (err) {
     console.error('Error loading designs:', err);
     toast.error('Failed to load designs from the database');
@@ -43,12 +46,14 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
 export const saveDesign = async (design: InfrastructureDesign): Promise<boolean> => {
   try {
     // Format data for Supabase - convert complex objects to JSON
+    // We need to ensure these are serializable for the database
     const designToSave = {
       id: design.id,
       name: design.name,
       description: design.description,
-      requirements: design.requirements,
-      components: design.components,
+      // Convert objects to serializable JSON format
+      requirements: design.requirements as any,
+      components: design.components as any,
       createdat: design.createdAt.toISOString(),
       updatedat: new Date().toISOString()
     };

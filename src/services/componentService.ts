@@ -15,7 +15,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
     }
     
     // Convert database format to application format with proper type assertion
-    return (data?.map(component => {
+    const components = (data?.map(component => {
       // Make sure we're only processing component rows by checking for required properties
       if ('type' in component) {
         return {
@@ -35,7 +35,10 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
       // This should never happen if database is properly set up
       console.error('Invalid component data:', component);
       return null;
-    }).filter(Boolean) || []) as InfrastructureComponent[];
+    }).filter(Boolean) || []);
+    
+    // Use type assertion with 'as unknown as' pattern to convert to InfrastructureComponent[]
+    return components as unknown as InfrastructureComponent[];
   } catch (err) {
     console.error('Error loading components:', err);
     toast.error('Failed to load components from the database');
