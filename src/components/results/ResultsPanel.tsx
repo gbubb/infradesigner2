@@ -10,7 +10,7 @@ import { InfrastructureSummaryCard } from './InfrastructureSummaryCard';
 import { ComponentsTable } from './ComponentsTable';
 import { ComponentTypeSummaryTable } from './ComponentTypeSummaryTable';
 import { DesignAlerts } from './DesignAlerts';
-import { useDesignCalculations } from './useDesignCalculations';
+import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 
 export const ResultsPanel: React.FC = () => {
   const { activeDesign } = useDesignStore();
