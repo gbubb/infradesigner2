@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { CalculationBreakdown } from './CalculationBreakdown';
 import { QuantityDisplay } from './QuantityDisplay';
 import { Separator } from '@/components/ui/separator';
-import { Info, LayoutGrid, LucideProperties, RotateCw, Save } from 'lucide-react';
+import { Info, LayoutGrid, RotateCw, Save } from 'lucide-react';
 import { DiskConfiguration } from './DiskConfiguration';
 import { GPUConfiguration } from './GPUConfiguration';
 
@@ -30,7 +30,7 @@ export const DesignPanel: React.FC = () => {
 
   const [activePage, setActivePage] = useState('roles');
   const [designName, setDesignName] = useState('');
-  const [designDescription, setDesignName] = useState('');
+  const [designDescription, setDesignDescription] = useState('');
 
   useEffect(() => {
     // Set design name from active design if it exists
@@ -119,7 +119,7 @@ export const DesignPanel: React.FC = () => {
             Component Roles
           </TabsTrigger>
           <TabsTrigger value="properties">
-            <LucideProperties className="h-4 w-4 mr-2" />
+            <Info className="h-4 w-4 mr-2" />
             Design Properties
           </TabsTrigger>
         </TabsList>
@@ -169,16 +169,20 @@ export const DesignPanel: React.FC = () => {
                         <>
                           <div className="bg-muted rounded-md p-3">
                             <QuantityDisplay
-                              role={role}
-                              requiredQuantity={role.adjustedRequiredCount || role.requiredCount}
+                              roleId={role.id}
+                              roleName={role.description}
+                              quantity={role.adjustedRequiredCount || role.requiredCount}
                             />
                           </div>
                           
                           <Separator />
                           
                           <CalculationBreakdown 
-                            calculationSteps={getCalculationBreakdown(role.id)} 
-                          />
+                            roleId={role.id}
+                            roleName={role.description}
+                          >
+                            <span>View Calculation</span>
+                          </CalculationBreakdown>
                           
                           {role.role === 'storageNode' && (
                             <DiskConfiguration roleId={role.id} />

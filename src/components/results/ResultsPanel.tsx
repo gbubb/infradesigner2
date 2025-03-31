@@ -139,11 +139,27 @@ export const ResultsPanel: React.FC = () => {
       if (component.type === ComponentType.Server) {
         if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
           const coresPerServer = (component as any).cpuSockets * (component as any).cpuCoresPerSocket;
-          const overcommitRatio = requirements.computeRequirements.overcommitRatio || 1;
+          // Get overcommit ratio from individual compute clusters if available
+          let overcommitRatio = 1;
+          
+          if (component.role === 'computeNode' && component.clusterInfo) {
+            const clusterId = (component as any).clusterInfo.clusterId;
+            const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
+            overcommitRatio = matchingCluster?.overcommitRatio || 1;
+          }
+          
           totalVCPUs += coresPerServer * quantity * overcommitRatio;
         } else if ('cpuCount' in component && 'coreCount' in component) {
           const coresPerServer = (component as any).cpuCount * (component as any).coreCount;
-          const overcommitRatio = requirements.computeRequirements.overcommitRatio || 1;
+          // Get overcommit ratio from individual compute clusters if available
+          let overcommitRatio = 1;
+          
+          if (component.role === 'computeNode' && component.clusterInfo) {
+            const clusterId = (component as any).clusterInfo.clusterId;
+            const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
+            overcommitRatio = matchingCluster?.overcommitRatio || 1;
+          }
+          
           totalVCPUs += coresPerServer * quantity * overcommitRatio;
         }
         
