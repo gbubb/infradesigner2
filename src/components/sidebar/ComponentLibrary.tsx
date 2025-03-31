@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Server as ServerIcon, 
@@ -1004,4 +1005,75 @@ export const ComponentLibrary: React.FC = () => {
                   id="edit-cost"
                   name="cost"
                   type="number"
-                  value={componentForm
+                  value={componentForm.cost || 0}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-power">Power (W)</Label>
+                <Input
+                  id="edit-power"
+                  name="powerRequired"
+                  type="number"
+                  value={componentForm.powerRequired || 0}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="edit-default"
+                checked={componentForm.isDefault || false}
+                onCheckedChange={(checked) => {
+                  setComponentForm({
+                    ...componentForm,
+                    isDefault: checked
+                  });
+                }}
+              />
+              <Label htmlFor="edit-default">Set as default for this type/role</Label>
+            </div>
+            
+            {renderTypeSpecificFormFields()}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              resetForm();
+              setIsEditDialogOpen(false);
+            }}>
+              <X className="mr-2 h-4 w-4" />
+              Cancel
+            </Button>
+            <Button onClick={handleAddComponent}>
+              <Save className="mr-2 h-4 w-4" />
+              Update Component
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this component? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
