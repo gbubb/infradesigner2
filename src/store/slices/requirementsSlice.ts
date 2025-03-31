@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -8,14 +7,15 @@ import {
   TB_TO_TIB_FACTOR,
   ComponentType,
   StorageClusterRequirement,
-  ClusterInfo
+  ClusterInfo,
+  ComponentRole
 } from '@/types/infrastructure';
 import { StoreState, RequirementsState } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface RequirementsSlice {
   requirements: DesignRequirements;
-  componentRoles: any[];
+  componentRoles: ComponentRole[];
   selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>;
   calculationBreakdowns: Record<string, string[]>;
   
@@ -99,7 +99,7 @@ export const createRequirementsSlice: StateCreator<
       
       const leafSwitchCount = totalAvailabilityZones * leafSwitchesPerAZ;
       
-      const newRoles = [
+      const newRoles: ComponentRole[] = [
         {
           id: uuidv4(),
           role: 'controllerNode',
@@ -128,7 +128,6 @@ export const createRequirementsSlice: StateCreator<
         requiredCount: totalComputeNodeCount
       });
       
-      // Add storage roles for each storage cluster
       storageClusters.forEach((cluster, index) => {
         newRoles.push({
           id: cluster.id || uuidv4(),
@@ -136,11 +135,11 @@ export const createRequirementsSlice: StateCreator<
           description: `Provides storage resources for ${cluster.name}`,
           requiredCount: cluster.availabilityZoneQuantity || 3,
           clusterInfo: {
-            clusterId: cluster.id,
-            clusterName: cluster.name,
+            clusterId: cluster.id || '',
+            clusterName: cluster.name || '',
             clusterIndex: index
           }
-        });
+        } as ComponentRole);
       });
       
       if (infrastructureClusterRequired) {
@@ -167,9 +166,7 @@ export const createRequirementsSlice: StateCreator<
           requiredCount: leafSwitchCount
         });
         
-        // Add dedicated storage switches if needed
         if (dedicatedStorageNetwork && storageClusters.length > 0) {
-          // Calculate total storage AZs
           const totalStorageAZs = storageClusters.reduce((sum, cluster) => 
             sum + (cluster.availabilityZoneQuantity || 3), 0);
           
@@ -284,7 +281,6 @@ export const createRequirementsSlice: StateCreator<
           calculationSteps.push(`Final node count: ${baseNodeCount} + ${additionalNodesCount} = ${requiredQuantity}`);
         }
       } else if (role.role === 'storageNode') {
-        // Get the specific storage cluster for this role
         if (role.clusterInfo && role.clusterInfo.clusterId) {
           const storageCluster = requirements.storageRequirements?.storageClusters.find(
             cluster => cluster.id === role.clusterInfo?.clusterId
@@ -324,7 +320,6 @@ export const createRequirementsSlice: StateCreator<
                 const requiredNodeCount = Math.ceil(totalRequiredCapacityTiB / effectiveCapacityPerNodeTiB);
                 calculationSteps.push(`Minimum Nodes Needed: ${totalRequiredCapacityTiB.toFixed(2)} TiB / ${effectiveCapacityPerNodeTiB.toFixed(2)} TiB = ${requiredNodeCount} nodes`);
                 
-                // Ensure we have at least the specified number of availability zones
                 requiredQuantity = Math.max(requiredNodeCount, availabilityZoneQuantity);
                 
                 if (requiredQuantity > requiredNodeCount) {
