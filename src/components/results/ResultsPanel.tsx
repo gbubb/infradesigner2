@@ -14,6 +14,7 @@ import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 
 export const ResultsPanel: React.FC = () => {
   const { activeDesign, saveDesign } = useDesignStore();
+  const [isLoading, setIsLoading] = useState(true);
   const [hasCalculated, setHasCalculated] = useState(false);
   
   const {
@@ -31,28 +32,41 @@ export const ResultsPanel: React.FC = () => {
   } = useDesignCalculations();
   
   // Auto-recalculate when the component mounts to ensure fresh data
-  // Save design after recalculating to ensure all selections are preserved
   useEffect(() => {
-    // Only recalculate if we have an active design and haven't calculated yet
     if (activeDesign && !hasCalculated) {
+      setIsLoading(true);
       const timer = setTimeout(() => {
-        manualRecalculateDesign();
-        // Save the design after calculating to ensure all selections are preserved
-        saveDesign();
-        setHasCalculated(true);
-      }, 100);
+        try {
+          manualRecalculateDesign();
+          // Save the design after calculating to ensure all selections are preserved
+          saveDesign();
+          setHasCalculated(true);
+        } catch (error) {
+          console.error("Error during auto-recalculation:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      }, 200);
       
       return () => clearTimeout(timer);
+    } else {
+      setIsLoading(false);
     }
   }, [activeDesign?.id, hasCalculated, saveDesign]); // Only depend on the design ID to prevent excessive recalculations
   
   // Recalculate handler - this will update the design when clicked
-  // Save after recalculating to preserve selections
   const handleRecalculate = useCallback(() => {
-    manualRecalculateDesign();
-    // Save the design after recalculating
-    saveDesign();
-    setHasCalculated(true);
+    setIsLoading(true);
+    try {
+      manualRecalculateDesign();
+      // Save the design after recalculating
+      saveDesign();
+      setHasCalculated(true);
+    } catch (error) {
+      console.error("Error during manual recalculation:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [saveDesign]);
 
   // Check if there's no design data - the components must exist AND have length > 0
@@ -62,6 +76,22 @@ export const ResultsPanel: React.FC = () => {
   const powerPerRack = resourceMetrics?.totalRackQuantity 
     ? (totalPower / resourceMetrics.totalRackQuantity)
     : 0;
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-semibold">Design Results</h2>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+            <p className="text-muted-foreground">Calculating design results...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto">

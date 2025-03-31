@@ -6,6 +6,7 @@ import { useComponentsByType } from './useComponentsByType';
 import { useCostAnalysis } from './useCostAnalysis';
 import { useDesignValidation } from './useDesignValidation';
 import { useDesignStore } from '@/store/designStore';
+import { useMemo } from 'react';
 
 export const useDesignCalculations = () => {
   const { activeDesign } = useDesignStore();
@@ -19,10 +20,10 @@ export const useDesignCalculations = () => {
   const { designErrors } = useDesignValidation();
   
   // Calculate total rack units (extracted from resourceMetrics for convenience)
-  const totalRackUnits = resourceMetrics.totalRackUnits;
+  const totalRackUnits = useMemo(() => resourceMetrics.totalRackUnits, [resourceMetrics.totalRackUnits]);
   
   // Calculate total power (extracted from resourceMetrics for convenience)
-  const totalPower = resourceMetrics.totalPower;
+  const totalPower = useMemo(() => resourceMetrics.totalPower, [resourceMetrics.totalPower]);
 
   return {
     totalCost,
