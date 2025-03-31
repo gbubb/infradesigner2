@@ -84,23 +84,13 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-xl">Compute Clusters</CardTitle>
-          <ComputeClusterForm 
-            clusters={requirements.computeClusters || []}
-            onUpdate={handleClustersUpdate}
-            showAddButton={true}
-          />
-        </CardHeader>
-        <CardContent>
-          <ComputeClusterForm 
-            clusters={requirements.computeClusters || []}
-            onUpdate={handleClustersUpdate}
-            showAddButton={false}
-          />
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold pl-2">Compute Clusters</h2>
+        <ComputeClusterForm 
+          clusters={requirements.computeClusters || []}
+          onUpdate={handleClustersUpdate}
+        />
+      </div>
     </div>
   );
 };
