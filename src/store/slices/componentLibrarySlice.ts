@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
@@ -87,7 +86,7 @@ export const createComponentLibrarySlice: StateCreator<
     set({ componentTemplates: templates });
     
     // Save initialized templates to database
-    const state = get();
+    const state = get() as ComponentLibrarySlice;
     state.saveAllComponentsToDB();
   },
   
@@ -99,7 +98,7 @@ export const createComponentLibrarySlice: StateCreator<
       toast.success(`Loaded ${components.length} components from database`);
     } else {
       // If no components in DB, initialize with default data
-      const state = get();
+      const state = get() as ComponentLibrarySlice;
       if (state.componentTemplates.length === 0) {
         state.initializeComponentTemplates();
       }
@@ -369,4 +368,3 @@ export const createComponentLibrarySlice: StateCreator<
     });
   }
 });
-

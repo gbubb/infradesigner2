@@ -1,16 +1,6 @@
 
-import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
-
-// Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase credentials not found in environment variables');
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from '@/integrations/supabase/client';
 
 // Table names
 export const TABLES = {
@@ -27,3 +17,6 @@ export const handleSupabaseError = (error: Error | null, operation: string) => {
   }
   return false;
 };
+
+// Re-export supabase client
+export { supabase };

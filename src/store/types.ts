@@ -38,6 +38,23 @@ export interface StoreState {
   // Default component methods
   getDefaultComponent: (type: ComponentType, role: string) => InfrastructureComponent | undefined;
   setDefaultComponent: (type: ComponentType, role: string, id: string) => void;
+  
+  // Design methods
+  saveDesign: () => void;
+  createNewDesign: (name: string, description?: string) => void;
+  updateDesign: (id: string, updates: Partial<InfrastructureDesign>) => void;
+  deleteDesign: (id: string) => void;
+  setActiveDesign: (id: string) => void;
+  updateActiveDesign: (components: InfrastructureComponent[]) => void;
+  
+  // Component library methods
+  initializeComponentTemplates: () => void;
+  loadComponentsFromDB: () => Promise<void>;
+  saveAllComponentsToDB: () => Promise<void>;
+  addComponentTemplate: (component: InfrastructureComponent) => void;
+  updateComponentTemplate: (id: string, updates: Partial<InfrastructureComponent>) => void;
+  cloneComponentTemplate: (id: string) => void;
+  deleteComponentTemplate: (id: string) => void;
 }
 
 // Define individual slice states if needed

@@ -1,10 +1,9 @@
-
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { InfrastructureComponent, InfrastructureDesign } from '@/types/infrastructure';
 import { StoreState } from '../types';
-import { saveDesign, deleteDesign } from '@/services/designService';
+import { saveDesign as saveDesignToDb, deleteDesign as deleteDesignFromDb } from '@/services/designService';
 
 export interface DesignSlice {
   // All saved designs
@@ -27,6 +26,9 @@ export interface DesignSlice {
   
   // Set active design
   setActiveDesign: (id: string) => void;
+  
+  // Save design to database
+  saveDesign: () => void;
 }
 
 export const createDesignSlice: StateCreator<
@@ -55,9 +57,11 @@ export const createDesignSlice: StateCreator<
       const updatedDesigns = [...state.savedDesigns, newDesign];
       
       // Save to Supabase
-      saveDesign(newDesign);
-      
-      toast.success(`Created new design: ${name}`);
+      saveDesignToDb(newDesign).then(success => {
+        if (success) {
+          toast.success(`Created new design: ${name}`);
+        }
+      });
       
       return {
         savedDesigns: updatedDesigns,
@@ -85,7 +89,11 @@ export const createDesignSlice: StateCreator<
       );
       
       // Save to Supabase
-      saveDesign(updatedDesign);
+      saveDesignToDb(updatedDesign).then(success => {
+        if (success) {
+          toast.success(`Updated design: ${updatedDesign.name}`);
+        }
+      });
       
       return {
         savedDesigns: updatedDesigns,
@@ -120,9 +128,11 @@ export const createDesignSlice: StateCreator<
           : state.activeDesign;
       
       // Save to Supabase
-      saveDesign(updatedDesign);
-      
-      toast.success(`Updated design: ${updatedDesign.name}`);
+      saveDesignToDb(updatedDesign).then(success => {
+        if (success) {
+          toast.success(`Updated design: ${updatedDesign.name}`);
+        }
+      });
       
       return {
         savedDesigns: updatedDesigns,
@@ -149,9 +159,11 @@ export const createDesignSlice: StateCreator<
       }
       
       // Delete from Supabase
-      deleteDesign(id);
-      
-      toast.success(`Deleted design: ${designToDelete.name}`);
+      deleteDesignFromDb(id).then(success => {
+        if (success) {
+          toast.success(`Deleted design: ${designToDelete.name}`);
+        }
+      });
       
       return {
         savedDesigns: updatedDesigns,
@@ -172,6 +184,21 @@ export const createDesignSlice: StateCreator<
       toast.success(`Switched to design: ${design.name}`);
       
       return { activeDesign: design };
+    });
+  },
+  
+  saveDesign: () => {
+    const state = get();
+    if (!state.activeDesign) {
+      toast.error("No active design to save");
+      return;
+    }
+    
+    // Save to Supabase
+    saveDesignToDb(state.activeDesign).then(success => {
+      if (success) {
+        toast.success(`Saved design: ${state.activeDesign?.name}`);
+      }
     });
   }
 });
