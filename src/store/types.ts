@@ -32,6 +32,9 @@ export interface StoreState {
   // Editing state
   editingComponentId: string | null;
   
+  // Methods
+  calculateComponentRoles: () => void;
+  
   // Default component methods
   getDefaultComponent: (type: ComponentType, role: string) => InfrastructureComponent | undefined;
   setDefaultComponent: (type: ComponentType, role: string, id: string) => void;

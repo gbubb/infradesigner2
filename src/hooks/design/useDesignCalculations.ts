@@ -27,7 +27,17 @@ export const useDesignCalculations = () => {
 
   // Check if we have a valid design with components
   const hasValidDesign = useMemo(() => {
-    return Boolean(activeDesign && activeDesign.components && activeDesign.components.length > 0);
+    return Boolean(
+      activeDesign && 
+      activeDesign.components && 
+      activeDesign.components.length > 0
+    );
+  }, [activeDesign]);
+
+  // Compute if the design has storage nodes
+  const hasStorageNodes = useMemo(() => {
+    if (!activeDesign || !activeDesign.components) return false;
+    return activeDesign.components.some(c => c.role === 'storageNode');
   }, [activeDesign]);
 
   return {
@@ -42,6 +52,7 @@ export const useDesignCalculations = () => {
     costPerVCPU,
     costPerTB,
     designErrors,
-    hasValidDesign
+    hasValidDesign,
+    hasStorageNodes
   };
 };
