@@ -1,5 +1,5 @@
 
-import { InfrastructureComponent, InfrastructureDesign, DesignRequirements, ComponentRole, StorageClusterRequirement, ClusterInfo, ComputeClusterRequirement } from '@/types/infrastructure';
+import { InfrastructureComponent, InfrastructureDesign, DesignRequirements, ComponentRole, StorageClusterRequirement, ClusterInfo, ComputeClusterRequirement, ComponentType } from '@/types/infrastructure';
 
 export interface StoreState {
   // Component templates
@@ -31,6 +31,10 @@ export interface StoreState {
   
   // Editing state
   editingComponentId: string | null;
+  
+  // Default component methods
+  getDefaultComponent: (type: ComponentType, role: string) => InfrastructureComponent | undefined;
+  setDefaultComponent: (type: ComponentType, role: string, id: string) => void;
 }
 
 // Define individual slice states if needed

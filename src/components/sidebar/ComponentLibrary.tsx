@@ -10,7 +10,8 @@ import {
   Copy,
   Save,
   X,
-  Plus
+  Plus,
+  Zap
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { 
   ComponentType, 
@@ -31,7 +33,7 @@ import {
   SwitchRole,
   PortSpeed,
   Server,
-  Switch,
+  Switch as NetworkSwitch,
   Router,
   Firewall,
   Disk,
@@ -100,6 +102,7 @@ type ComponentFormValues = {
   model: string;
   cost: number;
   powerRequired: number;
+  isDefault: boolean;
 } & Partial<ServerFormValues & SwitchFormValues & RouterFormValues & FirewallFormValues & DiskFormValues>;
 
 export const ComponentLibrary: React.FC = () => {
@@ -108,7 +111,8 @@ export const ComponentLibrary: React.FC = () => {
     addComponentTemplate,
     updateComponentTemplate,
     cloneComponentTemplate,
-    deleteComponentTemplate
+    deleteComponentTemplate,
+    setDefaultComponent
   } = useDesignStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,6 +127,7 @@ export const ComponentLibrary: React.FC = () => {
     model: '',
     cost: 0,
     powerRequired: 0,
+    isDefault: false,
   });
   
   const filteredComponents = componentTemplates.filter(component => {
@@ -143,6 +148,7 @@ export const ComponentLibrary: React.FC = () => {
     [ComponentCategory.Network]: <Network className="h-5 w-5" />,
     [ComponentCategory.Storage]: <HardDrive className="h-5 w-5" />,
     [ComponentCategory.Security]: <Shield className="h-5 w-5" />,
+    [ComponentCategory.Accelerator]: <Zap className="h-5 w-5" />,
     all: <Plus className="h-5 w-5" />
   };
 
@@ -184,6 +190,7 @@ export const ComponentLibrary: React.FC = () => {
       model: '',
       cost: 0,
       powerRequired: 0,
+      isDefault: false,
     });
     setEditingComponentId(null);
   };
@@ -577,6 +584,17 @@ export const ComponentLibrary: React.FC = () => {
     }
   };
 
+  const handleToggleDefault = (componentId: string, isDefault: boolean) => {
+    if (isDefault) {
+      const component = componentTemplates.find(c => c.id === componentId);
+      if (component) {
+        setDefaultComponent(component.type, component.role || '', componentId);
+      }
+    } else {
+      updateComponentTemplate(componentId, { isDefault: false });
+    }
+  };
+
   const handleAddComponent = () => {
     if (!componentForm.name || !componentForm.manufacturer || !componentForm.model) {
       toast.error("Please fill in all required fields");
@@ -591,6 +609,7 @@ export const ComponentLibrary: React.FC = () => {
       model: componentForm.model,
       cost: componentForm.cost || 0,
       powerRequired: componentForm.powerRequired || 0,
+      isDefault: componentForm.isDefault,
     };
     
     let component: InfrastructureComponent;
@@ -628,7 +647,7 @@ export const ComponentLibrary: React.FC = () => {
           ruSize: componentForm.ruSize || 1,
           portSpeedType: componentForm.portSpeedType || PortSpeed.TenG,
           portsProvidedQuantity: componentForm.portsProvidedQuantity || 24
-        } as Switch;
+        } as NetworkSwitch;
         break;
       case ComponentType.Router:
         component = {
@@ -730,7 +749,7 @@ export const ComponentLibrary: React.FC = () => {
                   <SelectContent>
                     {Object.values(ComponentType).map((type) => (
                       <SelectItem key={type} value={type}>
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                        {type}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -795,6 +814,21 @@ export const ComponentLibrary: React.FC = () => {
                   />
                 </div>
               </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isDefault"
+                  name="isDefault"
+                  checked={componentForm.isDefault || false}
+                  onCheckedChange={(checked) => {
+                    setComponentForm({
+                      ...componentForm,
+                      isDefault: checked
+                    });
+                  }}
+                />
+                <Label htmlFor="isDefault">Set as default for this type/role</Label>
+              </div>
               
               {renderTypeSpecificFormFields()}
             </div>
@@ -844,7 +878,7 @@ export const ComponentLibrary: React.FC = () => {
               onClick={() => setSelectedCategory(category)}
             >
               {categoryIcons[category]}
-              <span className="ml-1.5">{category}</span>
+              <span className="ml-1.5">{category.charAt(0).toUpperCase() + category.slice(1)}</span>
             </Button>
           ))}
         </div>
@@ -860,6 +894,7 @@ export const ComponentLibrary: React.FC = () => {
               <TableHead>Model</TableHead>
               <TableHead className="text-right">Cost</TableHead>
               <TableHead className="text-right">Power (W)</TableHead>
+              <TableHead className="text-center">Default</TableHead>
               <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -873,6 +908,12 @@ export const ComponentLibrary: React.FC = () => {
                   <TableCell>{component.model}</TableCell>
                   <TableCell className="text-right">${component.cost}</TableCell>
                   <TableCell className="text-right">{component.powerRequired}W</TableCell>
+                  <TableCell className="text-center">
+                    <Switch
+                      checked={component.isDefault || false}
+                      onCheckedChange={(checked) => handleToggleDefault(component.id, checked)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex justify-center space-x-2">
                       <Button variant="ghost" size="icon" onClick={() => openEditDialog(component)}>
@@ -890,7 +931,7 @@ export const ComponentLibrary: React.FC = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No components found matching your criteria
                 </TableCell>
               </TableRow>
@@ -965,6 +1006,21 @@ export const ComponentLibrary: React.FC = () => {
                   placeholder="0"
                 />
               </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="edit-isDefault"
+                name="isDefault"
+                checked={componentForm.isDefault || false}
+                onCheckedChange={(checked) => {
+                  setComponentForm({
+                    ...componentForm,
+                    isDefault: checked
+                  });
+                }}
+              />
+              <Label htmlFor="edit-isDefault">Set as default for this type/role</Label>
             </div>
             
             {renderTypeSpecificFormFields()}

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,12 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ComponentType, DeviceRoleType } from '@/types/infrastructure';
 import { toast } from 'sonner';
-import { CalculationBreakdown } from './CalculationBreakdown';
-import { QuantityDisplay } from './QuantityDisplay';
 import { Separator } from '@/components/ui/separator';
 import { Info, LayoutGrid, RotateCw, Save } from 'lucide-react';
 import { DiskConfiguration } from './DiskConfiguration';
 import { GPUConfiguration } from './GPUConfiguration';
+import { useComponentsByType } from '@/hooks/design/useComponentsByType';
 
 export const DesignPanel: React.FC = () => {
   const {
@@ -22,11 +22,11 @@ export const DesignPanel: React.FC = () => {
     assignComponentToRole,
     activeDesign,
     saveDesign,
-    calculateRequiredQuantity,
-    getCalculationBreakdown,
-    createNewDesign
+    createNewDesign,
+    getDefaultComponent
   } = useDesignStore();
 
+  const { findDefaultComponent } = useComponentsByType();
   const [activePage, setActivePage] = useState('roles');
   const [designName, setDesignName] = useState('');
   const [designDescription, setDesignDescription] = useState('');
@@ -38,6 +38,33 @@ export const DesignPanel: React.FC = () => {
       setDesignDescription(activeDesign.description || '');
     }
   }, [activeDesign]);
+
+  // Auto-assign default components when roles are loaded
+  useEffect(() => {
+    if (componentRoles.length > 0) {
+      componentRoles.forEach(role => {
+        if (!role.assignedComponentId) {
+          // Determine component type based on role
+          let componentType: ComponentType | undefined;
+          
+          if (role.role.includes('Node') || role.role.includes('node')) {
+            componentType = ComponentType.Server;
+          } else if (role.role.includes('Switch') || role.role.includes('switch')) {
+            componentType = ComponentType.Switch;
+          } else if (role.role === 'firewall') {
+            componentType = ComponentType.Firewall;
+          }
+          
+          if (componentType) {
+            const defaultComponent = findDefaultComponent(componentType, role.role);
+            if (defaultComponent) {
+              assignComponentToRole(role.id, defaultComponent.id);
+            }
+          }
+        }
+      });
+    }
+  }, [componentRoles, findDefaultComponent, assignComponentToRole]);
 
   const getComponentsForRole = (role: string) => {
     // Filter components based on role
@@ -161,6 +188,7 @@ export const DesignPanel: React.FC = () => {
                               {getComponentsForRole(role.role).map((component) => (
                                 <SelectItem key={component.id} value={component.id}>
                                   {component.name} ({component.manufacturer})
+                                  {component.isDefault && " (Default)"}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -171,11 +199,9 @@ export const DesignPanel: React.FC = () => {
                       {role.assignedComponentId && (
                         <>
                           <div className="bg-muted rounded-md p-3">
-                            <QuantityDisplay
-                              roleId={role.id}
-                              roleName={role.description}
-                              quantity={role.adjustedRequiredCount || role.requiredCount}
-                            />
+                            <div className="font-medium">
+                              Quantity: {role.adjustedRequiredCount || role.requiredCount}
+                            </div>
                           </div>
                           
                           <Separator />

@@ -9,20 +9,21 @@ export const useCostAnalysis = () => {
   
   // Calculate total cost
   const totalCost = useMemo(() => {
-    if (!activeDesign?.components) return 0;
+    if (!activeDesign?.components || activeDesign.components.length === 0) return 0;
     return activeDesign.components.reduce((total, component) => {
-      return total + (component.cost * (component.quantity || 1));
+      const quantity = component.quantity || 1;
+      return total + (component.cost * quantity);
     }, 0);
   }, [activeDesign]);
   
   // Cost metrics
   const costPerVCPU = useMemo(() => {
-    if (!actualHardwareTotals.totalVCPUs || !totalCost) return 0;
+    if (!actualHardwareTotals.totalVCPUs || actualHardwareTotals.totalVCPUs === 0 || !totalCost) return 0;
     return totalCost / actualHardwareTotals.totalVCPUs;
   }, [actualHardwareTotals.totalVCPUs, totalCost]);
   
   const costPerTB = useMemo(() => {
-    if (!actualHardwareTotals.totalStorageTB || !totalCost) return 0;
+    if (!actualHardwareTotals.totalStorageTB || actualHardwareTotals.totalStorageTB === 0 || !totalCost) return 0;
     return totalCost / actualHardwareTotals.totalStorageTB;
   }, [actualHardwareTotals.totalStorageTB, totalCost]);
 

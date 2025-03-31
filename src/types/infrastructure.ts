@@ -11,16 +11,17 @@ export interface BaseComponent {
   quantity?: number;
   capacityFactor?: number; // Factor for calculating required quantity
   role?: string; // Add role property to base component
+  isDefault?: boolean; // Add isDefault property for default component selection
 }
 
 // Enum for all component types
 export enum ComponentType {
-  Server = 'server',
-  Switch = 'switch',
-  Router = 'router',
-  Firewall = 'firewall',
-  Disk = 'disk',
-  GPU = 'gpu'  // Add GPU component type
+  Server = 'Server',
+  Switch = 'Switch',
+  Router = 'Router',
+  Firewall = 'Firewall',
+  Disk = 'Disk',
+  GPU = 'GPU'  // Add GPU component type
 }
 
 // Define network topology type for stronger type checking
