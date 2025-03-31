@@ -14,6 +14,7 @@ export type Database = {
           cost: number | null
           created_at: string | null
           description: string | null
+          details: Json | null
           id: string
           isdefault: boolean | null
           manufacturer: string | null
@@ -28,6 +29,7 @@ export type Database = {
           cost?: number | null
           created_at?: string | null
           description?: string | null
+          details?: Json | null
           id?: string
           isdefault?: boolean | null
           manufacturer?: string | null
@@ -42,6 +44,7 @@ export type Database = {
           cost?: number | null
           created_at?: string | null
           description?: string | null
+          details?: Json | null
           id?: string
           isdefault?: boolean | null
           manufacturer?: string | null

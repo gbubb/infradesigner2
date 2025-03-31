@@ -116,10 +116,10 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
       // This should never happen if database is properly set up
       console.error('Invalid component data:', component);
       return null;
-    }).filter(Boolean) || []);
+    }).filter(Boolean) || []) as InfrastructureComponent[];
     
     console.log(`Loaded ${components.length} components from database`);
-    return components as unknown as InfrastructureComponent[];
+    return components;
   } catch (err) {
     console.error('Error loading components:', err);
     toast.error('Failed to load components from the database');
