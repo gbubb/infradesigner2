@@ -1,8 +1,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { CustomTabsList, CustomTabsTrigger } from '@/components/ui/custom-tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ComputeRequirementsForm } from './ComputeRequirementsForm';
 import { StorageRequirementsForm } from './StorageRequirementsForm';
 import { NetworkRequirementsForm } from './NetworkRequirementsForm';
@@ -10,6 +9,7 @@ import { PhysicalConstraintsForm } from './PhysicalConstraintsForm';
 import { useDesignStore } from '@/store/designStore';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { DesignRequirements } from '@/types/infrastructure';
 
 export const RequirementsPanel: React.FC = () => {
   const { requirements, updateRequirements, calculateComponentRoles } = useDesignStore();
@@ -53,15 +53,15 @@ export const RequirementsPanel: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-semibold mb-8 text-center">Design Requirements</h1>
+      <h2 className="text-2xl font-semibold mb-6">Design Requirements</h2>
       
       <Tabs defaultValue="compute" value={activeTab} onValueChange={handleTabChange}>
-        <CustomTabsList className="grid grid-cols-4 mb-8">
-          <CustomTabsTrigger value="compute">Compute</CustomTabsTrigger>
-          <CustomTabsTrigger value="storage">Storage</CustomTabsTrigger>
-          <CustomTabsTrigger value="network">Network</CustomTabsTrigger>
-          <CustomTabsTrigger value="physical">Physical</CustomTabsTrigger>
-        </CustomTabsList>
+        <TabsList className="grid grid-cols-4 mb-8">
+          <TabsTrigger value="compute">Compute</TabsTrigger>
+          <TabsTrigger value="storage">Storage</TabsTrigger>
+          <TabsTrigger value="network">Network</TabsTrigger>
+          <TabsTrigger value="physical">Physical</TabsTrigger>
+        </TabsList>
         
         <TabsContent value="compute">
           <ComputeRequirementsForm 
@@ -110,7 +110,7 @@ export const RequirementsPanel: React.FC = () => {
       </Tabs>
       
       <div className="mt-8 flex justify-end">
-        <Button onClick={handleSaveRequirements} size="lg">
+        <Button onClick={handleSaveRequirements}>
           Save Requirements
         </Button>
       </div>
