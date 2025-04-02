@@ -28,6 +28,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   
   const role = componentRoles.find(r => r.id === roleId);
   const clusterName = role?.clusterInfo?.clusterName;
+  const roleType = role?.role || '';
   
   // Force calculation to ensure we have fresh breakdown
   if (role && role.assignedComponentId) {
@@ -45,12 +46,14 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
 
   // Determine a specific note based on the role type
   const getContextNote = () => {
-    if (role?.role === 'storageNode') {
+    if (roleType === 'storageNode') {
       return "For storage calculations, the effective capacity factors in both the storage pool type efficiency and the maximum recommended fill percentage.";
-    } else if (role?.role === 'computeNode') {
-      return "For compute nodes, we calculate based on both CPU and memory requirements, using the higher of the two values.";
-    } else if (role?.role === 'gpuNode') {
-      return "For GPU nodes, we calculate based on both CPU and memory requirements, plus additional nodes for redundancy.";
+    } else if (roleType === 'computeNode') {
+      return "For compute nodes, we calculate based on both CPU and memory requirements, using the higher of the two values. Nodes are evenly distributed across availability zones.";
+    } else if (roleType === 'gpuNode') {
+      return "For GPU nodes, we calculate based on both CPU and memory requirements, plus additional nodes for redundancy. Nodes are evenly distributed across availability zones.";
+    } else if (roleType.includes('Switch')) {
+      return "For switches, the calculation ensures even distribution across racks and availability zones based on the network topology.";
     } else {
       return "For redundancy calculations, we ensure that additional nodes are evenly distributed across all availability zones by rounding up to the nearest multiple of the total AZ count.";
     }

@@ -4,12 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { InfrastructureComponent } from '@/types/infrastructure';
-import { QuantityDisplay } from '@/components/design/QuantityDisplay';
 import { useDesignStore } from '@/store/designStore';
-import { CalculationBreakdown } from '@/components/design/CalculationBreakdown';
 import { Button } from '@/components/ui/button';
 import { Calculator } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { CalculationBreakdown } from '../design/CalculationBreakdown';
 
 interface ComponentsTableProps {
   components: InfrastructureComponent[];
@@ -83,24 +82,24 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                   </TableCell>
                   <TableCell>
                     {roleId ? (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="space-y-1">
-                              <div className="font-medium text-lg">{quantity}</div>
-                              <CalculationBreakdown roleId={roleId} roleName={roleName}>
-                                <Button variant="outline" size="sm" className="text-xs px-2 h-6 flex items-center">
-                                  <Calculator className="h-3 w-3 mr-1" />
-                                  View Calculation
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium">{quantity}</div>
+                        <CalculationBreakdown roleId={roleId} roleName={roleName}>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-blue-500 hover:bg-blue-50">
+                                  <Calculator className="h-3.5 w-3.5 mr-1" />
+                                  View
                                 </Button>
-                              </CalculationBreakdown>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <p>Click to see how this quantity was calculated</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p>View calculation breakdown</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </CalculationBreakdown>
+                      </div>
                     ) : (
                       quantity
                     )}
