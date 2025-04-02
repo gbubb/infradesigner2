@@ -1,3 +1,4 @@
+
 // Core Infrastructure Types
 export enum ComponentType {
   Server = 'Server',
@@ -62,8 +63,11 @@ export enum SwitchRole {
   Edge = 'edge'
 }
 
-// Network topology types - update to string literals for compatibility
-export enum NetworkTopology {
+// Network topology types - use string literals directly for type compatibility
+export type NetworkTopology = "Spine-Leaf" | "Three-Tier" | "Core-Distribution-Access";
+
+// Create an enum with the same values for code that expects an enum
+export enum NetworkTopologyEnum {
   SpineLeaf = "Spine-Leaf",
   ThreeTier = "Three-Tier",
   CoreDistributionAccess = "Core-Distribution-Access"
@@ -110,7 +114,7 @@ export interface DesignRequirements {
     storageClusters: StorageClusterRequirement[];
   };
   networkRequirements: {
-    networkTopology?: "Spine-Leaf" | "Three-Tier" | "Core-Distribution-Access";
+    networkTopology?: NetworkTopology;
     managementNetwork?: "Single connection" | "Dual Home";
     ipmiNetwork?: "Management converged" | "Dedicated IPMI switch";
     physicalFirewalls?: boolean;

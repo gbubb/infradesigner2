@@ -87,14 +87,14 @@ export const createRequirementsSlice: StateCreator<
       const computeClusters = getValue(requirements, 'computeRequirements.computeClusters', []) || [];
       const storageClusters = getValue(requirements, 'storageRequirements.storageClusters', []) || [];
       
-      const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', 'Spine-Leaf') || 'Spine-Leaf';
+      const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', "Spine-Leaf") as NetworkTopology || "Spine-Leaf";
       const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false) || false;
       const leafSwitchesPerAZ = getValue(requirements, 'networkRequirements.leafSwitchesPerAZ', 2) || 2;
       const dedicatedStorageNetwork = getValue(requirements, 'networkRequirements.dedicatedStorageNetwork', false) || false;
-      const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', 'Dual Home') || 'Dual Home';
+      const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', "Dual Home") || "Dual Home";
       
       const mgmtSwitchesPerAZ = managementNetwork === 'Dual Home' ? 2 : 1;
-      const ipmiNetwork = getValue(requirements, 'networkRequirements.ipmiNetwork', 'Management converged') as IPMINetworkType;
+      const ipmiNetwork = getValue(requirements, 'networkRequirements.ipmiNetwork', "Management converged") as IPMINetworkType;
       
       let managementSwitchCount = totalAvailabilityZones * mgmtSwitchesPerAZ;
       

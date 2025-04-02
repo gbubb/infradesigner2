@@ -23,7 +23,7 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
           const parsedComponents = design.components ? JSON.parse(String(design.components) || '[]') : [];
           const parsedRequirements = design.requirements ? JSON.parse(String(design.requirements) || '{}') : {};
           
-          // Parse additional data fields
+          // Parse additional data fields - use optional chaining to safely access properties
           const parsedComponentRoles = design.component_roles ? JSON.parse(String(design.component_roles) || '[]') : [];
           const parsedDisksByRole = design.selected_disks_by_role ? JSON.parse(String(design.selected_disks_by_role) || '{}') : {};
           const parsedGPUsByRole = design.selected_gpus_by_role ? JSON.parse(String(design.selected_gpus_by_role) || '{}') : {};
