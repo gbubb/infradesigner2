@@ -73,7 +73,8 @@ export const createRequirementsSlice: StateCreator<
   [],
   RequirementsSlice
 > = (set, get) => {
-  return {
+  // Create a reference to the slice object to use its methods
+  const slice = {
     requirements: defaultRequirements,
     componentRoles: [],
     selectedDisksByRole: {},
@@ -104,7 +105,7 @@ export const createRequirementsSlice: StateCreator<
         }
       }));
       
-      get().calculateComponentRoles();
+      slice.calculateComponentRoles();
     },
     
     calculateComponentRoles: () => {
@@ -207,8 +208,8 @@ export const createRequirementsSlice: StateCreator<
         return { componentRoles: updatedRoles };
       });
       
-      // Now call our own calculateRequiredQuantity method
-      const newQuantity = get().calculateRequiredQuantity(roleId, componentId);
+      // Call the calculateRequiredQuantity method directly from the slice
+      const newQuantity = slice.calculateRequiredQuantity(roleId, componentId);
       
       set((state) => ({
         componentRoles: state.componentRoles.map(r => {
@@ -233,8 +234,8 @@ export const createRequirementsSlice: StateCreator<
       const role = state.componentRoles.find(r => r.id === roleId);
       
       if (role && role.assignedComponentId) {
-        // Call our own calculateRequiredQuantity method
-        const newQuantity = get().calculateRequiredQuantity(roleId, role.assignedComponentId);
+        // Call the calculateRequiredQuantity method directly from the slice
+        const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
           componentRoles: state.componentRoles.map(r => {
@@ -260,8 +261,8 @@ export const createRequirementsSlice: StateCreator<
       const role = state.componentRoles.find(r => r.id === roleId);
       
       if (role && role.assignedComponentId) {
-        // Call our own calculateRequiredQuantity method
-        const newQuantity = get().calculateRequiredQuantity(roleId, role.assignedComponentId);
+        // Call the calculateRequiredQuantity method directly from the slice
+        const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
           componentRoles: state.componentRoles.map(r => {
@@ -287,8 +288,8 @@ export const createRequirementsSlice: StateCreator<
       const role = state.componentRoles.find(r => r.id === roleId);
       
       if (role && role.assignedComponentId) {
-        // Call our own calculateRequiredQuantity method
-        const newQuantity = get().calculateRequiredQuantity(roleId, role.assignedComponentId);
+        // Call the calculateRequiredQuantity method directly from the slice
+        const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
           componentRoles: state.componentRoles.map(r => {
@@ -314,8 +315,8 @@ export const createRequirementsSlice: StateCreator<
       const role = state.componentRoles.find(r => r.id === roleId);
       
       if (role && role.assignedComponentId) {
-        // Call our own calculateRequiredQuantity method
-        const newQuantity = get().calculateRequiredQuantity(roleId, role.assignedComponentId);
+        // Call the calculateRequiredQuantity method directly from the slice
+        const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
           componentRoles: state.componentRoles.map(r => {
@@ -331,4 +332,6 @@ export const createRequirementsSlice: StateCreator<
       }
     }
   };
+  
+  return slice;
 };
