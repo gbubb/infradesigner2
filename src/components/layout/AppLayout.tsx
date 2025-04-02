@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { ComponentLibrary } from '@/components/sidebar/ComponentLibrary';
@@ -8,24 +9,20 @@ import { DesignPanel } from '@/components/design/DesignPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDesignStore } from '@/store/designStore';
 import { PlusCircle, FolderOpen } from 'lucide-react';
+import { NewDesignDialog } from '@/components/layout/header/dialogs/NewDesignDialog';
+import { LoadDesignDialog } from '@/components/layout/header/dialogs/LoadDesignDialog';
 
 export const AppLayout: React.FC = () => {
   const { activeDesign } = useDesignStore();
+  const [isNewDesignDialogOpen, setIsNewDesignDialogOpen] = React.useState(false);
+  const [isLoadDesignDialogOpen, setIsLoadDesignDialogOpen] = React.useState(false);
   
-  // Handler for creating a new design
   const handleCreateNewDesign = () => {
-    const newDesignButton = document.querySelector('button:has(svg[data-lucide="PlusCircle"])');
-    if (newDesignButton) {
-      (newDesignButton as HTMLElement).click();
-    }
+    setIsNewDesignDialogOpen(true);
   };
   
-  // Handler for loading an existing design
   const handleLoadExistingDesign = () => {
-    const loadDesignButton = document.querySelector('button:has(svg[data-lucide="FolderOpen"])');
-    if (loadDesignButton) {
-      (loadDesignButton as HTMLElement).click();
-    }
+    setIsLoadDesignDialogOpen(true);
   };
   
   return (
@@ -81,6 +78,17 @@ export const AppLayout: React.FC = () => {
           )}
         </Tabs>
       </main>
+
+      {/* Dialogs for creating/loading designs */}
+      <NewDesignDialog 
+        isOpen={isNewDesignDialogOpen}
+        onOpenChange={setIsNewDesignDialogOpen}
+      />
+      
+      <LoadDesignDialog
+        isOpen={isLoadDesignDialogOpen}
+        onOpenChange={setIsLoadDesignDialogOpen}
+      />
     </div>
   );
 };
