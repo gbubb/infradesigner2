@@ -26,32 +26,29 @@ export const useHardwareTotals = () => {
       const quantity = component.quantity || 1;
       
       if (component.type === ComponentType.Server) {
+        // Calculate vCPUs - use consistent naming
+        let coresPerServer = 0;
+        let overcommitRatio = 1;
+        
+        // Handle different server property naming
         if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
-          const coresPerServer = (component as any).cpuSockets * (component as any).cpuCoresPerSocket;
-          // Get overcommit ratio from individual compute clusters if available
-          let overcommitRatio = 1;
-          
-          if (component.role === 'computeNode' && (component as any).clusterInfo) {
-            const clusterId = (component as any).clusterInfo.clusterId;
-            const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
-            overcommitRatio = matchingCluster?.overcommitRatio || 1;
-          }
-          
-          totalVCPUs += coresPerServer * quantity * overcommitRatio;
+          coresPerServer = (component as any).cpuSockets * (component as any).cpuCoresPerSocket;
         } else if ('cpuCount' in component && 'coreCount' in component) {
-          const coresPerServer = (component as any).cpuCount * (component as any).coreCount;
-          // Get overcommit ratio from individual compute clusters if available
-          let overcommitRatio = 1;
-          
-          if (component.role === 'computeNode' && (component as any).clusterInfo) {
-            const clusterId = (component as any).clusterInfo.clusterId;
-            const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
-            overcommitRatio = matchingCluster?.overcommitRatio || 1;
-          }
-          
-          totalVCPUs += coresPerServer * quantity * overcommitRatio;
+          coresPerServer = (component as any).cpuCount * (component as any).coreCount;
         }
         
+        // Get overcommit ratio from individual compute clusters if available
+        if ((component.role === 'computeNode' || component.role === 'gpuNode') && (component as any).clusterInfo) {
+          const clusterId = (component as any).clusterInfo.clusterId;
+          const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
+          overcommitRatio = matchingCluster?.overcommitRatio || 1;
+          
+          console.log(`Compute node in cluster ${clusterId}, coresPerServer: ${coresPerServer}, overcommit: ${overcommitRatio}, total vCPUs: ${coresPerServer * quantity * overcommitRatio}`);
+        }
+        
+        totalVCPUs += coresPerServer * quantity * overcommitRatio;
+        
+        // Calculate memory - use consistent naming
         let componentMemoryGB = 0;
         if ('memoryGB' in component) {
           componentMemoryGB = (component as any).memoryGB;
@@ -61,7 +58,7 @@ export const useHardwareTotals = () => {
         
         totalMemoryGB += componentMemoryGB * quantity;
         
-        if (component.role === 'computeNode') {
+        if (component.role === 'computeNode' || component.role === 'gpuNode') {
           computeMemoryGB += componentMemoryGB * quantity;
         }
         
