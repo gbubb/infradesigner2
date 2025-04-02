@@ -43,7 +43,7 @@ export const useHardwareTotals = () => {
           const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
           overcommitRatio = matchingCluster?.overcommitRatio || 1;
           
-          console.log(`${component.role} in cluster ${clusterId}, coresPerServer: ${coresPerServer}, overcommit: ${overcommitRatio}, total vCPUs: ${coresPerServer * quantity * overcommitRatio}`);
+          console.log(`${component.role} in cluster ${(component as any).clusterInfo.clusterName}, coresPerServer: ${coresPerServer}, overcommit: ${overcommitRatio}, total vCPUs: ${coresPerServer * quantity * overcommitRatio}`);
         }
         
         totalVCPUs += coresPerServer * quantity * overcommitRatio;

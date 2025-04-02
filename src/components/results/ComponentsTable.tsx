@@ -69,7 +69,7 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                     </div>
                   </TableCell>
                   <TableCell>
-                    {role ? (
+                    {roleId ? (
                       <QuantityDisplay 
                         roleId={roleId} 
                         roleName={roleName} 

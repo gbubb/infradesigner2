@@ -288,9 +288,17 @@ export const createRequirementsSlice: StateCreator<
         const totalAvailabilityZones = requirements.physicalConstraints?.totalAvailabilityZones || 8;
         const availabilityZoneRedundancy = cluster.availabilityZoneRedundancy || 'N+1';
         
-        if ('cpuCount' in component && 'coreCount' in component && 'memoryGB' in component) {
-          const coresPerNode = component.cpuCount * component.coreCount;
-          const memoryGBPerNode = component.memoryGB;
+        if (('cpuCount' in component && 'coreCount' in component && 'memoryGB' in component) || 
+            ('cpuSockets' in component && 'cpuCoresPerSocket' in component && 'memoryGB' in component)) {
+          
+          let coresPerNode = 0;
+          if ('cpuCount' in component && 'coreCount' in component) {
+            coresPerNode = (component.cpuCount || 0) * (component.coreCount || 0);
+          } else if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
+            coresPerNode = (component.cpuSockets || 0) * (component.cpuCoresPerSocket || 0);
+          }
+          
+          const memoryGBPerNode = component.memoryGB || 0;
           
           const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
           const totalMemoryGBNeeded = totalMemoryTB * 1024;
@@ -299,7 +307,13 @@ export const createRequirementsSlice: StateCreator<
           calculationSteps.push(`Total vCPU requirement: ${totalVCPUs}`);
           calculationSteps.push(`CPU overcommit ratio: ${overcommitRatio}`);
           calculationSteps.push(`Physical cores needed: ${totalVCPUs} / ${overcommitRatio} = ${totalPhysicalCoresNeeded}`);
-          calculationSteps.push(`Cores per node: ${component.cpuCount} CPUs × ${component.coreCount} cores = ${coresPerNode} cores`);
+          
+          if ('cpuCount' in component && 'coreCount' in component) {
+            calculationSteps.push(`Cores per node: ${component.cpuCount} CPUs × ${component.coreCount} cores = ${coresPerNode} cores`);
+          } else if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
+            calculationSteps.push(`Cores per node: ${component.cpuSockets} sockets × ${component.cpuCoresPerSocket} cores = ${coresPerNode} cores`);
+          }
+          
           calculationSteps.push(`Memory per node: ${memoryGBPerNode} GB`);
           
           const nodesNeededForCPU = Math.ceil(totalPhysicalCoresNeeded / coresPerNode);
@@ -335,6 +349,8 @@ export const createRequirementsSlice: StateCreator<
           
           requiredQuantity = baseNodeCount + additionalNodesCount;
           calculationSteps.push(`Final node count: ${baseNodeCount} + ${additionalNodesCount} = ${requiredQuantity}`);
+        } else {
+          calculationSteps.push(`Selected component doesn't have required CPU or memory properties, using default count of ${requiredQuantity}`);
         }
       } else if (role.role === 'storageNode') {
         if (role.clusterInfo && role.clusterInfo.clusterId) {
