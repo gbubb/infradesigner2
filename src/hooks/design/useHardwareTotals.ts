@@ -4,7 +4,7 @@ import { useDesignStore } from '@/store/designStore';
 import { ComponentType } from '@/types/infrastructure';
 
 export const useHardwareTotals = () => {
-  const { activeDesign, requirements } = useDesignStore();
+  const { activeDesign, requirements, componentRoles } = useDesignStore();
   
   // Calculate actual hardware totals (including redundancy)
   const actualHardwareTotals = useMemo(() => {

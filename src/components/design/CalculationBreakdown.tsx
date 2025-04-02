@@ -24,10 +24,17 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
 }) => {
   const getCalculationBreakdown = useDesignStore(state => state.getCalculationBreakdown);
   const componentRoles = useDesignStore(state => state.componentRoles);
+  const calculateRequiredQuantity = useDesignStore(state => state.calculateRequiredQuantity);
   
   const role = componentRoles.find(r => r.id === roleId);
   const clusterName = role?.clusterInfo?.clusterName;
   
+  // Force calculation to ensure we have fresh breakdown
+  if (role && role.assignedComponentId) {
+    calculateRequiredQuantity(roleId, role.assignedComponentId);
+  }
+  
+  // Now get the breakdown after calculation
   const breakdownSteps = getCalculationBreakdown(roleId);
   const hasBreakdown = breakdownSteps && breakdownSteps.length > 0;
   

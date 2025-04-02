@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { QuantityDisplay } from '@/components/design/QuantityDisplay';
 import { useDesignStore } from '@/store/designStore';
+import { CalculationBreakdown } from '@/components/design/CalculationBreakdown';
+import { Button } from '@/components/ui/button';
+import { Calculator } from 'lucide-react';
 
 interface ComponentsTableProps {
   components: InfrastructureComponent[];
@@ -53,13 +56,22 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                 : 'Unknown';
                 
               // Find the corresponding role to get the roleId
-              const role = componentRoles.find(r => r.role === component.role);
+              const role = componentRoles.find(r => r.role === component.role && 
+                ((!component.clusterInfo && !r.clusterInfo) || 
+                (component.clusterInfo && r.clusterInfo && 
+                 component.clusterInfo.clusterId === r.clusterInfo.clusterId)));
+              
               const roleId = role?.id || '';
-                
+              
               return (
                 <TableRow key={`${component.id}-${index}`}>
                   <TableCell className="font-medium">
                     {roleName}
+                    {component.clusterInfo && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {component.clusterInfo.clusterName}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">{component.name}</div>
@@ -70,11 +82,15 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                   </TableCell>
                   <TableCell>
                     {roleId ? (
-                      <QuantityDisplay 
-                        roleId={roleId} 
-                        roleName={roleName} 
-                        quantity={quantity} 
-                      />
+                      <>
+                        <div className="font-medium">{quantity}</div>
+                        <CalculationBreakdown roleId={roleId} roleName={roleName}>
+                          <Button variant="ghost" size="sm" className="text-xs px-2 h-6 mt-1">
+                            <Calculator className="h-3 w-3 mr-1" />
+                            Calculation
+                          </Button>
+                        </CalculationBreakdown>
+                      </>
                     ) : (
                       quantity
                     )}
