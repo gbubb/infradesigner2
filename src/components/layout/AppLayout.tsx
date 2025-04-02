@@ -9,20 +9,26 @@ import { DesignPanel } from '@/components/design/DesignPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDesignStore } from '@/store/designStore';
 import { PlusCircle, FolderOpen } from 'lucide-react';
-import { NewDesignDialog } from '@/components/layout/header/dialogs/NewDesignDialog';
-import { LoadDesignDialog } from '@/components/layout/header/dialogs/LoadDesignDialog';
 
 export const AppLayout: React.FC = () => {
   const { activeDesign } = useDesignStore();
-  const [isNewDesignDialogOpen, setIsNewDesignDialogOpen] = React.useState(false);
-  const [isLoadDesignDialogOpen, setIsLoadDesignDialogOpen] = React.useState(false);
   
+  // These states and handlers are passed to the Header component
+  // which already contains the dialog components
   const handleCreateNewDesign = () => {
-    setIsNewDesignDialogOpen(true);
+    // Find and click the New Design button in the header
+    const newDesignButton = document.querySelector('button:has(.lucide-plus-circle)');
+    if (newDesignButton) {
+      (newDesignButton as HTMLElement).click();
+    }
   };
   
   const handleLoadExistingDesign = () => {
-    setIsLoadDesignDialogOpen(true);
+    // Find and click the Load Design button in the header
+    const loadDesignButton = document.querySelector('button:has(.lucide-folder-open)');
+    if (loadDesignButton) {
+      (loadDesignButton as HTMLElement).click();
+    }
   };
   
   return (
@@ -78,17 +84,6 @@ export const AppLayout: React.FC = () => {
           )}
         </Tabs>
       </main>
-
-      {/* Dialogs for creating/loading designs */}
-      <NewDesignDialog 
-        isOpen={isNewDesignDialogOpen}
-        onOpenChange={setIsNewDesignDialogOpen}
-      />
-      
-      <LoadDesignDialog
-        isOpen={isLoadDesignDialogOpen}
-        onOpenChange={setIsLoadDesignDialogOpen}
-      />
     </div>
   );
 };

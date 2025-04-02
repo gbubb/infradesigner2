@@ -90,17 +90,33 @@ export const recalculateDesign = () => {
     
     // Then update the active design if it exists
     if (state.activeDesign) {
+      // Check if we have stored configurations in the active design
+      if (state.activeDesign.componentRoles && state.activeDesign.componentRoles.length > 0) {
+        // Restore component roles from the design
+        state.componentRoles = state.activeDesign.componentRoles;
+      }
+      
+      // Restore disk configurations if they exist
+      if (state.activeDesign.selectedDisksByRole) {
+        state.selectedDisksByRole = state.activeDesign.selectedDisksByRole;
+      }
+      
+      // Restore GPU configurations if they exist
+      if (state.activeDesign.selectedGPUsByRole) {
+        state.selectedGPUsByRole = state.activeDesign.selectedGPUsByRole;
+      }
+      
       // Get updated component data based on roles
       const updatedComponents = state.componentRoles
         .filter(role => role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
         .map(role => {
+          // Clone the component template and set the quantity and role
           const componentTemplate = state.componentTemplates.find(
             c => c.id === role.assignedComponentId
           );
           
           if (!componentTemplate) return null;
           
-          // Clone the component template and set the quantity and role
           const component = {
             ...componentTemplate,
             quantity: role.adjustedRequiredCount || role.requiredCount,

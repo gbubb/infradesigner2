@@ -18,12 +18,18 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
     const designs = (data?.map(design => {
       // Make sure we're only processing design rows by checking for required properties
       if ('createdat' in design && 'requirements' in design) {
+        // Create a complete design object with all properties
         return {
           id: design.id,
           name: design.name,
           description: design.description || '',
           requirements: design.requirements || {},
           components: design.components || [],
+          // Add additional properties that might be in the database
+          componentRoles: design.componentRoles || [],
+          selectedDisksByRole: design.selectedDisksByRole || {},
+          selectedGPUsByRole: design.selectedGPUsByRole || {},
+          // Convert dates
           createdAt: new Date(design.createdat),
           updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat)
         };
@@ -54,6 +60,11 @@ export const saveDesign = async (design: InfrastructureDesign): Promise<boolean>
       // Convert objects to serializable JSON format
       requirements: design.requirements as any,
       components: design.components as any,
+      // Add additional configuration data
+      componentRoles: design.componentRoles as any,
+      selectedDisksByRole: design.selectedDisksByRole as any,
+      selectedGPUsByRole: design.selectedGPUsByRole as any,
+      // Dates
       createdat: design.createdAt.toISOString(),
       updatedat: new Date().toISOString()
     };
@@ -155,10 +166,28 @@ export const importDesign = async (file: File): Promise<InfrastructureDesign | n
           const importedDesign = JSON.parse(fileContent) as InfrastructureDesign;
           
           // Validate the imported design has the required properties
-          if (!importedDesign.id || !importedDesign.name || !importedDesign.components) {
+          if (!importedDesign.id || !importedDesign.name) {
             toast.error('Invalid design file format');
             resolve(null);
             return;
+          }
+          
+          // Ensure components array exists
+          if (!importedDesign.components) {
+            importedDesign.components = [];
+          }
+          
+          // Ensure configuration data exists
+          if (!importedDesign.componentRoles) {
+            importedDesign.componentRoles = [];
+          }
+          
+          if (!importedDesign.selectedDisksByRole) {
+            importedDesign.selectedDisksByRole = {};
+          }
+          
+          if (!importedDesign.selectedGPUsByRole) {
+            importedDesign.selectedGPUsByRole = {};
           }
           
           // Convert date strings back to Date objects

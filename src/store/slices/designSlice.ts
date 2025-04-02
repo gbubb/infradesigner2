@@ -203,7 +203,14 @@ export const createDesignSlice: StateCreator<
       
       toast.success(`Switched to design: ${design.name}`);
       
-      return { activeDesign: design };
+      // Set active design and restore component roles and disk/gpu configurations
+      // Extract any saved component roles and configurations from the design
+      return { 
+        activeDesign: design,
+        // Reset component roles based on the design requirements
+        componentRoles: [], // This will trigger a recalculation
+        requirements: design.requirements || state.requirements,
+      };
     });
   },
   
@@ -214,10 +221,37 @@ export const createDesignSlice: StateCreator<
       return;
     }
     
+    // Save current component roles and configurations to the design
+    const updatedDesign = {
+      ...state.activeDesign,
+      // Save the component roles
+      componentRoles: state.componentRoles,
+      // Save disk configurations
+      selectedDisksByRole: state.selectedDisksByRole,
+      // Save GPU configurations
+      selectedGPUsByRole: state.selectedGPUsByRole,
+      // Save the requirements
+      requirements: state.requirements,
+      // Update timestamp
+      updatedAt: new Date()
+    };
+    
+    // Update the active design in the store
+    set((state) => {
+      const updatedDesigns = state.savedDesigns.map(design => 
+        design.id === updatedDesign.id ? updatedDesign : design
+      );
+      
+      return {
+        savedDesigns: updatedDesigns,
+        activeDesign: updatedDesign
+      };
+    });
+    
     // Save to Supabase
-    saveDesignToDb(state.activeDesign).then(success => {
+    saveDesignToDb(updatedDesign).then(success => {
       if (success) {
-        toast.success(`Saved design: ${state.activeDesign?.name}`);
+        toast.success(`Saved design: ${updatedDesign.name}`);
       }
     });
   },
