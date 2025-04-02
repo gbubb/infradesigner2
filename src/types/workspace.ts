@@ -1,13 +1,15 @@
 
-import { InfrastructureComponent } from './infrastructure';
-
-export interface Position {
-  x: number;
-  y: number;
-}
+import { InfrastructureComponent } from '@/types/infrastructure';
 
 export interface ComponentWithPosition {
   id: string;
+  position: { x: number; y: number };
   component: InfrastructureComponent;
-  position: Position;
+}
+
+export interface Connection {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  label?: string;
 }
