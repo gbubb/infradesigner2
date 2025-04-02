@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -10,8 +9,6 @@ import {
   calculateComponentRoles as calculateRoles 
 } from './requirements/roleCalculator';
 import { 
-  calculateComputeNodeQuantity,
-  calculateStorageNodeQuantity,
   calculateStorageNodeCapacity
 } from './requirements/calculationUtils';
 import {
@@ -20,6 +17,14 @@ import {
   addGPUToComputeNode as addGPU,
   removeGPUFromComputeNode as removeGPU
 } from './requirements/diskAndGPUOperations';
+import {
+  updateRoleRequiredCount,
+  assignComponentToRole as assignComponent,
+  getRoleById
+} from './requirements/roleOperations';
+import {
+  calculateRequiredQuantity as calculateQuantity
+} from './requirements/calculationManager';
 
 export interface RequirementsSlice {
   requirements: DesignRequirements;
@@ -73,8 +78,7 @@ export const createRequirementsSlice: StateCreator<
   [],
   RequirementsSlice
 > = (set, get) => {
-  // Create a reference to the slice object to use its methods
-  const slice = {
+  return {
     requirements: defaultRequirements,
     componentRoles: [],
     selectedDisksByRole: {},
@@ -105,6 +109,7 @@ export const createRequirementsSlice: StateCreator<
         }
       }));
       
+      const slice = get();
       slice.calculateComponentRoles();
     },
     
@@ -116,77 +121,9 @@ export const createRequirementsSlice: StateCreator<
     
     calculateRequiredQuantity: (roleId: string, componentId: string): number => {
       const state = get();
-      const { requirements, componentRoles } = state;
-      const componentTemplates = state.componentTemplates || [];
       
-      const role = componentRoles.find(r => r.id === roleId);
-      if (!role) return 0;
-      
-      const component = componentTemplates.find(c => c.id === componentId);
-      if (!component) return 0;
-      
-      let requiredQuantity = role.requiredCount || 1;
-      let calculationSteps: string[] = [];
-      
-      // Handle compute node quantity calculation
-      if (role.role === 'computeNode' || role.role === 'gpuNode') {
-        if (!role.clusterInfo) {
-          calculationSteps.push(`No cluster info available - using default count of ${requiredQuantity} nodes`);
-        } else {
-          const computeClusters = requirements.computeRequirements?.computeClusters || [];
-          const cluster = computeClusters.find(c => c.id === role.clusterInfo?.clusterId);
-          
-          if (cluster) {
-            const totalAvailabilityZones = requirements.physicalConstraints?.totalAvailabilityZones || 8;
-            const result = calculateComputeNodeQuantity(role, component, cluster, totalAvailabilityZones);
-            requiredQuantity = result.requiredQuantity;
-            calculationSteps = result.calculationSteps;
-          } else {
-            calculationSteps.push(`Cluster not found - using default count of ${requiredQuantity} nodes`);
-          }
-        }
-      } 
-      // Handle storage node quantity calculation
-      else if (role.role === 'storageNode') {
-        if (role.clusterInfo && role.clusterInfo.clusterId) {
-          const storageCluster = requirements.storageRequirements?.storageClusters.find(
-            cluster => cluster.id === role.clusterInfo?.clusterId
-          );
-          
-          if (storageCluster) {
-            // Use the imported utility function directly
-            const storageNodeCapacityTiB = calculateStorageNodeCapacity(
-              roleId, 
-              state.selectedDisksByRole, 
-              componentTemplates
-            );
-            
-            if (storageNodeCapacityTiB > 0) {
-              const result = calculateStorageNodeQuantity(role, storageCluster, roleId, storageNodeCapacityTiB);
-              requiredQuantity = result.requiredQuantity;
-              calculationSteps = result.calculationSteps;
-            } else {
-              calculationSteps.push(`No capacity calculation available - using default count of ${requiredQuantity} nodes`);
-            }
-          }
-        }
-      }
-      // For other component types, add simple calculation steps
-      else {
-        calculationSteps.push(`Role type: ${role.role}`);
-        calculationSteps.push(`Base required count: ${role.requiredCount}`);
-        
-        if (role.clusterInfo) {
-          calculationSteps.push(`Cluster: ${role.clusterInfo.clusterName || 'Unnamed cluster'}`);
-        }
-        
-        if (role.role === 'leafSwitch' || role.role === 'spineSwitch') {
-          const azCount = requirements.physicalConstraints?.totalAvailabilityZones || 1;
-          calculationSteps.push(`Total availability zones: ${azCount}`);
-          calculationSteps.push(`Switches needed per AZ: ${Math.ceil(role.requiredCount / azCount)}`);
-          calculationSteps.push(`Total switches: ${role.requiredCount}`);
-        }
-      }
+      // Calculate and get calculation details
+      const { requiredQuantity, calculationSteps } = calculateQuantity(roleId, componentId, state);
       
       // Save calculation steps to the store
       set(state => ({
@@ -209,145 +146,104 @@ export const createRequirementsSlice: StateCreator<
     },
     
     assignComponentToRole: (roleId: string, componentId: string) => {
+      // Update role with assigned component
       set((state) => {
-        const updatedRoles = state.componentRoles.map(role => {
-          if (role.id === roleId) {
-            return {
-              ...role,
-              assignedComponentId: componentId,
-              adjustedRequiredCount: undefined
-            };
-          }
-          return role;
-        });
-        
+        const updatedRoles = assignComponent(state.componentRoles, roleId, componentId);
         return { componentRoles: updatedRoles };
       });
       
-      // Call the calculateRequiredQuantity method directly from the slice
+      // Calculate new quantity
+      const slice = get();
       const newQuantity = slice.calculateRequiredQuantity(roleId, componentId);
       
+      // Update role with new quantity
       set((state) => ({
-        componentRoles: state.componentRoles.map(r => {
-          if (r.id === roleId) {
-            return {
-              ...r,
-              adjustedRequiredCount: newQuantity
-            };
-          }
-          return r;
-        })
+        componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
       }));
     },
     
     addDiskToStorageNode: (roleId: string, diskId: string, quantity: number) => {
+      // Update disks
       set((state) => {
         const updatedSelectedDisks = addDisk(roleId, diskId, quantity, state.selectedDisksByRole);
         return { selectedDisksByRole: updatedSelectedDisks };
       });
       
+      // Recalculate quantity if component is assigned
       const state = get();
-      const role = state.componentRoles.find(r => r.id === roleId);
+      const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        // Call the calculateRequiredQuantity method directly from the slice
+        const slice = get();
         const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
-          componentRoles: state.componentRoles.map(r => {
-            if (r.id === roleId) {
-              return {
-                ...r,
-                adjustedRequiredCount: newQuantity
-              };
-            }
-            return r;
-          })
+          componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
         }));
       }
     },
     
     removeDiskFromStorageNode: (roleId: string, diskId: string) => {
+      // Update disks
       set((state) => {
         const updatedSelectedDisks = removeDisk(roleId, diskId, state.selectedDisksByRole);
         return { selectedDisksByRole: updatedSelectedDisks };
       });
       
+      // Recalculate quantity if component is assigned
       const state = get();
-      const role = state.componentRoles.find(r => r.id === roleId);
+      const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        // Call the calculateRequiredQuantity method directly from the slice
+        const slice = get();
         const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
-          componentRoles: state.componentRoles.map(r => {
-            if (r.id === roleId) {
-              return {
-                ...r,
-                adjustedRequiredCount: newQuantity
-              };
-            }
-            return r;
-          })
+          componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
         }));
       }
     },
     
     addGPUToComputeNode: (roleId: string, gpuId: string, quantity: number) => {
+      // Update GPUs
       set((state) => {
         const updatedSelectedGPUs = addGPU(roleId, gpuId, quantity, state.selectedGPUsByRole);
         return { selectedGPUsByRole: updatedSelectedGPUs };
       });
       
+      // Recalculate quantity if component is assigned
       const state = get();
-      const role = state.componentRoles.find(r => r.id === roleId);
+      const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        // Call the calculateRequiredQuantity method directly from the slice
+        const slice = get();
         const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
-          componentRoles: state.componentRoles.map(r => {
-            if (r.id === roleId) {
-              return {
-                ...r,
-                adjustedRequiredCount: newQuantity
-              };
-            }
-            return r;
-          })
+          componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
         }));
       }
     },
     
     removeGPUFromComputeNode: (roleId: string, gpuId: string) => {
+      // Update GPUs
       set((state) => {
         const updatedSelectedGPUs = removeGPU(roleId, gpuId, state.selectedGPUsByRole);
         return { selectedGPUsByRole: updatedSelectedGPUs };
       });
       
+      // Recalculate quantity if component is assigned
       const state = get();
-      const role = state.componentRoles.find(r => r.id === roleId);
+      const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        // Call the calculateRequiredQuantity method directly from the slice
+        const slice = get();
         const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
-          componentRoles: state.componentRoles.map(r => {
-            if (r.id === roleId) {
-              return {
-                ...r,
-                adjustedRequiredCount: newQuantity
-              };
-            }
-            return r;
-          })
+          componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
         }));
       }
     }
   };
-  
-  return slice;
 };
