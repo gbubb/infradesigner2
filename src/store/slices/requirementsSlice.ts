@@ -1,12 +1,8 @@
-
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
   ComponentType,
-  StorageClusterRequirement,
-  ClusterInfo,
-  ComponentRole,
-  ComputeClusterRequirement
+  ComponentRole
 } from '@/types/infrastructure';
 import { StoreState, RequirementsState } from '../types';
 import { 
@@ -156,7 +152,11 @@ export const createRequirementsSlice: StateCreator<
           );
           
           if (storageCluster) {
-            const storageNodeCapacityTiB = get().calculateStorageNodeCapacity(roleId);
+            const storageNodeCapacityTiB = calculateStorageNodeCapacity(
+              roleId, 
+              state.selectedDisksByRole, 
+              state.componentTemplates || []
+            );
             
             if (storageNodeCapacityTiB > 0) {
               const result = calculateStorageNodeQuantity(role, storageCluster, roleId, storageNodeCapacityTiB);
@@ -182,7 +182,7 @@ export const createRequirementsSlice: StateCreator<
     
     calculateStorageNodeCapacity: (roleId: string): number => {
       const state = get();
-      return calculateStorageNodeCapacity(roleId, state.selectedDisksByRole, state.componentTemplates);
+      return calculateStorageNodeCapacity(roleId, state.selectedDisksByRole, state.componentTemplates || []);
     },
     
     getCalculationBreakdown: (roleId: string): string[] => {
@@ -205,24 +205,19 @@ export const createRequirementsSlice: StateCreator<
         return { componentRoles: updatedRoles };
       });
       
-      const state = get();
-      const role = state.componentRoles.find(r => r.id === roleId);
+      const newQuantity = get().calculateRequiredQuantity(roleId, componentId);
       
-      if (role) {
-        const newQuantity = get().calculateRequiredQuantity(roleId, componentId);
-        
-        set((state) => ({
-          componentRoles: state.componentRoles.map(r => {
-            if (r.id === roleId) {
-              return {
-                ...r,
-                adjustedRequiredCount: newQuantity
-              };
-            }
-            return r;
-          })
-        }));
-      }
+      set((state) => ({
+        componentRoles: state.componentRoles.map(r => {
+          if (r.id === roleId) {
+            return {
+              ...r,
+              adjustedRequiredCount: newQuantity
+            };
+          }
+          return r;
+        })
+      }));
     },
     
     addDiskToStorageNode: (roleId: string, diskId: string, quantity: number) => {
