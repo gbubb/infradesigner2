@@ -94,6 +94,27 @@ export const deleteDesign = async (id: string): Promise<boolean> => {
   }
 };
 
+// Purge all designs from Supabase - for admin use
+export const purgeAllDesigns = async (): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from(TABLES.DESIGNS)
+      .delete()
+      .neq('id', 'placeholder'); // Delete all rows
+    
+    if (handleSupabaseError(error, 'purging designs')) {
+      return false;
+    }
+    
+    toast.success('All designs have been purged from the database');
+    return true;
+  } catch (err) {
+    console.error('Error purging designs:', err);
+    toast.error('Failed to purge designs from the database');
+    return false;
+  }
+};
+
 // Export a design to a JSON file
 export const exportDesign = (design: InfrastructureDesign): void => {
   try {

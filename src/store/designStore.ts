@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { StoreState } from './types';
 import { createRequirementsSlice, RequirementsSlice } from './slices/requirementsSlice';
@@ -49,25 +48,8 @@ export const initializeStore = async () => {
     
     // Try to load designs from the database
     await state.loadDesignsFromDB();
-    const loadedDesigns = state.savedDesigns;
     
-    if (loadedDesigns && loadedDesigns.length > 0) {
-      // Set the most recently updated design as active
-      const mostRecentDesign = loadedDesigns.reduce((latest, design) => {
-        const latestUpdate = latest.updatedAt || latest.createdAt;
-        const thisUpdate = design.updatedAt || design.createdAt;
-        return thisUpdate > latestUpdate ? design : latest;
-      }, loadedDesigns[0]);
-      
-      state.activeDesign = mostRecentDesign;
-      console.log("Loaded design from database:", mostRecentDesign.name);
-    } else {
-      // Auto-create a default design if no designs exist
-      if (!state.activeDesign) {
-        console.log("Creating default design");
-        state.createNewDesign("Scenario A", "Auto-generated design based on requirements");
-      }
-    }
+    // Do NOT auto-create a design, keep activeDesign as null
     
     // Mark as initialized
     storeInitialized = true;
@@ -81,9 +63,7 @@ export const initializeStore = async () => {
       state.initializeComponentTemplates();
     }
     
-    if (!state.activeDesign) {
-      state.createNewDesign("Scenario A", "Auto-generated design based on requirements");
-    }
+    // No longer auto-create a design on error
     
     storeInitialized = true;
   }
@@ -218,9 +198,8 @@ export const recalculateDesign = () => {
       }
     } else {
       console.warn("No active design to update");
-      // Create a default design if none exists
-      state.createNewDesign("Default Infrastructure Design", "Auto-generated design based on requirements");
-      toast.info("Created a new design. Please assign components to roles.");
+      // Don't automatically create a design if none exists
+      toast.info("Please create a new design or load an existing one.");
     }
   } catch (error) {
     console.error("Error during design recalculation:", error);

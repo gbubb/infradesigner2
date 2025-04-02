@@ -2,20 +2,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useDesignStore } from '@/store/designStore';
-import { Save, Download, Upload, PlusCircle, Edit, Check, X, FolderOpen } from 'lucide-react';
+import { Save, Download, Upload, PlusCircle, Edit, Check, X, FolderOpen, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const Header: React.FC = () => {
-  const { activeDesign, createNewDesign, saveDesign, exportDesign, importDesign, savedDesigns, setActiveDesign } = useDesignStore();
+  const { activeDesign, createNewDesign, saveDesign, exportDesign, importDesign, savedDesigns, setActiveDesign, deleteDesign } = useDesignStore();
   const [newDesignName, setNewDesignName] = useState('');
   const [newDesignDescription, setNewDesignDescription] = useState('');
   const [isNewDesignDialogOpen, setIsNewDesignDialogOpen] = useState(false);
   const [isLoadDesignDialogOpen, setIsLoadDesignDialogOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
+  const [designToDelete, setDesignToDelete] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   // Create a file input ref for import
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +112,22 @@ export const Header: React.FC = () => {
     // Reset the file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  // Open delete confirmation dialog
+  const confirmDeleteDesign = (id: string) => {
+    setDesignToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Handle design deletion
+  const handleDeleteDesign = () => {
+    if (designToDelete) {
+      deleteDesign(designToDelete);
+      setDesignToDelete(null);
+      setIsDeleteDialogOpen(false);
+      setIsLoadDesignDialogOpen(false);
     }
   };
 
@@ -223,24 +241,33 @@ export const Header: React.FC = () => {
               {savedDesigns.length > 0 ? (
                 <div className="grid gap-2 max-h-[60vh] overflow-y-auto">
                   {savedDesigns.map((design) => (
-                    <Button
-                      key={design.id}
-                      variant="outline"
-                      className="justify-start h-auto py-3 px-4"
-                      onClick={() => handleLoadDesign(design.id)}
-                    >
-                      <div className="text-left">
-                        <div className="font-medium">{design.name}</div>
-                        {design.description && (
-                          <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {design.description}
+                    <div key={design.id} className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        className="justify-start h-auto py-3 px-4 flex-1"
+                        onClick={() => handleLoadDesign(design.id)}
+                      >
+                        <div className="text-left">
+                          <div className="font-medium">{design.name}</div>
+                          {design.description && (
+                            <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                              {design.description}
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Updated: {new Date(design.updatedAt).toLocaleString()}
                           </div>
-                        )}
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Updated: {new Date(design.updatedAt).toLocaleString()}
                         </div>
-                      </div>
-                    </Button>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => confirmDeleteDesign(design.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -264,12 +291,12 @@ export const Header: React.FC = () => {
         
         <Button 
           variant="secondary"
-          className="bg-white text-infra-blue hover:bg-gray-100"
+          className="bg-white text-infra-blue hover:bg-gray-100 px-2"
           onClick={handleExport}
           disabled={!activeDesign}
+          title="Export Design"
         >
-          <Download className="mr-2 h-4 w-4" />
-          Export
+          <Download className="h-4 w-4" />
         </Button>
         
         {/* Hidden file input for import */}
@@ -283,13 +310,29 @@ export const Header: React.FC = () => {
         
         <Button 
           variant="secondary" 
-          className="bg-white text-infra-blue hover:bg-gray-100"
+          className="bg-white text-infra-blue hover:bg-gray-100 px-2"
           onClick={handleImport}
+          title="Import Design"
         >
-          <Upload className="mr-2 h-4 w-4" />
-          Import
+          <Upload className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Design</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this design? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex sm:justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteDesign}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 };

@@ -1,3 +1,4 @@
+
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
@@ -8,7 +9,8 @@ import {
   deleteDesign as deleteDesignFromDb, 
   loadDesigns,
   exportDesign as exportDesignToFile,
-  importDesign as importDesignFromFile
+  importDesign as importDesignFromFile,
+  purgeAllDesigns
 } from '@/services/designService';
 
 export interface DesignSlice {
@@ -44,6 +46,9 @@ export interface DesignSlice {
   
   // Load designs from database
   loadDesignsFromDB: () => Promise<void>;
+  
+  // Purge all designs from database
+  purgeAllDesigns: () => Promise<void>;
 }
 
 export const createDesignSlice: StateCreator<
@@ -272,13 +277,30 @@ export const createDesignSlice: StateCreator<
       if (designs && designs.length > 0) {
         set({ 
           savedDesigns: designs,
-          activeDesign: designs[0] // Set first design as active
+          // Don't automatically set active design
         });
         console.log(`Loaded ${designs.length} designs from database`);
+      } else {
+        set({ savedDesigns: [] });
       }
     } catch (error) {
       console.error("Error loading designs from database:", error);
       toast.error("Failed to load designs");
+    }
+  },
+  
+  purgeAllDesigns: async () => {
+    try {
+      const success = await purgeAllDesigns();
+      if (success) {
+        set({ 
+          savedDesigns: [],
+          activeDesign: null
+        });
+      }
+    } catch (error) {
+      console.error("Error purging designs from database:", error);
+      toast.error("Failed to purge designs");
     }
   }
 });

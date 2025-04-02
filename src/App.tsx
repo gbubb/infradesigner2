@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { initializeStore } from "./store/designStore";
+// Import the purge script (makes it available in the console)
+import "@/utils/purgeDesigns";
 
 const queryClient = new QueryClient();
 
