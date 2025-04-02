@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { ComponentLibrary } from '@/components/sidebar/ComponentLibrary';
-import { Header } from '@/components/layout/Header';
+import { Header } from '@/components/layout/header';
 import { RequirementsPanel } from '@/components/requirements/RequirementsPanel';
 import { ResultsPanel } from '@/components/results/ResultsPanel';
 import { DesignPanel } from '@/components/design/DesignPanel';
