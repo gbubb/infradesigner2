@@ -9,6 +9,7 @@ import { useDesignStore } from '@/store/designStore';
 import { CalculationBreakdown } from '@/components/design/CalculationBreakdown';
 import { Button } from '@/components/ui/button';
 import { Calculator } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ComponentsTableProps {
   components: InfrastructureComponent[];
@@ -82,15 +83,24 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                   </TableCell>
                   <TableCell>
                     {roleId ? (
-                      <>
-                        <div className="font-medium">{quantity}</div>
-                        <CalculationBreakdown roleId={roleId} roleName={roleName}>
-                          <Button variant="ghost" size="sm" className="text-xs px-2 h-6 mt-1">
-                            <Calculator className="h-3 w-3 mr-1" />
-                            Calculation
-                          </Button>
-                        </CalculationBreakdown>
-                      </>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="space-y-1">
+                              <div className="font-medium text-lg">{quantity}</div>
+                              <CalculationBreakdown roleId={roleId} roleName={roleName}>
+                                <Button variant="outline" size="sm" className="text-xs px-2 h-6 flex items-center">
+                                  <Calculator className="h-3 w-3 mr-1" />
+                                  View Calculation
+                                </Button>
+                              </CalculationBreakdown>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Click to see how this quantity was calculated</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     ) : (
                       quantity
                     )}

@@ -171,6 +171,22 @@ export const createRequirementsSlice: StateCreator<
           }
         }
       }
+      // For other component types, add simple calculation steps
+      else {
+        calculationSteps.push(`Role type: ${role.role}`);
+        calculationSteps.push(`Base required count: ${role.requiredCount}`);
+        
+        if (role.clusterInfo) {
+          calculationSteps.push(`Cluster: ${role.clusterInfo.clusterName || 'Unnamed cluster'}`);
+        }
+        
+        if (role.role === 'leafSwitch' || role.role === 'spineSwitch') {
+          const azCount = requirements.physicalConstraints?.totalAvailabilityZones || 1;
+          calculationSteps.push(`Total availability zones: ${azCount}`);
+          calculationSteps.push(`Switches needed per AZ: ${Math.ceil(role.requiredCount / azCount)}`);
+          calculationSteps.push(`Total switches: ${role.requiredCount}`);
+        }
+      }
       
       // Save calculation steps to the store
       set(state => ({

@@ -42,6 +42,19 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const titleText = clusterName 
     ? `Calculation Breakdown for ${roleName} (${clusterName})` 
     : `Calculation Breakdown for ${roleName}`;
+
+  // Determine a specific note based on the role type
+  const getContextNote = () => {
+    if (role?.role === 'storageNode') {
+      return "For storage calculations, the effective capacity factors in both the storage pool type efficiency and the maximum recommended fill percentage.";
+    } else if (role?.role === 'computeNode') {
+      return "For compute nodes, we calculate based on both CPU and memory requirements, using the higher of the two values.";
+    } else if (role?.role === 'gpuNode') {
+      return "For GPU nodes, we calculate based on both CPU and memory requirements, plus additional nodes for redundancy.";
+    } else {
+      return "For redundancy calculations, we ensure that additional nodes are evenly distributed across all availability zones by rounding up to the nearest multiple of the total AZ count.";
+    }
+  };
   
   return (
     <Dialog>
@@ -68,18 +81,13 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
               </ol>
             </Card>
             <div className="mt-4 text-sm text-muted-foreground border-t pt-4">
-              {role?.role === 'storageNode' ? (
-                <p>Note: For storage calculations, the effective capacity factors in both the storage pool type efficiency and the maximum recommended fill percentage.</p>
-              ) : (role?.role === 'computeNode' || role?.role === 'gpuNode') ? (
-                <p>Note: For redundancy calculations, we ensure that additional nodes are evenly distributed across all availability zones by rounding up to the nearest multiple of the total AZ count.</p>
-              ) : (
-                <p>Note: For redundancy calculations, we ensure that additional nodes are evenly distributed across all availability zones by rounding up to the nearest multiple of the total AZ count.</p>
-              )}
+              <p>{getContextNote()}</p>
             </div>
           </div>
         ) : (
           <div className="py-4 text-center text-muted-foreground">
-            No detailed calculation available for this component.
+            <p>No detailed calculation available for this component.</p>
+            <p className="mt-2">Try assigning a component to see the calculation breakdown.</p>
           </div>
         )}
       </DialogContent>
