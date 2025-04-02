@@ -1,3 +1,4 @@
+
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureDesign } from '@/types/infrastructure';
 import { toast } from 'sonner';
@@ -21,7 +22,7 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
         const parsedComponents = design.components ? JSON.parse(design.components as string) : [];
         const parsedRequirements = design.requirements ? JSON.parse(design.requirements as string) : {};
         
-        // Get componentRoles, selectedDisksByRole, and selectedGPUsByRole from requirements JSON if they exist
+        // Get additional properties from the requirements if they exist
         const componentRoles = parsedRequirements.componentRoles || [];
         const selectedDisksByRole = parsedRequirements.selectedDisksByRole || {};
         const selectedGPUsByRole = parsedRequirements.selectedGPUsByRole || {};
@@ -31,12 +32,12 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
           id: design.id,
           name: design.name,
           description: design.description || '',
-          requirements: design.requirements || {},
-          components: design.components || [],
-          // Add additional properties that might be in the database
-          componentRoles: design.componentRoles || [],
-          selectedDisksByRole: design.selectedDisksByRole || {},
-          selectedGPUsByRole: design.selectedGPUsByRole || {},
+          components: parsedComponents,
+          requirements: parsedRequirements,
+          // Add additional properties
+          componentRoles: componentRoles,
+          selectedDisksByRole: selectedDisksByRole,
+          selectedGPUsByRole: selectedGPUsByRole,
           // Convert dates
           createdAt: new Date(design.createdat),
           updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat)

@@ -45,9 +45,9 @@ const defaultRequirements: DesignRequirements = {
     storageClusters: []
   },
   networkRequirements: {
-    networkTopology: 'Spine-Leaf',
-    managementNetwork: 'Dual Home',
-    ipmiNetwork: 'Management converged',
+    networkTopology: "Spine-Leaf",
+    managementNetwork: "Dual Home",
+    ipmiNetwork: "Management converged",
     physicalFirewalls: false,
     leafSwitchesPerAZ: 2,
     dedicatedStorageNetwork: false,
@@ -98,9 +98,7 @@ export const createRequirementsSlice: StateCreator<
       
       let managementSwitchCount = totalAvailabilityZones * mgmtSwitchesPerAZ;
       
-      // Add dedicated IPMI switches if needed
-      if (ipmiNetwork === IPMINetworkType.DedicatedIPMISwitch) {
-        // Add one IPMI switch per AZ
+      if (ipmiNetwork === "Dedicated IPMI switch") {
         managementSwitchCount += totalAvailabilityZones;
       }
       
@@ -115,7 +113,6 @@ export const createRequirementsSlice: StateCreator<
         }
       ];
       
-      // Add compute cluster node roles
       computeClusters.forEach((cluster, index) => {
         const totalVCPUs = cluster.totalVCPUs || 5000;
         const totalMemoryTB = cluster.totalMemoryTB || 30;
@@ -136,14 +133,12 @@ export const createRequirementsSlice: StateCreator<
         
         const totalComputeNodeCount = baseComputeNodeCount + (additionalAZs * nodesPerAZ);
         
-        // Create a clusterInfo object for the compute cluster
         const clusterInfo: ClusterInfo = {
           clusterId: cluster.id,
           clusterName: cluster.name,
           clusterIndex: index
         };
         
-        // Determine the role type based on whether GPU is enabled
         const roleType = gpuEnabled ? 'gpuNode' : 'computeNode';
         const roleDescription = gpuEnabled 
           ? `Provides GPU compute resources for ${cluster.name}` 
@@ -158,7 +153,6 @@ export const createRequirementsSlice: StateCreator<
         } as ComponentRole);
       });
       
-      // Add storage cluster node roles
       storageClusters.forEach((cluster, index) => {
         newRoles.push({
           id: cluster.id || uuidv4(),
@@ -223,7 +217,6 @@ export const createRequirementsSlice: StateCreator<
           requiredCount: 2
         });
       } else {
-        // Calculate total compute nodes from all clusters
         const totalComputeNodes = computeClusters.reduce((sum, cluster) => {
           const totalVCPUs = cluster.totalVCPUs || 5000;
           const overcommitRatio = cluster.overcommitRatio || 2;

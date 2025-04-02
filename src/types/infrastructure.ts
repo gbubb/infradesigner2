@@ -1,4 +1,3 @@
-
 // Core Infrastructure Types
 export enum ComponentType {
   Server = 'Server',
@@ -63,18 +62,21 @@ export enum SwitchRole {
   Edge = 'edge'
 }
 
+// Network topology types - update to string literals for compatibility
+export enum NetworkTopology {
+  SpineLeaf = "Spine-Leaf",
+  ThreeTier = "Three-Tier",
+  CoreDistributionAccess = "Core-Distribution-Access"
+}
+
+// Update PortSpeed enum for consistency
 export enum PortSpeed {
-  Speed1G = '1G',
-  Speed10G = '10G',
-  Speed25G = '25G',
-  Speed40G = '40G',
-  Speed100G = '100G',
-  Speed400G = '400G',
   OneG = '1G',
   TenG = '10G',
   TwentyFiveG = '25G',
   FortyG = '40G',
-  HundredG = '100G'
+  HundredG = '100G',
+  Speed400G = '400G'
 }
 
 // Disk specific types
@@ -96,14 +98,7 @@ export enum GPUMemoryType {
   GDDR7 = 'GDDR7'
 }
 
-// Network topology types
-export enum NetworkTopology {
-  SpineLeaf = 'Spine-Leaf',
-  ThreeTier = 'Three-Tier',
-  Collapsed = 'Collapsed Core'
-}
-
-// Infrastructure Design Requirements
+// Infrastructure Design Requirements - update the interface
 export interface DesignRequirements {
   computeRequirements: {
     controllerNodeCount?: number;
@@ -115,9 +110,9 @@ export interface DesignRequirements {
     storageClusters: StorageClusterRequirement[];
   };
   networkRequirements: {
-    networkTopology?: NetworkTopology;
-    managementNetwork?: string;
-    ipmiNetwork?: string;
+    networkTopology?: "Spine-Leaf" | "Three-Tier" | "Core-Distribution-Access";
+    managementNetwork?: "Single connection" | "Dual Home";
+    ipmiNetwork?: "Management converged" | "Dedicated IPMI switch";
     physicalFirewalls?: boolean;
     leafSwitchesPerAZ?: number;
     dedicatedStorageNetwork?: boolean;
@@ -131,6 +126,7 @@ export interface DesignRequirements {
   };
 }
 
+// Update IPMINetworkType for consistency
 export enum IPMINetworkType {
   Shared = 'shared',
   Dedicated = 'dedicated',
@@ -173,13 +169,7 @@ export interface StorageClusterRequirement {
   maxFillFactor: number;
 }
 
-export interface ClusterInfo {
-  clusterId: string;
-  clusterName: string;
-  clusterIndex: number;
-}
-
-// Component role mapping between requirements and components
+// Update ComponentRole interface
 export interface ComponentRole {
   id: string;
   role: string;
@@ -188,6 +178,13 @@ export interface ComponentRole {
   adjustedRequiredCount?: number;
   assignedComponentId?: string;
   clusterInfo?: ClusterInfo;
+}
+
+// Update ClusterInfo interface
+export interface ClusterInfo {
+  clusterId: string;
+  clusterName: string;
+  clusterIndex: number;
 }
 
 // Storage efficiency factors
@@ -266,7 +263,7 @@ export interface Router extends InfrastructureComponent {
   rackUnitsConsumed: number;
 }
 
-// Firewall interface
+// Update Firewall interface to include missing properties
 export interface Firewall extends InfrastructureComponent {
   type: ComponentType.Firewall;
   throughput: number;
