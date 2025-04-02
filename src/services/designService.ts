@@ -17,39 +17,43 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
     // Convert database format to application format
     const designs = (data?.map(design => {
       // Make sure we're only processing design rows by checking for required properties
-      if ('createdat' in design && 'requirements' in design) {
-        // Parse JSON fields
-        const parsedComponents = design.components ? JSON.parse(design.components as string) : [];
-        const parsedRequirements = design.requirements ? JSON.parse(design.requirements as string) : {};
-        
-        // Get additional properties from the requirements if they exist
-        const componentRoles = parsedRequirements.componentRoles || [];
-        const selectedDisksByRole = parsedRequirements.selectedDisksByRole || {};
-        const selectedGPUsByRole = parsedRequirements.selectedGPUsByRole || {};
-        
-        // Create a complete design object with all properties
-        return {
-          id: design.id,
-          name: design.name,
-          description: design.description || '',
-          components: parsedComponents,
-          requirements: parsedRequirements,
-          // Add additional properties
-          componentRoles: componentRoles,
-          selectedDisksByRole: selectedDisksByRole,
-          selectedGPUsByRole: selectedGPUsByRole,
-          // Convert dates
-          createdAt: new Date(design.createdat),
-          updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat)
-        };
+      if ('createdat' in design && 'name' in design) {
+        try {
+          // Parse JSON fields - use null coalescing to prevent parsing errors
+          const parsedComponents = design.components ? JSON.parse(String(design.components) || '[]') : [];
+          const parsedRequirements = design.requirements ? JSON.parse(String(design.requirements) || '{}') : {};
+          
+          // Parse additional data fields
+          const parsedComponentRoles = design.component_roles ? JSON.parse(String(design.component_roles) || '[]') : [];
+          const parsedDisksByRole = design.selected_disks_by_role ? JSON.parse(String(design.selected_disks_by_role) || '{}') : {};
+          const parsedGPUsByRole = design.selected_gpus_by_role ? JSON.parse(String(design.selected_gpus_by_role) || '{}') : {};
+          
+          // Create a complete design object with all properties
+          return {
+            id: design.id,
+            name: design.name,
+            description: design.description || '',
+            components: parsedComponents,
+            requirements: parsedRequirements,
+            // Add additional properties
+            componentRoles: parsedComponentRoles,
+            selectedDisksByRole: parsedDisksByRole,
+            selectedGPUsByRole: parsedGPUsByRole,
+            // Convert dates
+            createdAt: new Date(design.createdat),
+            updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat)
+          };
+        } catch (parseErr) {
+          console.error('Error parsing design data:', parseErr, design);
+          return null;
+        }
       }
       // This should never happen if database is properly set up
       console.error('Invalid design data:', design);
       return null;
     }).filter(Boolean) || []);
     
-    // Use type assertion with 'as unknown as' pattern to convert to InfrastructureDesign[]
-    return designs as unknown as InfrastructureDesign[];
+    return designs as InfrastructureDesign[];
   } catch (err) {
     console.error('Error loading designs:', err);
     toast.error('Failed to load designs from the database');
@@ -60,19 +64,19 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
 // Save a design to Supabase
 export const saveDesign = async (design: InfrastructureDesign): Promise<boolean> => {
   try {
-    // Format data for Supabase - convert complex objects to JSON
+    // Format data for Supabase - convert complex objects to JSON strings
     // We need to ensure these are serializable for the database
     const designToSave = {
       id: design.id,
       name: design.name,
       description: design.description,
-      // Convert objects to serializable JSON format
-      requirements: design.requirements as any,
-      components: design.components as any,
-      // Add additional configuration data
-      componentRoles: design.componentRoles as any,
-      selectedDisksByRole: design.selectedDisksByRole as any,
-      selectedGPUsByRole: design.selectedGPUsByRole as any,
+      // Convert objects to JSON strings
+      requirements: JSON.stringify(design.requirements),
+      components: JSON.stringify(design.components),
+      // Add additional configuration data as JSON strings
+      component_roles: JSON.stringify(design.componentRoles || []),
+      selected_disks_by_role: JSON.stringify(design.selectedDisksByRole || {}),
+      selected_gpus_by_role: JSON.stringify(design.selectedGPUsByRole || {}),
       // Dates
       createdat: design.createdAt.toISOString(),
       updatedat: new Date().toISOString()
