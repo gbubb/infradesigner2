@@ -34,6 +34,7 @@ export interface StoreState {
   
   // Methods
   calculateComponentRoles: () => void;
+  calculateRequiredQuantity: (roleId: string, componentId: string) => number;
   
   // Default component methods
   getDefaultComponent: (type: ComponentType, role: string) => InfrastructureComponent | undefined;

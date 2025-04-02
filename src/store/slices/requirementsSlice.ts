@@ -1,3 +1,4 @@
+
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -153,8 +154,8 @@ export const createRequirementsSlice: StateCreator<
       });
       
       // Calculate new quantity
-      const slice = get();
-      const newQuantity = slice.calculateRequiredQuantity(roleId, componentId);
+      const { calculateRequiredQuantity } = get();
+      const newQuantity = calculateRequiredQuantity(roleId, componentId);
       
       // Update role with new quantity
       set((state) => ({
@@ -174,8 +175,8 @@ export const createRequirementsSlice: StateCreator<
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        const slice = get();
-        const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
+        const { calculateRequiredQuantity } = get();
+        const newQuantity = calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
           componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
@@ -195,8 +196,8 @@ export const createRequirementsSlice: StateCreator<
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        const slice = get();
-        const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
+        const { calculateRequiredQuantity } = get();
+        const newQuantity = calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
           componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
@@ -216,8 +217,8 @@ export const createRequirementsSlice: StateCreator<
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        const slice = get();
-        const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
+        const { calculateRequiredQuantity } = get();
+        const newQuantity = calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
           componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
@@ -237,8 +238,8 @@ export const createRequirementsSlice: StateCreator<
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        const slice = get();
-        const newQuantity = slice.calculateRequiredQuantity(roleId, role.assignedComponentId);
+        const { calculateRequiredQuantity } = get();
+        const newQuantity = calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
           componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
