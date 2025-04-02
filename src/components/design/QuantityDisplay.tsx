@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { CalculationBreakdown } from './CalculationBreakdown';
+import { Info } from 'lucide-react';
 
 interface QuantityDisplayProps {
   roleId: string;
@@ -19,6 +20,7 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
       <CalculationBreakdown roleId={roleId} roleName={roleName}>
         <span className="cursor-pointer underline text-primary hover:text-primary/80 flex items-center">
           {quantity}
+          <Info className="h-4 w-4 ml-1 text-blue-500" />
         </span>
       </CalculationBreakdown>
     </div>

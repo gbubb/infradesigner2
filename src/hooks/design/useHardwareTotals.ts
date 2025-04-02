@@ -32,9 +32,9 @@ export const useHardwareTotals = () => {
         
         // Handle different server property naming
         if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
-          coresPerServer = (component as any).cpuSockets * (component as any).cpuCoresPerSocket;
+          coresPerServer = (component.cpuSockets || 0) * (component.cpuCoresPerSocket || 0);
         } else if ('cpuCount' in component && 'coreCount' in component) {
-          coresPerServer = (component as any).cpuCount * (component as any).coreCount;
+          coresPerServer = (component.cpuCount || 0) * (component.coreCount || 0);
         }
         
         // Get overcommit ratio from individual compute clusters if available
@@ -43,7 +43,7 @@ export const useHardwareTotals = () => {
           const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
           overcommitRatio = matchingCluster?.overcommitRatio || 1;
           
-          console.log(`Compute node in cluster ${clusterId}, coresPerServer: ${coresPerServer}, overcommit: ${overcommitRatio}, total vCPUs: ${coresPerServer * quantity * overcommitRatio}`);
+          console.log(`${component.role} in cluster ${clusterId}, coresPerServer: ${coresPerServer}, overcommit: ${overcommitRatio}, total vCPUs: ${coresPerServer * quantity * overcommitRatio}`);
         }
         
         totalVCPUs += coresPerServer * quantity * overcommitRatio;
@@ -51,9 +51,9 @@ export const useHardwareTotals = () => {
         // Calculate memory - use consistent naming
         let componentMemoryGB = 0;
         if ('memoryGB' in component) {
-          componentMemoryGB = (component as any).memoryGB;
+          componentMemoryGB = component.memoryGB || 0;
         } else if ('memoryCapacity' in component) {
-          componentMemoryGB = (component as any).memoryCapacity;
+          componentMemoryGB = (component as any).memoryCapacity || 0;
         }
         
         totalMemoryGB += componentMemoryGB * quantity;
@@ -63,7 +63,7 @@ export const useHardwareTotals = () => {
         }
         
         if (component.role === 'storageNode' && 'storageCapacityTB' in component) {
-          totalStorageTB += (component as any).storageCapacityTB * quantity;
+          totalStorageTB += (component.storageCapacityTB || 0) * quantity;
         }
       }
     });

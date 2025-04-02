@@ -38,9 +38,9 @@ export const AppLayout: React.FC = () => {
           {/* Overlay when no design is active - only showing the header with New/Load buttons */}
           {!activeDesign && (
             <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center z-50 p-8">
-              <div className="bg-white rounded-lg p-6 max-w-lg text-center">
-                <h2 className="text-2xl font-bold mb-4">Welcome to Infrastructure Design Tool</h2>
-                <p className="mb-6 text-gray-600">
+              <div className="bg-white rounded-lg p-6 max-w-lg text-center opacity-75 pointer-events-none">
+                <h2 className="text-2xl font-bold mb-4 text-gray-500">Welcome to Infrastructure Design Tool</h2>
+                <p className="mb-6 text-gray-400">
                   To get started, please use the New or Load buttons in the header above.
                 </p>
               </div>
