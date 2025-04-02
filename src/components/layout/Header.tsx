@@ -5,14 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useDesignStore } from '@/store/designStore';
-import { Save, Download, Upload, PlusCircle, Edit, Check, X } from 'lucide-react';
+import { Save, Download, Upload, PlusCircle, Edit, Check, X, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const Header: React.FC = () => {
-  const { activeDesign, createNewDesign, saveDesign, exportDesign, importDesign } = useDesignStore();
+  const { activeDesign, createNewDesign, saveDesign, exportDesign, importDesign, savedDesigns, setActiveDesign } = useDesignStore();
   const [newDesignName, setNewDesignName] = useState('');
   const [newDesignDescription, setNewDesignDescription] = useState('');
   const [isNewDesignDialogOpen, setIsNewDesignDialogOpen] = useState(false);
+  const [isLoadDesignDialogOpen, setIsLoadDesignDialogOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   
@@ -34,6 +35,11 @@ export const Header: React.FC = () => {
       setNewDesignDescription('');
       setIsNewDesignDialogOpen(false);
     }
+  };
+
+  const handleLoadDesign = (id: string) => {
+    setActiveDesign(id);
+    setIsLoadDesignDialogOpen(false);
   };
 
   const startEditingName = () => {
@@ -196,6 +202,53 @@ export const Header: React.FC = () => {
               </div>
             </div>
             <Button onClick={handleCreateDesign}>Create Design</Button>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isLoadDesignDialogOpen} onOpenChange={setIsLoadDesignDialogOpen}>
+          <DialogTrigger asChild>
+            <Button 
+              variant="secondary"
+              className="bg-white text-infra-blue hover:bg-gray-100"
+            >
+              <FolderOpen className="mr-2 h-4 w-4" />
+              Load Design
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Load Infrastructure Design</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              {savedDesigns.length > 0 ? (
+                <div className="grid gap-2 max-h-[60vh] overflow-y-auto">
+                  {savedDesigns.map((design) => (
+                    <Button
+                      key={design.id}
+                      variant="outline"
+                      className="justify-start h-auto py-3 px-4"
+                      onClick={() => handleLoadDesign(design.id)}
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">{design.name}</div>
+                        {design.description && (
+                          <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            {design.description}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Updated: {new Date(design.updatedAt).toLocaleString()}
+                        </div>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No saved designs found. Create a new design to get started.
+                </div>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
 
