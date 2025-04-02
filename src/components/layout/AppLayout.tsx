@@ -4,13 +4,11 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { ComponentLibrary } from '@/components/sidebar/ComponentLibrary';
 import { Header } from '@/components/layout/header';
 import { RequirementsPanel } from '@/components/requirements/RequirementsPanel';
-import { DesignPanel } from '@/components/design/DesignPanel';
 import { ResultsPanel } from '@/components/results/ResultsPanel';
-import { Workspace } from '@/components/workspace/Workspace';
+import { DesignPanel } from '@/components/design/DesignPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDesignStore } from '@/store/designStore';
-import { PlusCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { PlusCircle, FolderOpen } from 'lucide-react';
 import { NewDesignDialog } from '@/components/layout/header/dialogs/NewDesignDialog';
 import { LoadDesignDialog } from '@/components/layout/header/dialogs/LoadDesignDialog';
 
@@ -22,38 +20,34 @@ export const AppLayout: React.FC = () => {
   const handleCreateNewDesign = () => {
     setIsNewDesignDialogOpen(true);
   };
-
+  
+  const handleLoadExistingDesign = () => {
+    setIsLoadDesignDialogOpen(true);
+  };
+  
   return (
-    <SidebarProvider>
-      <div className="flex flex-col h-screen overflow-hidden">
-        <Header />
-        
-        <div className="flex flex-1 overflow-hidden">
-          <ComponentLibrary />
-          
-          <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
-            <Tabs defaultValue="requirements" className="flex-1 flex flex-col overflow-hidden">
-              <TabsList className="flex justify-center h-12 bg-white shadow-sm">
-                <TabsTrigger value="requirements" className="flex-1">Requirements</TabsTrigger>
-                <TabsTrigger value="design" className="flex-1">Design</TabsTrigger>
-                <TabsTrigger value="results" className="flex-1">Results</TabsTrigger>
-                <TabsTrigger value="workspace" className="flex-1">Workspace</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="requirements" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
-                <RequirementsPanel />
-              </TabsContent>
-              <TabsContent value="design" className="flex-1 overflow-auto m-0 p-0 relative">
-                <DesignPanel />
-              </TabsContent>
-              <TabsContent value="results" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
-                <ResultsPanel />
-              </TabsContent>
-              <TabsContent value="workspace" className="flex-1 overflow-auto m-0 p-0 relative">
-                <Workspace />
-              </TabsContent>
-            </Tabs>
-          </div>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-1 flex flex-col overflow-hidden relative">
+        <Tabs defaultValue="requirements" className="w-full h-full flex flex-col">
+          <TabsList className="mx-6 mt-2 mb-0">
+            <TabsTrigger value="requirements">Requirements</TabsTrigger>
+            <TabsTrigger value="components">Component Library</TabsTrigger>
+            <TabsTrigger value="design">Design</TabsTrigger>
+            <TabsTrigger value="results">Results</TabsTrigger>
+          </TabsList>
+          <TabsContent value="requirements" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
+            <RequirementsPanel />
+          </TabsContent>
+          <TabsContent value="components" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
+            <ComponentLibrary />
+          </TabsContent>
+          <TabsContent value="design" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
+            <DesignPanel />
+          </TabsContent>
+          <TabsContent value="results" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
+            <ResultsPanel />
+          </TabsContent>
           
           {/* Dialogs for creating/loading designs */}
           <NewDesignDialog 
@@ -68,23 +62,33 @@ export const AppLayout: React.FC = () => {
           
           {/* Overlay when no design is active */}
           {!activeDesign && (
-            <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg shadow-xl p-8 max-w-md text-center">
-                <h2 className="text-2xl font-bold mb-4">Welcome to Infrastructure Designer</h2>
-                <p className="text-gray-600 mb-6">
-                  To get started, create a new infrastructure design or load an existing one.
+            <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center z-50 p-8">
+              <div className="bg-white rounded-lg p-6 max-w-lg text-center">
+                <h2 className="text-2xl font-bold mb-4">Welcome to Infrastructure Design Tool</h2>
+                <p className="mb-6 text-gray-600">
+                  To get started, create a new design or load an existing one using the buttons in the header.
                 </p>
-                <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-                  <Button onClick={handleCreateNewDesign} className="flex items-center justify-center gap-2">
-                    <PlusCircle className="h-5 w-5" />
+                <div className="flex gap-4 justify-center">
+                  <button 
+                    className="px-4 py-2 bg-infra-blue text-white rounded-md hover:bg-infra-blue/90 transition-colors flex items-center"
+                    onClick={handleCreateNewDesign}
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
                     Create New Design
-                  </Button>
+                  </button>
+                  <button 
+                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors flex items-center"
+                    onClick={handleLoadExistingDesign}
+                  >
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    Load Existing Design
+                  </button>
                 </div>
               </div>
             </div>
           )}
-        </div>
-      </div>
-    </SidebarProvider>
+        </Tabs>
+      </main>
+    </div>
   );
 };
