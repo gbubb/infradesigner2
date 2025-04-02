@@ -4,12 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { InfrastructureComponent } from '@/types/infrastructure';
+import { QuantityDisplay } from '@/components/design/QuantityDisplay';
+import { useDesignStore } from '@/store/designStore';
 
 interface ComponentsTableProps {
   components: InfrastructureComponent[];
 }
 
 export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) => {
+  const { componentRoles } = useDesignStore();
+  
   if (!components || components.length === 0) {
     return null;
   }
@@ -48,6 +52,10 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                   component.role.slice(1).replace(/([A-Z])/g, ' $1') 
                 : 'Unknown';
                 
+              // Find the corresponding role to get the roleId
+              const role = componentRoles.find(r => r.role === component.role);
+              const roleId = role?.id || '';
+                
               return (
                 <TableRow key={`${component.id}-${index}`}>
                   <TableCell className="font-medium">
@@ -60,7 +68,17 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                       {component.manufacturer} {component.model}
                     </div>
                   </TableCell>
-                  <TableCell>{quantity}</TableCell>
+                  <TableCell>
+                    {role ? (
+                      <QuantityDisplay 
+                        roleId={roleId} 
+                        roleName={roleName} 
+                        quantity={quantity} 
+                      />
+                    ) : (
+                      quantity
+                    )}
+                  </TableCell>
                   <TableCell>${component.cost.toLocaleString()}</TableCell>
                   <TableCell>${totalComponentCost.toLocaleString()}</TableCell>
                   <TableCell>{totalComponentPower.toLocaleString()} W</TableCell>
