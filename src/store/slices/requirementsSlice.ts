@@ -1,3 +1,4 @@
+
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -114,7 +115,7 @@ export const createRequirementsSlice: StateCreator<
     
     calculateRequiredQuantity: (roleId: string, componentId: string): number => {
       const state = get();
-      const { requirements, componentRoles, selectedDisksByRole } = state;
+      const { requirements, componentRoles } = state;
       const componentTemplates = state.componentTemplates || [];
       
       const role = componentRoles.find(r => r.id === roleId);
@@ -152,10 +153,11 @@ export const createRequirementsSlice: StateCreator<
           );
           
           if (storageCluster) {
+            // Use the imported utility function directly
             const storageNodeCapacityTiB = calculateStorageNodeCapacity(
               roleId, 
               state.selectedDisksByRole, 
-              state.componentTemplates || []
+              componentTemplates
             );
             
             if (storageNodeCapacityTiB > 0) {
@@ -205,6 +207,7 @@ export const createRequirementsSlice: StateCreator<
         return { componentRoles: updatedRoles };
       });
       
+      // Now call our own calculateRequiredQuantity method
       const newQuantity = get().calculateRequiredQuantity(roleId, componentId);
       
       set((state) => ({
@@ -230,6 +233,7 @@ export const createRequirementsSlice: StateCreator<
       const role = state.componentRoles.find(r => r.id === roleId);
       
       if (role && role.assignedComponentId) {
+        // Call our own calculateRequiredQuantity method
         const newQuantity = get().calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
@@ -256,6 +260,7 @@ export const createRequirementsSlice: StateCreator<
       const role = state.componentRoles.find(r => r.id === roleId);
       
       if (role && role.assignedComponentId) {
+        // Call our own calculateRequiredQuantity method
         const newQuantity = get().calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
@@ -282,6 +287,7 @@ export const createRequirementsSlice: StateCreator<
       const role = state.componentRoles.find(r => r.id === roleId);
       
       if (role && role.assignedComponentId) {
+        // Call our own calculateRequiredQuantity method
         const newQuantity = get().calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
@@ -308,6 +314,7 @@ export const createRequirementsSlice: StateCreator<
       const role = state.componentRoles.find(r => r.id === roleId);
       
       if (role && role.assignedComponentId) {
+        // Call our own calculateRequiredQuantity method
         const newQuantity = get().calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         set((state) => ({
