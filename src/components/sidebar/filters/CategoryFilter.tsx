@@ -1,51 +1,55 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Server as ServerIcon, Network, HardDrive, Shield, Zap, Plus } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { ComponentCategory } from '@/types/infrastructure';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface CategoryFilterProps {
   selectedCategory: ComponentCategory | 'all';
   onCategoryChange: (category: ComponentCategory | 'all') => void;
 }
 
-export const CategoryFilter: React.FC<CategoryFilterProps> = ({
-  selectedCategory,
-  onCategoryChange
-}) => {
-  const categoryIcons = {
-    [ComponentCategory.Compute]: <ServerIcon className="h-5 w-5" />,
-    [ComponentCategory.Network]: <Network className="h-5 w-5" />,
-    [ComponentCategory.Storage]: <HardDrive className="h-5 w-5" />,
-    [ComponentCategory.Security]: <Shield className="h-5 w-5" />,
-    [ComponentCategory.Accelerator]: <Zap className="h-5 w-5" />,
-    all: <Plus className="h-5 w-5" />
+export const CategoryFilter: React.FC<CategoryFilterProps> = ({ selectedCategory, onCategoryChange }) => {
+  const categories = [
+    'all',
+    ComponentCategory.Compute,
+    ComponentCategory.Network,
+    ComponentCategory.Storage,
+    ComponentCategory.Security,
+    ComponentCategory.Acceleration
+  ];
+
+  const getDisplayText = (category: string) => {
+    if (category === 'all') return 'All Categories';
+    return category.charAt(0).toUpperCase() + category.slice(1);
   };
 
   return (
-    <div className="flex flex-wrap gap-1">
-      <Button
-        variant="outline"
-        size="sm"
-        className={selectedCategory === 'all' ? 'bg-primary text-white' : ''}
-        onClick={() => onCategoryChange('all')}
-      >
-        {categoryIcons.all}
-        <span className="ml-1.5">All</span>
-      </Button>
-      
-      {Object.values(ComponentCategory).map((category) => (
-        <Button
-          key={category}
-          variant="outline"
-          size="sm"
-          className={selectedCategory === category ? 'bg-primary text-white' : ''}
-          onClick={() => onCategoryChange(category)}
-        >
-          {categoryIcons[category]}
-          <span className="ml-1.5">{category.charAt(0).toUpperCase() + category.slice(1)}</span>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" className="flex items-center gap-2">
+          Filter: {getDisplayText(selectedCategory)}
+          <ChevronDown className="h-4 w-4" />
         </Button>
-      ))}
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56">
+        <DropdownMenuRadioGroup value={selectedCategory} onValueChange={(value) => onCategoryChange(value as ComponentCategory | 'all')}>
+          {categories.map((category) => (
+            <DropdownMenuRadioItem key={category} value={category} className="flex items-center gap-2">
+              {getDisplayText(category)}
+              {selectedCategory === category && <Check className="ml-auto h-4 w-4" />}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };

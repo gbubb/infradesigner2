@@ -31,19 +31,23 @@ export enum ServerRole {
   Compute = 'compute',
   Storage = 'storage',
   Controller = 'controller',
-  GPU = 'gpu'
+  GPU = 'gpu',
+  Infrastructure = 'infrastructure'
 }
 
 export enum DiskSlotType {
   SATABay = 'SATA Bay',
   SASBay = 'SAS Bay',
   NVMeBay = 'NVMe Bay',
-  PCIeSlot = 'PCIe Slot'
+  PCIeSlot = 'PCIe Slot',
+  TwoPointFive = '2.5"',
+  ThreePointFive = '3.5"'
 }
 
 export enum NetworkPortType {
   RJ45 = 'RJ45',
   SFPlus = 'SFP+',
+  SFP = 'SFP',
   QSFP = 'QSFP',
   QSFPPlus = 'QSFP+',
   QSFPPlusPlusDD = 'QSFP++/DD'
@@ -54,7 +58,9 @@ export enum SwitchRole {
   Management = 'management',
   Leaf = 'leaf',
   Spine = 'spine',
-  Border = 'border'
+  Border = 'border',
+  Access = 'access',
+  Edge = 'edge'
 }
 
 export enum PortSpeed {
@@ -63,14 +69,21 @@ export enum PortSpeed {
   Speed25G = '25G',
   Speed40G = '40G',
   Speed100G = '100G',
-  Speed400G = '400G'
+  Speed400G = '400G',
+  OneG = '1G',
+  TenG = '10G',
+  TwentyFiveG = '25G',
+  FortyG = '40G',
+  HundredG = '100G'
 }
 
 // Disk specific types
 export enum DiskType {
   SSD = 'SSD',
   HDD = 'HDD',
-  NVMe = 'NVMe'
+  NVMe = 'NVMe',
+  SATASSD = 'SATA SSD',
+  NVMeSSD = 'NVMe SSD'
 }
 
 // GPU specific types
@@ -92,22 +105,37 @@ export enum NetworkTopology {
 
 // Infrastructure Design Requirements
 export interface DesignRequirements {
-  controllerNodeCount?: number;
-  infrastructureClusterRequired?: boolean;
-  infrastructureNodeCount?: number;
-  computeClusters: ComputeClusterRequirement[];
-  storageClusters: StorageClusterRequirement[];
-  networkTopology?: NetworkTopology;
-  redundantManagementNetwork?: boolean;
-  firewallRequired?: boolean;
-  disasterRecovery?: boolean;
-  ipmiNetworkType?: IPMINetworkType;
+  computeRequirements: {
+    controllerNodeCount?: number;
+    infrastructureClusterRequired?: boolean;
+    infrastructureNodeCount?: number;
+    computeClusters: ComputeClusterRequirement[];
+  };
+  storageRequirements: {
+    storageClusters: StorageClusterRequirement[];
+  };
+  networkRequirements: {
+    networkTopology?: NetworkTopology;
+    managementNetwork?: string;
+    ipmiNetwork?: string;
+    physicalFirewalls?: boolean;
+    leafSwitchesPerAZ?: number;
+    dedicatedStorageNetwork?: boolean;
+    dedicatedNetworkCoreRacks?: boolean;
+  };
+  physicalConstraints: {
+    computeStorageRackQuantity?: number;
+    totalAvailabilityZones?: number;
+    rackUnitsPerRack?: number;
+    powerPerRackWatts?: number;
+  };
 }
 
 export enum IPMINetworkType {
   Shared = 'shared',
   Dedicated = 'dedicated',
-  None = 'none'
+  None = 'none',
+  DedicatedIPMISwitch = 'Dedicated IPMI switch'
 }
 
 export enum DeviceRoleType {
@@ -146,9 +174,20 @@ export interface StorageClusterRequirement {
 }
 
 export interface ClusterInfo {
+  clusterId: string;
+  clusterName: string;
+  clusterIndex: number;
+}
+
+// Component role mapping between requirements and components
+export interface ComponentRole {
   id: string;
-  name: string;
-  nodeCount: number;
+  role: string;
+  description: string;
+  requiredCount: number;
+  adjustedRequiredCount?: number;
+  assignedComponentId?: string;
+  clusterInfo?: ClusterInfo;
 }
 
 // Storage efficiency factors
@@ -174,6 +213,7 @@ export interface InfrastructureComponent {
   powerRequired: number;
   isDefault?: boolean;
   role?: string;
+  quantity?: number;
   [key: string]: any; // To allow for any additional properties
 }
 
@@ -185,12 +225,17 @@ export interface Server extends InfrastructureComponent {
   cpuModel: string;
   cpuCoresPerSocket: number;
   coreCount: number;
+  cpuCount?: number;
   memoryGB: number;
+  memoryCapacity?: number;
   ruSize: number;
+  rackUnitsConsumed?: number;
   diskSlotType: DiskSlotType;
   diskSlotQuantity: number;
   networkPortType: NetworkPortType;
   portsConsumedQuantity: number;
+  networkPorts?: number;
+  networkPortSpeed?: number;
   gpuSupported?: boolean;
   gpuSlots?: number;
   storageCapacityTB?: number;
@@ -200,10 +245,13 @@ export interface Server extends InfrastructureComponent {
 export interface Switch extends InfrastructureComponent {
   type: ComponentType.Switch;
   switchRole: SwitchRole;
-  layer: string;
+  layer: string | number;
   portsProvidedQuantity: number;
+  portCount?: number;
+  portSpeed?: number | string;
   portSpeedType: PortSpeed;
   ruSize: number;
+  rackUnitsConsumed?: number;
   nonBlockingFabric?: boolean;
   bufferSize?: number;
 }
@@ -227,6 +275,7 @@ export interface Firewall extends InfrastructureComponent {
   portCount: number;
   portSpeed: number;
   rackUnitsConsumed: number;
+  features?: string[];
 }
 
 // Disk interface
@@ -239,6 +288,7 @@ export interface Disk extends InfrastructureComponent {
   iops?: number;
   readSpeed?: number;
   writeSpeed?: number;
+  rpm?: number;
 }
 
 // GPU interface
@@ -249,16 +299,10 @@ export interface GPU extends InfrastructureComponent {
   tdpWatts: number;
   computeUnits?: number;
   tensorCores?: number;
-}
-
-// Component role mapping between requirements and components
-export interface ComponentRole {
-  id: string;
-  role: string;
-  description: string;
-  requiredCount: number;
-  adjustedRequiredCount?: number;
-  assignedComponentId?: string;
+  cudaCores?: number;
+  pcieGeneration?: number;
+  pcieWidth?: number;
+  modelFamily?: string;
 }
 
 // Infrastructure Design interface
@@ -280,4 +324,12 @@ export interface ComponentWithPosition {
   id: string;
   position: { x: number; y: number };
   component: InfrastructureComponent;
+}
+
+// Connection interface
+export interface Connection {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  label?: string;
 }

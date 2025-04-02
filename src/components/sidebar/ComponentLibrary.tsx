@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -231,6 +230,8 @@ export const ComponentLibrary: React.FC = () => {
           portCount: componentForm.portCount || 8,
           portSpeed: componentForm.portSpeed || 10,
           throughput: componentForm.throughput || 10,
+          connectionPerSecond: componentForm.connectionPerSecond || 10000,
+          concurrentConnections: componentForm.concurrentConnections || 100000,
           features: ['IPS', 'VPN']
         } as Firewall;
         break;

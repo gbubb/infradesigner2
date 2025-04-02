@@ -1,4 +1,3 @@
-
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureDesign } from '@/types/infrastructure';
 import { toast } from 'sonner';
@@ -18,6 +17,15 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
     const designs = (data?.map(design => {
       // Make sure we're only processing design rows by checking for required properties
       if ('createdat' in design && 'requirements' in design) {
+        // Parse JSON fields
+        const parsedComponents = design.components ? JSON.parse(design.components as string) : [];
+        const parsedRequirements = design.requirements ? JSON.parse(design.requirements as string) : {};
+        
+        // Get componentRoles, selectedDisksByRole, and selectedGPUsByRole from requirements JSON if they exist
+        const componentRoles = parsedRequirements.componentRoles || [];
+        const selectedDisksByRole = parsedRequirements.selectedDisksByRole || {};
+        const selectedGPUsByRole = parsedRequirements.selectedGPUsByRole || {};
+        
         // Create a complete design object with all properties
         return {
           id: design.id,

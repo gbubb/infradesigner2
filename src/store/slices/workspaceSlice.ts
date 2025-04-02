@@ -1,9 +1,8 @@
-
 import { StateCreator } from 'zustand';
-import { v4 as uuidv4 } from 'uuid';
+import { StoreState, WorkspaceState } from '../types';
 import { InfrastructureComponent } from '@/types/infrastructure';
-import { Position, ComponentWithPosition } from '@/types/workspace';
-import { StoreState } from '../types';
+import { ComponentWithPosition, Position } from '@/types/workspace';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface WorkspaceSlice {
   // Components placed in the workspace

@@ -1,4 +1,3 @@
-
 import { 
   ComponentType, 
   InfrastructureComponent, 
@@ -142,7 +141,7 @@ export const switchTemplates: Switch[] = [
     powerRequired: 650,
     rackUnitsConsumed: 1,
     portCount: 36,
-    portSpeed: 100,
+    portSpeed: '100G',
     layer: 3,
     // New fields
     switchRole: SwitchRole.Leaf,
@@ -160,7 +159,7 @@ export const switchTemplates: Switch[] = [
     powerRequired: 1050,
     rackUnitsConsumed: 2,
     portCount: 64,
-    portSpeed: 100,
+    portSpeed: '100G',
     layer: 3,
     // New fields
     switchRole: SwitchRole.Spine,
@@ -178,7 +177,7 @@ export const switchTemplates: Switch[] = [
     powerRequired: 350,
     rackUnitsConsumed: 1,
     portCount: 48,
-    portSpeed: 1,
+    portSpeed: '1G',
     layer: 3,
     // New fields
     switchRole: SwitchRole.Management,
@@ -196,7 +195,7 @@ export const switchTemplates: Switch[] = [
     powerRequired: 500,
     rackUnitsConsumed: 1,
     portCount: 48,
-    portSpeed: 25,
+    portSpeed: '25G',
     layer: 3,
     // New fields
     switchRole: SwitchRole.Edge,
@@ -238,6 +237,8 @@ export const firewallTemplates: Firewall[] = [
     portCount: 24,
     portSpeed: 10,
     throughput: 20,
+    connectionPerSecond: 100000,
+    concurrentConnections: 2000000,
     features: ['App-ID', 'User-ID', 'IPS', 'URL Filtering', 'VPN']
   }
 ];

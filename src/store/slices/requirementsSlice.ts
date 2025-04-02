@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -100,7 +99,7 @@ export const createRequirementsSlice: StateCreator<
       let managementSwitchCount = totalAvailabilityZones * mgmtSwitchesPerAZ;
       
       // Add dedicated IPMI switches if needed
-      if (ipmiNetwork === 'Dedicated IPMI switch') {
+      if (ipmiNetwork === IPMINetworkType.DedicatedIPMISwitch) {
         // Add one IPMI switch per AZ
         managementSwitchCount += totalAvailabilityZones;
       }
