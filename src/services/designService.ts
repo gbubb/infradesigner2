@@ -71,8 +71,8 @@ export const saveDesign = async (design: InfrastructureDesign): Promise<boolean>
       name: design.name,
       description: design.description,
       // Convert objects to JSON strings
-      requirements: JSON.stringify(design.requirements),
-      components: JSON.stringify(design.components),
+      requirements: JSON.stringify(design.requirements || {}),
+      components: JSON.stringify(design.components || []),
       // Add additional configuration data as JSON strings
       component_roles: JSON.stringify(design.componentRoles || []),
       selected_disks_by_role: JSON.stringify(design.selectedDisksByRole || {}),

@@ -59,30 +59,39 @@ export type Database = {
       }
       designs: {
         Row: {
+          component_roles: Json | null
           components: Json | null
           createdat: string | null
           description: string | null
           id: string
           name: string
           requirements: Json | null
+          selected_disks_by_role: Json | null
+          selected_gpus_by_role: Json | null
           updatedat: string | null
         }
         Insert: {
+          component_roles?: Json | null
           components?: Json | null
           createdat?: string | null
           description?: string | null
           id?: string
           name: string
           requirements?: Json | null
+          selected_disks_by_role?: Json | null
+          selected_gpus_by_role?: Json | null
           updatedat?: string | null
         }
         Update: {
+          component_roles?: Json | null
           components?: Json | null
           createdat?: string | null
           description?: string | null
           id?: string
           name?: string
           requirements?: Json | null
+          selected_disks_by_role?: Json | null
+          selected_gpus_by_role?: Json | null
           updatedat?: string | null
         }
         Relationships: []
