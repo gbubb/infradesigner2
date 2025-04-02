@@ -72,7 +72,7 @@ export const HeaderActions: React.FC = () => {
         onClick={() => setIsNewDesignDialogOpen(true)}
       >
         <PlusCircle className="mr-2 h-4 w-4" />
-        New Design
+        New
       </Button>
 
       <Button 
@@ -81,7 +81,7 @@ export const HeaderActions: React.FC = () => {
         onClick={() => setIsLoadDesignDialogOpen(true)}
       >
         <FolderOpen className="mr-2 h-4 w-4" />
-        Load Design
+        Load
       </Button>
 
       <Button 
@@ -90,8 +90,7 @@ export const HeaderActions: React.FC = () => {
         onClick={saveDesign}
         disabled={!activeDesign}
       >
-        <Save className="mr-2 h-4 w-4" />
-        Save
+        <Save className="h-4 w-4" />
       </Button>
       
       <Button 
