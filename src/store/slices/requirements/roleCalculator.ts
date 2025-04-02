@@ -1,0 +1,194 @@
+
+import { v4 as uuidv4 } from 'uuid';
+import { ComponentRole, IPMINetworkType, NetworkTopology } from '@/types/infrastructure';
+
+/**
+ * Calculates component roles based on requirements
+ */
+export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
+  const getValue = <T>(obj: any, path: string, defaultValue: T): T => {
+    try {
+      return path.split('.').reduce((o, key) => o[key], obj) || defaultValue;
+    } catch (error) {
+      return defaultValue;
+    }
+  };
+  
+  const totalAvailabilityZones = getValue(requirements, 'physicalConstraints.totalAvailabilityZones', 8) || 8;
+  const controllerNodeCount = getValue(requirements, 'computeRequirements.controllerNodeCount', 3) || 3;
+  const infrastructureClusterRequired = getValue(requirements, 'computeRequirements.infrastructureClusterRequired', false) || false;
+  const infrastructureNodeCount = getValue(requirements, 'computeRequirements.infrastructureNodeCount', 3) || 3;
+  
+  const computeClusters = getValue(requirements, 'computeRequirements.computeClusters', []) || [];
+  const storageClusters = getValue(requirements, 'storageRequirements.storageClusters', []) || [];
+  
+  const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', "Spine-Leaf") as NetworkTopology || "Spine-Leaf";
+  const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false) || false;
+  const leafSwitchesPerAZ = getValue(requirements, 'networkRequirements.leafSwitchesPerAZ', 2) || 2;
+  const dedicatedStorageNetwork = getValue(requirements, 'networkRequirements.dedicatedStorageNetwork', false) || false;
+  const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', "Dual Home") || "Dual Home";
+  
+  const mgmtSwitchesPerAZ = managementNetwork === 'Dual Home' ? 2 : 1;
+  const ipmiNetwork = getValue(requirements, 'networkRequirements.ipmiNetwork', "Management converged") as IPMINetworkType;
+  
+  let managementSwitchCount = totalAvailabilityZones * mgmtSwitchesPerAZ;
+  
+  if (ipmiNetwork === "Dedicated IPMI switch") {
+    managementSwitchCount += totalAvailabilityZones;
+  }
+  
+  const leafSwitchCount = totalAvailabilityZones * leafSwitchesPerAZ;
+  
+  const newRoles: ComponentRole[] = [
+    {
+      id: uuidv4(),
+      role: 'controllerNode',
+      description: 'Handles cluster management and monitoring',
+      requiredCount: controllerNodeCount
+    }
+  ];
+  
+  // Add compute cluster nodes
+  computeClusters.forEach((cluster, index) => {
+    const totalVCPUs = cluster.totalVCPUs || 5000;
+    const totalMemoryTB = cluster.totalMemoryTB || 30;
+    const availabilityZoneRedundancy = cluster.availabilityZoneRedundancy || 'N+1';
+    const overcommitRatio = cluster.overcommitRatio || 2;
+    const gpuEnabled = cluster.gpuEnabled || false;
+    
+    const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
+    const nodesPerAZ = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones);
+    const baseComputeNodeCount = nodesPerAZ * totalAvailabilityZones;
+    
+    let additionalAZs = 0;
+    if (availabilityZoneRedundancy === 'N+1') {
+      additionalAZs = 1;
+    } else if (availabilityZoneRedundancy === 'N+2') {
+      additionalAZs = 2;
+    }
+    
+    const totalComputeNodeCount = baseComputeNodeCount + (additionalAZs * nodesPerAZ);
+    
+    const clusterInfo = {
+      clusterId: cluster.id,
+      clusterName: cluster.name,
+      clusterIndex: index
+    };
+    
+    const roleType = gpuEnabled ? 'gpuNode' : 'computeNode';
+    const roleDescription = gpuEnabled 
+      ? `Provides GPU compute resources for ${cluster.name}` 
+      : `Provides compute resources for ${cluster.name}`;
+    
+    newRoles.push({
+      id: uuidv4(),
+      role: roleType,
+      description: roleDescription,
+      requiredCount: totalComputeNodeCount,
+      clusterInfo: clusterInfo
+    } as ComponentRole);
+  });
+  
+  // Add storage cluster nodes
+  storageClusters.forEach((cluster, index) => {
+    newRoles.push({
+      id: cluster.id || uuidv4(),
+      role: 'storageNode',
+      description: `Provides storage resources for ${cluster.name}`,
+      requiredCount: cluster.availabilityZoneQuantity || 3,
+      clusterInfo: {
+        clusterId: cluster.id || '',
+        clusterName: cluster.name || '',
+        clusterIndex: index
+      }
+    } as ComponentRole);
+  });
+  
+  // Add infrastructure nodes if required
+  if (infrastructureClusterRequired) {
+    newRoles.push({
+      id: uuidv4(),
+      role: 'infrastructureNode',
+      description: 'Provides infrastructure services for the cluster',
+      requiredCount: infrastructureNodeCount
+    });
+  }
+  
+  // Add network components
+  newRoles.push({
+    id: uuidv4(),
+    role: 'managementSwitch',
+    description: 'Provides network connectivity for management interfaces',
+    requiredCount: managementSwitchCount
+  });
+  
+  if (networkTopology === 'Spine-Leaf') {
+    newRoles.push({
+      id: uuidv4(),
+      role: 'leafSwitch',
+      description: 'Provides network connectivity for compute nodes',
+      requiredCount: leafSwitchCount
+    });
+    
+    if (dedicatedStorageNetwork && storageClusters.length > 0) {
+      const totalStorageAZs = storageClusters.reduce((sum, cluster) => 
+        sum + (cluster.availabilityZoneQuantity || 3), 0);
+      
+      newRoles.push({
+        id: uuidv4(),
+        role: 'storageSwitch',
+        description: 'Provides network connectivity for storage nodes',
+        requiredCount: totalStorageAZs * 2
+      });
+    }
+    
+    newRoles.push({
+      id: uuidv4(),
+      role: 'borderLeafSwitch',
+      description: 'Connects the internal network to external networks',
+      requiredCount: 2
+    });
+    
+    newRoles.push({
+      id: uuidv4(),
+      role: 'spineSwitch',
+      description: 'Provides high-speed connectivity between leaf switches',
+      requiredCount: 2
+    });
+  } else {
+    const totalComputeNodes = computeClusters.reduce((sum, cluster) => {
+      const totalVCPUs = cluster.totalVCPUs || 5000;
+      const overcommitRatio = cluster.overcommitRatio || 2;
+      const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
+      const nodesPerAZ = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones);
+      const baseNodeCount = nodesPerAZ * totalAvailabilityZones;
+      
+      let additionalAZs = 0;
+      if (cluster.availabilityZoneRedundancy === 'N+1') {
+        additionalAZs = 1;
+      } else if (cluster.availabilityZoneRedundancy === 'N+2') {
+        additionalAZs = 2;
+      }
+      
+      return sum + baseNodeCount + (additionalAZs * nodesPerAZ);
+    }, 0);
+    
+    newRoles.push({
+      id: uuidv4(),
+      role: 'torSwitch',
+      description: 'Provides top-of-rack switching for servers',
+      requiredCount: Math.ceil(totalComputeNodes / 2)
+    });
+  }
+  
+  if (physicalFirewalls) {
+    newRoles.push({
+      id: uuidv4(),
+      role: 'firewall',
+      description: 'Provides network security and traffic filtering',
+      requiredCount: 2
+    });
+  }
+  
+  return newRoles;
+};
