@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { ComponentLibrary } from '@/components/sidebar/ComponentLibrary';
 import { Header } from '@/components/layout/header';
@@ -9,26 +9,20 @@ import { DesignPanel } from '@/components/design/DesignPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDesignStore } from '@/store/designStore';
 import { PlusCircle, FolderOpen } from 'lucide-react';
+import { NewDesignDialog } from '@/components/layout/header/dialogs/NewDesignDialog';
+import { LoadDesignDialog } from '@/components/layout/header/dialogs/LoadDesignDialog';
 
 export const AppLayout: React.FC = () => {
   const { activeDesign } = useDesignStore();
+  const [isNewDesignDialogOpen, setIsNewDesignDialogOpen] = useState(false);
+  const [isLoadDesignDialogOpen, setIsLoadDesignDialogOpen] = useState(false);
   
-  // These states and handlers are passed to the Header component
-  // which already contains the dialog components
   const handleCreateNewDesign = () => {
-    // Find and click the New Design button in the header
-    const newDesignButton = document.querySelector('button:has(.lucide-plus-circle)');
-    if (newDesignButton) {
-      (newDesignButton as HTMLElement).click();
-    }
+    setIsNewDesignDialogOpen(true);
   };
   
   const handleLoadExistingDesign = () => {
-    // Find and click the Load Design button in the header
-    const loadDesignButton = document.querySelector('button:has(.lucide-folder-open)');
-    if (loadDesignButton) {
-      (loadDesignButton as HTMLElement).click();
-    }
+    setIsLoadDesignDialogOpen(true);
   };
   
   return (
@@ -54,6 +48,17 @@ export const AppLayout: React.FC = () => {
           <TabsContent value="results" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
             <ResultsPanel />
           </TabsContent>
+          
+          {/* Dialogs for creating/loading designs */}
+          <NewDesignDialog 
+            isOpen={isNewDesignDialogOpen}
+            onOpenChange={setIsNewDesignDialogOpen}
+          />
+          
+          <LoadDesignDialog
+            isOpen={isLoadDesignDialogOpen}
+            onOpenChange={setIsLoadDesignDialogOpen}
+          />
           
           {/* Overlay when no design is active */}
           {!activeDesign && (

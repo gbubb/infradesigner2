@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useDesignStore } from '@/store/designStore';
-import { Save, Download, Upload } from 'lucide-react';
+import { Save, Download, Upload, PlusCircle, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { NewDesignDialog } from './dialogs/NewDesignDialog';
 import { LoadDesignDialog } from './dialogs/LoadDesignDialog';
@@ -65,6 +65,24 @@ export const HeaderActions: React.FC = () => {
         isOpen={isLoadDesignDialogOpen}
         onOpenChange={setIsLoadDesignDialogOpen}
       />
+
+      <Button 
+        variant="secondary"
+        className="bg-white text-infra-blue hover:bg-gray-100"
+        onClick={() => setIsNewDesignDialogOpen(true)}
+      >
+        <PlusCircle className="mr-2 h-4 w-4" />
+        New Design
+      </Button>
+
+      <Button 
+        variant="secondary"
+        className="bg-white text-infra-blue hover:bg-gray-100"
+        onClick={() => setIsLoadDesignDialogOpen(true)}
+      >
+        <FolderOpen className="mr-2 h-4 w-4" />
+        Load Design
+      </Button>
 
       <Button 
         variant="secondary"
