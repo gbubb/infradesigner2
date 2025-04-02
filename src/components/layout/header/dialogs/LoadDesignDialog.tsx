@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { FolderOpen, Trash2 } from 'lucide-react';
 import { useDesignStore } from '@/store/designStore';
@@ -30,15 +30,6 @@ export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOp
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogTrigger asChild>
-          <Button 
-            variant="secondary"
-            className="bg-white text-infra-blue hover:bg-gray-100"
-          >
-            <FolderOpen className="mr-2 h-4 w-4" />
-            Load Design
-          </Button>
-        </DialogTrigger>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Load Infrastructure Design</DialogTitle>

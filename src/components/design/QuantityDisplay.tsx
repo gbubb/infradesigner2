@@ -16,12 +16,12 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
 }) => {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-muted-foreground">Required Quantity:</span>
+      <span className="text-muted-foreground">Required:</span>
       <CalculationBreakdown roleId={roleId} roleName={roleName}>
-        <span className="cursor-pointer underline text-primary hover:text-primary/80 flex items-center">
+        <div className="cursor-pointer underline text-primary hover:text-primary/80 flex items-center">
           {quantity}
           <Info className="h-4 w-4 ml-1 text-blue-500" />
-        </span>
+        </div>
       </CalculationBreakdown>
     </div>
   );
