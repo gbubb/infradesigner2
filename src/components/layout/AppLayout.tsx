@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { ComponentLibrary } from '@/components/sidebar/ComponentLibrary';
@@ -11,6 +12,22 @@ import { PlusCircle, FolderOpen } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
   const { activeDesign } = useDesignStore();
+  
+  // Handler for creating a new design
+  const handleCreateNewDesign = () => {
+    const newDesignButton = document.querySelector('button:has(svg[data-lucide="PlusCircle"])');
+    if (newDesignButton) {
+      (newDesignButton as HTMLElement).click();
+    }
+  };
+  
+  // Handler for loading an existing design
+  const handleLoadExistingDesign = () => {
+    const loadDesignButton = document.querySelector('button:has(svg[data-lucide="FolderOpen"])');
+    if (loadDesignButton) {
+      (loadDesignButton as HTMLElement).click();
+    }
+  };
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -47,14 +64,14 @@ export const AppLayout: React.FC = () => {
                 <div className="flex gap-4 justify-center">
                   <button 
                     className="px-4 py-2 bg-infra-blue text-white rounded-md hover:bg-infra-blue/90 transition-colors flex items-center"
-                    onClick={() => document.querySelector('button:has(svg[data-lucide="PlusCircle"])')?.click()}
+                    onClick={handleCreateNewDesign}
                   >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Create New Design
                   </button>
                   <button 
                     className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors flex items-center"
-                    onClick={() => document.querySelector('button:has(svg[data-lucide="FolderOpen"])')?.click()}
+                    onClick={handleLoadExistingDesign}
                   >
                     <FolderOpen className="mr-2 h-4 w-4" />
                     Load Existing Design
