@@ -10,6 +10,7 @@ import { Workspace } from '@/components/workspace/Workspace';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDesignStore } from '@/store/designStore';
 import { PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { NewDesignDialog } from '@/components/layout/header/dialogs/NewDesignDialog';
 import { LoadDesignDialog } from '@/components/layout/header/dialogs/LoadDesignDialog';
 
@@ -51,7 +52,7 @@ export const AppLayout: React.FC = () => {
               <TabsContent value="workspace" className="flex-1 overflow-auto m-0 p-0 relative">
                 <Workspace />
               </TabsContent>
-            </TabsList>
+            </Tabs>
           </div>
           
           {/* Dialogs for creating/loading designs */}
