@@ -36,19 +36,33 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   // Update breakdown steps whenever the dialog state changes or when forceUpdate changes
   useEffect(() => {
     if (isOpen && role && role.assignedComponentId) {
-      // Get the breakdown steps
-      const steps = getCalculationBreakdown(roleId);
-      if (steps && steps.length > 0) {
-        setBreakdownSteps(steps);
-      } else {
-        // If no breakdown steps available, force a calculation
+      // First ensure we have a fresh calculation
+      const freshCalculation = async () => {
+        console.log(`Calculating for ${roleId} with component ${role.assignedComponentId}`);
+        
+        // Force a calculation first 
         calculateRequiredQuantity(roleId, role.assignedComponentId);
-        // Use setTimeout to ensure state updates have propagated
-        setTimeout(() => {
+        
+        // Add a small delay to ensure the calculation has had time to update state
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Now get the breakdown steps
+        const steps = getCalculationBreakdown(roleId);
+        console.log(`Got breakdown steps for ${roleId}:`, steps?.length || 0);
+        
+        if (steps && steps.length > 0) {
+          setBreakdownSteps(steps);
+        } else {
+          console.log(`No breakdown steps found for ${roleId}, trying again`);
+          // One more attempt with a longer delay
+          await new Promise(resolve => setTimeout(resolve, 200));
           const freshSteps = getCalculationBreakdown(roleId);
+          console.log(`Second attempt - got breakdown steps for ${roleId}:`, freshSteps?.length || 0);
           setBreakdownSteps(freshSteps || []);
-        }, 100); // Increased timeout for better reliability
-      }
+        }
+      };
+      
+      freshCalculation();
     }
   }, [isOpen, role, roleId, getCalculationBreakdown, calculateRequiredQuantity, forceUpdate]);
   
@@ -57,16 +71,12 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     setIsOpen(open);
     
     if (open && role && role.assignedComponentId) {
-      // Force calculation to ensure we have fresh breakdown
-      calculateRequiredQuantity(roleId, role.assignedComponentId);
-      
-      // Use setTimeout to ensure state updates have propagated
+      // Force an update to trigger the effect
       setTimeout(() => {
-        // Force an update to trigger the effect
         setForceUpdate(prev => !prev);
       }, 50);
     }
-  }, [roleId, role, calculateRequiredQuantity]);
+  }, [roleId, role]);
   
   // Build the title with cluster name if available
   const titleText = clusterName 

@@ -22,19 +22,23 @@ export const useHardwareTotals = () => {
     let computeMemoryGB = 0;
     let totalStorageTB = 0;
     
+    console.log('Calculating hardware totals from components:', activeDesign.components.length);
+    
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
       
       if (component.type === ComponentType.Server) {
-        // Calculate vCPUs - use consistent naming
+        // Calculate vCPUs - use consistent naming and log details
         let coresPerServer = 0;
         let overcommitRatio = 1;
         
-        // Handle different server property naming
+        // Handle different server property naming with better logging
         if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
           coresPerServer = (component.cpuSockets || 0) * (component.cpuCoresPerSocket || 0);
+          console.log(`Server ${component.name} has ${component.cpuSockets} sockets × ${component.cpuCoresPerSocket} cores = ${coresPerServer} cores`);
         } else if ('cpuCount' in component && 'coreCount' in component) {
           coresPerServer = (component.cpuCount || 0) * (component.coreCount || 0);
+          console.log(`Server ${component.name} has ${component.cpuCount} CPUs × ${component.coreCount} cores = ${coresPerServer} cores`);
         }
         
         // Get overcommit ratio from individual compute clusters if available
@@ -48,12 +52,14 @@ export const useHardwareTotals = () => {
         
         totalVCPUs += coresPerServer * quantity * overcommitRatio;
         
-        // Calculate memory - use consistent naming
+        // Calculate memory - use consistent naming and log details
         let componentMemoryGB = 0;
-        if ('memoryGB' in component) {
-          componentMemoryGB = component.memoryGB || 0;
-        } else if ('memoryCapacity' in component) {
-          componentMemoryGB = (component as any).memoryCapacity || 0;
+        if ('memoryGB' in component && component.memoryGB > 0) {
+          componentMemoryGB = component.memoryGB;
+          console.log(`Server ${component.name} has ${componentMemoryGB}GB of memory (memoryGB property)`);
+        } else if ('memoryCapacity' in component && (component as any).memoryCapacity > 0) {
+          componentMemoryGB = (component as any).memoryCapacity;
+          console.log(`Server ${component.name} has ${componentMemoryGB}GB of memory (memoryCapacity property)`);
         }
         
         totalMemoryGB += componentMemoryGB * quantity;
@@ -70,6 +76,13 @@ export const useHardwareTotals = () => {
     
     const totalMemoryTB = totalMemoryGB / 1024;
     const computeMemoryTB = computeMemoryGB / 1024;
+    
+    console.log('Final hardware totals calculated:', {
+      totalVCPUs,
+      totalMemoryTB,
+      computeMemoryTB,
+      totalStorageTB
+    });
     
     return {
       totalVCPUs,
