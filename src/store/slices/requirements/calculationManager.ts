@@ -1,4 +1,3 @@
-
 import { 
   calculateComputeNodeQuantity,
   calculateStorageNodeQuantity,
@@ -44,22 +43,20 @@ export const calculateRequiredQuantity = (
         // For GPU nodes, also pass GPU configurations
         const nodeGPUs = role.role === 'gpuNode' ? selectedGPUsByRole[roleId] || [] : [];
         
+        // Simplified memory and CPU information logging
+        const coresPerServer = component.cpuSockets * component.cpuCoresPerSocket || component.cpuCount * component.coreCount || component.cores || component.totalCores || 0;
+        const memoryGB = component.memoryCapacity || component.memoryGB || (component.memoryTB ? component.memoryTB * 1024 : 0);
+        
         console.log('Calculate compute node quantity. Component details:', {
           id: component.id,
           name: component.name,
           manufacturer: component.manufacturer,
           model: component.model,
-          cpuSockets: component.cpuSockets,
-          cpuCoresPerSocket: component.cpuCoresPerSocket,
-          cpuCount: component.cpuCount,
-          coreCount: component.coreCount,
-          cores: component.cores,
-          totalCores: component.totalCores,
-          memoryGB: component.memoryGB,
-          memoryCapacity: component.memoryCapacity,
-          memory: component.memory,
-          totalMemoryGB: component.totalMemoryGB,
-          memoryTB: component.memoryTB
+          cores: coresPerServer,
+          memory: memoryGB,
+          memorySource: component.memoryCapacity ? 'memoryCapacity' : 
+                         component.memoryGB ? 'memoryGB' : 
+                         component.memoryTB ? 'memoryTB' : 'unknown'
         });
         
         // The fix: Check if this is a GPU node and pass nodeGPUs only if it is
@@ -128,7 +125,7 @@ export const calculateRequiredQuantity = (
     }
   }
   
-  // Log the calculation result
+  // Log the calculation result with simplified server properties
   console.log(`Calculation result for ${role.role} (${roleId}):`, {
     requiredQuantity,
     calculationStepsCount: calculationSteps.length,
@@ -140,7 +137,7 @@ export const calculateRequiredQuantity = (
         (component.cpuCount && component.coreCount ? 
           component.cpuCount * component.coreCount : 
           (component.cores || component.totalCores || 'unknown')),
-      memory: component.memoryGB || component.memoryCapacity || component.memory || component.totalMemoryGB || 
+      memory: component.memoryCapacity || component.memoryGB || 
         (component.memoryTB ? `${component.memoryTB} TB` : 'unknown')
     }
   });

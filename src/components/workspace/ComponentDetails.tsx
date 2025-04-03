@@ -104,7 +104,15 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
     switch (component.type) {
       case ComponentType.Server:
         // Check if component has server properties
-        if ('cpuModel' in component && 'coreCount' in component && 'memoryGB' in component) {
+        if ('cpuModel' in component) {
+          // Get the total cores based on sockets and cores per socket
+          const totalCores = component.cpuSockets && component.cpuCoresPerSocket ? 
+            component.cpuSockets * component.cpuCoresPerSocket : 
+            component.coreCount || 0;
+          
+          // Use memoryCapacity as the primary memory field
+          const serverMemory = component.memoryCapacity || component.memoryGB || 0;
+          
           return (
             <>
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -133,10 +141,10 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
                 )}
                 
                 <div className="text-gray-500">Total Cores</div>
-                <div>{component.coreCount}</div>
+                <div>{totalCores}</div>
                 
                 <div className="text-gray-500">Memory</div>
-                <div>{component.memoryGB} GB</div>
+                <div>{serverMemory} GB</div>
                 
                 {component.diskSlotType && component.diskSlotQuantity && (
                   <>

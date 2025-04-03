@@ -1,4 +1,3 @@
-
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureComponent, ComponentType, Server, Switch, Disk } from '@/types/infrastructure';
 import { toast } from 'sonner';
@@ -75,17 +74,28 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
         // Construct the full component based on its type
         switch (component.type) {
           case ComponentType.Server:
+            // Determine the memory value using memoryCapacity as the primary field
+            const memoryCapacity = details.memoryCapacity || details.memoryGB || 
+              (details.memoryTB ? details.memoryTB * 1024 : 0);
+                
+            // Calculate core count consistently
+            const coreCount = details.cpuSockets && details.cpuCoresPerSocket ?
+              details.cpuSockets * details.cpuCoresPerSocket :
+              details.cpuCount && details.coreCount ?
+                details.cpuCount * details.coreCount :
+                details.cores || details.totalCores || 0;
+                
             return {
               ...baseComponent,
               serverRole: component.serverrole,
               rackUnitsConsumed: details.rackUnitsConsumed || details.ruSize || 1,
               cpuModel: details.cpuModel || '',
               cpuCount: details.cpuCount || 1,
-              coreCount: details.coreCount || details.cpuCoresPerSocket * details.cpuSockets || 0,
-              memoryGB: details.memoryGB || details.memoryCapacity || 0,
+              coreCount: coreCount,
+              memoryGB: memoryCapacity, // For backward compatibility
               cpuSockets: details.cpuSockets || 1,
               cpuCoresPerSocket: details.cpuCoresPerSocket || 1,
-              memoryCapacity: details.memoryCapacity || details.memoryGB || 0,
+              memoryCapacity: memoryCapacity, // Primary memory field
               diskSlotType: details.diskSlotType || undefined,
               diskSlotQuantity: details.diskSlotQuantity || 0,
               ruSize: details.ruSize || details.rackUnitsConsumed || 1,
@@ -130,6 +140,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
             };
         }
       }
+      
       // This should never happen if database is properly set up
       console.error('Invalid component data:', component);
       return null;

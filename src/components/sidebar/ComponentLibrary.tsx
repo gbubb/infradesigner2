@@ -141,7 +141,6 @@ export const ComponentLibrary: React.FC = () => {
         setDefaultComponent(component.type, component.role || '', componentId);
       }
     } else {
-      // Only allow turning off default if there are other components of same type and role
       const component = componentTemplates.find(c => c.id === componentId);
       if (component) {
         const sameTypeAndRole = componentTemplates.filter(
@@ -178,18 +177,21 @@ export const ComponentLibrary: React.FC = () => {
     
     switch (componentForm.type) {
       case ComponentType.Server:
+        const memoryCapacity = componentForm.memoryCapacity || 0;
+        const coreCount = componentForm.cpuSockets * componentForm.cpuCoresPerSocket || 0;
+        
         component = {
           ...baseComponent,
           type: ComponentType.Server,
           rackUnitsConsumed: componentForm.ruSize || 1,
           cpuModel: componentForm.cpuModel || "Generic CPU",
           cpuCount: componentForm.cpuCount || 1,
-          coreCount: componentForm.coreCount || 8,
-          memoryGB: componentForm.memoryGB || 32,
+          coreCount: coreCount,
+          memoryGB: memoryCapacity, // For backward compatibility
           serverRole: componentForm.serverRole || ServerRole.Compute,
           cpuSockets: componentForm.cpuSockets || 1,
           cpuCoresPerSocket: componentForm.cpuCoresPerSocket || 4,
-          memoryCapacity: componentForm.memoryCapacity || 32,
+          memoryCapacity: memoryCapacity, // Primary memory field
           diskSlotType: componentForm.diskSlotType || DiskSlotType.TwoPointFive,
           diskSlotQuantity: componentForm.diskSlotQuantity || 8,
           ruSize: componentForm.ruSize || 1,

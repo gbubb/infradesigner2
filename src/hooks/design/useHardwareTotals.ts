@@ -58,25 +58,26 @@ export const useHardwareTotals = () => {
         
         totalVCPUs += coresPerServer * quantity * overcommitRatio;
         
-        // Calculate memory - use consistent naming and log details
+        // SIMPLIFIED MEMORY CALCULATION - Use memoryCapacity as the primary source of truth
         let componentMemoryGB = 0;
         
-        // Expanded property check patterns for memory
-        if ('memoryGB' in component && component.memoryGB > 0) {
+        // First check for memoryCapacity which is our primary field from the UI
+        if ('memoryCapacity' in component && component.memoryCapacity > 0) {
+          componentMemoryGB = component.memoryCapacity;
+          console.log(`Server ${component.name} has ${componentMemoryGB}GB of memory (memoryCapacity property)`);
+        }
+        // Then fall back to other possible memory fields only if necessary
+        else if ('memoryGB' in component && component.memoryGB > 0) {
           componentMemoryGB = component.memoryGB;
           console.log(`Server ${component.name} has ${componentMemoryGB}GB of memory (memoryGB property)`);
-        } else if ('memoryCapacity' in component && (component as any).memoryCapacity > 0) {
-          componentMemoryGB = (component as any).memoryCapacity;
-          console.log(`Server ${component.name} has ${componentMemoryGB}GB of memory (memoryCapacity property)`);
-        } else if ('memory' in component && (component as any).memory > 0) {
-          componentMemoryGB = (component as any).memory;
-          console.log(`Server ${component.name} has ${componentMemoryGB}GB of memory (memory property)`);
-        } else if ('totalMemoryGB' in component && (component as any).totalMemoryGB > 0) {
-          componentMemoryGB = (component as any).totalMemoryGB;
-          console.log(`Server ${component.name} has ${componentMemoryGB}GB of memory (totalMemoryGB property)`);
-        } else if ('memoryTB' in component && (component as any).memoryTB > 0) {
+        }
+        else if ('memoryTB' in component && (component as any).memoryTB > 0) {
           componentMemoryGB = (component as any).memoryTB * 1024;
           console.log(`Server ${component.name} has ${(component as any).memoryTB}TB (${componentMemoryGB}GB) of memory (memoryTB property)`);
+        }
+        
+        if (componentMemoryGB === 0) {
+          console.warn(`Server ${component.name} has no valid memory configuration!`);
         }
         
         totalMemoryGB += componentMemoryGB * quantity;
