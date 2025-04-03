@@ -32,13 +32,19 @@ export const useHardwareTotals = () => {
         let coresPerServer = 0;
         let overcommitRatio = 1;
         
-        // Handle different server property naming with better logging
+        // Expanded property check patterns for CPU cores
         if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
           coresPerServer = (component.cpuSockets || 0) * (component.cpuCoresPerSocket || 0);
           console.log(`Server ${component.name} has ${component.cpuSockets} sockets × ${component.cpuCoresPerSocket} cores = ${coresPerServer} cores`);
         } else if ('cpuCount' in component && 'coreCount' in component) {
           coresPerServer = (component.cpuCount || 0) * (component.coreCount || 0);
           console.log(`Server ${component.name} has ${component.cpuCount} CPUs × ${component.coreCount} cores = ${coresPerServer} cores`);
+        } else if ('cores' in component) {
+          coresPerServer = component.cores || 0;
+          console.log(`Server ${component.name} has ${coresPerServer} cores (from cores property)`);
+        } else if ('totalCores' in component) {
+          coresPerServer = component.totalCores || 0;
+          console.log(`Server ${component.name} has ${coresPerServer} cores (from totalCores property)`);
         }
         
         // Get overcommit ratio from individual compute clusters if available
@@ -54,12 +60,23 @@ export const useHardwareTotals = () => {
         
         // Calculate memory - use consistent naming and log details
         let componentMemoryGB = 0;
+        
+        // Expanded property check patterns for memory
         if ('memoryGB' in component && component.memoryGB > 0) {
           componentMemoryGB = component.memoryGB;
           console.log(`Server ${component.name} has ${componentMemoryGB}GB of memory (memoryGB property)`);
         } else if ('memoryCapacity' in component && (component as any).memoryCapacity > 0) {
           componentMemoryGB = (component as any).memoryCapacity;
           console.log(`Server ${component.name} has ${componentMemoryGB}GB of memory (memoryCapacity property)`);
+        } else if ('memory' in component && (component as any).memory > 0) {
+          componentMemoryGB = (component as any).memory;
+          console.log(`Server ${component.name} has ${componentMemoryGB}GB of memory (memory property)`);
+        } else if ('totalMemoryGB' in component && (component as any).totalMemoryGB > 0) {
+          componentMemoryGB = (component as any).totalMemoryGB;
+          console.log(`Server ${component.name} has ${componentMemoryGB}GB of memory (totalMemoryGB property)`);
+        } else if ('memoryTB' in component && (component as any).memoryTB > 0) {
+          componentMemoryGB = (component as any).memoryTB * 1024;
+          console.log(`Server ${component.name} has ${(component as any).memoryTB}TB (${componentMemoryGB}GB) of memory (memoryTB property)`);
         }
         
         totalMemoryGB += componentMemoryGB * quantity;

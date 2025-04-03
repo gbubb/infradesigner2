@@ -22,38 +22,68 @@ export const calculateComputeNodeQuantity = (
   const overcommitRatio = cluster.overcommitRatio || 2;
   const availabilityZoneRedundancy = cluster.availabilityZoneRedundancy || 'N+1';
   
-  // Log the component details to help with debugging
-  console.log('Component details for calculation:', {
-    name: component.name,
-    cpuSockets: component.cpuSockets,
-    cpuCoresPerSocket: component.cpuCoresPerSocket,
-    cpuCount: component.cpuCount,
-    coreCount: component.coreCount,
-    memoryGB: component.memoryGB,
-    memoryCapacity: component.memoryCapacity
-  });
+  // Enhanced component property detection with detailed logging
+  console.log('FULL Component details for calculation:', JSON.stringify(component, null, 2));
   
   // Check both legacy and new CPU property naming patterns
   let coresPerNode = 0;
   let memoryGBPerNode = 0;
   
-  // Determine cores per node based on available properties
+  // Determine cores per node based on available properties - try all known property patterns
   if (typeof component.cpuSockets === 'number' && typeof component.cpuCoresPerSocket === 'number') {
     coresPerNode = component.cpuSockets * component.cpuCoresPerSocket;
+    console.log(`CPU cores calculated from cpuSockets(${component.cpuSockets}) * cpuCoresPerSocket(${component.cpuCoresPerSocket}) = ${coresPerNode}`);
   } else if (typeof component.cpuCount === 'number' && typeof component.coreCount === 'number') {
     coresPerNode = component.cpuCount * component.coreCount;
+    console.log(`CPU cores calculated from cpuCount(${component.cpuCount}) * coreCount(${component.coreCount}) = ${coresPerNode}`);
+  } else {
+    // Try additional property patterns
+    if (typeof component.cores === 'number') {
+      coresPerNode = component.cores;
+      console.log(`CPU cores directly from cores property = ${coresPerNode}`);
+    } else if (typeof component.totalCores === 'number') {
+      coresPerNode = component.totalCores;
+      console.log(`CPU cores directly from totalCores property = ${coresPerNode}`);
+    }
   }
   
-  // Determine memory per node based on available properties
+  // Determine memory per node based on available properties - try all known property patterns
   if (typeof component.memoryGB === 'number' && component.memoryGB > 0) {
     memoryGBPerNode = component.memoryGB;
+    console.log(`Memory from memoryGB property = ${memoryGBPerNode} GB`);
   } else if (typeof component.memoryCapacity === 'number' && component.memoryCapacity > 0) {
     memoryGBPerNode = component.memoryCapacity;
+    console.log(`Memory from memoryCapacity property = ${memoryGBPerNode} GB`);
+  } else if (typeof component.totalMemoryGB === 'number' && component.totalMemoryGB > 0) {
+    memoryGBPerNode = component.totalMemoryGB;
+    console.log(`Memory from totalMemoryGB property = ${memoryGBPerNode} GB`);
+  } else if (typeof component.memory === 'number' && component.memory > 0) {
+    memoryGBPerNode = component.memory;
+    console.log(`Memory from memory property = ${memoryGBPerNode} GB`);
   }
   
-  // If we still have no values, set some fallbacks to avoid division by zero
-  coresPerNode = coresPerNode || 1;
-  memoryGBPerNode = memoryGBPerNode || 1;
+  // Check for memory in TB and convert to GB if found
+  if (memoryGBPerNode === 0 && typeof component.memoryTB === 'number' && component.memoryTB > 0) {
+    memoryGBPerNode = component.memoryTB * 1024;
+    console.log(`Memory converted from memoryTB(${component.memoryTB}) to GB = ${memoryGBPerNode} GB`);
+  }
+  
+  // Log a warning if we still have zero values
+  if (coresPerNode === 0) {
+    console.warn(`WARNING: Could not determine cores for component ${component.name} (ID: ${component.id})`);
+    console.warn(`Component properties:`, JSON.stringify(component, null, 2));
+    // Fallback to a minimum value
+    coresPerNode = 1;
+    calculationSteps.push(`WARNING: Could not determine CPU cores for this server model. Using minimum value of 1 core.`);
+  }
+  
+  if (memoryGBPerNode === 0) {
+    console.warn(`WARNING: Could not determine memory for component ${component.name} (ID: ${component.id})`);
+    console.warn(`Component properties:`, JSON.stringify(component, null, 2));
+    // Fallback to a minimum value
+    memoryGBPerNode = 1;
+    calculationSteps.push(`WARNING: Could not determine memory for this server model. Using minimum value of 1 GB.`);
+  }
   
   // Add cluster details to calculation steps
   calculationSteps.push(`${role.role === 'gpuNode' ? 'GPU' : 'Compute'} Cluster: ${cluster.name || 'Unnamed cluster'}`);
@@ -61,16 +91,8 @@ export const calculateComputeNodeQuantity = (
   calculationSteps.push(`Total memory requirement: ${totalMemoryTB.toLocaleString()} TB (${(totalMemoryTB * 1024).toLocaleString()} GB)`);
   calculationSteps.push(`CPU overcommit ratio: ${overcommitRatio}:1`);
   
-  // Add server specifications
-  if (component.cpuSockets && component.cpuCoresPerSocket) {
-    calculationSteps.push(`Server Model: ${component.manufacturer} ${component.model} with ${component.cpuSockets} sockets × ${component.cpuCoresPerSocket} cores = ${coresPerNode} cores`);
-  } else if (component.cpuCount && component.coreCount) {
-    calculationSteps.push(`Server Model: ${component.manufacturer} ${component.model} with ${component.cpuCount} CPUs × ${component.coreCount} cores = ${coresPerNode} cores`);
-  } else {
-    calculationSteps.push(`Server Model: ${component.manufacturer} ${component.model} with ${coresPerNode} total cores`);
-  }
-  
-  calculationSteps.push(`Server Memory: ${memoryGBPerNode.toLocaleString()} GB`);
+  // Add server specifications with detailed information
+  calculationSteps.push(`Server Model: ${component.manufacturer} ${component.model || ''} with ${coresPerNode} CPU cores and ${memoryGBPerNode.toLocaleString()} GB memory`);
   
   // Calculate nodes based on resources
   const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);

@@ -27,24 +27,28 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const calculateRequiredQuantity = useDesignStore(state => state.calculateRequiredQuantity);
   const [isOpen, setIsOpen] = useState(false);
   const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
-  const [forceUpdate, setForceUpdate] = useState(false); // Added to force re-renders
+  const [isLoading, setIsLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
   
   const role = componentRoles.find(r => r.id === roleId);
   const clusterName = role?.clusterInfo?.clusterName;
   const roleType = role?.role || '';
   
-  // Update breakdown steps whenever the dialog state changes or when forceUpdate changes
+  // Update breakdown steps whenever the dialog state changes or when role/assignment changes
   useEffect(() => {
     if (isOpen && role && role.assignedComponentId) {
+      // Set loading state
+      setIsLoading(true);
+      
       // First ensure we have a fresh calculation
-      const freshCalculation = async () => {
-        console.log(`Calculating for ${roleId} with component ${role.assignedComponentId}`);
+      const fetchCalculation = async () => {
+        console.log(`Calculating for ${roleId} with component ${role.assignedComponentId} (attempt ${attempts + 1})`);
         
         // Force a calculation first 
         calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         // Add a small delay to ensure the calculation has had time to update state
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
         
         // Now get the breakdown steps
         const steps = getCalculationBreakdown(roleId);
@@ -52,31 +56,41 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         
         if (steps && steps.length > 0) {
           setBreakdownSteps(steps);
+          setIsLoading(false);
+        } else if (attempts < 3) {
+          console.log(`No breakdown steps found for ${roleId}, retrying...`);
+          // Increment the attempt counter
+          setAttempts(prevAttempts => prevAttempts + 1);
+          
+          // Try again with a longer delay
+          setTimeout(() => {
+            fetchCalculation();
+          }, 300);
         } else {
-          console.log(`No breakdown steps found for ${roleId}, trying again`);
-          // One more attempt with a longer delay
-          await new Promise(resolve => setTimeout(resolve, 200));
-          const freshSteps = getCalculationBreakdown(roleId);
-          console.log(`Second attempt - got breakdown steps for ${roleId}:`, freshSteps?.length || 0);
-          setBreakdownSteps(freshSteps || []);
+          // After 3 attempts, stop trying and show whatever we have
+          console.log(`Still no breakdown steps after ${attempts} attempts.`);
+          setBreakdownSteps(getCalculationBreakdown(roleId) || []);
+          setIsLoading(false);
         }
       };
       
-      freshCalculation();
+      fetchCalculation();
+    } else {
+      // Reset attempts when dialog closes
+      setAttempts(0);
     }
-  }, [isOpen, role, roleId, getCalculationBreakdown, calculateRequiredQuantity, forceUpdate]);
+  }, [isOpen, role, roleId, getCalculationBreakdown, calculateRequiredQuantity, attempts]);
   
   // Handle calculation when dialog opens
   const handleDialogOpen = useCallback((open: boolean) => {
     setIsOpen(open);
     
-    if (open && role && role.assignedComponentId) {
-      // Force an update to trigger the effect
-      setTimeout(() => {
-        setForceUpdate(prev => !prev);
-      }, 50);
+    if (!open) {
+      // Reset state when dialog closes
+      setAttempts(0);
+      setIsLoading(false);
     }
-  }, [roleId, role]);
+  }, []);
   
   // Build the title with cluster name if available
   const titleText = clusterName 
@@ -111,7 +125,12 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        {breakdownSteps && breakdownSteps.length > 0 ? (
+        {isLoading ? (
+          <div className="py-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-2"></div>
+            <p className="text-sm text-muted-foreground">Calculating...</p>
+          </div>
+        ) : breakdownSteps && breakdownSteps.length > 0 ? (
           <div className="space-y-2 py-4">
             <Card className="p-4 bg-slate-50">
               <ol className="list-decimal list-inside space-y-2">
