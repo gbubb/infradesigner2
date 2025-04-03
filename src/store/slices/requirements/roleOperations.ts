@@ -33,7 +33,8 @@ export const assignComponentToRole = (
       return {
         ...role,
         assignedComponentId: componentId,
-        adjustedRequiredCount: undefined
+        // Don't reset the adjusted count here to prevent flickering during calculations
+        // adjustedRequiredCount: undefined 
       };
     }
     return role;
@@ -70,4 +71,27 @@ export const assignComponentAndCalculateQuantity = (
     }
     return role;
   });
+};
+
+/**
+ * Updates role and calculation breakdown in one operation
+ * This helps prevent race conditions by doing both updates atomically
+ */
+export const updateRoleAndCalculation = (
+  componentRoles: ComponentRole[],
+  roleId: string,
+  newQuantity: number,
+  calculationSteps: string[]
+): { 
+  updatedRoles: ComponentRole[], 
+  calculationBreakdowns: Record<string, string[]>
+} => {
+  const updatedRoles = updateRoleRequiredCount(componentRoles, roleId, newQuantity);
+  
+  return {
+    updatedRoles,
+    calculationBreakdowns: {
+      [roleId]: calculationSteps
+    }
+  };
 };

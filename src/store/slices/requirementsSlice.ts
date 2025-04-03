@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -22,7 +21,8 @@ import {
   updateRoleRequiredCount,
   assignComponentToRole as assignComponent,
   getRoleById,
-  assignComponentAndCalculateQuantity
+  assignComponentAndCalculateQuantity,
+  updateRoleAndCalculation
 } from './requirements/roleOperations';
 import {
   calculateRequiredQuantity as calculateQuantity

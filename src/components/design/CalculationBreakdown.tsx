@@ -27,10 +27,30 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const calculateRequiredQuantity = useDesignStore(state => state.calculateRequiredQuantity);
   const [isOpen, setIsOpen] = useState(false);
   const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
+  const [forceUpdate, setForceUpdate] = useState(false); // Added to force re-renders
   
   const role = componentRoles.find(r => r.id === roleId);
   const clusterName = role?.clusterInfo?.clusterName;
   const roleType = role?.role || '';
+  
+  // Update breakdown steps whenever the dialog state changes or when forceUpdate changes
+  useEffect(() => {
+    if (isOpen && role && role.assignedComponentId) {
+      // Get the breakdown steps
+      const steps = getCalculationBreakdown(roleId);
+      if (steps && steps.length > 0) {
+        setBreakdownSteps(steps);
+      } else {
+        // If no breakdown steps available, force a calculation
+        calculateRequiredQuantity(roleId, role.assignedComponentId);
+        // Use setTimeout to ensure state updates have propagated
+        setTimeout(() => {
+          const freshSteps = getCalculationBreakdown(roleId);
+          setBreakdownSteps(freshSteps || []);
+        }, 100); // Increased timeout for better reliability
+      }
+    }
+  }, [isOpen, role, roleId, getCalculationBreakdown, calculateRequiredQuantity, forceUpdate]);
   
   // Handle calculation when dialog opens
   const handleDialogOpen = useCallback((open: boolean) => {
@@ -42,11 +62,11 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       
       // Use setTimeout to ensure state updates have propagated
       setTimeout(() => {
-        const steps = getCalculationBreakdown(roleId);
-        setBreakdownSteps(steps || []);
+        // Force an update to trigger the effect
+        setForceUpdate(prev => !prev);
       }, 50);
     }
-  }, [roleId, role, calculateRequiredQuantity, getCalculationBreakdown]);
+  }, [roleId, role, calculateRequiredQuantity]);
   
   // Build the title with cluster name if available
   const titleText = clusterName 

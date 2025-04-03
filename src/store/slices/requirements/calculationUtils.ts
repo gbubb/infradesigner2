@@ -29,12 +29,14 @@ export const calculateStorageNodeCapacity = (
 
 /**
  * Calculates required quantity of compute nodes
+ * Optional fifth parameter for GPU nodes to include GPU configurations
  */
 export const calculateComputeNodeQuantity = (
   role: any,
   component: any,
   cluster: any,
-  totalAvailabilityZones: number
+  totalAvailabilityZones: number,
+  nodeGPUs?: { gpuId: string, quantity: number }[]
 ): { requiredQuantity: number, calculationSteps: string[] } => {
   let calculationSteps: string[] = [];
   
@@ -137,6 +139,14 @@ export const calculateComputeNodeQuantity = (
     if (role.role === 'gpuNode') {
       const gpuInfo = `This cluster is designated for GPU-accelerated workloads. Each node will be equipped with GPUs as specified in the GPU configuration section.`;
       calculationSteps.push(gpuInfo);
+      
+      // Add GPU-specific calculations if we have GPU configurations
+      if (nodeGPUs && nodeGPUs.length > 0) {
+        calculationSteps.push(`GPU configuration: ${nodeGPUs.length} GPU type(s) configured for this node`);
+        // Additional GPU-specific calculations could be added here in the future
+      } else {
+        calculationSteps.push(`No GPUs have been configured for this node yet.`);
+      }
     }
     
     return { requiredQuantity, calculationSteps };

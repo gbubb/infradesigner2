@@ -52,9 +52,18 @@ export const calculateRequiredQuantity = (
           nodeGPUs: nodeGPUs.length
         });
         
-        const result = calculateComputeNodeQuantity(role, component, cluster, totalAvailabilityZones, nodeGPUs);
-        requiredQuantity = result.requiredQuantity;
-        calculationSteps = result.calculationSteps;
+        // The fix: Check if this is a GPU node and pass nodeGPUs only if it is
+        if (role.role === 'gpuNode') {
+          // Pass nodeGPUs as the fifth argument for GPU nodes
+          const result = calculateComputeNodeQuantity(role, component, cluster, totalAvailabilityZones, nodeGPUs);
+          requiredQuantity = result.requiredQuantity;
+          calculationSteps = result.calculationSteps;
+        } else {
+          // For regular compute nodes, use only 4 arguments
+          const result = calculateComputeNodeQuantity(role, component, cluster, totalAvailabilityZones);
+          requiredQuantity = result.requiredQuantity;
+          calculationSteps = result.calculationSteps;
+        }
       } else {
         calculationSteps.push(`Cluster not found - using default count of ${requiredQuantity} nodes`);
       }
