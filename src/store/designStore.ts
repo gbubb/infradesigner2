@@ -106,6 +106,14 @@ export const recalculateDesign = () => {
         state.selectedGPUsByRole = state.activeDesign.selectedGPUsByRole;
       }
       
+      // Recalculate all component quantities to ensure calculations are fresh
+      state.componentRoles.forEach(role => {
+        if (role.assignedComponentId) {
+          const newQuantity = state.calculateRequiredQuantity(role.id, role.assignedComponentId);
+          console.log(`Recalculated ${role.role}: ${newQuantity} units required`);
+        }
+      });
+      
       // Get updated component data based on roles
       const updatedComponents = state.componentRoles
         .filter(role => role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
@@ -214,7 +222,6 @@ export const recalculateDesign = () => {
       }
     } else {
       console.warn("No active design to update");
-      // Don't automatically create a design if none exists
       toast.info("Please create a new design or load an existing one.");
     }
   } catch (error) {
@@ -226,9 +233,31 @@ export const recalculateDesign = () => {
   }
 };
 
-// Export a manual recalculation function for UI usage
+// Export a manual recalculation function for UI usage that adds additional debugging
 export const manualRecalculateDesign = () => {
   // Reset to ensure we can force a recalculation
   isRecalculating = false;
+  
+  // Add more logging for debugging
+  console.log("Manual recalculation requested");
+  
+  // Get current state for logging
+  const state = useDesignStore.getState();
+  console.log("Current calculation state:", {
+    roleCount: state.componentRoles.length,
+    assignedRoles: state.componentRoles.filter(r => r.assignedComponentId).length,
+    hasBreakdowns: Object.keys(state.calculationBreakdowns).length > 0
+  });
+  
   recalculateDesign();
+  
+  // Log verification after recalculation
+  setTimeout(() => {
+    const newState = useDesignStore.getState();
+    console.log("After recalculation:", {
+      roleCount: newState.componentRoles.length,
+      assignedRoles: newState.componentRoles.filter(r => r.assignedComponentId).length,
+      hasBreakdowns: Object.keys(newState.calculationBreakdowns).length > 0
+    });
+  }, 100);
 };

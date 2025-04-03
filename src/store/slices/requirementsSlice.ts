@@ -21,7 +21,8 @@ import {
 import {
   updateRoleRequiredCount,
   assignComponentToRole as assignComponent,
-  getRoleById
+  getRoleById,
+  assignComponentAndCalculateQuantity
 } from './requirements/roleOperations';
 import {
   calculateRequiredQuantity as calculateQuantity
@@ -147,20 +148,33 @@ export const createRequirementsSlice: StateCreator<
     },
     
     assignComponentToRole: (roleId: string, componentId: string) => {
-      // Update role with assigned component
+      // Get current state before making any updates
+      const state = get();
+      
+      // Update role with assigned component in a single operation
       set((state) => {
+        // First assign the component to the role
         const updatedRoles = assignComponent(state.componentRoles, roleId, componentId);
-        return { componentRoles: updatedRoles };
+        
+        // Calculate the required quantity using the updated roles
+        const { requiredQuantity, calculationSteps } = calculateQuantity(
+          roleId, 
+          componentId, 
+          {...state, componentRoles: updatedRoles}
+        );
+        
+        // Update the roles with the calculated quantity and save calculation steps
+        const finalRoles = updateRoleRequiredCount(updatedRoles, roleId, requiredQuantity);
+        
+        // Return all updates in a single state update to avoid race conditions
+        return { 
+          componentRoles: finalRoles,
+          calculationBreakdowns: {
+            ...state.calculationBreakdowns,
+            [roleId]: calculationSteps
+          }
+        };
       });
-      
-      // Calculate new quantity
-      const { calculateRequiredQuantity } = get();
-      const newQuantity = calculateRequiredQuantity(roleId, componentId);
-      
-      // Update role with new quantity
-      set((state) => ({
-        componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
-      }));
     },
     
     addDiskToStorageNode: (roleId: string, diskId: string, quantity: number) => {
@@ -175,12 +189,24 @@ export const createRequirementsSlice: StateCreator<
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        const { calculateRequiredQuantity } = get();
-        const newQuantity = calculateRequiredQuantity(roleId, role.assignedComponentId);
-        
-        set((state) => ({
-          componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
-        }));
+        // Perform calculation and update in a single operation
+        set((state) => {
+          // Calculate new quantity
+          const { requiredQuantity, calculationSteps } = calculateQuantity(
+            roleId, 
+            role.assignedComponentId!, 
+            state
+          );
+          
+          // Update roles and calculation steps in one go
+          return {
+            componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, requiredQuantity),
+            calculationBreakdowns: {
+              ...state.calculationBreakdowns,
+              [roleId]: calculationSteps
+            }
+          };
+        });
       }
     },
     
@@ -196,12 +222,24 @@ export const createRequirementsSlice: StateCreator<
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        const { calculateRequiredQuantity } = get();
-        const newQuantity = calculateRequiredQuantity(roleId, role.assignedComponentId);
-        
-        set((state) => ({
-          componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
-        }));
+        // Perform calculation and update in a single operation
+        set((state) => {
+          // Calculate new quantity
+          const { requiredQuantity, calculationSteps } = calculateQuantity(
+            roleId, 
+            role.assignedComponentId!, 
+            state
+          );
+          
+          // Update roles and calculation steps in one go
+          return {
+            componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, requiredQuantity),
+            calculationBreakdowns: {
+              ...state.calculationBreakdowns,
+              [roleId]: calculationSteps
+            }
+          };
+        });
       }
     },
     
@@ -217,12 +255,24 @@ export const createRequirementsSlice: StateCreator<
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        const { calculateRequiredQuantity } = get();
-        const newQuantity = calculateRequiredQuantity(roleId, role.assignedComponentId);
-        
-        set((state) => ({
-          componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
-        }));
+        // Perform calculation and update in a single operation
+        set((state) => {
+          // Calculate new quantity
+          const { requiredQuantity, calculationSteps } = calculateQuantity(
+            roleId, 
+            role.assignedComponentId!, 
+            state
+          );
+          
+          // Update roles and calculation steps in one go
+          return {
+            componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, requiredQuantity),
+            calculationBreakdowns: {
+              ...state.calculationBreakdowns,
+              [roleId]: calculationSteps
+            }
+          };
+        });
       }
     },
     
@@ -238,12 +288,24 @@ export const createRequirementsSlice: StateCreator<
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        const { calculateRequiredQuantity } = get();
-        const newQuantity = calculateRequiredQuantity(roleId, role.assignedComponentId);
-        
-        set((state) => ({
-          componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, newQuantity)
-        }));
+        // Perform calculation and update in a single operation
+        set((state) => {
+          // Calculate new quantity
+          const { requiredQuantity, calculationSteps } = calculateQuantity(
+            roleId, 
+            role.assignedComponentId!, 
+            state
+          );
+          
+          // Update roles and calculation steps in one go
+          return {
+            componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, requiredQuantity),
+            calculationBreakdowns: {
+              ...state.calculationBreakdowns,
+              [roleId]: calculationSteps
+            }
+          };
+        });
       }
     }
   };

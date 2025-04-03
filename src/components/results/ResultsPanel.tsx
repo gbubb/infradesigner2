@@ -1,7 +1,6 @@
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Info } from 'lucide-react';
 import { useDesignStore, manualRecalculateDesign } from '@/store/designStore';
 import { ResourceUtilizationChart } from './PowerDistributionChart';
 import { ResourceSummaryCard, CostAnalysisCard } from './ResultsSummaryCards';
@@ -12,11 +11,14 @@ import { ComponentTypeSummaryTable } from './ComponentTypeSummaryTable';
 import { DesignAlerts } from './DesignAlerts';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card } from '@/components/ui/card';
 
 export const ResultsPanel: React.FC = () => {
-  const { activeDesign, saveDesign } = useDesignStore();
+  const { activeDesign, saveDesign, componentRoles, calculationBreakdowns } = useDesignStore();
   const [isLoading, setIsLoading] = useState(true);
   const [hasCalculated, setHasCalculated] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   
   const {
     totalCost,
@@ -83,6 +85,41 @@ export const ResultsPanel: React.FC = () => {
     }
   }, [activeDesign, saveDesign]);
 
+  // Force recalculation of all assigned components
+  const handleForceFullRecalculation = useCallback(() => {
+    setIsLoading(true);
+    
+    try {
+      // Get assigned roles
+      const assignedRoles = componentRoles.filter(role => role.assignedComponentId);
+      console.log(`Force recalculating ${assignedRoles.length} assigned components`);
+      
+      // Recalculate each role one by one with logging
+      const { calculateRequiredQuantity } = useDesignStore.getState();
+      assignedRoles.forEach(role => {
+        if (role.assignedComponentId) {
+          console.log(`Recalculating ${role.role} (${role.id})`);
+          const newQuantity = calculateRequiredQuantity(role.id, role.assignedComponentId);
+          console.log(`New quantity for ${role.role}: ${newQuantity}`);
+        }
+      });
+      
+      // Final recalculation and save
+      manualRecalculateDesign();
+      
+      if (activeDesign) {
+        saveDesign();
+      }
+      
+      toast.success(`Recalculated ${assignedRoles.length} components`);
+    } catch (error) {
+      console.error("Error during force recalculation:", error);
+      toast.error("Failed to recalculate components. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [componentRoles, activeDesign, saveDesign]);
+  
   // Derived state
   const hasNoDesign = !hasValidDesign;
   
@@ -112,13 +149,57 @@ export const ResultsPanel: React.FC = () => {
     <div className="max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Design Results</h2>
-        <Button 
-          onClick={handleRecalculate} 
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Recalculate Design
-        </Button>
+        <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" onClick={() => setShowDebug(true)}>
+                <Info className="h-4 w-4 mr-1" />
+                Debug
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
+              <DialogHeader>
+                <DialogTitle>Calculation Debug Info</DialogTitle>
+              </DialogHeader>
+              <div className="mt-4">
+                <h3 className="text-lg font-medium mb-2">Component Roles</h3>
+                <Card className="p-3 mb-4 bg-slate-50 overflow-auto max-h-[200px]">
+                  <pre className="text-xs">
+                    {JSON.stringify(componentRoles.map(role => ({
+                      id: role.id,
+                      role: role.role,
+                      assignedComponentId: role.assignedComponentId,
+                      requiredCount: role.requiredCount,
+                      adjustedRequiredCount: role.adjustedRequiredCount,
+                      hasCluster: !!role.clusterInfo
+                    })), null, 2)}
+                  </pre>
+                </Card>
+                
+                <h3 className="text-lg font-medium mb-2">Calculation Breakdowns</h3>
+                <Card className="p-3 mb-4 bg-slate-50 overflow-auto max-h-[200px]">
+                  <pre className="text-xs">
+                    {JSON.stringify(calculationBreakdowns, null, 2)}
+                  </pre>
+                </Card>
+                
+                <div className="flex justify-center mt-4">
+                  <Button onClick={handleForceFullRecalculation} className="w-full">
+                    Force Full Recalculation
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Button 
+            onClick={handleRecalculate} 
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Recalculate Design
+          </Button>
+        </div>
       </div>
       
       <DesignAlerts 

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,19 +25,28 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const getCalculationBreakdown = useDesignStore(state => state.getCalculationBreakdown);
   const componentRoles = useDesignStore(state => state.componentRoles);
   const calculateRequiredQuantity = useDesignStore(state => state.calculateRequiredQuantity);
+  const [isOpen, setIsOpen] = useState(false);
+  const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
   
   const role = componentRoles.find(r => r.id === roleId);
   const clusterName = role?.clusterInfo?.clusterName;
   const roleType = role?.role || '';
   
-  // Force calculation to ensure we have fresh breakdown
-  if (role && role.assignedComponentId) {
-    calculateRequiredQuantity(roleId, role.assignedComponentId);
-  }
-  
-  // Now get the breakdown after calculation
-  const breakdownSteps = getCalculationBreakdown(roleId);
-  const hasBreakdown = breakdownSteps && breakdownSteps.length > 0;
+  // Handle calculation when dialog opens
+  const handleDialogOpen = useCallback((open: boolean) => {
+    setIsOpen(open);
+    
+    if (open && role && role.assignedComponentId) {
+      // Force calculation to ensure we have fresh breakdown
+      calculateRequiredQuantity(roleId, role.assignedComponentId);
+      
+      // Use setTimeout to ensure state updates have propagated
+      setTimeout(() => {
+        const steps = getCalculationBreakdown(roleId);
+        setBreakdownSteps(steps || []);
+      }, 50);
+    }
+  }, [roleId, role, calculateRequiredQuantity, getCalculationBreakdown]);
   
   // Build the title with cluster name if available
   const titleText = clusterName 
@@ -60,7 +69,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   };
   
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpen}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
@@ -72,7 +81,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        {hasBreakdown ? (
+        {breakdownSteps && breakdownSteps.length > 0 ? (
           <div className="space-y-2 py-4">
             <Card className="p-4 bg-slate-50">
               <ol className="list-decimal list-inside space-y-2">

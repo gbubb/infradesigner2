@@ -13,7 +13,13 @@ export const calculateRequiredQuantity = (
   componentId: string,
   state: any
 ): { requiredQuantity: number, calculationSteps: string[] } => {
-  const { requirements, componentRoles, componentTemplates = [], selectedDisksByRole } = state;
+  const { 
+    requirements, 
+    componentRoles, 
+    componentTemplates = [], 
+    selectedDisksByRole,
+    selectedGPUsByRole
+  } = state;
   
   const role = componentRoles.find(r => r.id === roleId);
   if (!role) return { requiredQuantity: 0, calculationSteps: ['Role not found'] };
@@ -34,7 +40,19 @@ export const calculateRequiredQuantity = (
       
       if (cluster) {
         const totalAvailabilityZones = requirements.physicalConstraints?.totalAvailabilityZones || 8;
-        const result = calculateComputeNodeQuantity(role, component, cluster, totalAvailabilityZones);
+        
+        // For GPU nodes, also pass GPU configurations
+        const nodeGPUs = role.role === 'gpuNode' ? selectedGPUsByRole[roleId] || [] : [];
+        
+        console.log('Calculate compute node quantity:', {
+          role,
+          componentId,
+          cluster,
+          totalAvailabilityZones,
+          nodeGPUs: nodeGPUs.length
+        });
+        
+        const result = calculateComputeNodeQuantity(role, component, cluster, totalAvailabilityZones, nodeGPUs);
         requiredQuantity = result.requiredQuantity;
         calculationSteps = result.calculationSteps;
       } else {
@@ -55,6 +73,14 @@ export const calculateRequiredQuantity = (
           selectedDisksByRole, 
           componentTemplates
         );
+        
+        console.log('Calculate storage node quantity:', {
+          role,
+          storageCluster,
+          roleId,
+          storageNodeCapacityTiB,
+          disksConfig: selectedDisksByRole[roleId] || []
+        });
         
         if (storageNodeCapacityTiB > 0) {
           const result = calculateStorageNodeQuantity(role, storageCluster, roleId, storageNodeCapacityTiB);
@@ -82,6 +108,12 @@ export const calculateRequiredQuantity = (
       calculationSteps.push(`Total switches: ${role.requiredCount}`);
     }
   }
+  
+  // Log the calculation result
+  console.log(`Calculation result for ${role.role} (${roleId}):`, {
+    requiredQuantity,
+    calculationStepsCount: calculationSteps.length
+  });
   
   return { requiredQuantity, calculationSteps };
 };

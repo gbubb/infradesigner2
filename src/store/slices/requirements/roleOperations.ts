@@ -49,3 +49,25 @@ export const getRoleById = (
 ): ComponentRole | undefined => {
   return componentRoles.find(r => r.id === roleId);
 };
+
+/**
+ * Calculates and updates the role with required count in a single operation
+ * This prevents race conditions by doing the assignment and quantity update in one go
+ */
+export const assignComponentAndCalculateQuantity = (
+  componentRoles: ComponentRole[],
+  roleId: string,
+  componentId: string,
+  calculatedQuantity: number
+): ComponentRole[] => {
+  return componentRoles.map(role => {
+    if (role.id === roleId) {
+      return {
+        ...role,
+        assignedComponentId: componentId,
+        adjustedRequiredCount: calculatedQuantity
+      };
+    }
+    return role;
+  });
+};
