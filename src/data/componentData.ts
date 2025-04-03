@@ -334,7 +334,7 @@ export const gpuTemplates: GPU[] = [
   }
 ];
 
-// All component templates combining
+// All component templates combined
 export const allComponentTemplates: InfrastructureComponent[] = [
   ...serverTemplates,
   ...switchTemplates,
