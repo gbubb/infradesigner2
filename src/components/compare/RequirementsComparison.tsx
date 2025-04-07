@@ -127,8 +127,8 @@ export function RequirementsComparison({ leftDesign, rightDesign }: Requirements
               <h3 className="text-sm font-medium mb-2">{leftDesign.name}</h3>
               <dl className="grid grid-cols-2 gap-4">
                 <div>
-                  <dt className="text-sm text-muted-foreground">Network Type</dt>
-                  <dd className="font-medium">{leftDesign.requirements?.networkRequirements?.networkType || 'Not specified'}</dd>
+                  <dt className="text-sm text-muted-foreground">Network Topology</dt>
+                  <dd className="font-medium">{leftDesign.requirements?.networkRequirements?.networkTopology || 'Not specified'}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Management Network</dt>
@@ -156,8 +156,8 @@ export function RequirementsComparison({ leftDesign, rightDesign }: Requirements
               <h3 className="text-sm font-medium mb-2">{rightDesign.name}</h3>
               <dl className="grid grid-cols-2 gap-4">
                 <div>
-                  <dt className="text-sm text-muted-foreground">Network Type</dt>
-                  <dd className="font-medium">{rightDesign.requirements?.networkRequirements?.networkType || 'Not specified'}</dd>
+                  <dt className="text-sm text-muted-foreground">Network Topology</dt>
+                  <dd className="font-medium">{rightDesign.requirements?.networkRequirements?.networkTopology || 'Not specified'}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Management Network</dt>

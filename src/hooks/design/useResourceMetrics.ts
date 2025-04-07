@@ -82,7 +82,7 @@ export const useResourceMetrics = () => {
         }
         
         // Add another management port if we have a separate IPMI network
-        if (ipmiNetwork === 'IPMI dedicated') {
+        if (ipmiNetwork === 'Dedicated IPMI switch') {
           mgmtPortsUsed += 1 * quantity;
           console.log(`Server ${component.name} using 1 additional IPMI port per unit, ${1 * quantity} total (dedicated IPMI)`);
         }
