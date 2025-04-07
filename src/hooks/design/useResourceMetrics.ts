@@ -62,37 +62,60 @@ export const useResourceMetrics = () => {
       if (component.type === ComponentType.Server) {
         totalServers += quantity;
         
+        // Calculate leaf ports used by servers
         if ('portsConsumedQuantity' in component) {
           leafPortsUsed += (component as any).portsConsumedQuantity * quantity;
+          console.log(`Server ${component.name} using ${(component as any).portsConsumedQuantity} leaf ports per unit, ${(component as any).portsConsumedQuantity * quantity} total`);
         } else {
+          // Default to 2 ports per server if not specified
           leafPortsUsed += 2 * quantity;
+          console.log(`Server ${component.name} using default 2 leaf ports per unit, ${2 * quantity} total`);
         }
         
+        // Calculate management ports used by servers - always at least 1 for IPMI/management
         if (requirements.networkRequirements.managementNetwork === 'Dual Home') {
           mgmtPortsUsed += 2 * quantity;
+          console.log(`Server ${component.name} using 2 mgmt ports (Dual Home) per unit, ${2 * quantity} total`);
         } else {
-          mgmtPortsUsed += quantity;
+          mgmtPortsUsed += 1 * quantity;
+          console.log(`Server ${component.name} using 1 mgmt port per unit, ${1 * quantity} total`);
         }
         
-        mgmtPortsUsed += quantity;
+        // Add another management port if we have a separate IPMI network
+        if (ipmiNetwork === 'IPMI dedicated') {
+          mgmtPortsUsed += 1 * quantity;
+          console.log(`Server ${component.name} using 1 additional IPMI port per unit, ${1 * quantity} total (dedicated IPMI)`);
+        }
       } else if (component.type === ComponentType.Switch) {
         if (component.role === 'managementSwitch') {
           totalMgmtSwitches += quantity;
-          if ('portsProvidedQuantity' in component) {
-            mgmtPortsAvailable += (component as any).portsProvidedQuantity * quantity;
-          } else if ('portCount' in component) {
-            mgmtPortsAvailable += (component as any).portCount * quantity;
+          
+          // Calculate available management ports
+          if ('portsProvidedQuantity' in component && component.portsProvidedQuantity) {
+            mgmtPortsAvailable += component.portsProvidedQuantity * quantity;
+            console.log(`Management switch ${component.name}: ${component.portsProvidedQuantity} ports × ${quantity} units = ${component.portsProvidedQuantity * quantity} mgmt ports available`);
+          } else if ('portCount' in component && component.portCount) {
+            mgmtPortsAvailable += component.portCount * quantity;
+            console.log(`Management switch ${component.name}: ${component.portCount} ports × ${quantity} units = ${component.portCount * quantity} mgmt ports available`);
           }
         } else if (component.role === 'computeSwitch' || component.role === 'storageSwitch' || component.role === 'borderLeafSwitch' || component.role === 'leafSwitch') {
           totalLeafSwitches += quantity;
-          if ('portsProvidedQuantity' in component) {
-            leafPortsAvailable += (component as any).portsProvidedQuantity * quantity;
-          } else if ('portCount' in component) {
-            leafPortsAvailable += (component as any).portCount * quantity;
+          
+          // Calculate available leaf ports
+          if ('portsProvidedQuantity' in component && component.portsProvidedQuantity) {
+            leafPortsAvailable += component.portsProvidedQuantity * quantity;
+            console.log(`Leaf switch ${component.name}: ${component.portsProvidedQuantity} ports × ${quantity} units = ${component.portsProvidedQuantity * quantity} leaf ports available`);
+          } else if ('portCount' in component && component.portCount) {
+            leafPortsAvailable += component.portCount * quantity;
+            console.log(`Leaf switch ${component.name}: ${component.portCount} ports × ${quantity} units = ${component.portCount * quantity} leaf ports available`);
           }
         }
       }
     });
+    
+    console.log(`Total resource metrics calculated: 
+      Leaf ports - Used: ${leafPortsUsed}, Available: ${leafPortsAvailable}
+      Mgmt ports - Used: ${mgmtPortsUsed}, Available: ${mgmtPortsAvailable}`);
     
     return {
       totalRackUnits,

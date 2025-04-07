@@ -7,6 +7,7 @@ import { DesignPanel } from '@/components/design/DesignPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDesignStore } from '@/store/designStore';
 import { ComponentLibrary } from '@/components/sidebar/ComponentLibrary';
+import { ComparePanel } from '@/components/compare/ComparePanel';
 
 export const AppLayout: React.FC = () => {
   const { activeDesign } = useDesignStore();
@@ -21,6 +22,7 @@ export const AppLayout: React.FC = () => {
             <TabsTrigger value="components">Component Library</TabsTrigger>
             <TabsTrigger value="design">Design</TabsTrigger>
             <TabsTrigger value="results">Results</TabsTrigger>
+            <TabsTrigger value="compare">Compare</TabsTrigger>
           </TabsList>
           <TabsContent value="requirements" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
             <RequirementsPanel />
@@ -33,6 +35,9 @@ export const AppLayout: React.FC = () => {
           </TabsContent>
           <TabsContent value="results" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
             <ResultsPanel />
+          </TabsContent>
+          <TabsContent value="compare" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
+            <ComparePanel />
           </TabsContent>
           
           {/* Overlay when no design is active - only showing the header with New/Load buttons */}
