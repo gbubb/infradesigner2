@@ -2,13 +2,23 @@
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { DesignRequirements } from '@/types/infrastructure';
+import { 
+  calculateAmortizedCosts,
+  calculatePowerMetrics,
+  calculateEnergyCosts,
+  calculateUtilizationMetrics,
+  getDeviceLifespans,
+  getOperationalSettings,
+  countComponentsByType
+} from './utils/resourceCalculationUtils';
+import { useComponentCosts } from './utils/useComponentCosts';
 
 export const useResourceMetrics = () => {
   const { activeDesign } = useDesignStore();
   
   // Calculate resource metrics
   const resourceMetrics = useMemo(() => {
-    // Initialize metrics
+    // Initialize metrics with default values
     const metrics = {
       totalServers: 0,
       totalLeafSwitches: 0,
@@ -60,149 +70,89 @@ export const useResourceMetrics = () => {
     // Initialize requirements with proper type checking
     const requirements: DesignRequirements = activeDesign?.requirements || {} as DesignRequirements;
     
-    // Set default values for physical constraints if not defined
-    const physicalConstraints = requirements.physicalConstraints || {};
-    const rackUnitsPerRack = physicalConstraints.rackUnitsPerRack || 42;
+    // Get operational settings with safe defaults
+    const { 
+      rackUnitsPerRack, 
+      coloRacks, 
+      rackCostPerMonth, 
+      operationalLoad, 
+      energyPricePerKwh 
+    } = getOperationalSettings(requirements);
     
-    // Get operational costs with proper null checks
-    const operationalCosts = physicalConstraints.operationalCosts || {
-      coloRacks: false,
-      energyPricePerKwh: 0.25,
-      operationalLoad: 50
-    };
+    // Count components by type and role
+    const {
+      totalServers,
+      totalLeafSwitches,
+      totalMgmtSwitches,
+      totalRackUnits
+    } = countComponentsByType(activeDesign.components);
     
-    // Get colo rack settings
-    const coloRacks = operationalCosts?.coloRacks || false;
-    const rackCostPerMonth = operationalCosts?.rackCostPerMonth || 0;
-    const operationalLoad = operationalCosts?.operationalLoad || 50;
+    // Set the counted values in our metrics object
+    metrics.totalServers = totalServers;
+    metrics.totalLeafSwitches = totalLeafSwitches;
+    metrics.totalMgmtSwitches = totalMgmtSwitches;
+    metrics.totalRackUnits = totalRackUnits;
     
-    // Energy cost calculations
-    const energyPricePerKwh = operationalCosts?.energyPricePerKwh || 0.25;
+    // Calculate the rack space utilization
+    let totalRackUnitsUsed = totalRackUnits;
     
-    let totalRackUnitsUsed = 0;
+    // Get component costs by category
+    const { totalComputeCost, totalStorageCost, totalNetworkCost } = 
+      useComponentCosts(activeDesign.components);
     
-    // Get device lifespans (years) with proper null checks and defaults
-    const computeRequirements = requirements.computeRequirements || {};
-    const storageRequirements = requirements.storageRequirements || {};
-    const networkRequirements = requirements.networkRequirements || {};
+    // Get device lifespans with safe defaults
+    const { computeLifespan, storageLifespan, networkLifespan } = 
+      getDeviceLifespans(requirements);
     
-    // Default lifespan is 3 years if not specified
-    const computeLifespan = computeRequirements?.deviceLifespanYears ?? 3;
-    const storageLifespan = storageRequirements?.deviceLifespanYears ?? 3;
-    const networkLifespan = networkRequirements?.deviceLifespanYears ?? 3;
-    
-    // Track component costs by category for amortization
-    let totalComputeCost = 0;
-    let totalStorageCost = 0;
-    let totalNetworkCost = 0;
-    
-    activeDesign.components.forEach(component => {
-      const quantity = component.quantity || 1;
-      const componentCost = component.cost * quantity;
-      
-      // Add to rack units count
-      if ('rackUnitsConsumed' in component) {
-        metrics.totalRackUnits += (component.rackUnitsConsumed || 0) * quantity;
-        totalRackUnitsUsed += (component.rackUnitsConsumed || 0) * quantity;
-      }
-      
-      // Power calculations
-      const maxPower = component.powerRequired * quantity;
-      const minPower = maxPower / 3;
-      const opLoad = operationalLoad / 100;
-      const operPower = minPower + ((maxPower - minPower) * opLoad);
-      
-      metrics.totalPower += maxPower;
-      metrics.minimumPower += minPower;
-      metrics.operationalPower += operPower;
-      
-      // Categorize components for amortization
-      if (component.type === 'Server') {
-        metrics.totalServers += quantity;
-        
-        // Track compute costs for amortization
-        if (component.role !== 'storageNode') {
-          totalComputeCost += componentCost;
-        } else {
-          totalStorageCost += componentCost;
-        }
-      } else if (component.type === 'Switch') {
-        if (component.role === 'leafSwitch') {
-          metrics.totalLeafSwitches += quantity;
-        } else if (component.role === 'managementSwitch') {
-          metrics.totalMgmtSwitches += quantity;
-        }
-        
-        totalNetworkCost += componentCost;
-      } else if (component.type === 'Disk') {
-        totalStorageCost += componentCost;
-      } else if (component.type === 'Firewall') {
-        totalNetworkCost += componentCost;
-      }
-    });
+    // Calculate power metrics
+    const powerMetrics = calculatePowerMetrics(activeDesign.components, operationalLoad);
+    metrics.totalPower = powerMetrics.totalPower;
+    metrics.minimumPower = powerMetrics.minimumPower;
+    metrics.operationalPower = powerMetrics.operationalPower;
     
     // Calculate required racks based on rack units
     metrics.totalRackQuantity = Math.ceil(metrics.totalRackUnits / rackUnitsPerRack);
     
-    // Calculate energy costs
-    // Operational power is in watts, convert to kW for cost calculation
+    // Calculate energy costs (operational power is in watts, convert to kW)
     const operationalPowerKW = metrics.operationalPower / 1000;
-    
-    // Daily cost = power in kW * 24 hours * cost per kWh
-    metrics.dailyEnergyCost = operationalPowerKW * 24 * energyPricePerKwh;
-    
-    // Monthly cost = daily cost * 30 days (approx)
-    metrics.monthlyEnergyCost = metrics.dailyEnergyCost * 30;
+    const energyCosts = calculateEnergyCosts(operationalPowerKW, energyPricePerKwh);
+    metrics.dailyEnergyCost = energyCosts.dailyEnergyCost;
+    metrics.monthlyEnergyCost = energyCosts.monthlyEnergyCost;
     
     // Calculate colocation costs if enabled
     if (coloRacks) {
       metrics.monthlyColoCost = metrics.totalRackQuantity * rackCostPerMonth;
     }
     
-    // Calculate amortized costs (converting years to months)
-    metrics.monthlyAmortizedComputeCost = totalComputeCost / (computeLifespan * 12);
-    metrics.monthlyAmortizedStorageCost = totalStorageCost / (storageLifespan * 12);
-    metrics.monthlyAmortizedNetworkCost = totalNetworkCost / (networkLifespan * 12);
-    metrics.totalMonthlyAmortizedCost = 
-      metrics.monthlyAmortizedComputeCost +
-      metrics.monthlyAmortizedStorageCost +
-      metrics.monthlyAmortizedNetworkCost;
+    // Calculate amortized costs
+    const amortizedCosts = calculateAmortizedCosts(
+      totalComputeCost,
+      totalStorageCost,
+      totalNetworkCost,
+      computeLifespan,
+      storageLifespan,
+      networkLifespan
+    );
     
-    // Calculate percentages for utilization with proper object structure
-    // Power utilization (as % of maximum)
-    metrics.utilization.powerUtilization = {
-      percentage: metrics.totalPower > 0 ? (metrics.operationalPower / metrics.totalPower) * 100 : 0,
-      used: metrics.operationalPower,
-      total: metrics.totalPower
-    };
+    metrics.monthlyAmortizedComputeCost = amortizedCosts.monthlyAmortizedComputeCost;
+    metrics.monthlyAmortizedStorageCost = amortizedCosts.monthlyAmortizedStorageCost;
+    metrics.monthlyAmortizedNetworkCost = amortizedCosts.monthlyAmortizedNetworkCost;
+    metrics.totalMonthlyAmortizedCost = amortizedCosts.totalMonthlyAmortizedCost;
     
-    // Space utilization
+    // Calculate utilization metrics
     const maxRackUnits = metrics.totalRackQuantity * rackUnitsPerRack;
-    metrics.utilization.spaceUtilization = {
-      percentage: maxRackUnits > 0 ? (totalRackUnitsUsed / maxRackUnits) * 100 : 0,
-      used: totalRackUnitsUsed,
-      total: maxRackUnits
-    };
     
-    // Network utilization (this part could be enhanced with actual network usage data)
-    // For now use simple approximations
-    const maxLeafPorts = metrics.totalLeafSwitches * 48; // Assuming 48 ports per leaf switch
-    const usedLeafPorts = metrics.totalServers * 2; // Assuming dual-homing
+    const utilizationMetrics = calculateUtilizationMetrics(
+      metrics.operationalPower,
+      metrics.totalPower,
+      totalRackUnitsUsed,
+      maxRackUnits,
+      totalServers,
+      totalLeafSwitches,
+      totalMgmtSwitches
+    );
     
-    metrics.utilization.leafNetworkUtilization = {
-      percentage: maxLeafPorts > 0 ? Math.min((usedLeafPorts / maxLeafPorts) * 100, 100) : 0,
-      used: usedLeafPorts,
-      total: maxLeafPorts
-    };
-    
-    const maxMgmtPorts = metrics.totalMgmtSwitches * 48; // Assuming 48 ports per management switch
-    const usedMgmtPorts = metrics.totalServers; // Assuming single management connection
-    
-    metrics.utilization.mgmtNetworkUtilization = {
-      percentage: maxMgmtPorts > 0 ? Math.min((usedMgmtPorts / maxMgmtPorts) * 100, 100) : 0,
-      used: usedMgmtPorts,
-      total: maxMgmtPorts
-    };
+    metrics.utilization = utilizationMetrics;
     
     return metrics;
   }, [activeDesign]);
