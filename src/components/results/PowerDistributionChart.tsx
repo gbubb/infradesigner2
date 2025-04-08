@@ -4,27 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { AlertCircle } from 'lucide-react';
 
+interface UtilizationData {
+  percentage: number;
+  used: number;
+  total: number;
+}
+
 interface ResourceUtilizationProps {
-  powerUtilization: {
-    percentage: number;
-    used: number;
-    total: number;
-  };
-  spaceUtilization: {
-    percentage: number;
-    used: number;
-    total: number;
-  };
-  leafNetworkUtilization: {
-    percentage: number;
-    used: number;
-    total: number;
-  };
-  mgmtNetworkUtilization: {
-    percentage: number;
-    used: number;
-    total: number;
-  };
+  powerUtilization: UtilizationData;
+  spaceUtilization: UtilizationData;
+  leafNetworkUtilization: UtilizationData;
+  mgmtNetworkUtilization: UtilizationData;
 }
 
 export const ResourceUtilizationChart: React.FC<ResourceUtilizationProps> = ({ 

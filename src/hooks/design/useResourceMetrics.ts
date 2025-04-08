@@ -29,10 +29,26 @@ export const useResourceMetrics = () => {
       monthlyAmortizedNetworkCost: 0,
       totalMonthlyAmortizedCost: 0,
       utilization: {
-        powerUtilization: 0,
-        spaceUtilization: 0,
-        leafNetworkUtilization: 0,
-        mgmtNetworkUtilization: 0
+        powerUtilization: {
+          percentage: 0,
+          used: 0,
+          total: 0
+        },
+        spaceUtilization: {
+          percentage: 0,
+          used: 0,
+          total: 0
+        },
+        leafNetworkUtilization: {
+          percentage: 0,
+          used: 0,
+          total: 0
+        },
+        mgmtNetworkUtilization: {
+          percentage: 0,
+          used: 0,
+          total: 0
+        }
       }
     };
     
@@ -70,9 +86,9 @@ export const useResourceMetrics = () => {
     const storageRequirements = requirements.storageRequirements || {};
     const networkRequirements = requirements.networkRequirements || {};
     
-    const computeLifespan = computeRequirements?.deviceLifespanYears || 3;
-    const storageLifespan = storageRequirements?.deviceLifespanYears || 3;
-    const networkLifespan = networkRequirements?.deviceLifespanYears || 3;
+    const computeLifespan = computeRequirements.deviceLifespanYears || 3;
+    const storageLifespan = storageRequirements.deviceLifespanYears || 3;
+    const networkLifespan = networkRequirements.deviceLifespanYears || 3;
     
     // Track component costs by category for amortization
     let totalComputeCost = 0;
@@ -151,39 +167,44 @@ export const useResourceMetrics = () => {
       metrics.monthlyAmortizedStorageCost +
       metrics.monthlyAmortizedNetworkCost;
     
-    // Calculate percentages for utilization
+    // Calculate percentages for utilization with proper object structure
     // Power utilization (as % of maximum)
-    if (metrics.totalPower > 0) {
-      metrics.utilization.powerUtilization = (metrics.operationalPower / metrics.totalPower) * 100;
-    }
+    metrics.utilization.powerUtilization = {
+      percentage: metrics.totalPower > 0 ? (metrics.operationalPower / metrics.totalPower) * 100 : 0,
+      used: metrics.operationalPower,
+      total: metrics.totalPower
+    };
     
     // Space utilization
     const maxRackUnits = metrics.totalRackQuantity * rackUnitsPerRack;
-    if (maxRackUnits > 0) {
-      metrics.utilization.spaceUtilization = (totalRackUnitsUsed / maxRackUnits) * 100;
-    }
+    metrics.utilization.spaceUtilization = {
+      percentage: maxRackUnits > 0 ? (totalRackUnitsUsed / maxRackUnits) * 100 : 0,
+      used: totalRackUnitsUsed,
+      total: maxRackUnits
+    };
     
     // Network utilization (this part could be enhanced with actual network usage data)
     // For now use simple approximations
     const maxLeafPorts = metrics.totalLeafSwitches * 48; // Assuming 48 ports per leaf switch
     const usedLeafPorts = metrics.totalServers * 2; // Assuming dual-homing
     
-    if (maxLeafPorts > 0) {
-      metrics.utilization.leafNetworkUtilization = Math.min((usedLeafPorts / maxLeafPorts) * 100, 100);
-    }
+    metrics.utilization.leafNetworkUtilization = {
+      percentage: maxLeafPorts > 0 ? Math.min((usedLeafPorts / maxLeafPorts) * 100, 100) : 0,
+      used: usedLeafPorts,
+      total: maxLeafPorts
+    };
     
     const maxMgmtPorts = metrics.totalMgmtSwitches * 48; // Assuming 48 ports per management switch
     const usedMgmtPorts = metrics.totalServers; // Assuming single management connection
     
-    if (maxMgmtPorts > 0) {
-      metrics.utilization.mgmtNetworkUtilization = Math.min((usedMgmtPorts / maxMgmtPorts) * 100, 100);
-    }
+    metrics.utilization.mgmtNetworkUtilization = {
+      percentage: maxMgmtPorts > 0 ? Math.min((usedMgmtPorts / maxMgmtPorts) * 100, 100) : 0,
+      used: usedMgmtPorts,
+      total: maxMgmtPorts
+    };
     
     return metrics;
   }, [activeDesign]);
   
-  // Extract utilization to avoid TypeScript error
-  const { utilization, ...metrics } = resourceMetrics;
-  
-  return { resourceMetrics: metrics, resourceUtilization: utilization };
+  return { resourceMetrics: resourceMetrics, resourceUtilization: resourceMetrics.utilization };
 };
