@@ -1,4 +1,3 @@
-
 import { DesignRequirements, InfrastructureComponent } from '@/types/infrastructure';
 
 // Cost calculation utilities
@@ -116,16 +115,23 @@ export const calculateUtilizationMetrics = (
 
 // Safely get device lifespans with default fallbacks
 export const getDeviceLifespans = (requirements: DesignRequirements) => {
-  // Make sure we have objects to work with to avoid undefined property access
-  const computeReqs = requirements?.computeRequirements || {};
-  const storageReqs = requirements?.storageRequirements || {};
-  const networkReqs = requirements?.networkRequirements || {};
+  // Get device lifespans with fallbacks to default values
+  const computeLifespan = requirements?.computeRequirements?.deviceLifespanYears !== undefined 
+    ? requirements.computeRequirements.deviceLifespanYears 
+    : 3;
+    
+  const storageLifespan = requirements?.storageRequirements?.deviceLifespanYears !== undefined
+    ? requirements.storageRequirements.deviceLifespanYears
+    : 3;
+    
+  const networkLifespan = requirements?.networkRequirements?.deviceLifespanYears !== undefined
+    ? requirements.networkRequirements.deviceLifespanYears
+    : 3;
   
   return {
-    // Use optional chaining and nullish coalescing to provide default values if properties are undefined
-    computeLifespan: computeReqs?.deviceLifespanYears ?? 3,
-    storageLifespan: storageReqs?.deviceLifespanYears ?? 3,
-    networkLifespan: networkReqs?.deviceLifespanYears ?? 3
+    computeLifespan,
+    storageLifespan,
+    networkLifespan
   };
 };
 
