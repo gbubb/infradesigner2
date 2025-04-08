@@ -13,8 +13,10 @@ export const ResultsPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasCalculated, setHasCalculated] = useState(false);
   
+  // Get the recalculation handlers
   const { handleRecalculate, handleForceFullRecalculation } = useRecalculation();
   
+  // Get design calculations all at once to ensure proper hook ordering
   const designCalculations = useDesignCalculations();
   
   // Effect to handle initial calculation
