@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Info } from 'lucide-react';
 import { useDesignStore, manualRecalculateDesign } from '@/store/designStore';
@@ -64,7 +64,7 @@ export const ResultsPanel: React.FC = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [activeDesign?.id, hasCalculated, saveDesign]);
+  }, [activeDesign?.id, hasCalculated, saveDesign, activeDesign]);
   
   const handleRecalculate = useCallback(() => {
     setIsLoading(true);

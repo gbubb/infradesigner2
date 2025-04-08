@@ -69,7 +69,7 @@ export const useStorageClusters = () => {
         nodeCount: clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0)
       };
     });
-  }, [activeDesign, requirements]);
+  }, [activeDesign, requirements]);  // Fix: Explicitly listing dependencies
 
   return {
     storageClustersMetrics
