@@ -52,7 +52,7 @@ export const useDesignCalculations = () => {
   const hasStorageNodes = useMemo(() => {
     if (!activeDesign?.components) return false;
     return activeDesign.components.some(c => c.role === 'storageNode');
-  }, [activeDesign]);
+  }, [activeDesign?.components]);
 
   return {
     totalCost,

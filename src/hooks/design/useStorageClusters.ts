@@ -72,7 +72,7 @@ export const useStorageClusters = () => {
         nodeCount
       };
     });
-  }, [activeDesign, requirements]);
+  }, [activeDesign?.components, requirements?.storageRequirements?.storageClusters]);
 
   return {
     storageClustersMetrics: storageClustersMetrics || []

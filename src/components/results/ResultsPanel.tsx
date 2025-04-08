@@ -9,30 +9,13 @@ import { ResultsContent } from './ResultsContent';
 import { useRecalculation } from '@/hooks/useRecalculation';
 
 export const ResultsPanel: React.FC = () => {
-  const { activeDesign, saveDesign } = useDesignStore();
+  const { activeDesign } = useDesignStore();
   const [isLoading, setIsLoading] = useState(true);
   const [hasCalculated, setHasCalculated] = useState(false);
   
   const { handleRecalculate, handleForceFullRecalculation } = useRecalculation();
   
-  const {
-    totalCost,
-    totalPower,
-    totalRackUnits,
-    componentsByType,
-    storageClustersMetrics,
-    actualHardwareTotals,
-    resourceMetrics,
-    resourceUtilization,
-    costPerVCPU,
-    costPerTB,
-    designErrors,
-    hasValidDesign,
-    monthlyAmortizedComputeCost,
-    monthlyAmortizedStorageCost,
-    monthlyAmortizedNetworkCost,
-    totalMonthlyAmortizedCost
-  } = useDesignCalculations();
+  const designCalculations = useDesignCalculations();
   
   // Effect to handle initial calculation
   useEffect(() => {
@@ -54,7 +37,7 @@ export const ResultsPanel: React.FC = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [activeDesign?.id, hasCalculated, saveDesign, activeDesign, handleRecalculate]);
+  }, [activeDesign?.id, hasCalculated, handleRecalculate]);
   
   // Wrapper for recalculate to set loading state
   const onRecalculate = () => {
@@ -78,7 +61,7 @@ export const ResultsPanel: React.FC = () => {
     }
   };
   
-  const hasNoDesign = !hasValidDesign;
+  const hasNoDesign = !designCalculations.hasValidDesign;
 
   if (isLoading) {
     return (
@@ -101,21 +84,21 @@ export const ResultsPanel: React.FC = () => {
       
       <ResultsContent 
         hasNoDesign={hasNoDesign}
-        designErrors={designErrors}
-        totalCost={totalCost}
-        totalPower={totalPower}
-        totalRackUnits={totalRackUnits}
-        componentsByType={componentsByType}
-        storageClustersMetrics={storageClustersMetrics}
-        actualHardwareTotals={actualHardwareTotals}
-        resourceMetrics={resourceMetrics}
-        resourceUtilization={resourceUtilization}
-        costPerVCPU={costPerVCPU}
-        costPerTB={costPerTB}
-        monthlyAmortizedComputeCost={monthlyAmortizedComputeCost}
-        monthlyAmortizedStorageCost={monthlyAmortizedStorageCost}
-        monthlyAmortizedNetworkCost={monthlyAmortizedNetworkCost}
-        totalMonthlyAmortizedCost={totalMonthlyAmortizedCost}
+        designErrors={designCalculations.designErrors}
+        totalCost={designCalculations.totalCost}
+        totalPower={designCalculations.totalPower}
+        totalRackUnits={designCalculations.totalRackUnits}
+        componentsByType={designCalculations.componentsByType}
+        storageClustersMetrics={designCalculations.storageClustersMetrics}
+        actualHardwareTotals={designCalculations.actualHardwareTotals}
+        resourceMetrics={designCalculations.resourceMetrics}
+        resourceUtilization={designCalculations.resourceUtilization}
+        costPerVCPU={designCalculations.costPerVCPU}
+        costPerTB={designCalculations.costPerTB}
+        monthlyAmortizedComputeCost={designCalculations.monthlyAmortizedComputeCost}
+        monthlyAmortizedStorageCost={designCalculations.monthlyAmortizedStorageCost}
+        monthlyAmortizedNetworkCost={designCalculations.monthlyAmortizedNetworkCost}
+        totalMonthlyAmortizedCost={designCalculations.totalMonthlyAmortizedCost}
         components={activeDesign?.components}
       />
     </div>
