@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { DesignRequirements } from '@/types/infrastructure';
@@ -58,7 +57,7 @@ export const useResourceMetrics = () => {
     }
     
     // Initialize requirements with proper type checking
-    const requirements: DesignRequirements = activeDesign.requirements || {} as DesignRequirements;
+    const requirements: DesignRequirements = activeDesign?.requirements || {} as DesignRequirements;
     
     // Set default values for physical constraints if not defined
     const physicalConstraints = requirements.physicalConstraints || {};
@@ -209,4 +208,3 @@ export const useResourceMetrics = () => {
   
   return { resourceMetrics: resourceMetrics, resourceUtilization: resourceMetrics.utilization };
 };
-
