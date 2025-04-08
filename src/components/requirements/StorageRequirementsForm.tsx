@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 interface StorageRequirementsProps {
   requirements: {
-    storageClusters: StorageClusterRequirement[];
+    storageClusters?: StorageClusterRequirement[];
     deviceLifespanYears?: number;
   };
   onUpdate: (storageRequirements: any) => void;
@@ -24,6 +24,9 @@ export const StorageRequirementsForm: React.FC<StorageRequirementsProps> = ({
   requirements,
   onUpdate,
 }) => {
+  // Ensure storageClusters is initialized
+  const storageClusters = requirements.storageClusters || [];
+  
   // Pool type options for storage clusters
   const poolTypeOptions = [
     '3 Replica',
@@ -44,9 +47,9 @@ export const StorageRequirementsForm: React.FC<StorageRequirementsProps> = ({
 
   // Add a new storage cluster
   const handleAddCluster = () => {
-    const newClusters = [...(requirements.storageClusters || []), {
+    const newClusters = [...storageClusters, {
       id: uuidv4(),
-      name: `Storage Cluster ${(requirements.storageClusters?.length || 0) + 1}`,
+      name: `Storage Cluster ${storageClusters.length + 1}`,
       totalCapacityTB: 100,
       availabilityZoneQuantity: 3,
       poolType: '3 Replica',
@@ -58,13 +61,13 @@ export const StorageRequirementsForm: React.FC<StorageRequirementsProps> = ({
 
   // Remove a storage cluster
   const handleRemoveCluster = (clusterId: string) => {
-    const updatedClusters = requirements.storageClusters.filter(cluster => cluster.id !== clusterId);
+    const updatedClusters = storageClusters.filter(cluster => cluster.id !== clusterId);
     onUpdate({ storageClusters: updatedClusters });
   };
 
   // Update a storage cluster property
   const handleClusterChange = (clusterId: string, field: string, value: any) => {
-    const updatedClusters = requirements.storageClusters.map(cluster => {
+    const updatedClusters = storageClusters.map(cluster => {
       if (cluster.id === clusterId) {
         return { ...cluster, [field]: value };
       }
@@ -123,8 +126,8 @@ export const StorageRequirementsForm: React.FC<StorageRequirementsProps> = ({
         <CardContent>
           <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-8">
-              {requirements.storageClusters && requirements.storageClusters.length > 0 ? (
-                requirements.storageClusters.map((cluster, index) => (
+              {storageClusters.length > 0 ? (
+                storageClusters.map((cluster, index) => (
                   <div key={cluster.id} className="p-4 border rounded-md relative">
                     <Button
                       variant="ghost"

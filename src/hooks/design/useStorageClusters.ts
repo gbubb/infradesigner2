@@ -1,20 +1,26 @@
 
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/types/infrastructure';
+import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
 
 export const useStorageClusters = () => {
   const { activeDesign, requirements } = useDesignStore();
   
   // Calculate storage clusters metrics
   const storageClustersMetrics = useMemo(() => {
-    if (!activeDesign?.components || !requirements?.storageRequirements?.storageClusters) {
+    // Ensure components array exists
+    const components = activeDesign?.components || [];
+    
+    // Ensure storageClusters array exists
+    const storageClusters = requirements?.storageRequirements?.storageClusters || [];
+    
+    if (components.length === 0 || storageClusters.length === 0) {
       return [];
     }
 
-    return requirements.storageRequirements.storageClusters.map(cluster => {
+    return storageClusters.map(cluster => {
       // Find storage nodes for this cluster
-      const clusterNodes = activeDesign.components.filter(
+      const clusterNodes = components.filter(
         component => component.role === 'storageNode' && 
         (component as any).clusterInfo?.clusterId === cluster.id
       );
