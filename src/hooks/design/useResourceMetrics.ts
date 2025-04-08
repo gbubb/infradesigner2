@@ -1,5 +1,7 @@
+
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
+import { DesignRequirements } from '@/types/infrastructure';
 
 export const useResourceMetrics = () => {
   const { activeDesign } = useDesignStore();
@@ -25,7 +27,13 @@ export const useResourceMetrics = () => {
       monthlyAmortizedComputeCost: 0,
       monthlyAmortizedStorageCost: 0,
       monthlyAmortizedNetworkCost: 0,
-      totalMonthlyAmortizedCost: 0
+      totalMonthlyAmortizedCost: 0,
+      utilization: {
+        powerUtilization: 0,
+        spaceUtilization: 0,
+        leafNetworkUtilization: 0,
+        mgmtNetworkUtilization: 0
+      }
     };
     
     // Return default metrics if no active design
@@ -33,23 +41,38 @@ export const useResourceMetrics = () => {
       return metrics;
     }
     
-    const requirements = activeDesign.requirements || {};
-    const rackUnitsPerRack = requirements.physicalConstraints?.rackUnitsPerRack || 42;
+    // Initialize requirements with proper type checking
+    const requirements: DesignRequirements = activeDesign.requirements || {} as DesignRequirements;
     
-    // Get operational costs
-    const coloRacks = requirements.physicalConstraints?.operationalCosts?.coloRacks || false;
-    const rackCostPerMonth = requirements.physicalConstraints?.operationalCosts?.rackCostPerMonth || 0;
-    const operationalLoad = requirements.physicalConstraints?.operationalCosts?.operationalLoad || 50;
+    // Set default values for physical constraints if not defined
+    const physicalConstraints = requirements.physicalConstraints || {};
+    const rackUnitsPerRack = physicalConstraints.rackUnitsPerRack || 42;
+    
+    // Get operational costs with proper null checks
+    const operationalCosts = physicalConstraints.operationalCosts || {
+      coloRacks: false,
+      energyPricePerKwh: 0.25,
+      operationalLoad: 50
+    };
+    
+    // Get colo rack settings
+    const coloRacks = operationalCosts?.coloRacks || false;
+    const rackCostPerMonth = operationalCosts?.rackCostPerMonth || 0;
+    const operationalLoad = operationalCosts?.operationalLoad || 50;
     
     // Energy cost calculations
-    const energyPricePerKwh = requirements.physicalConstraints?.operationalCosts?.energyPricePerKwh || 0.25;
+    const energyPricePerKwh = operationalCosts?.energyPricePerKwh || 0.25;
     
-    let totalRackUnits = 0;
+    let totalRackUnitsUsed = 0;
     
-    // Get device lifespans (years)
-    const computeLifespan = requirements.computeRequirements?.deviceLifespanYears || 3;
-    const storageLifespan = requirements.storageRequirements?.deviceLifespanYears || 3;
-    const networkLifespan = requirements.networkRequirements?.deviceLifespanYears || 3;
+    // Get device lifespans (years) with proper null checks
+    const computeRequirements = requirements.computeRequirements || {};
+    const storageRequirements = requirements.storageRequirements || {};
+    const networkRequirements = requirements.networkRequirements || {};
+    
+    const computeLifespan = computeRequirements?.deviceLifespanYears || 3;
+    const storageLifespan = storageRequirements?.deviceLifespanYears || 3;
+    const networkLifespan = networkRequirements?.deviceLifespanYears || 3;
     
     // Track component costs by category for amortization
     let totalComputeCost = 0;
@@ -63,7 +86,7 @@ export const useResourceMetrics = () => {
       // Add to rack units count
       if ('rackUnitsConsumed' in component) {
         metrics.totalRackUnits += (component.rackUnitsConsumed || 0) * quantity;
-        totalRackUnits += (component.rackUnitsConsumed || 0) * quantity;
+        totalRackUnitsUsed += (component.rackUnitsConsumed || 0) * quantity;
       }
       
       // Power calculations
@@ -128,24 +151,16 @@ export const useResourceMetrics = () => {
       metrics.monthlyAmortizedStorageCost +
       metrics.monthlyAmortizedNetworkCost;
     
-    // Calculate network utilization percentages
-    const utilization = {
-      powerUtilization: 0,
-      spaceUtilization: 0,
-      leafNetworkUtilization: 0,
-      mgmtNetworkUtilization: 0
-    };
-    
-    // Calculate percentages
+    // Calculate percentages for utilization
     // Power utilization (as % of maximum)
     if (metrics.totalPower > 0) {
-      utilization.powerUtilization = (metrics.operationalPower / metrics.totalPower) * 100;
+      metrics.utilization.powerUtilization = (metrics.operationalPower / metrics.totalPower) * 100;
     }
     
     // Space utilization
     const maxRackUnits = metrics.totalRackQuantity * rackUnitsPerRack;
     if (maxRackUnits > 0) {
-      utilization.spaceUtilization = (totalRackUnits / maxRackUnits) * 100;
+      metrics.utilization.spaceUtilization = (totalRackUnitsUsed / maxRackUnits) * 100;
     }
     
     // Network utilization (this part could be enhanced with actual network usage data)
@@ -154,23 +169,20 @@ export const useResourceMetrics = () => {
     const usedLeafPorts = metrics.totalServers * 2; // Assuming dual-homing
     
     if (maxLeafPorts > 0) {
-      utilization.leafNetworkUtilization = Math.min((usedLeafPorts / maxLeafPorts) * 100, 100);
+      metrics.utilization.leafNetworkUtilization = Math.min((usedLeafPorts / maxLeafPorts) * 100, 100);
     }
     
     const maxMgmtPorts = metrics.totalMgmtSwitches * 48; // Assuming 48 ports per management switch
     const usedMgmtPorts = metrics.totalServers; // Assuming single management connection
     
     if (maxMgmtPorts > 0) {
-      utilization.mgmtNetworkUtilization = Math.min((usedMgmtPorts / maxMgmtPorts) * 100, 100);
+      metrics.utilization.mgmtNetworkUtilization = Math.min((usedMgmtPorts / maxMgmtPorts) * 100, 100);
     }
     
-    return {
-      ...metrics,
-      utilization
-    };
+    return metrics;
   }, [activeDesign]);
   
-  // Avoid returning the internal utilization property directly
+  // Extract utilization to avoid TypeScript error
   const { utilization, ...metrics } = resourceMetrics;
   
   return { resourceMetrics: metrics, resourceUtilization: utilization };
