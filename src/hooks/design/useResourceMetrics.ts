@@ -86,9 +86,10 @@ export const useResourceMetrics = () => {
     const storageRequirements = requirements.storageRequirements || {};
     const networkRequirements = requirements.networkRequirements || {};
     
-    const computeLifespan = computeRequirements.deviceLifespanYears || 3;
-    const storageLifespan = storageRequirements.deviceLifespanYears || 3;
-    const networkLifespan = networkRequirements.deviceLifespanYears || 3;
+    // Default lifespan is 3 years if not specified
+    const computeLifespan = computeRequirements.deviceLifespanYears ?? 3;
+    const storageLifespan = storageRequirements.deviceLifespanYears ?? 3;
+    const networkLifespan = networkRequirements.deviceLifespanYears ?? 3;
     
     // Track component costs by category for amortization
     let totalComputeCost = 0;
@@ -208,3 +209,4 @@ export const useResourceMetrics = () => {
   
   return { resourceMetrics: resourceMetrics, resourceUtilization: resourceMetrics.utilization };
 };
+
