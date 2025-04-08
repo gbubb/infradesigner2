@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { DesignRequirements } from '@/types/infrastructure';
@@ -80,15 +81,15 @@ export const useResourceMetrics = () => {
     
     let totalRackUnitsUsed = 0;
     
-    // Get device lifespans (years) with proper null checks
+    // Get device lifespans (years) with proper null checks and defaults
     const computeRequirements = requirements.computeRequirements || {};
     const storageRequirements = requirements.storageRequirements || {};
     const networkRequirements = requirements.networkRequirements || {};
     
     // Default lifespan is 3 years if not specified
-    const computeLifespan = computeRequirements.deviceLifespanYears ?? 3;
-    const storageLifespan = storageRequirements.deviceLifespanYears ?? 3;
-    const networkLifespan = networkRequirements.deviceLifespanYears ?? 3;
+    const computeLifespan = computeRequirements?.deviceLifespanYears ?? 3;
+    const storageLifespan = storageRequirements?.deviceLifespanYears ?? 3;
+    const networkLifespan = networkRequirements?.deviceLifespanYears ?? 3;
     
     // Track component costs by category for amortization
     let totalComputeCost = 0;
