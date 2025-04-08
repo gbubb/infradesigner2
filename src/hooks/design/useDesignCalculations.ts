@@ -55,12 +55,12 @@ export const useDesignCalculations = () => {
   }, [activeDesign?.components]);
 
   return {
-    totalCost,
+    totalCost: totalCost || 0,
     totalPower,
     totalRackUnits,
     minimumPower,
     operationalPower,
-    componentsByType,
+    componentsByType: componentsByType || {},
     storageClustersMetrics: storageClustersMetrics || [],
     actualHardwareTotals: actualHardwareTotals || {
       totalVCPUs: 0,
@@ -75,8 +75,8 @@ export const useDesignCalculations = () => {
       leafNetworkUtilization: { percentage: 0, used: 0, total: 0 },
       mgmtNetworkUtilization: { percentage: 0, used: 0, total: 0 }
     },
-    costPerVCPU,
-    costPerTB,
+    costPerVCPU: costPerVCPU || 0,
+    costPerTB: costPerTB || 0,
     designErrors: designErrors || [],
     hasValidDesign,
     hasStorageNodes,

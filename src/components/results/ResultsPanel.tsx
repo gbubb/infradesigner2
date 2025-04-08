@@ -9,14 +9,17 @@ import { ResultsContent } from './ResultsContent';
 import { useRecalculation } from '@/hooks/useRecalculation';
 
 export const ResultsPanel: React.FC = () => {
+  // Get store state first
   const { activeDesign } = useDesignStore();
+  
+  // Then declare component state
   const [isLoading, setIsLoading] = useState(true);
   const [hasCalculated, setHasCalculated] = useState(false);
   
-  // Get the recalculation handlers
+  // Get the recalculation handlers next - this ensures consistent hook ordering
   const { handleRecalculate, handleForceFullRecalculation } = useRecalculation();
   
-  // Get design calculations all at once to ensure proper hook ordering
+  // Get design calculations - always call this hook unconditionally
   const designCalculations = useDesignCalculations();
   
   // Effect to handle initial calculation
