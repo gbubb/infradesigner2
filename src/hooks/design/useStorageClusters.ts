@@ -55,6 +55,9 @@ export const useStorageClusters = () => {
       // Calculate cost per TiB
       const costPerTiB = usableCapacityTiB > 0 ? totalNodeCost / usableCapacityTiB : 0;
       
+      // Calculate total node count
+      const nodeCount = clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0);
+      
       return {
         id: cluster.id,
         name: cluster.name,
@@ -66,12 +69,12 @@ export const useStorageClusters = () => {
         effectiveCapacityTiB,
         totalNodeCost,
         costPerTiB,
-        nodeCount: clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0)
+        nodeCount
       };
     });
-  }, [activeDesign, requirements]);  // Fix: Explicitly listing dependencies
+  }, [activeDesign, requirements]);
 
   return {
-    storageClustersMetrics
+    storageClustersMetrics: storageClustersMetrics || []
   };
 };

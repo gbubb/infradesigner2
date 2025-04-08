@@ -61,13 +61,23 @@ export const useDesignCalculations = () => {
     minimumPower,
     operationalPower,
     componentsByType,
-    storageClustersMetrics,
-    actualHardwareTotals,
-    resourceMetrics,
-    resourceUtilization,
+    storageClustersMetrics: storageClustersMetrics || [],
+    actualHardwareTotals: actualHardwareTotals || {
+      totalVCPUs: 0,
+      totalComputeMemoryTB: 0,
+      totalStorageTB: 0,
+      totalMemoryTB: 0
+    },
+    resourceMetrics: resourceMetrics || {},
+    resourceUtilization: resourceUtilization || {
+      powerUtilization: { percentage: 0, used: 0, total: 0 },
+      spaceUtilization: { percentage: 0, used: 0, total: 0 },
+      leafNetworkUtilization: { percentage: 0, used: 0, total: 0 },
+      mgmtNetworkUtilization: { percentage: 0, used: 0, total: 0 }
+    },
     costPerVCPU,
     costPerTB,
-    designErrors,
+    designErrors: designErrors || [],
     hasValidDesign,
     hasStorageNodes,
     monthlyAmortizedComputeCost,
