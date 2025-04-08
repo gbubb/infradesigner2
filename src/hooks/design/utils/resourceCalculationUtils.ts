@@ -116,33 +116,34 @@ export const calculateUtilizationMetrics = (
 
 // Safely get device lifespans with default fallbacks
 export const getDeviceLifespans = (requirements: DesignRequirements) => {
-  const computeReqs = requirements.computeRequirements || {};
-  const storageReqs = requirements.storageRequirements || {};
-  const networkReqs = requirements.networkRequirements || {};
+  // Make sure we have objects to work with to avoid undefined property access
+  const computeReqs = requirements?.computeRequirements || {};
+  const storageReqs = requirements?.storageRequirements || {};
+  const networkReqs = requirements?.networkRequirements || {};
   
-  // Use optional chaining and nullish coalescing for type safety
   return {
-    computeLifespan: computeReqs.deviceLifespanYears ?? 3,
-    storageLifespan: storageReqs.deviceLifespanYears ?? 3,
-    networkLifespan: networkReqs.deviceLifespanYears ?? 3
+    // Use nullish coalescing to provide default values if properties are undefined
+    computeLifespan: computeReqs?.deviceLifespanYears ?? 3,
+    storageLifespan: storageReqs?.deviceLifespanYears ?? 3,
+    networkLifespan: networkReqs?.deviceLifespanYears ?? 3
   };
 };
 
 // Get operational settings with safe defaults
 export const getOperationalSettings = (requirements: DesignRequirements) => {
-  const physicalConstraints = requirements.physicalConstraints || {};
-  const operationalCosts = physicalConstraints.operationalCosts || {
+  const physicalConstraints = requirements?.physicalConstraints || {};
+  const operationalCosts = physicalConstraints?.operationalCosts || {
     coloRacks: false,
     energyPricePerKwh: 0.25,
     operationalLoad: 50
   };
   
   return {
-    rackUnitsPerRack: physicalConstraints.rackUnitsPerRack || 42,
-    coloRacks: operationalCosts.coloRacks || false,
-    rackCostPerMonth: operationalCosts.rackCostPerMonth || 0,
-    operationalLoad: operationalCosts.operationalLoad || 50,
-    energyPricePerKwh: operationalCosts.energyPricePerKwh || 0.25
+    rackUnitsPerRack: physicalConstraints?.rackUnitsPerRack || 42,
+    coloRacks: operationalCosts?.coloRacks || false,
+    rackCostPerMonth: operationalCosts?.rackCostPerMonth || 0,
+    operationalLoad: operationalCosts?.operationalLoad || 50,
+    energyPricePerKwh: operationalCosts?.energyPricePerKwh || 0.25
   };
 };
 
