@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { InfrastructureComponent } from '@/types/infrastructure';
 
@@ -10,13 +9,15 @@ export const useComponentCosts = (components: InfrastructureComponent[] | undefi
     let totalNetworkCost = 0;
     
     // Return default if no components
-    if (!components || components.length === 0) {
+    if (!components || !Array.isArray(components) || components.length === 0) {
       return { totalComputeCost, totalStorageCost, totalNetworkCost };
     }
     
     components.forEach(component => {
+      if (!component) return; // Skip undefined components
+      
       const quantity = component.quantity || 1;
-      const componentCost = component.cost * quantity;
+      const componentCost = (component.cost || 0) * quantity;
       
       // Categorize components for amortization
       if (component.type === 'Server') {
@@ -26,12 +27,15 @@ export const useComponentCosts = (components: InfrastructureComponent[] | undefi
         } else {
           totalStorageCost += componentCost;
         }
-      } else if (component.type === 'Switch') {
+      } else if (component.type === 'Switch' || component.type === 'Router') {
         totalNetworkCost += componentCost;
       } else if (component.type === 'Disk') {
         totalStorageCost += componentCost;
       } else if (component.type === 'Firewall') {
         totalNetworkCost += componentCost;
+      } else if (component.type === 'GPU') {
+        // GPUs are considered part of compute costs
+        totalComputeCost += componentCost;
       }
     });
     

@@ -32,18 +32,18 @@ export const initializeStore = async () => {
     await state.loadComponentsFromDB();
     
     // Calculate component roles if needed
-    if (state.componentRoles.length === 0) {
+    if (!state.componentRoles || !Array.isArray(state.componentRoles) || state.componentRoles.length === 0) {
       state.calculateComponentRoles();
     }
     
-    // Initialize selectedDisksByRole if it's empty
-    if (Object.keys(state.selectedDisksByRole).length === 0) {
-      state.selectedDisksByRole = {};
+    // Initialize selectedDisksByRole if it's empty or undefined
+    if (!state.selectedDisksByRole || typeof state.selectedDisksByRole !== 'object') {
+      useDesignStore.setState({ selectedDisksByRole: {} });
     }
     
-    // Initialize selectedGPUsByRole if it's empty
-    if (Object.keys(state.selectedGPUsByRole).length === 0) {
-      state.selectedGPUsByRole = {};
+    // Initialize selectedGPUsByRole if it's empty or undefined
+    if (!state.selectedGPUsByRole || typeof state.selectedGPUsByRole !== 'object') {
+      useDesignStore.setState({ selectedGPUsByRole: {} });
     }
     
     // Try to load designs from the database
@@ -53,24 +53,46 @@ export const initializeStore = async () => {
     
     // Mark as initialized
     storeInitialized = true;
-    console.log("Store initialized");
+    console.log("Store initialized successfully");
   } catch (error) {
     console.error("Error during store initialization:", error);
     toast.error("Error initializing application data");
     
     // Even if there's an error, initialize with defaults
-    if (state.componentTemplates.length === 0) {
+    if (!state.componentTemplates || !Array.isArray(state.componentTemplates) || state.componentTemplates.length === 0) {
       state.initializeComponentTemplates();
+    }
+    
+    // Initialize state with empty objects if they're missing
+    const updates: any = {};
+    
+    if (!state.selectedDisksByRole || typeof state.selectedDisksByRole !== 'object') {
+      updates.selectedDisksByRole = {};
+    }
+    
+    if (!state.selectedGPUsByRole || typeof state.selectedGPUsByRole !== 'object') {
+      updates.selectedGPUsByRole = {};
+    }
+    
+    if (!state.componentRoles || !Array.isArray(state.componentRoles)) {
+      updates.componentRoles = [];
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      useDesignStore.setState(updates);
     }
     
     // No longer auto-create a design on error
     
     storeInitialized = true;
+    console.log("Store initialized with defaults due to error");
   }
 };
 
 // Call initialization once
-initializeStore();
+initializeStore().catch(error => {
+  console.error("Failed to initialize store:", error);
+});
 
 // Export a function to recalculate when needed - with flag to prevent loops
 let isRecalculating = false;
@@ -85,127 +107,168 @@ export const recalculateDesign = () => {
     // Get the current state
     const state = useDesignStore.getState();
     
+    // Safety check for component roles
+    if (!state.componentRoles || !Array.isArray(state.componentRoles)) {
+      useDesignStore.setState({ componentRoles: [] });
+      console.log("Initialized componentRoles array");
+    }
+    
     // First calculate component roles
     state.calculateComponentRoles();
     
     // Then update the active design if it exists
     if (state.activeDesign) {
       // Check if we have stored configurations in the active design
-      if (state.activeDesign.componentRoles && state.activeDesign.componentRoles.length > 0) {
+      if (state.activeDesign.componentRoles && Array.isArray(state.activeDesign.componentRoles) && state.activeDesign.componentRoles.length > 0) {
         // Restore component roles from the design
-        state.componentRoles = state.activeDesign.componentRoles;
+        useDesignStore.setState({ componentRoles: state.activeDesign.componentRoles });
       }
       
       // Restore disk configurations if they exist
-      if (state.activeDesign.selectedDisksByRole) {
-        state.selectedDisksByRole = state.activeDesign.selectedDisksByRole;
+      if (state.activeDesign.selectedDisksByRole && typeof state.activeDesign.selectedDisksByRole === 'object') {
+        useDesignStore.setState({ selectedDisksByRole: state.activeDesign.selectedDisksByRole });
       }
       
       // Restore GPU configurations if they exist
-      if (state.activeDesign.selectedGPUsByRole) {
-        state.selectedGPUsByRole = state.activeDesign.selectedGPUsByRole;
+      if (state.activeDesign.selectedGPUsByRole && typeof state.activeDesign.selectedGPUsByRole === 'object') {
+        useDesignStore.setState({ selectedGPUsByRole: state.activeDesign.selectedGPUsByRole });
       }
       
+      // Get fresh state after updates
+      const updatedState = useDesignStore.getState();
+      
       // Recalculate all component quantities to ensure calculations are fresh
-      state.componentRoles.forEach(role => {
-        if (role.assignedComponentId) {
-          const newQuantity = state.calculateRequiredQuantity(role.id, role.assignedComponentId);
-          console.log(`Recalculated ${role.role}: ${newQuantity} units required`);
-        }
-      });
+      if (Array.isArray(updatedState.componentRoles)) {
+        updatedState.componentRoles.forEach(role => {
+          if (role && role.id && role.assignedComponentId) {
+            try {
+              const newQuantity = updatedState.calculateRequiredQuantity(role.id, role.assignedComponentId);
+              console.log(`Recalculated ${role.role}: ${newQuantity} units required`);
+            } catch (error) {
+              console.error(`Error calculating quantity for role ${role.role}:`, error);
+            }
+          }
+        });
+      }
+      
+      // Safety check for components array
+      if (!state.activeDesign.components || !Array.isArray(state.activeDesign.components)) {
+        console.warn("Active design has no components array");
+        state.updateActiveDesign([]);
+        return;
+      }
       
       // Get updated component data based on roles
-      const updatedComponents = state.componentRoles
-        .filter(role => role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
+      const updatedComponents = updatedState.componentRoles
+        .filter(role => role && role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
         .map(role => {
-          // Clone the component template and set the quantity and role
-          const componentTemplate = state.componentTemplates.find(
-            c => c.id === role.assignedComponentId
-          );
-          
-          if (!componentTemplate) return null;
-          
-          const component = {
-            ...componentTemplate,
-            quantity: role.adjustedRequiredCount || role.requiredCount,
-            role: role.role
-          };
-          
-          // For storage nodes, calculate additional properties based on disk configuration
-          if (role.role === 'storageNode') {
-            const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
+          try {
+            // Clone the component template and set the quantity and role
+            const componentTemplate = updatedState.componentTemplates.find(
+              c => c && c.id === role.assignedComponentId
+            );
             
-            // Calculate the total cost and power with attached disks
-            let totalComponentCost = component.cost;
-            let totalComponentPower = component.powerRequired;
+            if (!componentTemplate) return null;
             
-            // Add disk details if we have them
-            if (roleDiskConfigs.length > 0) {
-              roleDiskConfigs.forEach(diskConfig => {
-                const disk = state.componentTemplates.find(c => c.id === diskConfig.diskId);
-                if (disk) {
-                  totalComponentCost += disk.cost * diskConfig.quantity;
-                  totalComponentPower += disk.powerRequired * diskConfig.quantity;
-                }
-              });
+            const component = {
+              ...componentTemplate,
+              quantity: role.adjustedRequiredCount || role.requiredCount,
+              role: role.role
+            };
+            
+            // For storage nodes, calculate additional properties based on disk configuration
+            if (role.role === 'storageNode') {
+              const roleDiskConfigs = updatedState.selectedDisksByRole[role.id] || [];
               
-              component.cost = totalComponentCost;
-              component.powerRequired = totalComponentPower;
+              // Calculate the total cost and power with attached disks
+              let totalComponentCost = component.cost;
+              let totalComponentPower = component.powerRequired;
               
-              // You might want to add attached disks to the component for reference
-              (component as any).attachedDisks = roleDiskConfigs.map(diskConfig => {
-                const disk = state.componentTemplates.find(c => c.id === diskConfig.diskId);
-                return {
-                  ...disk,
-                  quantity: diskConfig.quantity
-                };
-              }).filter(Boolean);
+              // Add disk details if we have them
+              if (roleDiskConfigs.length > 0) {
+                roleDiskConfigs.forEach(diskConfig => {
+                  if (!diskConfig) return;
+                  
+                  const disk = updatedState.componentTemplates.find(c => c && c.id === diskConfig.diskId);
+                  if (disk) {
+                    totalComponentCost += disk.cost * (diskConfig.quantity || 1);
+                    totalComponentPower += disk.powerRequired * (diskConfig.quantity || 1);
+                  }
+                });
+                
+                component.cost = totalComponentCost;
+                component.powerRequired = totalComponentPower;
+                
+                // You might want to add attached disks to the component for reference
+                (component as any).attachedDisks = roleDiskConfigs
+                  .filter(diskConfig => diskConfig) // Filter out undefined configs
+                  .map(diskConfig => {
+                    const disk = updatedState.componentTemplates.find(c => c && c.id === diskConfig.diskId);
+                    if (!disk) return null;
+                    
+                    return {
+                      ...disk,
+                      quantity: diskConfig.quantity || 1
+                    };
+                  })
+                  .filter(Boolean); // Filter out nulls
+              }
+              
+              // Add cluster info to the storage node
+              if (role.clusterInfo) {
+                (component as any).clusterInfo = role.clusterInfo;
+              }
             }
             
-            // Add cluster info to the storage node
-            if (role.clusterInfo) {
-              (component as any).clusterInfo = role.clusterInfo;
+            // For GPU nodes, calculate additional properties based on GPU configuration
+            if (role.role === 'gpuNode') {
+              const roleGPUConfigs = updatedState.selectedGPUsByRole[role.id] || [];
+              
+              // Calculate the total cost and power with attached GPUs
+              let totalComponentCost = component.cost;
+              let totalComponentPower = component.powerRequired;
+              
+              // Add GPU details if we have them
+              if (roleGPUConfigs.length > 0) {
+                roleGPUConfigs.forEach(gpuConfig => {
+                  if (!gpuConfig) return;
+                  
+                  const gpu = updatedState.componentTemplates.find(c => c && c.id === gpuConfig.gpuId);
+                  if (gpu) {
+                    totalComponentCost += gpu.cost * (gpuConfig.quantity || 1);
+                    totalComponentPower += gpu.powerRequired * (gpuConfig.quantity || 1);
+                  }
+                });
+                
+                component.cost = totalComponentCost;
+                component.powerRequired = totalComponentPower;
+                
+                // Add attached GPUs to the component for reference
+                (component as any).attachedGPUs = roleGPUConfigs
+                  .filter(gpuConfig => gpuConfig) // Filter out undefined configs
+                  .map(gpuConfig => {
+                    const gpu = updatedState.componentTemplates.find(c => c && c.id === gpuConfig.gpuId);
+                    if (!gpu) return null;
+                    
+                    return {
+                      ...gpu,
+                      quantity: gpuConfig.quantity || 1
+                    };
+                  })
+                  .filter(Boolean); // Filter out nulls
+              }
+              
+              // Add cluster info to the GPU node
+              if (role.clusterInfo) {
+                (component as any).clusterInfo = role.clusterInfo;
+              }
             }
+            
+            return component;
+          } catch (error) {
+            console.error(`Error processing component for role ${role.role}:`, error);
+            return null;
           }
-          
-          // For GPU nodes, calculate additional properties based on GPU configuration
-          if (role.role === 'gpuNode') {
-            const roleGPUConfigs = state.selectedGPUsByRole[role.id] || [];
-            
-            // Calculate the total cost and power with attached GPUs
-            let totalComponentCost = component.cost;
-            let totalComponentPower = component.powerRequired;
-            
-            // Add GPU details if we have them
-            if (roleGPUConfigs.length > 0) {
-              roleGPUConfigs.forEach(gpuConfig => {
-                const gpu = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
-                if (gpu) {
-                  totalComponentCost += gpu.cost * gpuConfig.quantity;
-                  totalComponentPower += gpu.powerRequired * gpuConfig.quantity;
-                }
-              });
-              
-              component.cost = totalComponentCost;
-              component.powerRequired = totalComponentPower;
-              
-              // Add attached GPUs to the component for reference
-              (component as any).attachedGPUs = roleGPUConfigs.map(gpuConfig => {
-                const gpu = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
-                return {
-                  ...gpu,
-                  quantity: gpuConfig.quantity
-                };
-              }).filter(Boolean);
-            }
-            
-            // Add cluster info to the GPU node
-            if (role.clusterInfo) {
-              (component as any).clusterInfo = role.clusterInfo;
-            }
-          }
-          
-          return component;
         })
         .filter(Boolean) as any[];
       
@@ -232,7 +295,6 @@ export const recalculateDesign = () => {
     console.log("Design recalculation completed");
   }
 };
-
 // Export a manual recalculation function for UI usage that adds additional debugging
 export const manualRecalculateDesign = () => {
   // Reset to ensure we can force a recalculation

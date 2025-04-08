@@ -1,4 +1,3 @@
-
 import { useResourceMetrics } from './useResourceMetrics';
 import { useStorageClusters } from './useStorageClusters';
 import { useHardwareTotals } from './useHardwareTotals';
@@ -29,7 +28,7 @@ export const useDesignCalculations = () => {
   const minimumPower = useMemo(() => resourceMetrics?.minimumPower || 0, [resourceMetrics]);
   const operationalPower = useMemo(() => resourceMetrics?.operationalPower || 0, [resourceMetrics]);
 
-  // Extract amortized cost metrics
+  // Extract amortized cost metrics with null checks
   const monthlyAmortizedComputeCost = useMemo(() => 
     resourceMetrics?.monthlyAmortizedComputeCost || 0, [resourceMetrics]);
   const monthlyAmortizedStorageCost = useMemo(() => 
@@ -44,16 +43,18 @@ export const useDesignCalculations = () => {
     return Boolean(
       activeDesign && 
       activeDesign.components && 
+      Array.isArray(activeDesign.components) &&
       activeDesign.components.length > 0
     );
   }, [activeDesign]);
 
-  // Compute if the design has storage nodes
+  // Compute if the design has storage nodes with proper null checks
   const hasStorageNodes = useMemo(() => {
-    if (!activeDesign?.components) return false;
-    return activeDesign.components.some(c => c.role === 'storageNode');
+    if (!activeDesign?.components || !Array.isArray(activeDesign.components)) return false;
+    return activeDesign.components.some(c => c && c.role === 'storageNode');
   }, [activeDesign?.components]);
 
+  // Ensure defaults for all returned values
   return {
     totalCost: totalCost || 0,
     totalPower,
@@ -61,7 +62,7 @@ export const useDesignCalculations = () => {
     minimumPower,
     operationalPower,
     componentsByType: componentsByType || {},
-    storageClustersMetrics: storageClustersMetrics || [],
+    storageClustersMetrics: Array.isArray(storageClustersMetrics) ? storageClustersMetrics : [],
     actualHardwareTotals: actualHardwareTotals || {
       totalVCPUs: 0,
       totalComputeMemoryTB: 0,
@@ -77,7 +78,7 @@ export const useDesignCalculations = () => {
     },
     costPerVCPU: costPerVCPU || 0,
     costPerTB: costPerTB || 0,
-    designErrors: designErrors || [],
+    designErrors: Array.isArray(designErrors) ? designErrors : [],
     hasValidDesign,
     hasStorageNodes,
     monthlyAmortizedComputeCost,

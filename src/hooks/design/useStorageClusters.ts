@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
@@ -22,6 +21,8 @@ export const useStorageClusters = () => {
       // Find storage nodes for this cluster
       const clusterNodes = components.filter(
         component => component.role === 'storageNode' && 
+        component && 
+        (component as any).clusterInfo && 
         (component as any).clusterInfo?.clusterId === cluster.id
       );
       
@@ -34,7 +35,7 @@ export const useStorageClusters = () => {
         totalNodeCost += node.cost * quantity;
         
         // Add attached disks capacity if available
-        if ('attachedDisks' in node) {
+        if (node && 'attachedDisks' in node) {
           const disks = (node as any).attachedDisks || [];
           disks.forEach((disk: any) => {
             if (disk && 'capacityTB' in disk) {
