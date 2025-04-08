@@ -82,7 +82,7 @@ export const useStorageClusters = () => {
         nodeCount
       };
     }).filter(Boolean); // Filter out null values
-  }, [activeDesign?.components, requirements?.storageRequirements?.storageClusters]);
+  }, [activeDesign?.components, requirements?.storageRequirements?.storageClusters]); // Fix dependency array
 
   return {
     storageClustersMetrics: Array.isArray(storageClustersMetrics) ? storageClustersMetrics : []

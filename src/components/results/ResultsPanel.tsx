@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';

@@ -45,5 +45,5 @@ export const useComponentCosts = (components: InfrastructureComponent[] | undefi
       totalStorageCost,
       totalNetworkCost
     };
-  }, [components]);
+  }, [components]); // Ensure proper dependency array
 };
