@@ -22,7 +22,10 @@ export const useDesignComparison = (leftDesign: InfrastructureDesign, rightDesig
           storageCost: 0,
           networkCost: 0,
           totalPower: 0,
-          totalRackUnits: 0
+          totalRackUnits: 0,
+          monthlyAmortizedComputeCost: 0,
+          monthlyAmortizedStorageCost: 0,
+          monthlyAmortizedNetworkCost: 0
         };
       }
 
@@ -38,6 +41,11 @@ export const useDesignComparison = (leftDesign: InfrastructureDesign, rightDesig
       let networkCost = 0;
       let totalPower = 0;
       let totalRackUnits = 0;
+      
+      // Get device lifespans (years)
+      const computeLifespan = design.requirements?.computeRequirements?.deviceLifespanYears || 3;
+      const storageLifespan = design.requirements?.storageRequirements?.deviceLifespanYears || 3;
+      const networkLifespan = design.requirements?.networkRequirements?.deviceLifespanYears || 3;
 
       design.components.forEach(component => {
         const quantity = component.quantity || 1;
@@ -88,6 +96,11 @@ export const useDesignComparison = (leftDesign: InfrastructureDesign, rightDesig
           networkCost += componentCost;
         }
       });
+      
+      // Calculate amortized monthly costs
+      const monthlyAmortizedComputeCost = computeCost / (computeLifespan * 12);
+      const monthlyAmortizedStorageCost = storageCost / (storageLifespan * 12);
+      const monthlyAmortizedNetworkCost = networkCost / (networkLifespan * 12);
 
       return {
         totalCost,
@@ -103,7 +116,10 @@ export const useDesignComparison = (leftDesign: InfrastructureDesign, rightDesig
         storageCost,
         networkCost,
         totalPower,
-        totalRackUnits
+        totalRackUnits,
+        monthlyAmortizedComputeCost,
+        monthlyAmortizedStorageCost,
+        monthlyAmortizedNetworkCost
       };
     };
 
@@ -132,7 +148,10 @@ export const useDesignComparison = (leftDesign: InfrastructureDesign, rightDesig
       storageCost: calculateDifference(leftMetrics.storageCost, rightMetrics.storageCost),
       networkCost: calculateDifference(leftMetrics.networkCost, rightMetrics.networkCost),
       totalPower: calculateDifference(leftMetrics.totalPower, rightMetrics.totalPower),
-      totalRackUnits: calculateDifference(leftMetrics.totalRackUnits, rightMetrics.totalRackUnits)
+      totalRackUnits: calculateDifference(leftMetrics.totalRackUnits, rightMetrics.totalRackUnits),
+      monthlyAmortizedComputeCost: calculateDifference(leftMetrics.monthlyAmortizedComputeCost, rightMetrics.monthlyAmortizedComputeCost),
+      monthlyAmortizedStorageCost: calculateDifference(leftMetrics.monthlyAmortizedStorageCost, rightMetrics.monthlyAmortizedStorageCost),
+      monthlyAmortizedNetworkCost: calculateDifference(leftMetrics.monthlyAmortizedNetworkCost, rightMetrics.monthlyAmortizedNetworkCost)
     };
 
     return {

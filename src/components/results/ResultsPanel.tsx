@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Info } from 'lucide-react';
@@ -35,21 +34,21 @@ export const ResultsPanel: React.FC = () => {
     costPerVCPU,
     costPerTB,
     designErrors,
-    hasValidDesign
+    hasValidDesign,
+    monthlyAmortizedComputeCost,
+    monthlyAmortizedStorageCost,
+    monthlyAmortizedNetworkCost,
+    totalMonthlyAmortizedCost
   } = useDesignCalculations();
   
-  // Force recalculation when the component mounts
   useEffect(() => {
     if (!hasCalculated) {
       setIsLoading(true);
       
-      // Use a short delay to ensure store is fully initialized
       const timer = setTimeout(() => {
         try {
-          // Force recalculation of the design
           manualRecalculateDesign();
           
-          // Save the design to ensure it's persisted
           if (activeDesign) {
             saveDesign();
           }
@@ -67,7 +66,6 @@ export const ResultsPanel: React.FC = () => {
     }
   }, [activeDesign?.id, hasCalculated, saveDesign]);
   
-  // Handle manual recalculation
   const handleRecalculate = useCallback(() => {
     setIsLoading(true);
     
@@ -88,16 +86,13 @@ export const ResultsPanel: React.FC = () => {
     }
   }, [activeDesign, saveDesign]);
 
-  // Force recalculation of all assigned components
   const handleForceFullRecalculation = useCallback(() => {
     setIsLoading(true);
     
     try {
-      // Get assigned roles
       const assignedRoles = componentRoles.filter(role => role.assignedComponentId);
       console.log(`Force recalculating ${assignedRoles.length} assigned components`);
       
-      // Recalculate each role one by one with logging
       const { calculateRequiredQuantity } = useDesignStore.getState();
       assignedRoles.forEach(role => {
         if (role.assignedComponentId) {
@@ -107,7 +102,6 @@ export const ResultsPanel: React.FC = () => {
         }
       });
       
-      // Final recalculation and save
       manualRecalculateDesign();
       
       if (activeDesign) {
@@ -123,18 +117,14 @@ export const ResultsPanel: React.FC = () => {
     }
   }, [componentRoles, activeDesign, saveDesign]);
   
-  // Derived state
   const hasNoDesign = !hasValidDesign;
   
-  // Calculate power per rack value
   const powerPerRack = resourceMetrics?.totalRackQuantity 
     ? (totalPower / resourceMetrics.totalRackQuantity)
     : 0;
     
-  // Get energy price per kWh from requirements
   const energyPricePerKwh = activeDesign?.requirements?.physicalConstraints?.operationalCosts?.energyPricePerKwh || 0.25;
 
-  // Show loading state while calculating
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto p-6">
@@ -248,6 +238,10 @@ export const ResultsPanel: React.FC = () => {
             monthlyEnergyCost={resourceMetrics.monthlyEnergyCost}
             monthlyColoCost={resourceMetrics.monthlyColoCost}
             totalRackQuantity={resourceMetrics.totalRackQuantity}
+            monthlyAmortizedComputeCost={monthlyAmortizedComputeCost}
+            monthlyAmortizedStorageCost={monthlyAmortizedStorageCost}
+            monthlyAmortizedNetworkCost={monthlyAmortizedNetworkCost}
+            totalMonthlyAmortizedCost={totalMonthlyAmortizedCost}
           />
           
           <StorageClustersTable clusters={storageClustersMetrics} />

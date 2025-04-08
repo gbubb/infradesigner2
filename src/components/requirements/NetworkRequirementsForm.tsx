@@ -15,6 +15,7 @@ interface NetworkRequirementsProps {
     leafSwitchesPerAZ?: number;
     dedicatedStorageNetwork?: boolean;
     dedicatedNetworkCoreRacks?: boolean;
+    deviceLifespanYears?: number;
   };
   onUpdate: (networkRequirements: any) => void;
 }
@@ -132,6 +133,20 @@ export const NetworkRequirementsForm: React.FC<NetworkRequirementsProps> = ({
               id="dedicatedNetworkCoreRacks"
               checked={requirements.dedicatedNetworkCoreRacks || false}
               onCheckedChange={(checked) => handleSwitchChange('dedicatedNetworkCoreRacks', checked)}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="deviceLifespanYears">Device Lifespan (Years)</Label>
+            <Input
+              id="deviceLifespanYears"
+              name="deviceLifespanYears"
+              type="number"
+              min="2"
+              max="6"
+              placeholder="3"
+              value={requirements.deviceLifespanYears || ''}
+              onChange={handleInputChange}
             />
           </div>
         </div>

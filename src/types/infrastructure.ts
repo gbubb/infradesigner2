@@ -109,9 +109,11 @@ export interface DesignRequirements {
     infrastructureClusterRequired?: boolean;
     infrastructureNodeCount?: number;
     computeClusters: ComputeClusterRequirement[];
+    deviceLifespanYears?: number;
   };
   storageRequirements: {
     storageClusters: StorageClusterRequirement[];
+    deviceLifespanYears?: number;
   };
   networkRequirements: {
     networkTopology?: NetworkTopology;
@@ -121,6 +123,7 @@ export interface DesignRequirements {
     leafSwitchesPerAZ?: number;
     dedicatedStorageNetwork?: boolean;
     dedicatedNetworkCoreRacks?: boolean;
+    deviceLifespanYears?: number;
   };
   physicalConstraints: {
     computeStorageRackQuantity?: number;

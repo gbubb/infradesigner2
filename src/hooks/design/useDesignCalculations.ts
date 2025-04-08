@@ -29,6 +29,16 @@ export const useDesignCalculations = () => {
   const minimumPower = useMemo(() => resourceMetrics.minimumPower, [resourceMetrics.minimumPower]);
   const operationalPower = useMemo(() => resourceMetrics.operationalPower, [resourceMetrics.operationalPower]);
 
+  // Extract amortized cost metrics
+  const monthlyAmortizedComputeCost = useMemo(() => 
+    resourceMetrics.monthlyAmortizedComputeCost, [resourceMetrics.monthlyAmortizedComputeCost]);
+  const monthlyAmortizedStorageCost = useMemo(() => 
+    resourceMetrics.monthlyAmortizedStorageCost, [resourceMetrics.monthlyAmortizedStorageCost]);
+  const monthlyAmortizedNetworkCost = useMemo(() => 
+    resourceMetrics.monthlyAmortizedNetworkCost, [resourceMetrics.monthlyAmortizedNetworkCost]);
+  const totalMonthlyAmortizedCost = useMemo(() => 
+    resourceMetrics.totalMonthlyAmortizedCost, [resourceMetrics.totalMonthlyAmortizedCost]);
+
   // Check if we have a valid design with components
   const hasValidDesign = useMemo(() => {
     return Boolean(
@@ -59,6 +69,10 @@ export const useDesignCalculations = () => {
     costPerTB,
     designErrors,
     hasValidDesign,
-    hasStorageNodes
+    hasStorageNodes,
+    monthlyAmortizedComputeCost,
+    monthlyAmortizedStorageCost,
+    monthlyAmortizedNetworkCost,
+    totalMonthlyAmortizedCost
   };
 };
