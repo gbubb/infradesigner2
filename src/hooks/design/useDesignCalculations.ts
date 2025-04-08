@@ -20,24 +20,24 @@ export const useDesignCalculations = () => {
   const { designErrors } = useDesignValidation();
   
   // Calculate total rack units (extracted from resourceMetrics for convenience)
-  const totalRackUnits = useMemo(() => resourceMetrics.totalRackUnits, [resourceMetrics.totalRackUnits]);
+  const totalRackUnits = useMemo(() => resourceMetrics?.totalRackUnits || 0, [resourceMetrics]);
   
   // Calculate total power (extracted from resourceMetrics for convenience)
-  const totalPower = useMemo(() => resourceMetrics.totalPower, [resourceMetrics.totalPower]);
+  const totalPower = useMemo(() => resourceMetrics?.totalPower || 0, [resourceMetrics]);
 
   // Extract power metrics
-  const minimumPower = useMemo(() => resourceMetrics.minimumPower, [resourceMetrics.minimumPower]);
-  const operationalPower = useMemo(() => resourceMetrics.operationalPower, [resourceMetrics.operationalPower]);
+  const minimumPower = useMemo(() => resourceMetrics?.minimumPower || 0, [resourceMetrics]);
+  const operationalPower = useMemo(() => resourceMetrics?.operationalPower || 0, [resourceMetrics]);
 
   // Extract amortized cost metrics
   const monthlyAmortizedComputeCost = useMemo(() => 
-    resourceMetrics.monthlyAmortizedComputeCost, [resourceMetrics.monthlyAmortizedComputeCost]);
+    resourceMetrics?.monthlyAmortizedComputeCost || 0, [resourceMetrics]);
   const monthlyAmortizedStorageCost = useMemo(() => 
-    resourceMetrics.monthlyAmortizedStorageCost, [resourceMetrics.monthlyAmortizedStorageCost]);
+    resourceMetrics?.monthlyAmortizedStorageCost || 0, [resourceMetrics]);
   const monthlyAmortizedNetworkCost = useMemo(() => 
-    resourceMetrics.monthlyAmortizedNetworkCost, [resourceMetrics.monthlyAmortizedNetworkCost]);
+    resourceMetrics?.monthlyAmortizedNetworkCost || 0, [resourceMetrics]);
   const totalMonthlyAmortizedCost = useMemo(() => 
-    resourceMetrics.totalMonthlyAmortizedCost, [resourceMetrics.totalMonthlyAmortizedCost]);
+    resourceMetrics?.totalMonthlyAmortizedCost || 0, [resourceMetrics]);
 
   // Check if we have a valid design with components
   const hasValidDesign = useMemo(() => {
@@ -50,7 +50,7 @@ export const useDesignCalculations = () => {
 
   // Compute if the design has storage nodes
   const hasStorageNodes = useMemo(() => {
-    if (!activeDesign || !activeDesign.components) return false;
+    if (!activeDesign?.components) return false;
     return activeDesign.components.some(c => c.role === 'storageNode');
   }, [activeDesign]);
 

@@ -8,7 +8,7 @@ export const useStorageClusters = () => {
   
   // Calculate storage clusters metrics
   const storageClustersMetrics = useMemo(() => {
-    if (!activeDesign?.components || !requirements.storageRequirements.storageClusters) {
+    if (!activeDesign?.components || !requirements?.storageRequirements?.storageClusters) {
       return [];
     }
 

@@ -123,9 +123,9 @@ export const getDeviceLifespans = (requirements: DesignRequirements) => {
   
   return {
     // Use nullish coalescing to provide default values if properties are undefined
-    computeLifespan: computeReqs?.deviceLifespanYears ?? 3,
-    storageLifespan: storageReqs?.deviceLifespanYears ?? 3,
-    networkLifespan: networkReqs?.deviceLifespanYears ?? 3
+    computeLifespan: computeReqs.deviceLifespanYears ?? 3,
+    storageLifespan: storageReqs.deviceLifespanYears ?? 3,
+    networkLifespan: networkReqs.deviceLifespanYears ?? 3
   };
 };
 
