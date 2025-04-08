@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
@@ -13,15 +14,19 @@ export const useStorageClusters = () => {
     // Ensure storageClusters array exists
     const storageClusters = requirements?.storageRequirements?.storageClusters || [];
     
-    if (components.length === 0 || storageClusters.length === 0) {
+    if (!Array.isArray(components) || !Array.isArray(storageClusters) || components.length === 0 || storageClusters.length === 0) {
       return [];
     }
 
     return storageClusters.map(cluster => {
+      if (!cluster || !cluster.id) {
+        return null;
+      }
+      
       // Find storage nodes for this cluster
       const clusterNodes = components.filter(
-        component => component.role === 'storageNode' && 
-        component && 
+        component => component && 
+        component.role === 'storageNode' && 
         (component as any).clusterInfo && 
         (component as any).clusterInfo?.clusterId === cluster.id
       );
@@ -31,17 +36,21 @@ export const useStorageClusters = () => {
       let totalNodeCost = 0;
       
       clusterNodes.forEach(node => {
+        if (!node) return;
+        
         const quantity = node.quantity || 1;
-        totalNodeCost += node.cost * quantity;
+        totalNodeCost += (node.cost || 0) * quantity;
         
         // Add attached disks capacity if available
-        if (node && 'attachedDisks' in node) {
+        if ('attachedDisks' in node) {
           const disks = (node as any).attachedDisks || [];
-          disks.forEach((disk: any) => {
-            if (disk && 'capacityTB' in disk) {
-              totalRawCapacityTB += disk.capacityTB * (disk.quantity || 1) * quantity;
-            }
-          });
+          if (Array.isArray(disks)) {
+            disks.forEach((disk: any) => {
+              if (disk && 'capacityTB' in disk) {
+                totalRawCapacityTB += disk.capacityTB * (disk.quantity || 1) * quantity;
+              }
+            });
+          }
         }
       });
       
@@ -57,13 +66,13 @@ export const useStorageClusters = () => {
       const costPerTiB = usableCapacityTiB > 0 ? totalNodeCost / usableCapacityTiB : 0;
       
       // Calculate total node count
-      const nodeCount = clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0);
+      const nodeCount = clusterNodes.reduce((sum, node) => sum + (node?.quantity || 1), 0);
       
       return {
         id: cluster.id,
-        name: cluster.name,
-        poolType: cluster.poolType,
-        maxFillFactor: cluster.maxFillFactor,
+        name: cluster.name || '',
+        poolType: cluster.poolType || '',
+        maxFillFactor: cluster.maxFillFactor || 80,
         totalRawCapacityTB,
         usableCapacityTB,
         usableCapacityTiB,
@@ -72,10 +81,10 @@ export const useStorageClusters = () => {
         costPerTiB,
         nodeCount
       };
-    });
+    }).filter(Boolean); // Filter out null values
   }, [activeDesign?.components, requirements?.storageRequirements?.storageClusters]);
 
   return {
-    storageClustersMetrics: storageClustersMetrics || []
+    storageClustersMetrics: Array.isArray(storageClustersMetrics) ? storageClustersMetrics : []
   };
 };
