@@ -61,6 +61,8 @@ export const useResourceMetrics = () => {
     // Energy cost calculations
     const energyPricePerKwh = requirements.physicalConstraints.operationalCosts?.energyPricePerKwh || 0.25;
     
+    let totalRackUnits = 0;
+    
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
       

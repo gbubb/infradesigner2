@@ -127,6 +127,12 @@ export interface DesignRequirements {
     totalAvailabilityZones?: number;
     rackUnitsPerRack?: number;
     powerPerRackWatts?: number;
+    operationalCosts?: {
+      coloRacks: boolean;
+      rackCostPerMonth?: number;
+      energyPricePerKwh: number;
+      operationalLoad: number;
+    };
   };
 }
 
