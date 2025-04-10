@@ -19,7 +19,11 @@ import { PowerEnergySection } from './PowerEnergySection';
 import { DetailedCostAnalysisCard } from './DetailedCostAnalysisCard';
 
 export const ResultsPanel: React.FC = () => {
-  const { activeDesign, saveDesign, componentRoles, calculationBreakdowns } = useDesignStore();
+  const activeDesign = useDesignStore(state => state.activeDesign);
+  const saveDesign = useDesignStore(state => state.saveDesign);
+  const componentRoles = useDesignStore(state => state.componentRoles);
+  const calculationBreakdowns = useDesignStore(state => state.calculationBreakdowns);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [hasCalculated, setHasCalculated] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
@@ -41,30 +45,33 @@ export const ResultsPanel: React.FC = () => {
   
   const { powerUsage, energyCosts } = usePowerCalculations();
   
-  const {
-    capitalCost,
-    operationalCosts,
-    totalCostOfOwnership,
-    amortizedCostsByType
-  } = useDesignStore((state) => ({
-    capitalCost: state.activeDesign?.components?.reduce((total, c) => total + (c.cost * (c.quantity || 1)), 0) || 0,
-    operationalCosts: {
-      racksMonthly: ((state.activeDesign?.requirements?.physicalConstraints?.useColoRacks ? 
-        (state.activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros || 2000) : 0) * 
-        (state.activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity || 1)),
-      energyMonthly: ((powerUsage.operationalPower / 1000) * 
-        (state.activeDesign?.requirements?.physicalConstraints?.electricityPricePerKwh || 0.25) * 24 * 30),
-      amortizedMonthly: 0, // Calculated below
-      totalMonthly: 0 // Calculated below
-    },
-    totalCostOfOwnership: 0, // Calculated below
-    amortizedCostsByType: {
-      compute: 0,
-      storage: 0,
-      network: 0,
-      total: 0
-    }
-  }));
+  // Get operational costs data once per render using primitive selectors
+  const capitalCost = useDesignStore(state => {
+    return state.activeDesign?.components?.reduce((total, c) => total + (c.cost * (c.quantity || 1)), 0) || 0;
+  });
+  
+  const operationalCosts = useDesignStore(state => {
+    const racksMonthly = ((state.activeDesign?.requirements?.physicalConstraints?.useColoRacks ? 
+      (state.activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros || 2000) : 0) * 
+      (state.activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity || 1));
+      
+    return {
+      racksMonthly,
+      energyMonthly: powerUsage?.operationalPower ? 
+        ((powerUsage.operationalPower / 1000) * (state.activeDesign?.requirements?.physicalConstraints?.electricityPricePerKwh || 0.25) * 24 * 30) : 0,
+      amortizedMonthly: 0,
+      totalMonthly: 0
+    };
+  });
+  
+  const totalCostOfOwnership = 0; // Will be calculated later
+  
+  const amortizedCostsByType = {
+    compute: 0,
+    storage: 0,
+    network: 0,
+    total: 0
+  };
   
   // Force recalculation when the component mounts
   useEffect(() => {

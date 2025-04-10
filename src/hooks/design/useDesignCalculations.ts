@@ -9,7 +9,9 @@ import { useDesignStore } from '@/store/designStore';
 import { useMemo } from 'react';
 
 export const useDesignCalculations = () => {
-  const { activeDesign } = useDesignStore();
+  const { activeDesign } = useDesignStore(state => ({
+    activeDesign: state.activeDesign
+  }));
   
   // Import all the individual hooks
   const { resourceMetrics, resourceUtilization } = useResourceMetrics();
