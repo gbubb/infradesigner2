@@ -2,13 +2,13 @@
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
-import { InfrastructureComponent, InfrastructureDesign } from '@/types/infrastructure';
+import { InfrastructureComponent, InfrastructureDesign, DesignRequirements } from '@/types/infrastructure';
 
 export const useStorageClusters = () => {
   // Explicitly type the state we're pulling from the store
   const storeState = useDesignStore(state => ({
     activeDesign: state.activeDesign || {} as InfrastructureDesign,
-    requirements: state.requirements || {}
+    requirements: state.requirements || {} as DesignRequirements
   }));
   
   // Destructure with explicit typing
