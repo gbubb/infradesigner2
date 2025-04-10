@@ -2,20 +2,24 @@
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
+import { InfrastructureComponent, InfrastructureDesign } from '@/types/infrastructure';
 
 export const useStorageClusters = () => {
-  // Destructure with default empty objects to prevent undefined errors
-  const { activeDesign = {}, requirements = {} } = useDesignStore(state => ({
-    activeDesign: state.activeDesign || {},
+  // Explicitly type the state we're pulling from the store
+  const storeState = useDesignStore(state => ({
+    activeDesign: state.activeDesign || {} as InfrastructureDesign,
     requirements: state.requirements || {}
   }));
   
+  // Destructure with explicit typing
+  const { activeDesign, requirements } = storeState;
+  
   // Calculate storage clusters metrics
   const storageClustersMetrics = useMemo(() => {
-    // Ensure components array exists
-    const components = activeDesign?.components || [];
+    // Ensure components array exists with proper typing
+    const components = activeDesign?.components as InfrastructureComponent[] || [];
     
-    // Ensure storageClusters array exists
+    // Ensure storageClusters array exists with proper typing
     const storageRequirements = requirements?.storageRequirements || {};
     const storageClusters = storageRequirements?.storageClusters || [];
     

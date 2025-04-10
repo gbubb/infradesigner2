@@ -7,13 +7,38 @@ import { useCostAnalysis } from './useCostAnalysis';
 import { useDesignValidation } from './useDesignValidation';
 import { useDesignStore } from '@/store/designStore';
 import { useMemo } from 'react';
+import { InfrastructureDesign } from '@/types/infrastructure';
+
+// Define a type for the resource metrics to make TypeScript happy
+interface ResourceMetricsType {
+  totalRackUnits?: number;
+  totalPower?: number;
+  minimumPower?: number;
+  operationalPower?: number;
+  monthlyAmortizedComputeCost?: number;
+  monthlyAmortizedStorageCost?: number;
+  monthlyAmortizedNetworkCost?: number;
+  totalMonthlyAmortizedCost?: number;
+  totalRackQuantity?: number;
+  energyPricePerKwh?: number;
+  dailyEnergyCost?: number;
+  monthlyEnergyCost?: number;
+  monthlyColoCost?: number;
+  totalServers?: number;
+  totalLeafSwitches?: number;
+  totalMgmtSwitches?: number;
+  [key: string]: any;
+}
 
 export const useDesignCalculations = () => {
-  // Get store state with default empty object to prevent undefined errors
-  const activeDesign = useDesignStore(state => state.activeDesign || {});
+  // Get store state with proper typing
+  const activeDesign = useDesignStore(state => state.activeDesign || {} as InfrastructureDesign);
   
   // Import all the individual hooks with stable references
-  const { resourceMetrics = {}, resourceUtilization = {} } = useResourceMetrics();
+  const resourceMetricsHook = useResourceMetrics();
+  const resourceMetrics: ResourceMetricsType = resourceMetricsHook?.resourceMetrics || {};
+  const resourceUtilization = resourceMetricsHook?.resourceUtilization || {};
+  
   const { storageClustersMetrics = [] } = useStorageClusters();
   const { actualHardwareTotals = {} } = useHardwareTotals();
   const { componentsByType = {} } = useComponentsByType();
