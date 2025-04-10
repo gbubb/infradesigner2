@@ -103,6 +103,7 @@ export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
               <SelectContent>
                 <SelectItem value="Single connection">Single connection</SelectItem>
                 <SelectItem value="Dual Home">Dual Home (Redundant)</SelectItem>
+                <SelectItem value="Converged Management Plane">Converged Management Plane</SelectItem>
               </SelectContent>
             </Select>
           </div>

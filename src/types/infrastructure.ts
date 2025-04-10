@@ -117,7 +117,7 @@ export interface DesignRequirements {
   };
   networkRequirements: {
     networkTopology?: NetworkTopology;
-    managementNetwork?: "Single connection" | "Dual Home";
+    managementNetwork?: "Single connection" | "Dual Home" | "Converged Management Plane";
     ipmiNetwork?: "Management converged" | "Dedicated IPMI switch";
     physicalFirewalls?: boolean;
     leafSwitchesPerAZ?: number;

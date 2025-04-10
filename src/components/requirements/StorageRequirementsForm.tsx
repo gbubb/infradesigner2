@@ -106,7 +106,7 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Total Raw Capacity (TB)</Label>
+                <Label>Usable Pool Capacity (TiB)</Label>
                 <Input
                   type="number"
                   min="0"
@@ -173,21 +173,6 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
                     )
                   }
                 />
-              </div>
-            </div>
-
-            <div className="bg-muted p-3 rounded-md">
-              <div className="flex justify-between items-center text-sm">
-                <span>Effective Capacity:</span>
-                <span className="font-semibold">
-                  {Math.round(
-                    cluster.totalCapacityTB *
-                    StoragePoolEfficiencyFactors[cluster.poolType] *
-                    (cluster.maxFillFactor / 100) *
-                    0.909495 * 10
-                  ) / 10}{' '}
-                  TiB
-                </span>
               </div>
             </div>
           </CardContent>

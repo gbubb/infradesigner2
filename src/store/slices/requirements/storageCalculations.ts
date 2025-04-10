@@ -41,13 +41,14 @@ export const calculateStorageNodeQuantity = (
     return { requiredQuantity, calculationSteps };
   }
   
-  const totalCapacityTB = storageCluster.totalCapacityTB || 100;
+  // Now we treat totalCapacityTB as TiB directly since the user input is in TiB
+  const totalRequiredCapacityTiB = storageCluster.totalCapacityTB || 100;
   const poolType = storageCluster.poolType || '3 Replica';
   const maxFillFactor = storageCluster.maxFillFactor || 80;
   const availabilityZoneQuantity = storageCluster.availabilityZoneQuantity || 3;
   
   calculationSteps.push(`Storage Cluster: ${storageCluster.name || 'Unnamed Storage Cluster'}`);
-  calculationSteps.push(`Required Usable Capacity: ${totalCapacityTB.toLocaleString()} TB (${(totalCapacityTB * TB_TO_TIB_FACTOR).toFixed(2)} TiB)`);
+  calculationSteps.push(`Required Usable Capacity: ${totalRequiredCapacityTiB.toLocaleString()} TiB`);
   calculationSteps.push(`Storage Pool Type: ${poolType}`);
   calculationSteps.push(`Maximum Fill Factor: ${maxFillFactor}%`);
   calculationSteps.push(`Availability Zone Quantity: ${availabilityZoneQuantity}`);
@@ -61,8 +62,6 @@ export const calculateStorageNodeQuantity = (
     
     calculationSteps.push(`Pool Efficiency Factor: ${poolEfficiencyFactor.toFixed(2)} (based on ${poolType} configuration)`);
     calculationSteps.push(`Fill Factor Adjustment: ${fillFactorAdjustment.toFixed(2)} (${maxFillFactor}% of total capacity)`);
-    
-    const totalRequiredCapacityTiB = totalCapacityTB * TB_TO_TIB_FACTOR;
     
     const effectiveCapacityPerNodeTiB = storageNodeCapacityTiB * poolEfficiencyFactor * fillFactorAdjustment;
     calculationSteps.push(`Effective Capacity per Node: ${storageNodeCapacityTiB.toFixed(2)} TiB × ${poolEfficiencyFactor.toFixed(2)} × ${fillFactorAdjustment.toFixed(2)} = ${effectiveCapacityPerNodeTiB.toFixed(2)} TiB`);

@@ -1,3 +1,4 @@
+
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -70,7 +71,8 @@ const defaultRequirements: DesignRequirements = {
     computeStorageRackQuantity: 16,
     totalAvailabilityZones: 8,
     rackUnitsPerRack: 42,
-    powerPerRackWatts: 5000
+    powerPerRackWatts: 5000,
+    operationalLoadPercentage: 50
   }
 };
 

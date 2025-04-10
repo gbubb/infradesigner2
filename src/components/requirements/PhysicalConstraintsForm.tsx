@@ -126,8 +126,8 @@ export const PhysicalConstraintsForm: React.FC<PhysicalConstraintsProps> = ({
             />
           </FormItem>
           
-          {requirements.useColoRacks && (
-            <div className="grid grid-cols-3 gap-4 mt-4">
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            {requirements.useColoRacks && (
               <div className="space-y-2">
                 <Label htmlFor="rackCostPerMonthEuros">Rack Cost per Month (€)</Label>
                 <Input
@@ -141,36 +141,36 @@ export const PhysicalConstraintsForm: React.FC<PhysicalConstraintsProps> = ({
                   onChange={handleInputChange}
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="electricityPricePerKwh">Electricity Price (€/kWh)</Label>
-                <Input
-                  id="electricityPricePerKwh"
-                  name="electricityPricePerKwh"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.25"
-                  value={requirements.electricityPricePerKwh === undefined ? 0.25 : requirements.electricityPricePerKwh}
-                  onChange={handleFloatInputChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="operationalLoadPercentage">Operational Load (%)</Label>
-                <Input
-                  id="operationalLoadPercentage"
-                  name="operationalLoadPercentage"
-                  type="number"
-                  min="1"
-                  max="100"
-                  placeholder="50"
-                  value={requirements.operationalLoadPercentage === undefined ? 50 : requirements.operationalLoadPercentage}
-                  onChange={handleInputChange}
-                />
-              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="electricityPricePerKwh">Energy Price (€/kWh)</Label>
+              <Input
+                id="electricityPricePerKwh"
+                name="electricityPricePerKwh"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.25"
+                value={requirements.electricityPricePerKwh === undefined ? 0.25 : requirements.electricityPricePerKwh}
+                onChange={handleFloatInputChange}
+              />
             </div>
-          )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="operationalLoadPercentage">Operational Load (%)</Label>
+              <Input
+                id="operationalLoadPercentage"
+                name="operationalLoadPercentage"
+                type="number"
+                min="1"
+                max="100"
+                placeholder="50"
+                value={requirements.operationalLoadPercentage === undefined ? 50 : requirements.operationalLoadPercentage}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
