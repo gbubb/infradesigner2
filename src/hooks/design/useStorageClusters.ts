@@ -98,7 +98,7 @@ export const useStorageClusters = () => {
         nodeCount
       };
     }).filter(Boolean); // Filter out null values
-  }, [activeDesign, requirements]); // Use parent objects as dependencies and handle null checks inside
+  }, [activeDesign, requirements]); // Use stable references as dependencies
 
   return {
     storageClustersMetrics: Array.isArray(storageClustersMetrics) ? storageClustersMetrics : []

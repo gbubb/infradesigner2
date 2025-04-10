@@ -39,7 +39,10 @@ export const useDesignCalculations = () => {
   const resourceMetrics: ResourceMetricsType = resourceMetricsHook?.resourceMetrics || {};
   const resourceUtilization = resourceMetricsHook?.resourceUtilization || {};
   
+  // Get storage clusters metrics with proper null checks
   const { storageClustersMetrics = [] } = useStorageClusters();
+  
+  // Get other metrics with proper null checks
   const { actualHardwareTotals = {} } = useHardwareTotals();
   const { componentsByType = {} } = useComponentsByType();
   const { totalCost = 0, costPerVCPU = 0, costPerTB = 0 } = useCostAnalysis();
