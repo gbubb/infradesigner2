@@ -12,7 +12,7 @@ import {
 export const useStorageClusters = () => {
   // Create stable references to state from the store
   const activeDesign = useDesignStore(state => state.activeDesign || null);
-  const requirements = useDesignStore(state => state.requirements || {});
+  const requirements = useDesignStore(state => state.requirements || {}) as DesignRequirements;
   
   // Calculate storage clusters metrics
   const storageClustersMetrics = useMemo(() => {
