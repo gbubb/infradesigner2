@@ -40,11 +40,11 @@ export const useDesignCalculations = () => {
   const resourceUtilization = resourceMetricsHook?.resourceUtilization || {};
   
   // Get all metrics with proper null checks and default values
-  const { storageClustersMetrics = [] } = useStorageClusters();
-  const { actualHardwareTotals = {} } = useHardwareTotals();
-  const { componentsByType = {} } = useComponentsByType();
-  const { totalCost = 0, costPerVCPU = 0, costPerTB = 0 } = useCostAnalysis();
-  const { designErrors = [] } = useDesignValidation();
+  const { storageClustersMetrics = [] } = useStorageClusters() || { storageClustersMetrics: [] };
+  const { actualHardwareTotals = {} } = useHardwareTotals() || { actualHardwareTotals: {} };
+  const { componentsByType = {} } = useComponentsByType() || { componentsByType: {} };
+  const { totalCost = 0, costPerVCPU = 0, costPerTB = 0 } = useCostAnalysis() || { totalCost: 0, costPerVCPU: 0, costPerTB: 0 };
+  const { designErrors = [] } = useDesignValidation() || { designErrors: [] };
   
   // Calculate total rack units (extracted from resourceMetrics for convenience)
   const totalRackUnits = useMemo(() => resourceMetrics?.totalRackUnits || 0, [resourceMetrics]);

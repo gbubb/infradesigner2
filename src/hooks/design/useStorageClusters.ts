@@ -10,9 +10,9 @@ import {
 } from '@/types/infrastructure';
 
 export const useStorageClusters = () => {
-  // Create stable references to state from the store
+  // Create stable references to state from the store with explicit null defaults
   const activeDesign = useDesignStore(state => state.activeDesign || null);
-  const requirements = useDesignStore(state => state.requirements || {}) as DesignRequirements;
+  const requirements = useDesignStore(state => state.requirements || null);
   
   // Calculate storage clusters metrics
   const storageClustersMetrics = useMemo(() => {
@@ -22,16 +22,18 @@ export const useStorageClusters = () => {
     }
     
     // Ensure components array exists with proper typing
-    const components = activeDesign.components as InfrastructureComponent[] || [];
+    const components = activeDesign.components && Array.isArray(activeDesign.components) ? 
+      activeDesign.components as InfrastructureComponent[] : [];
     
     // Ensure storageRequirements exists with proper typing and has a default empty object
     const storageRequirements = requirements.storageRequirements || { storageClusters: [] };
     
     // Make sure we handle storageClusters as an array with proper typing
-    const storageClusters = Array.isArray(storageRequirements.storageClusters) ? 
+    const storageClusters = storageRequirements.storageClusters && 
+      Array.isArray(storageRequirements.storageClusters) ? 
       storageRequirements.storageClusters : [];
     
-    if (!Array.isArray(components) || !Array.isArray(storageClusters) || components.length === 0 || storageClusters.length === 0) {
+    if (components.length === 0 || storageClusters.length === 0) {
       return [];
     }
 

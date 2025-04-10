@@ -104,7 +104,7 @@ export const ResultsContent: React.FC<ResultsContentProps> = ({
             totalMonthlyAmortizedCost={totalMonthlyAmortizedCost}
           />
           
-          <StorageClustersTable clusters={storageClustersMetrics} />
+          <StorageClustersTable clusters={Array.isArray(storageClustersMetrics) ? storageClustersMetrics : []} />
           
           <div className="mb-8">
             <ResourceUtilizationChart 
