@@ -50,40 +50,59 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-sm font-medium">Power Usage Levels</span>
-              <span className="text-sm font-medium">{formatPower(totalAvailablePower)} Available</span>
             </div>
             
             <div className="h-10 bg-gray-200 relative rounded-full overflow-hidden">
-              {/* Minimum power segment (blue) */}
+              {/* Calculate the width of each segment based on the actual power values */}
+              {/* Minimum power segment (blue) - exactly 1/3 of maximum */}
               <div 
-                className="absolute h-full bg-blue-400" 
-                style={{ width: `${minPercent}%` }}
-              />
+                className="absolute h-full bg-blue-400 flex items-center px-2 text-xs text-white font-medium"
+                style={{ width: `${(minimumPower / totalAvailablePower) * 100}%` }}
+              >
+                {formatPower(minimumPower)}
+              </div>
               
-              {/* Operational power segment (green) */}
+              {/* Operational power segment (green) - between min and operational */}
               <div 
-                className="absolute h-full bg-green-500" 
-                style={{ width: `${opPercent}%`, clipPath: `inset(0 0 0 ${minPercent}%)` }}
-              />
+                className="absolute h-full bg-green-500 flex items-center px-2 text-xs text-white font-medium"
+                style={{ 
+                  width: `${((operationalPower - minimumPower) / totalAvailablePower) * 100}%`,
+                  left: `${(minimumPower / totalAvailablePower) * 100}%`
+                }}
+              >
+                {formatPower(operationalPower)}
+              </div>
               
-              {/* Maximum power segment (orange) */}
+              {/* Maximum power segment (orange) - between operational and max */}
               <div 
-                className="absolute h-full bg-orange-400" 
-                style={{ width: `${maxPercent}%`, clipPath: `inset(0 0 0 ${opPercent}%)` }}
-              />
+                className="absolute h-full bg-orange-400 flex items-center px-2 text-xs text-white font-medium"
+                style={{ 
+                  width: `${((maximumPower - operationalPower) / totalAvailablePower) * 100}%`,
+                  left: `${(operationalPower / totalAvailablePower) * 100}%` 
+                }}
+              >
+                {formatPower(maximumPower)}
+              </div>
               
-              {/* Labels */}
-              <div className="absolute inset-0 flex items-center px-3">
-                <div className="flex justify-between w-full text-xs z-10">
-                  <span className="font-semibold text-white">{formatPower(minimumPower)} Min</span>
-                  <span className="font-semibold text-white">{formatPower(operationalPower)} Op</span>
-                  <span className="font-semibold text-white">{formatPower(maximumPower)} Max</span>
-                </div>
+              {/* Unused power segment (gray) - remaining space */}
+              <div 
+                className="absolute h-full flex items-center px-2 text-xs text-gray-600 font-medium"
+                style={{ 
+                  width: `${(unusedPower / totalAvailablePower) * 100}%`,
+                  left: `${(maximumPower / totalAvailablePower) * 100}%` 
+                }}
+              >
+                {unusedPower > 0 ? formatPower(unusedPower) : ''}
+              </div>
+              
+              {/* Total Power Available - shown at the far right end */}
+              <div className="absolute right-2 h-full flex items-center text-xs font-medium text-gray-700">
+                Total: {formatPower(totalAvailablePower)}
               </div>
             </div>
             
             {/* Power legend */}
-            <div className="flex items-center justify-between text-xs pt-1">
+            <div className="flex flex-wrap items-center text-xs pt-1 gap-x-4">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-blue-400 rounded-sm mr-1"></div>
                 <span>Minimum</span>
@@ -98,7 +117,7 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-gray-200 rounded-sm mr-1"></div>
-                <span>Unused ({formatPower(unusedPower)})</span>
+                <span>Unused</span>
               </div>
             </div>
           </div>

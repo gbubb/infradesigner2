@@ -17,7 +17,7 @@ export const usePowerCalculations = () => {
       return { minimumPower: 0, operationalPower: 0, maximumPower: 0 };
     }
     
-    // Calculate power for all components
+    // Calculate maximum power for all components
     let totalMaximumPower = 0;
     
     activeDesign.components.forEach(component => {
