@@ -2,7 +2,12 @@
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
-import { InfrastructureComponent, InfrastructureDesign, DesignRequirements, StorageClusterRequirement } from '@/types/infrastructure';
+import { 
+  InfrastructureComponent, 
+  InfrastructureDesign, 
+  DesignRequirements, 
+  StorageClusterRequirement 
+} from '@/types/infrastructure';
 
 export const useStorageClusters = () => {
   // Explicitly type the state we're pulling from the store
@@ -19,10 +24,11 @@ export const useStorageClusters = () => {
     // Ensure components array exists with proper typing
     const components = activeDesign?.components as InfrastructureComponent[] || [];
     
-    // Ensure storageRequirements and storageClusters exist with proper typing
-    const storageRequirements = requirements?.storageRequirements || {};
+    // Ensure storageRequirements exists with proper typing and has a default empty object
+    const storageRequirements = requirements.storageRequirements || { storageClusters: [] };
+    
     // Make sure we handle storageClusters as an array with proper typing
-    const storageClusters = (storageRequirements?.storageClusters || []) as StorageClusterRequirement[];
+    const storageClusters = (storageRequirements.storageClusters || []) as StorageClusterRequirement[];
     
     if (!Array.isArray(components) || !Array.isArray(storageClusters) || components.length === 0 || storageClusters.length === 0) {
       return [];
