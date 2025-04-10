@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PowerUsage } from '@/types/infrastructure';
+import { useResourceMetrics } from '@/hooks/design/useResourceMetrics';
 
 interface PowerEnergySectionProps {
   powerUsage: PowerUsage;
@@ -18,11 +19,15 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
   energyCosts
 }) => {
   const { minimumPower, operationalPower, maximumPower } = powerUsage;
+  const { resourceUtilization } = useResourceMetrics();
   
-  // Calculate percentages for the progress bar segments
-  const minPercent = (minimumPower / maximumPower) * 100;
-  const opPercent = (operationalPower / maximumPower) * 100;
-  const maxPercent = 100; // Maximum is 100% of itself
+  // Get the total available power from the resource metrics
+  const totalAvailablePower = resourceUtilization.powerUtilization.total || maximumPower;
+  
+  // Calculate percentages for the progress bar segments based on total available power
+  const minPercent = (minimumPower / totalAvailablePower) * 100;
+  const opPercent = (operationalPower / totalAvailablePower) * 100;
+  const maxPercent = (maximumPower / totalAvailablePower) * 100;
   
   return (
     <Card className="mb-8">
@@ -34,7 +39,7 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-sm font-medium">Power Usage Levels</span>
-              <span className="text-sm font-medium">{Math.round(maximumPower)} W Max</span>
+              <span className="text-sm font-medium">{Math.round(totalAvailablePower)} W Available</span>
             </div>
             
             <div className="h-10 bg-gray-200 relative rounded-full overflow-hidden">
@@ -53,7 +58,7 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
               {/* Maximum power segment (orange) */}
               <div 
                 className="absolute h-full bg-orange-400" 
-                style={{ width: `100%`, clipPath: `inset(0 0 0 ${opPercent}%)` }}
+                style={{ width: `${maxPercent}%`, clipPath: `inset(0 0 0 ${opPercent}%)` }}
               />
               
               {/* Labels */}
@@ -82,7 +87,7 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-gray-200 rounded-sm mr-1"></div>
-                <span>Unused</span>
+                <span>Unused ({Math.round(totalAvailablePower - maximumPower)} W)</span>
               </div>
             </div>
           </div>
