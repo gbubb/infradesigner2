@@ -10,25 +10,26 @@ import {
 } from '@/types/infrastructure';
 
 export const useStorageClusters = () => {
-  // Explicitly type the state we're pulling from the store
-  const storeState = useDesignStore(state => ({
-    activeDesign: state.activeDesign || {} as InfrastructureDesign,
-    requirements: state.requirements || {} as DesignRequirements
-  }));
-  
-  // Destructure with explicit typing
-  const { activeDesign, requirements } = storeState;
+  // Create stable references to state from the store
+  const activeDesign = useDesignStore(state => state.activeDesign || null);
+  const requirements = useDesignStore(state => state.requirements || {});
   
   // Calculate storage clusters metrics
   const storageClustersMetrics = useMemo(() => {
+    // Early return with empty array if either dependency is null/undefined
+    if (!activeDesign || !requirements) {
+      return [];
+    }
+    
     // Ensure components array exists with proper typing
-    const components = activeDesign?.components as InfrastructureComponent[] || [];
+    const components = activeDesign.components as InfrastructureComponent[] || [];
     
     // Ensure storageRequirements exists with proper typing and has a default empty object
     const storageRequirements = requirements.storageRequirements || { storageClusters: [] };
     
     // Make sure we handle storageClusters as an array with proper typing
-    const storageClusters = (storageRequirements.storageClusters || []) as StorageClusterRequirement[];
+    const storageClusters = Array.isArray(storageRequirements.storageClusters) ? 
+      storageRequirements.storageClusters : [];
     
     if (!Array.isArray(components) || !Array.isArray(storageClusters) || components.length === 0 || storageClusters.length === 0) {
       return [];

@@ -31,18 +31,16 @@ interface ResourceMetricsType {
 }
 
 export const useDesignCalculations = () => {
-  // Get store state with proper typing
-  const activeDesign = useDesignStore(state => state.activeDesign || {} as InfrastructureDesign);
+  // Get store state with proper typing and default null value to ensure stable reference
+  const activeDesign = useDesignStore(state => state.activeDesign || null);
   
   // Import all the individual hooks with stable references
   const resourceMetricsHook = useResourceMetrics();
   const resourceMetrics: ResourceMetricsType = resourceMetricsHook?.resourceMetrics || {};
   const resourceUtilization = resourceMetricsHook?.resourceUtilization || {};
   
-  // Get storage clusters metrics with proper null checks
+  // Get all metrics with proper null checks and default values
   const { storageClustersMetrics = [] } = useStorageClusters();
-  
-  // Get other metrics with proper null checks
   const { actualHardwareTotals = {} } = useHardwareTotals();
   const { componentsByType = {} } = useComponentsByType();
   const { totalCost = 0, costPerVCPU = 0, costPerTB = 0 } = useCostAnalysis();
