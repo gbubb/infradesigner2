@@ -19,8 +19,9 @@ export const useStorageClusters = () => {
     // Ensure components array exists with proper typing
     const components = activeDesign?.components as InfrastructureComponent[] || [];
     
-    // Ensure storageClusters array exists with proper typing
+    // Ensure storageRequirements and storageClusters exist with proper typing
     const storageRequirements = requirements?.storageRequirements || {};
+    // Make sure we handle storageClusters as an array
     const storageClusters = storageRequirements?.storageClusters || [];
     
     if (!Array.isArray(components) || !Array.isArray(storageClusters) || components.length === 0 || storageClusters.length === 0) {
