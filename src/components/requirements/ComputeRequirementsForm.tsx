@@ -13,7 +13,6 @@ interface ComputeRequirementsProps {
     controllerNodeCount?: number;
     infrastructureClusterRequired?: boolean;
     infrastructureNodeCount?: number;
-    deviceLifespanYears?: number;
   };
   onUpdate: (computeRequirements: any) => void;
 }
@@ -81,20 +80,6 @@ export const ComputeRequirementsForm: React.FC<ComputeRequirementsProps> = ({
                 />
               </div>
             )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="deviceLifespanYears">Device Lifespan (Years)</Label>
-              <Input
-                id="deviceLifespanYears"
-                name="deviceLifespanYears"
-                type="number"
-                min="2"
-                max="6"
-                placeholder="3"
-                value={requirements.deviceLifespanYears || ''}
-                onChange={handleInputChange}
-              />
-            </div>
           </div>
         </CardContent>
       </Card>

@@ -9,10 +9,6 @@ interface DetailedCostAnalysisCardProps {
   monthlyEnergyCost: number;
   monthlyColoCost: number;
   totalRackQuantity: number;
-  monthlyAmortizedComputeCost: number;
-  monthlyAmortizedStorageCost: number;
-  monthlyAmortizedNetworkCost: number;
-  totalMonthlyAmortizedCost: number;
 }
 
 export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> = ({
@@ -21,10 +17,6 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
   monthlyEnergyCost,
   monthlyColoCost,
   totalRackQuantity,
-  monthlyAmortizedComputeCost,
-  monthlyAmortizedStorageCost,
-  monthlyAmortizedNetworkCost,
-  totalMonthlyAmortizedCost,
 }) => {
   const formatCost = (amount: number) => {
     return `€${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -43,7 +35,7 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
   const totalCapitalCost = Object.values(costsByType).reduce((sum, cost) => sum + cost, 0);
   
   // Calculate total operational cost (monthly)
-  const totalOperationalCost = monthlyEnergyCost + monthlyColoCost + totalMonthlyAmortizedCost;
+  const totalOperationalCost = monthlyEnergyCost + monthlyColoCost;
 
   return (
     <Card className="mb-8">
@@ -85,30 +77,6 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
                   <dd className="font-medium">{formatCost(monthlyColoCost)}</dd>
                 </div>
               )}
-              
-              {/* Amortized Costs Section */}
-              <div className="mt-3 pt-3 border-t">
-                <h4 className="text-sm font-medium mb-2">Amortized Hardware Costs</h4>
-                <div className="space-y-2 pl-2">
-                  <div className="flex justify-between text-sm">
-                    <dt className="text-muted-foreground">Compute Hardware</dt>
-                    <dd className="font-medium">{formatCost(monthlyAmortizedComputeCost)}</dd>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <dt className="text-muted-foreground">Storage Hardware</dt>
-                    <dd className="font-medium">{formatCost(monthlyAmortizedStorageCost)}</dd>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <dt className="text-muted-foreground">Network Hardware</dt>
-                    <dd className="font-medium">{formatCost(monthlyAmortizedNetworkCost)}</dd>
-                  </div>
-                  <div className="flex justify-between text-sm font-medium">
-                    <dt>Total Amortized</dt>
-                    <dd>{formatCost(totalMonthlyAmortizedCost)}</dd>
-                  </div>
-                </div>
-              </div>
-              
               <div className="pt-3 border-t flex justify-between">
                 <dt className="font-medium">Total Monthly Operational Cost</dt>
                 <dd className="font-bold">{formatCost(totalOperationalCost)}</dd>
