@@ -118,8 +118,8 @@ export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
       {requirements.computeClusters.map((cluster) => (
         <div key={cluster.id} className="relative">
           <ComputeClusterForm
-            cluster={cluster}
-            onUpdate={(updatedCluster) => handleClusterUpdate(cluster.id, updatedCluster)}
+            clusters={[cluster]} 
+            onUpdate={(updatedClusters) => handleClusterUpdate(cluster.id, updatedClusters[0])}
           />
           <Button
             variant="ghost"

@@ -16,7 +16,7 @@ export const useDesignCalculations = () => {
   const { storageClustersMetrics } = useStorageClusters();
   const { actualHardwareTotals } = useHardwareTotals();
   const { componentsByType } = useComponentsByType();
-  const { totalCost, costPerVCPU, costPerTB } = useCostAnalysis();
+  const { capitalCost, costPerVCPU, costPerTB } = useCostAnalysis();
   const { designErrors } = useDesignValidation();
   
   // Calculate total rack units (extracted from resourceMetrics for convenience)
@@ -41,7 +41,7 @@ export const useDesignCalculations = () => {
   }, [activeDesign]);
 
   return {
-    totalCost,
+    totalCost: capitalCost,
     totalPower,
     totalRackUnits,
     componentsByType,
