@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 import { toast } from 'sonner';
@@ -9,8 +9,8 @@ import { ResultsContent } from './ResultsContent';
 import { useRecalculation } from '@/hooks/useRecalculation';
 
 export const ResultsPanel: React.FC = () => {
-  // Get store state first
-  const { activeDesign } = useDesignStore();
+  // Get store state first with null check
+  const activeDesign = useDesignStore(state => state.activeDesign);
   
   // Then declare component state
   const [isLoading, setIsLoading] = useState(true);
@@ -22,6 +22,16 @@ export const ResultsPanel: React.FC = () => {
   // Get design calculations - always call this hook unconditionally
   const designCalculations = useDesignCalculations();
   
+  // Create stable callback references
+  const recalculate = useCallback(() => {
+    try {
+      handleRecalculate();
+      setHasCalculated(true);
+    } catch (error) {
+      console.error("Error during calculation:", error);
+    }
+  }, [handleRecalculate]);
+  
   // Effect to handle initial calculation
   useEffect(() => {
     if (!hasCalculated && activeDesign && activeDesign.id) {
@@ -30,8 +40,7 @@ export const ResultsPanel: React.FC = () => {
       const timer = setTimeout(() => {
         try {
           // Use the recalculation handler
-          handleRecalculate();
-          setHasCalculated(true);
+          recalculate();
         } catch (error) {
           console.error("Error during initial calculation:", error);
           toast.error("Failed to calculate design. Please try again.");
@@ -45,7 +54,7 @@ export const ResultsPanel: React.FC = () => {
       // No active design, no need to calculate
       setIsLoading(false);
     }
-  }, [activeDesign?.id, hasCalculated, handleRecalculate, activeDesign]);
+  }, [activeDesign?.id, hasCalculated, recalculate, activeDesign]);
   
   // Wrapper for recalculate to set loading state
   const onRecalculate = () => {

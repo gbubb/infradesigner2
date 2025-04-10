@@ -4,7 +4,11 @@ import { useDesignStore } from '@/store/designStore';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
 
 export const useStorageClusters = () => {
-  const { activeDesign, requirements } = useDesignStore();
+  // Destructure with default empty objects to prevent undefined errors
+  const { activeDesign = {}, requirements = {} } = useDesignStore(state => ({
+    activeDesign: state.activeDesign || {},
+    requirements: state.requirements || {}
+  }));
   
   // Calculate storage clusters metrics
   const storageClustersMetrics = useMemo(() => {
@@ -12,7 +16,8 @@ export const useStorageClusters = () => {
     const components = activeDesign?.components || [];
     
     // Ensure storageClusters array exists
-    const storageClusters = requirements?.storageRequirements?.storageClusters || [];
+    const storageRequirements = requirements?.storageRequirements || {};
+    const storageClusters = storageRequirements?.storageClusters || [];
     
     if (!Array.isArray(components) || !Array.isArray(storageClusters) || components.length === 0 || storageClusters.length === 0) {
       return [];
@@ -82,7 +87,7 @@ export const useStorageClusters = () => {
         nodeCount
       };
     }).filter(Boolean); // Filter out null values
-  }, [activeDesign, requirements]); // Fixed dependency array to use parent objects
+  }, [activeDesign, requirements]); // Use parent objects as dependencies and handle null checks inside
 
   return {
     storageClustersMetrics: Array.isArray(storageClustersMetrics) ? storageClustersMetrics : []

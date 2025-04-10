@@ -45,5 +45,5 @@ export const useComponentCosts = (components: InfrastructureComponent[] | undefi
       totalStorageCost,
       totalNetworkCost
     };
-  }, [components]); // Keep simple dependency array with null check logic in the function body
+  }, [components]); // Keep components in dependency array with null checks inside function
 };

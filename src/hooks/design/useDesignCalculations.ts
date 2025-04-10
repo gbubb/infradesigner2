@@ -9,15 +9,16 @@ import { useDesignStore } from '@/store/designStore';
 import { useMemo } from 'react';
 
 export const useDesignCalculations = () => {
-  const { activeDesign } = useDesignStore();
+  // Get store state with default empty object to prevent undefined errors
+  const activeDesign = useDesignStore(state => state.activeDesign || {});
   
-  // Import all the individual hooks
-  const { resourceMetrics, resourceUtilization } = useResourceMetrics();
-  const { storageClustersMetrics } = useStorageClusters();
-  const { actualHardwareTotals } = useHardwareTotals();
-  const { componentsByType } = useComponentsByType();
-  const { totalCost, costPerVCPU, costPerTB } = useCostAnalysis();
-  const { designErrors } = useDesignValidation();
+  // Import all the individual hooks with stable references
+  const { resourceMetrics = {}, resourceUtilization = {} } = useResourceMetrics();
+  const { storageClustersMetrics = [] } = useStorageClusters();
+  const { actualHardwareTotals = {} } = useHardwareTotals();
+  const { componentsByType = {} } = useComponentsByType();
+  const { totalCost = 0, costPerVCPU = 0, costPerTB = 0 } = useCostAnalysis();
+  const { designErrors = [] } = useDesignValidation();
   
   // Calculate total rack units (extracted from resourceMetrics for convenience)
   const totalRackUnits = useMemo(() => resourceMetrics?.totalRackUnits || 0, [resourceMetrics]);
@@ -53,17 +54,24 @@ export const useDesignCalculations = () => {
   const hasStorageNodes = useMemo(() => {
     if (!activeDesign?.components || !Array.isArray(activeDesign.components)) return false;
     return activeDesign.components.some(c => c && c.role === 'storageNode');
-  }, [activeDesign?.components]);
+  }, [activeDesign]);
 
   // Ensure defaults for all returned values
+  const defaultResourceUtilization = {
+    powerUtilization: { percentage: 0, used: 0, total: 0 },
+    spaceUtilization: { percentage: 0, used: 0, total: 0 },
+    leafNetworkUtilization: { percentage: 0, used: 0, total: 0 },
+    mgmtNetworkUtilization: { percentage: 0, used: 0, total: 0 }
+  };
+
   return {
-    totalCost: totalCost || 0,
+    totalCost,
     totalPower,
     totalRackUnits,
     minimumPower,
     operationalPower,
-    componentsByType: componentsByType || {},
-    storageClustersMetrics: Array.isArray(storageClustersMetrics) ? storageClustersMetrics : [],
+    componentsByType,
+    storageClustersMetrics,
     actualHardwareTotals: actualHardwareTotals || {
       totalVCPUs: 0,
       totalComputeMemoryTB: 0,
@@ -71,15 +79,10 @@ export const useDesignCalculations = () => {
       totalMemoryTB: 0
     },
     resourceMetrics: resourceMetrics || {},
-    resourceUtilization: resourceUtilization || {
-      powerUtilization: { percentage: 0, used: 0, total: 0 },
-      spaceUtilization: { percentage: 0, used: 0, total: 0 },
-      leafNetworkUtilization: { percentage: 0, used: 0, total: 0 },
-      mgmtNetworkUtilization: { percentage: 0, used: 0, total: 0 }
-    },
-    costPerVCPU: costPerVCPU || 0,
-    costPerTB: costPerTB || 0,
-    designErrors: Array.isArray(designErrors) ? designErrors : [],
+    resourceUtilization: resourceUtilization || defaultResourceUtilization,
+    costPerVCPU,
+    costPerTB,
+    designErrors,
     hasValidDesign,
     hasStorageNodes,
     monthlyAmortizedComputeCost,
