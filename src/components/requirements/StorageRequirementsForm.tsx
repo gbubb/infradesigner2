@@ -1,286 +1,204 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Plus, X } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
-import { StorageClusterRequirement } from '@/types/infrastructure';
-import { useDesignStore } from '@/store/designStore';
-import { v4 as uuidv4 } from 'uuid';
-import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from '@/components/ui/dialog';
+import { StoragePoolEfficiencyFactors } from '@/types/infrastructure';
 
-interface StorageRequirementsProps {
-  requirements: {
-    storageClusters: StorageClusterRequirement[];
+export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    const numericValue = parseInt(value, 10);
+    onUpdate({
+      ...requirements,
+      [name]: isNaN(numericValue) ? undefined : numericValue
+    });
   };
-  onUpdate: (storageRequirements: any) => void;
-}
-
-export const StorageRequirementsForm: React.FC<StorageRequirementsProps> = ({
-  requirements,
-  onUpdate,
-}) => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentClusterId, setCurrentClusterId] = useState<string | null>(null);
-  const [clusterForm, setClusterForm] = useState<Partial<StorageClusterRequirement>>({
-    name: '',
-    totalCapacityTB: 100,
-    availabilityZoneQuantity: 3,
-    poolType: '3 Replica',
-    maxFillFactor: 80
-  });
 
   const handleAddCluster = () => {
-    setCurrentClusterId(null);
-    setClusterForm({
+    const newCluster = {
+      id: uuidv4(),
       name: `Storage Cluster ${requirements.storageClusters.length + 1}`,
-      totalCapacityTB: 100,
+      totalCapacityTB: 0,
       availabilityZoneQuantity: 3,
       poolType: '3 Replica',
-      maxFillFactor: 80
-    });
-    setIsDialogOpen(true);
-  };
+      maxFillFactor: 85,
+    };
 
-  const handleEditCluster = (cluster: StorageClusterRequirement) => {
-    setCurrentClusterId(cluster.id);
-    setClusterForm({ ...cluster });
-    setIsDialogOpen(true);
-  };
-
-  const handleRemoveCluster = (clusterId: string) => {
-    const updatedClusters = requirements.storageClusters.filter(c => c.id !== clusterId);
-    onUpdate({ storageClusters: updatedClusters });
-    toast.success('Storage cluster removed');
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    const numericValue = parseFloat(value);
-    setClusterForm({
-      ...clusterForm,
-      [name]: isNaN(numericValue) ? value : numericValue
+    onUpdate({
+      ...requirements,
+      storageClusters: [...requirements.storageClusters, newCluster],
     });
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setClusterForm({
-      ...clusterForm,
-      [name]: value
+  const handleRemoveCluster = (id) => {
+    onUpdate({
+      ...requirements,
+      storageClusters: requirements.storageClusters.filter((cluster) => cluster.id !== id),
     });
   };
 
-  const handleSaveCluster = () => {
-    if (!clusterForm.name) {
-      toast.error('Please provide a name for the storage cluster');
-      return;
-    }
-
-    if (!clusterForm.totalCapacityTB || clusterForm.totalCapacityTB <= 0) {
-      toast.error('Please specify a valid capacity');
-      return;
-    }
-
-    if (!clusterForm.availabilityZoneQuantity || clusterForm.availabilityZoneQuantity <= 0) {
-      toast.error('Please specify a valid number of availability zones');
-      return;
-    }
-
-    let updatedClusters: StorageClusterRequirement[];
-    
-    if (currentClusterId) {
-      // Edit existing cluster
-      updatedClusters = requirements.storageClusters.map(cluster => 
-        cluster.id === currentClusterId 
-          ? { ...clusterForm, id: currentClusterId } as StorageClusterRequirement
-          : cluster
-      );
-      toast.success('Storage cluster updated');
-    } else {
-      // Add new cluster
-      const newCluster: StorageClusterRequirement = {
-        ...clusterForm,
-        id: uuidv4()
-      } as StorageClusterRequirement;
-      
-      updatedClusters = [...requirements.storageClusters, newCluster];
-      toast.success('Storage cluster added');
-    }
-    
-    onUpdate({ storageClusters: updatedClusters });
-    setIsDialogOpen(false);
+  const handleClusterUpdate = (id, field, value) => {
+    onUpdate({
+      ...requirements,
+      storageClusters: requirements.storageClusters.map((cluster) =>
+        cluster.id === id ? { ...cluster, [field]: value } : cluster
+      ),
+    });
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Storage Requirements</CardTitle>
-        <Button onClick={handleAddCluster}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Storage Cluster
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {requirements.storageClusters.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>No storage clusters defined yet.</p>
-            <p className="text-sm mt-2">Add a storage cluster to define your storage requirements.</p>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Storage Requirements</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="deviceLifespanYears">Device Lifespan (years)</Label>
+              <Input
+                id="deviceLifespanYears"
+                name="deviceLifespanYears"
+                type="number"
+                min="2"
+                max="6"
+                placeholder="3"
+                value={requirements.deviceLifespanYears === undefined ? 3 : requirements.deviceLifespanYears}
+                onChange={handleInputChange}
+              />
+            </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {requirements.storageClusters.map((cluster) => (
-              <div 
-                key={cluster.id} 
-                className="border rounded-md p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-              >
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    {cluster.name} 
-                    <Badge variant="outline">{cluster.poolType}</Badge>
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Capacity:</span> {cluster.totalCapacityTB} TB
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Availability Zones:</span> {cluster.availabilityZoneQuantity}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Fill Factor:</span> {cluster.maxFillFactor}%
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-2 self-end sm:self-center">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleEditCluster(cluster)}
-                  >
-                    <Edit2 className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleRemoveCluster(cluster.id)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        </CardContent>
+      </Card>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{currentClusterId ? 'Edit Storage Cluster' : 'Add Storage Cluster'}</DialogTitle>
-              <DialogDescription>
-                Define the requirements for this storage cluster
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">Storage Clusters</h3>
+        <Button onClick={handleAddCluster} variant="outline" size="sm">
+          <Plus className="h-4 w-4 mr-1" />
+          Add Cluster
+        </Button>
+      </div>
+
+      {requirements.storageClusters.map((cluster) => (
+        <Card key={cluster.id} className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-muted-foreground"
+            onClick={() => handleRemoveCluster(cluster.id)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Input
+                className="font-semibold"
+                value={cluster.name}
+                onChange={(e) => handleClusterUpdate(cluster.id, 'name', e.target.value)}
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Cluster Name</Label>
+                <Label>Total Raw Capacity (TB)</Label>
                 <Input
-                  id="name"
-                  name="name"
-                  placeholder="e.g., Primary Storage"
-                  value={clusterForm.name || ''}
-                  onChange={handleInputChange}
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={cluster.totalCapacityTB}
+                  onChange={(e) => 
+                    handleClusterUpdate(
+                      cluster.id, 
+                      'totalCapacityTB', 
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
                 />
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="totalCapacityTB">Total Usable Capacity (TB)</Label>
-                  <Input
-                    id="totalCapacityTB"
-                    name="totalCapacityTB"
-                    type="number"
-                    placeholder="e.g., 1000"
-                    value={clusterForm.totalCapacityTB || ''}
-                    onChange={handleInputChange}
-                  />
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="availabilityZoneQuantity">Availability Zone Quantity</Label>
-                  <Input
-                    id="availabilityZoneQuantity"
-                    name="availabilityZoneQuantity"
-                    type="number"
-                    min="1"
-                    placeholder="e.g., 3"
-                    value={clusterForm.availabilityZoneQuantity || ''}
-                    onChange={handleInputChange}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>Availability Zone Quantity</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={cluster.availabilityZoneQuantity}
+                  onChange={(e) => 
+                    handleClusterUpdate(
+                      cluster.id, 
+                      'availabilityZoneQuantity', 
+                      parseInt(e.target.value, 10) || 1
+                    )
+                  }
+                />
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="maxFillFactor">Maximum Fill Factor (%)</Label>
-                  <Input
-                    id="maxFillFactor"
-                    name="maxFillFactor"
-                    type="number"
-                    min="1"
-                    max="100"
-                    placeholder="e.g., 80"
-                    value={clusterForm.maxFillFactor || ''}
-                    onChange={handleInputChange}
-                  />
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="poolType">Storage Pool Type</Label>
-                  <Select
-                    value={clusterForm.poolType || '3 Replica'}
-                    onValueChange={(value) => handleSelectChange('poolType', value)}
-                  >
-                    <SelectTrigger id="poolType">
-                      <SelectValue placeholder="Select storage pool type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="3 Replica">3 Replica</SelectItem>
-                      <SelectItem value="2 Replica">2 Replica</SelectItem>
-                      <SelectItem value="Erasure Coding 4+2">Erasure Coding 4+2</SelectItem>
-                      <SelectItem value="Erasure Coding 8+3">Erasure Coding 8+3</SelectItem>
-                      <SelectItem value="Erasure Coding 8+4">Erasure Coding 8+4</SelectItem>
-                      <SelectItem value="Erasure Coding 10+4">Erasure Coding 10+4</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label>Pool Type</Label>
+                <Select
+                  value={cluster.poolType}
+                  onValueChange={(value) => handleClusterUpdate(cluster.id, 'poolType', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select pool type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(StoragePoolEfficiencyFactors).map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type} ({Math.round(StoragePoolEfficiencyFactors[type] * 100)}% efficient)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Max Fill Factor (%)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={cluster.maxFillFactor}
+                  onChange={(e) => 
+                    handleClusterUpdate(
+                      cluster.id, 
+                      'maxFillFactor', 
+                      parseInt(e.target.value, 10) || 1
+                    )
+                  }
+                />
               </div>
             </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveCluster}>
-                {currentClusterId ? 'Update Cluster' : 'Add Cluster'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+
+            <div className="bg-muted p-3 rounded-md">
+              <div className="flex justify-between items-center text-sm">
+                <span>Effective Capacity:</span>
+                <span className="font-semibold">
+                  {Math.round(
+                    cluster.totalCapacityTB *
+                    StoragePoolEfficiencyFactors[cluster.poolType] *
+                    (cluster.maxFillFactor / 100) *
+                    0.909495 * 10
+                  ) / 10}{' '}
+                  TiB
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      {requirements.storageClusters.length === 0 && (
+        <div className="bg-muted/50 rounded-md p-4 text-center text-muted-foreground">
+          No storage clusters defined. Click "Add Cluster" to create one.
+        </div>
+      )}
+    </div>
   );
 };

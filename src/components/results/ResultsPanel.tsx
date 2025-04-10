@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Info } from 'lucide-react';
@@ -10,9 +11,12 @@ import { ComponentsTable } from './ComponentsTable';
 import { ComponentTypeSummaryTable } from './ComponentTypeSummaryTable';
 import { DesignAlerts } from './DesignAlerts';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
+import { usePowerCalculations } from '@/hooks/design/usePowerCalculations';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from '@/components/ui/card';
+import { PowerEnergySection } from './PowerEnergySection';
+import { DetailedCostAnalysisCard } from './DetailedCostAnalysisCard';
 
 export const ResultsPanel: React.FC = () => {
   const { activeDesign, saveDesign, componentRoles, calculationBreakdowns } = useDesignStore();
@@ -34,6 +38,33 @@ export const ResultsPanel: React.FC = () => {
     designErrors,
     hasValidDesign
   } = useDesignCalculations();
+  
+  const { powerUsage, energyCosts } = usePowerCalculations();
+  
+  const {
+    capitalCost,
+    operationalCosts,
+    totalCostOfOwnership,
+    amortizedCostsByType
+  } = useDesignStore((state) => ({
+    capitalCost: state.activeDesign?.components?.reduce((total, c) => total + (c.cost * (c.quantity || 1)), 0) || 0,
+    operationalCosts: {
+      racksMonthly: ((state.activeDesign?.requirements?.physicalConstraints?.useColoRacks ? 
+        (state.activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros || 2000) : 0) * 
+        (state.activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity || 1)),
+      energyMonthly: ((powerUsage.operationalPower / 1000) * 
+        (state.activeDesign?.requirements?.physicalConstraints?.electricityPricePerKwh || 0.25) * 24 * 30),
+      amortizedMonthly: 0, // Calculated below
+      totalMonthly: 0 // Calculated below
+    },
+    totalCostOfOwnership: 0, // Calculated below
+    amortizedCostsByType: {
+      compute: 0,
+      storage: 0,
+      network: 0,
+      total: 0
+    }
+  }));
   
   // Force recalculation when the component mounts
   useEffect(() => {
@@ -226,6 +257,18 @@ export const ResultsPanel: React.FC = () => {
               costPerTB={costPerTB}
             />
           </div>
+          
+          <PowerEnergySection 
+            powerUsage={powerUsage}
+            energyCosts={energyCosts}
+          />
+          
+          <DetailedCostAnalysisCard 
+            capitalCost={capitalCost}
+            operationalCosts={operationalCosts}
+            amortizedCostsByType={amortizedCostsByType}
+            totalCostOfOwnership={totalCostOfOwnership}
+          />
           
           <StorageClustersTable clusters={storageClustersMetrics} />
           

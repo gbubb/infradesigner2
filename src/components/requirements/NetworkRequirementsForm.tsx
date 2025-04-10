@@ -5,74 +5,104 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { NetworkTopology } from '@/types/infrastructure';
 
-interface NetworkRequirementsProps {
-  requirements: {
-    networkTopology?: 'Spine-Leaf' | 'Three-Tier' | 'Core-Distribution-Access';
-    managementNetwork?: 'Single connection' | 'Dual Home';
-    ipmiNetwork?: 'Management converged' | 'Dedicated IPMI switch';
-    physicalFirewalls?: boolean;
-    leafSwitchesPerAZ?: number;
-    dedicatedStorageNetwork?: boolean;
-    dedicatedNetworkCoreRacks?: boolean;
-  };
-  onUpdate: (networkRequirements: any) => void;
-}
-
-export const NetworkRequirementsForm: React.FC<NetworkRequirementsProps> = ({
-  requirements,
-  onUpdate,
-}) => {
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     const numericValue = parseInt(value, 10);
-    onUpdate({ [name]: isNaN(numericValue) ? undefined : numericValue });
+    onUpdate({
+      ...requirements,
+      [name]: isNaN(numericValue) ? undefined : numericValue,
+    });
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    onUpdate({ [name]: value });
+  const handleSelectChange = (field, value) => {
+    onUpdate({
+      ...requirements,
+      [field]: value,
+    });
   };
 
-  const handleSwitchChange = (name: string, checked: boolean) => {
-    onUpdate({ [name]: checked });
+  const handleSwitchChange = (field, checked) => {
+    onUpdate({
+      ...requirements,
+      [field]: checked,
+    });
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Network Requirements</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Network Topology</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="networkTopology">Network Topology</Label>
             <Select
-              value={requirements.networkTopology || 'Spine-Leaf'}
-              onValueChange={(value) => handleSelectChange('networkTopology', value)}
+              value={requirements.networkTopology}
+              onValueChange={(value) => handleSelectChange('networkTopology', value as NetworkTopology)}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select network topology" />
+              <SelectTrigger id="networkTopology">
+                <SelectValue placeholder="Select topology" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Spine-Leaf">Spine-Leaf</SelectItem>
+                <SelectItem value="Spine-Leaf">Spine-Leaf (CLOS)</SelectItem>
                 <SelectItem value="Three-Tier">Three-Tier</SelectItem>
                 <SelectItem value="Core-Distribution-Access">Core-Distribution-Access</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="leafSwitchesPerAZ">Leaf Switches Per AZ</Label>
+              <Input
+                id="leafSwitchesPerAZ"
+                name="leafSwitchesPerAZ"
+                type="number"
+                min="1"
+                placeholder="e.g., 2"
+                value={requirements.leafSwitchesPerAZ || ''}
+                onChange={handleInputChange}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="deviceLifespanYears">Device Lifespan (years)</Label>
+              <Input
+                id="deviceLifespanYears"
+                name="deviceLifespanYears"
+                type="number"
+                min="2"
+                max="6"
+                placeholder="3"
+                value={requirements.deviceLifespanYears === undefined ? 3 : requirements.deviceLifespanYears}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Network Configuration</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="managementNetwork">Management Network</Label>
             <Select
-              value={requirements.managementNetwork || 'Single connection'}
+              value={requirements.managementNetwork}
               onValueChange={(value) => handleSelectChange('managementNetwork', value)}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select management network" />
+              <SelectTrigger id="managementNetwork">
+                <SelectValue placeholder="Select configuration" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Single connection">Single connection</SelectItem>
-                <SelectItem value="Dual Home">Dual Home</SelectItem>
+                <SelectItem value="Dual Home">Dual Home (Redundant)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -80,62 +110,53 @@ export const NetworkRequirementsForm: React.FC<NetworkRequirementsProps> = ({
           <div className="space-y-2">
             <Label htmlFor="ipmiNetwork">IPMI Network</Label>
             <Select
-              value={requirements.ipmiNetwork || 'Management converged'}
+              value={requirements.ipmiNetwork}
               onValueChange={(value) => handleSelectChange('ipmiNetwork', value)}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select IPMI network" />
+              <SelectTrigger id="ipmiNetwork">
+                <SelectValue placeholder="Select configuration" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Management converged">Management converged</SelectItem>
-                <SelectItem value="Dedicated IPMI switch">Dedicated IPMI switch</SelectItem>
+                <SelectItem value="Dedicated IPMI switch">Dedicated IPMI switches</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="flex items-center justify-between space-y-0 pt-4">
-            <Label htmlFor="physicalFirewalls">Physical Firewalls</Label>
+          <div className="flex items-center justify-between space-x-2 rounded-md border p-4">
+            <div>
+              <h4 className="text-sm font-medium">Physical Firewalls</h4>
+              <p className="text-sm text-muted-foreground">Include dedicated physical firewalls</p>
+            </div>
             <Switch
-              id="physicalFirewalls"
               checked={requirements.physicalFirewalls || false}
               onCheckedChange={(checked) => handleSwitchChange('physicalFirewalls', checked)}
             />
           </div>
-          
-          {requirements.networkTopology === 'Spine-Leaf' && (
-            <div className="space-y-2">
-              <Label htmlFor="leafSwitchesPerAZ">Leaf Switches per AZ</Label>
-              <Input
-                id="leafSwitchesPerAZ"
-                name="leafSwitchesPerAZ"
-                type="number"
-                min="2"
-                placeholder="e.g., 2"
-                value={requirements.leafSwitchesPerAZ || ''}
-                onChange={handleInputChange}
-              />
+
+          <div className="flex items-center justify-between space-x-2 rounded-md border p-4">
+            <div>
+              <h4 className="text-sm font-medium">Dedicated Storage Network</h4>
+              <p className="text-sm text-muted-foreground">Use dedicated switches for storage traffic</p>
             </div>
-          )}
-          
-          <div className="flex items-center justify-between space-y-0 pt-4">
-            <Label htmlFor="dedicatedStorageNetwork">Dedicated Storage Network</Label>
             <Switch
-              id="dedicatedStorageNetwork"
               checked={requirements.dedicatedStorageNetwork || false}
               onCheckedChange={(checked) => handleSwitchChange('dedicatedStorageNetwork', checked)}
             />
           </div>
-          
-          <div className="flex items-center justify-between space-y-0 pt-4">
-            <Label htmlFor="dedicatedNetworkCoreRacks">Dedicated Network Core Racks</Label>
+
+          <div className="flex items-center justify-between space-x-2 rounded-md border p-4">
+            <div>
+              <h4 className="text-sm font-medium">Dedicated Network Core Racks</h4>
+              <p className="text-sm text-muted-foreground">Place core network in dedicated racks</p>
+            </div>
             <Switch
-              id="dedicatedNetworkCoreRacks"
               checked={requirements.dedicatedNetworkCoreRacks || false}
               onCheckedChange={(checked) => handleSwitchChange('dedicatedNetworkCoreRacks', checked)}
             />
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };

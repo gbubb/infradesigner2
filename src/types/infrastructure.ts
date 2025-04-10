@@ -109,9 +109,11 @@ export interface DesignRequirements {
     infrastructureClusterRequired?: boolean;
     infrastructureNodeCount?: number;
     computeClusters: ComputeClusterRequirement[];
+    deviceLifespanYears?: number;
   };
   storageRequirements: {
     storageClusters: StorageClusterRequirement[];
+    deviceLifespanYears?: number;
   };
   networkRequirements: {
     networkTopology?: NetworkTopology;
@@ -121,12 +123,17 @@ export interface DesignRequirements {
     leafSwitchesPerAZ?: number;
     dedicatedStorageNetwork?: boolean;
     dedicatedNetworkCoreRacks?: boolean;
+    deviceLifespanYears?: number;
   };
   physicalConstraints: {
     computeStorageRackQuantity?: number;
     totalAvailabilityZones?: number;
     rackUnitsPerRack?: number;
     powerPerRackWatts?: number;
+    useColoRacks?: boolean;
+    rackCostPerMonthEuros?: number;
+    electricityPricePerKwh?: number;
+    operationalLoadPercentage?: number;
   };
 }
 
@@ -304,6 +311,25 @@ export interface GPU extends InfrastructureComponent {
   pcieGeneration?: number;
   pcieWidth?: number;
   modelFamily?: string;
+}
+
+// Power usage tiers
+export interface PowerUsage {
+  minimumPower: number;
+  operationalPower: number;
+  maximumPower: number;
+}
+
+// Cost analysis breakdown
+export interface CostBreakdown {
+  capitalCost: number;
+  operationalCost: {
+    racksMonthly: number;
+    energyMonthly: number;
+    amortizedMonthly: number;
+    totalMonthly: number;
+  };
+  total: number;
 }
 
 // Infrastructure Design interface
