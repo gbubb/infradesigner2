@@ -6,7 +6,8 @@ import { usePowerCalculations } from './usePowerCalculations';
 import { ComponentType } from '@/types/infrastructure';
 
 export const useCostAnalysis = () => {
-  const { activeDesign } = useDesignStore();
+  // Use primitive selector for better stability
+  const activeDesign = useDesignStore(state => state.activeDesign);
   const { actualHardwareTotals } = useHardwareTotals();
   const { energyCosts } = usePowerCalculations();
   
@@ -128,7 +129,7 @@ export const useCostAnalysis = () => {
     }, 0) || 0;
     
     return computeCapitalCost / actualHardwareTotals.totalVCPUs;
-  }, [actualHardwareTotals.totalVCPUs, activeDesign?.components]);
+  }, [actualHardwareTotals.totalVCPUs, activeDesign?.components, capitalCost]);
   
   const costPerTB = useMemo(() => {
     if (!actualHardwareTotals.totalStorageTB || actualHardwareTotals.totalStorageTB === 0) return 0;

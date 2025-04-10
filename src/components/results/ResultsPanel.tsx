@@ -19,6 +19,7 @@ import { PowerEnergySection } from './PowerEnergySection';
 import { DetailedCostAnalysisCard } from './DetailedCostAnalysisCard';
 
 export const ResultsPanel: React.FC = () => {
+  // Use primitive selectors instead of object selectors to prevent unnecessary re-renders
   const activeDesign = useDesignStore(state => state.activeDesign);
   const saveDesign = useDesignStore(state => state.saveDesign);
   const componentRoles = useDesignStore(state => state.componentRoles);
@@ -28,6 +29,7 @@ export const ResultsPanel: React.FC = () => {
   const [hasCalculated, setHasCalculated] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   
+  // Use memoized design calculations through dedicated hook
   const {
     totalCost,
     totalPower,
@@ -40,40 +42,58 @@ export const ResultsPanel: React.FC = () => {
     costPerVCPU,
     costPerTB,
     designErrors,
-    hasValidDesign
+    hasValidDesign,
+    amortizedCostsByType
   } = useDesignCalculations();
   
+  // Get power calculations which are separate from design calculations
   const { powerUsage, energyCosts } = usePowerCalculations();
   
-  // Get operational costs data once per render using primitive selectors
-  const capitalCost = useDesignStore(state => {
-    return state.activeDesign?.components?.reduce((total, c) => total + (c.cost * (c.quantity || 1)), 0) || 0;
-  });
+  // Calculate these simple values directly for better stability
+  // In a complex app, these would ideally be moved to their own memoized hooks
+  const capitalCost = activeDesign?.components?.reduce(
+    (total, c) => total + (c.cost * (c.quantity || 1)), 
+    0
+  ) || 0;
   
-  const operationalCosts = useDesignStore(state => {
-    const racksMonthly = ((state.activeDesign?.requirements?.physicalConstraints?.useColoRacks ? 
-      (state.activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros || 2000) : 0) * 
-      (state.activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity || 1));
-      
+  // Calculate operational costs based on design requirements and power usage
+  const operationalCosts = React.useMemo(() => {
+    if (!activeDesign || !activeDesign.requirements) {
+      return {
+        racksMonthly: 0,
+        energyMonthly: 0,
+        amortizedMonthly: 0,
+        totalMonthly: 0
+      };
+    }
+    
+    const racksMonthly = (
+      (activeDesign.requirements.physicalConstraints?.useColoRacks ? 
+        (activeDesign.requirements.physicalConstraints.rackCostPerMonthEuros || 2000) : 0) * 
+      (activeDesign.requirements.physicalConstraints?.computeStorageRackQuantity || 1)
+    );
+    
+    const energyMonthly = powerUsage?.operationalPower ? 
+      ((powerUsage.operationalPower / 1000) * 
+       (activeDesign.requirements.physicalConstraints?.electricityPricePerKwh || 0.25) * 
+       24 * 30) : 0;
+    
+    const totalMonthly = racksMonthly + energyMonthly + (amortizedCostsByType?.total || 0);
+    
     return {
       racksMonthly,
-      energyMonthly: powerUsage?.operationalPower ? 
-        ((powerUsage.operationalPower / 1000) * (state.activeDesign?.requirements?.physicalConstraints?.electricityPricePerKwh || 0.25) * 24 * 30) : 0,
-      amortizedMonthly: 0,
-      totalMonthly: 0
+      energyMonthly,
+      amortizedMonthly: amortizedCostsByType?.total || 0,
+      totalMonthly
     };
-  });
+  }, [activeDesign, powerUsage?.operationalPower, amortizedCostsByType?.total]);
   
-  const totalCostOfOwnership = 0; // Will be calculated later
+  // Calculate TCO
+  const totalCostOfOwnership = React.useMemo(() => {
+    return capitalCost + (operationalCosts.totalMonthly * 12);
+  }, [capitalCost, operationalCosts.totalMonthly]);
   
-  const amortizedCostsByType = {
-    compute: 0,
-    storage: 0,
-    network: 0,
-    total: 0
-  };
-  
-  // Force recalculation when the component mounts
+  // Force recalculation when the component mounts, but only once
   useEffect(() => {
     if (!hasCalculated) {
       setIsLoading(true);
@@ -84,7 +104,7 @@ export const ResultsPanel: React.FC = () => {
           // Force recalculation of the design
           manualRecalculateDesign();
           
-          // Save the design to ensure it's persisted
+          // Save the design to ensure it's persisted, but only if it exists
           if (activeDesign) {
             saveDesign();
           }

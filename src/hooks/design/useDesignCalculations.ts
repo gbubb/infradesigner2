@@ -9,16 +9,15 @@ import { useDesignStore } from '@/store/designStore';
 import { useMemo } from 'react';
 
 export const useDesignCalculations = () => {
-  const { activeDesign } = useDesignStore(state => ({
-    activeDesign: state.activeDesign
-  }));
+  // Use more stable, primitive selectors - avoid object selector that creates a new reference
+  const activeDesign = useDesignStore(state => state.activeDesign);
   
-  // Import all the individual hooks
+  // Import all the individual hooks - these will use the same activeDesign from the store
   const { resourceMetrics, resourceUtilization } = useResourceMetrics();
   const { storageClustersMetrics } = useStorageClusters();
   const { actualHardwareTotals } = useHardwareTotals();
   const { componentsByType } = useComponentsByType();
-  const { capitalCost, costPerVCPU, costPerTB } = useCostAnalysis();
+  const { capitalCost, costPerVCPU, costPerTB, amortizedCostsByType } = useCostAnalysis();
   const { designErrors } = useDesignValidation();
   
   // Calculate total rack units (extracted from resourceMetrics for convenience)
@@ -55,6 +54,7 @@ export const useDesignCalculations = () => {
     costPerTB,
     designErrors,
     hasValidDesign,
-    hasStorageNodes
+    hasStorageNodes,
+    amortizedCostsByType
   };
 };
