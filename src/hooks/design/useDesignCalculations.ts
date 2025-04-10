@@ -25,10 +25,6 @@ export const useDesignCalculations = () => {
   // Calculate total power (extracted from resourceMetrics for convenience)
   const totalPower = useMemo(() => resourceMetrics.totalPower, [resourceMetrics.totalPower]);
 
-  // Extract power metrics
-  const minimumPower = useMemo(() => resourceMetrics.minimumPower, [resourceMetrics.minimumPower]);
-  const operationalPower = useMemo(() => resourceMetrics.operationalPower, [resourceMetrics.operationalPower]);
-
   // Check if we have a valid design with components
   const hasValidDesign = useMemo(() => {
     return Boolean(
@@ -48,8 +44,6 @@ export const useDesignCalculations = () => {
     totalCost,
     totalPower,
     totalRackUnits,
-    minimumPower,
-    operationalPower,
     componentsByType,
     storageClustersMetrics,
     actualHardwareTotals,

@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Info } from 'lucide-react';
@@ -11,8 +10,6 @@ import { ComponentsTable } from './ComponentsTable';
 import { ComponentTypeSummaryTable } from './ComponentTypeSummaryTable';
 import { DesignAlerts } from './DesignAlerts';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
-import { PowerEnergySection } from './PowerEnergySection';
-import { DetailedCostAnalysisCard } from './DetailedCostAnalysisCard';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from '@/components/ui/card';
@@ -130,9 +127,6 @@ export const ResultsPanel: React.FC = () => {
   const powerPerRack = resourceMetrics?.totalRackQuantity 
     ? (totalPower / resourceMetrics.totalRackQuantity)
     : 0;
-    
-  // Get energy price per kWh from requirements
-  const energyPricePerKwh = activeDesign?.requirements?.physicalConstraints?.operationalCosts?.energyPricePerKwh || 0.25;
 
   // Show loading state while calculating
   if (isLoading) {
@@ -232,23 +226,6 @@ export const ResultsPanel: React.FC = () => {
               costPerTB={costPerTB}
             />
           </div>
-          
-          <PowerEnergySection
-            minimumPower={resourceMetrics.minimumPower}
-            operationalPower={resourceMetrics.operationalPower}
-            maximumPower={resourceMetrics.totalPower}
-            dailyEnergyCost={resourceMetrics.dailyEnergyCost}
-            monthlyEnergyCost={resourceMetrics.monthlyEnergyCost}
-            energyPricePerKwh={energyPricePerKwh}
-          />
-          
-          <DetailedCostAnalysisCard
-            totalCost={totalCost}
-            componentsByType={componentsByType}
-            monthlyEnergyCost={resourceMetrics.monthlyEnergyCost}
-            monthlyColoCost={resourceMetrics.monthlyColoCost}
-            totalRackQuantity={resourceMetrics.totalRackQuantity}
-          />
           
           <StorageClustersTable clusters={storageClustersMetrics} />
           

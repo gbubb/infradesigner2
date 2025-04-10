@@ -25,7 +25,7 @@ export function CostComparison({ leftDesign, rightDesign }: CostComparisonProps)
 
   // Helper to format numbers with commas
   const formatCurrency = (num: number) => {
-    return `€${num.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+    return `$${num.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   };
 
   // Helper to render the difference icon
@@ -61,90 +61,6 @@ export function CostComparison({ leftDesign, rightDesign }: CostComparisonProps)
       Network: comparison.right.networkCost
     }
   ];
-  
-  // Calculate operational costs for each design
-  const calculateOperationalCosts = (design: InfrastructureDesign) => {
-    if (!design.components || design.components.length === 0) {
-      return {
-        monthlyEnergyCost: 0,
-        monthlyColoCost: 0,
-        annualOperationalCost: 0,
-        threeYearTCO: 0,
-        capitalCost: 0,
-      };
-    }
-    
-    // Calculate power components
-    const operationalLoadPercent = design.requirements?.physicalConstraints?.operationalCosts?.operationalLoad || 50;
-    const operationalLoadFraction = operationalLoadPercent / 100;
-    const energyPricePerKwh = design.requirements?.physicalConstraints?.operationalCosts?.energyPricePerKwh || 0.25;
-    
-    // Calculate capital cost (sum of all component costs)
-    const capitalCost = design.components.reduce((sum, comp) => {
-      const quantity = comp.quantity || 1;
-      return sum + (comp.cost * quantity);
-    }, 0);
-    
-    // Calculate power metrics
-    let totalMaxPower = 0;
-    let totalMinPower = 0;
-    let totalOperationalPower = 0;
-    
-    design.components.forEach(component => {
-      const quantity = component.quantity || 1;
-      const maxPower = component.powerRequired * quantity;
-      
-      totalMaxPower += maxPower;
-      totalMinPower += maxPower / 3;
-      
-      const remainingPower = maxPower - (maxPower / 3);
-      totalOperationalPower += (maxPower / 3) + (operationalLoadFraction * remainingPower);
-    });
-    
-    // Calculate energy costs
-    const operationalPowerKw = totalOperationalPower / 1000; // Convert watts to kilowatts
-    const dailyEnergyCost = operationalPowerKw * 24 * energyPricePerKwh;
-    const monthlyEnergyCost = dailyEnergyCost * 30; // Assuming 30 days per month
-    
-    // Calculate colocation costs if enabled
-    let monthlyColoCost = 0;
-    const totalRackQuantity = (design.requirements?.physicalConstraints?.computeStorageRackQuantity || 0) +
-      (design.requirements?.networkRequirements?.dedicatedNetworkCoreRacks ? 2 : 0);
-      
-    if (design.requirements?.physicalConstraints?.operationalCosts?.coloRacks) {
-      const rackCostPerMonth = design.requirements?.physicalConstraints?.operationalCosts?.rackCostPerMonth || 0;
-      monthlyColoCost = totalRackQuantity * rackCostPerMonth;
-    }
-    
-    const monthlyOperationalCost = monthlyEnergyCost + monthlyColoCost;
-    const annualOperationalCost = monthlyOperationalCost * 12;
-    const threeYearTCO = capitalCost + (annualOperationalCost * 3);
-    
-    return {
-      monthlyEnergyCost,
-      monthlyColoCost,
-      annualOperationalCost,
-      threeYearTCO,
-      capitalCost,
-    };
-  };
-  
-  const leftOpCosts = calculateOperationalCosts(leftDesign);
-  const rightOpCosts = calculateOperationalCosts(rightDesign);
-  
-  // Calculate percentage differences for operational costs
-  const calculateDifference = (left: number, right: number) => {
-    if (left === 0 && right === 0) return 0;
-    if (left === 0) return 100; // Right is infinitely more
-    return ((right - left) / left) * 100;
-  };
-  
-  const opCostDifferences = {
-    monthlyEnergyCost: calculateDifference(leftOpCosts.monthlyEnergyCost, rightOpCosts.monthlyEnergyCost),
-    monthlyColoCost: calculateDifference(leftOpCosts.monthlyColoCost, rightOpCosts.monthlyColoCost),
-    annualOperationalCost: calculateDifference(leftOpCosts.annualOperationalCost, rightOpCosts.annualOperationalCost),
-    threeYearTCO: calculateDifference(leftOpCosts.threeYearTCO, rightOpCosts.threeYearTCO),
-  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -192,7 +108,7 @@ export function CostComparison({ leftDesign, rightDesign }: CostComparisonProps)
                 <XAxis type="number" />
                 <YAxis dataKey="name" type="category" width={100} />
                 <Tooltip
-                  formatter={(value) => [`€${Number(value).toLocaleString()}`, '']}
+                  formatter={(value) => [`$${Number(value).toLocaleString()}`, '']}
                 />
                 <Legend />
                 <Bar dataKey="Compute" fill="#8884d8" stackId="a" name="Compute" />
@@ -306,103 +222,6 @@ export function CostComparison({ leftDesign, rightDesign }: CostComparisonProps)
                   </div>
                 </dl>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* TCO Comparison */}
-      <Card className="md:col-span-2">
-        <CardHeader>
-          <CardTitle>Total Cost of Ownership Comparison</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-sm font-medium mb-3">{leftDesign.name}</h3>
-              <dl className="space-y-3">
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Capital Expenditure</dt>
-                  <dd className="font-medium">{formatCurrency(leftOpCosts.capitalCost)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Monthly Energy Cost</dt>
-                  <dd className="font-medium">{formatCurrency(leftOpCosts.monthlyEnergyCost)}</dd>
-                </div>
-                {leftOpCosts.monthlyColoCost > 0 && (
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Monthly Colocation Cost</dt>
-                    <dd className="font-medium">{formatCurrency(leftOpCosts.monthlyColoCost)}</dd>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Annual Operational Cost</dt>
-                  <dd className="font-medium">{formatCurrency(leftOpCosts.annualOperationalCost)}</dd>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <dt className="font-medium">3-Year Total Cost of Ownership</dt>
-                  <dd className="font-bold">{formatCurrency(leftOpCosts.threeYearTCO)}</dd>
-                </div>
-              </dl>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium mb-3">{rightDesign.name}</h3>
-              <dl className="space-y-3">
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Capital Expenditure</dt>
-                  <dd className="font-medium">{formatCurrency(rightOpCosts.capitalCost)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Monthly Energy Cost</dt>
-                  <dd className="font-medium">
-                    {formatCurrency(rightOpCosts.monthlyEnergyCost)}
-                    {Math.abs(opCostDifferences.monthlyEnergyCost) > 1 && (
-                      <span className={`ml-2 text-xs ${getDiffColor(opCostDifferences.monthlyEnergyCost)}`}>
-                        {opCostDifferences.monthlyEnergyCost > 0 ? '+' : ''}
-                        {opCostDifferences.monthlyEnergyCost.toFixed(1)}%
-                      </span>
-                    )}
-                  </dd>
-                </div>
-                {(rightOpCosts.monthlyColoCost > 0 || leftOpCosts.monthlyColoCost > 0) && (
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Monthly Colocation Cost</dt>
-                    <dd className="font-medium">
-                      {formatCurrency(rightOpCosts.monthlyColoCost)}
-                      {Math.abs(opCostDifferences.monthlyColoCost) > 1 && rightOpCosts.monthlyColoCost > 0 && leftOpCosts.monthlyColoCost > 0 && (
-                        <span className={`ml-2 text-xs ${getDiffColor(opCostDifferences.monthlyColoCost)}`}>
-                          {opCostDifferences.monthlyColoCost > 0 ? '+' : ''}
-                          {opCostDifferences.monthlyColoCost.toFixed(1)}%
-                        </span>
-                      )}
-                    </dd>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Annual Operational Cost</dt>
-                  <dd className="font-medium">
-                    {formatCurrency(rightOpCosts.annualOperationalCost)}
-                    {Math.abs(opCostDifferences.annualOperationalCost) > 1 && (
-                      <span className={`ml-2 text-xs ${getDiffColor(opCostDifferences.annualOperationalCost)}`}>
-                        {opCostDifferences.annualOperationalCost > 0 ? '+' : ''}
-                        {opCostDifferences.annualOperationalCost.toFixed(1)}%
-                      </span>
-                    )}
-                  </dd>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <dt className="font-medium">3-Year Total Cost of Ownership</dt>
-                  <dd className="font-bold">
-                    {formatCurrency(rightOpCosts.threeYearTCO)}
-                    {Math.abs(opCostDifferences.threeYearTCO) > 1 && (
-                      <span className={`ml-2 text-xs ${getDiffColor(opCostDifferences.threeYearTCO)}`}>
-                        {opCostDifferences.threeYearTCO > 0 ? '+' : ''}
-                        {opCostDifferences.threeYearTCO.toFixed(1)}%
-                      </span>
-                    )}
-                  </dd>
-                </div>
-              </dl>
             </div>
           </div>
         </CardContent>

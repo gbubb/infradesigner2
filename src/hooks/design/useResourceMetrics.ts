@@ -11,8 +11,6 @@ export const useResourceMetrics = () => {
       return {
         totalRackUnits: 0,
         totalPower: 0,
-        minimumPower: 0,
-        operationalPower: 0,
         totalServers: 0,
         totalLeafSwitches: 0,
         totalMgmtSwitches: 0,
@@ -22,10 +20,7 @@ export const useResourceMetrics = () => {
         mgmtPortsAvailable: 0,
         totalAvailableRU: 0,
         totalAvailablePower: 0,
-        totalRackQuantity: 0,
-        monthlyEnergyCost: 0,
-        dailyEnergyCost: 0,
-        monthlyColoCost: 0
+        totalRackQuantity: 0
       };
     }
     
@@ -49,33 +44,15 @@ export const useResourceMetrics = () => {
     
     const ipmiNetwork = requirements.networkRequirements.ipmiNetwork || 'Management converged';
     
-    // Calculate power metrics
-    let totalMaxPower = 0;
-    let totalMinPower = 0;
-    let totalOperationalPower = 0;
-    
-    // Get operational load percentage (1-100)
-    const operationalLoadPercent = requirements.physicalConstraints.operationalCosts?.operationalLoad || 50;
-    const operationalLoadFraction = operationalLoadPercent / 100;
-    
-    // Energy cost calculations
-    const energyPricePerKwh = requirements.physicalConstraints.operationalCosts?.energyPricePerKwh || 0.25;
+    // Calculate total power and rack units
+    let totalPower = 0;
+    let totalRackUnits = 0;
     
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
       
-      // Calculate power metrics
-      const maxPower = component.powerRequired * quantity;
-      totalMaxPower += maxPower;
-      
-      // Minimum power is 1/3 of maximum power
-      const minPower = maxPower / 3;
-      totalMinPower += minPower;
-      
-      // Operational power = min power + (operational load * remaining 2/3 power)
-      const remainingPower = maxPower - minPower;
-      const operationalPower = minPower + (operationalLoadFraction * remainingPower);
-      totalOperationalPower += operationalPower;
+      // Add to total power
+      totalPower += component.powerRequired * quantity;
       
       // Add to total rack units if applicable
       if ('rackUnitsConsumed' in component) {
@@ -136,30 +113,13 @@ export const useResourceMetrics = () => {
       }
     });
     
-    // Calculate energy costs
-    const operationalPowerKw = totalOperationalPower / 1000; // Convert watts to kilowatts
-    const dailyEnergyCost = operationalPowerKw * 24 * energyPricePerKwh;
-    const monthlyEnergyCost = dailyEnergyCost * 30; // Assuming 30 days per month
-    
-    // Calculate colocation costs if enabled
-    let monthlyColoCost = 0;
-    if (requirements.physicalConstraints.operationalCosts?.coloRacks) {
-      const rackCostPerMonth = requirements.physicalConstraints.operationalCosts.rackCostPerMonth || 0;
-      monthlyColoCost = totalRackQuantity * rackCostPerMonth;
-    }
-    
     console.log(`Total resource metrics calculated: 
       Leaf ports - Used: ${leafPortsUsed}, Available: ${leafPortsAvailable}
-      Mgmt ports - Used: ${mgmtPortsUsed}, Available: ${mgmtPortsAvailable}
-      Power - Min: ${totalMinPower}W, Operational: ${totalOperationalPower}W, Max: ${totalMaxPower}W
-      Energy costs - Daily: €${dailyEnergyCost.toFixed(2)}, Monthly: €${monthlyEnergyCost.toFixed(2)}
-      Colocation costs - Monthly: €${monthlyColoCost.toFixed(2)}`);
+      Mgmt ports - Used: ${mgmtPortsUsed}, Available: ${mgmtPortsAvailable}`);
     
     return {
       totalRackUnits,
-      totalPower: totalMaxPower,
-      minimumPower: totalMinPower,
-      operationalPower: totalOperationalPower,
+      totalPower,
       totalServers,
       totalLeafSwitches,
       totalMgmtSwitches,
@@ -169,10 +129,7 @@ export const useResourceMetrics = () => {
       mgmtPortsAvailable,
       totalAvailableRU,
       totalAvailablePower,
-      totalRackQuantity,
-      monthlyEnergyCost,
-      dailyEnergyCost,
-      monthlyColoCost
+      totalRackQuantity
     };
   }, [activeDesign, requirements]);
   
