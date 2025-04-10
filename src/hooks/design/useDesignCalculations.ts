@@ -42,7 +42,6 @@ export const useDesignCalculations = () => {
   }, [activeDesign]);
 
   return {
-    totalCost: capitalCost,
     totalPower,
     totalRackUnits,
     componentsByType,
@@ -55,6 +54,8 @@ export const useDesignCalculations = () => {
     designErrors,
     hasValidDesign,
     hasStorageNodes,
-    amortizedCostsByType
+    amortizedCostsByType,
+    // Return capitalCost as the totalCost for backward compatibility
+    totalCost: capitalCost
   };
 };

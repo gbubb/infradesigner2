@@ -1,97 +1,22 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { RefreshCw, Info } from 'lucide-react';
 import { useDesignStore, manualRecalculateDesign } from '@/store/designStore';
-import { ResourceUtilizationChart } from './PowerDistributionChart';
-import { ResourceSummaryCard, CostAnalysisCard } from './ResultsSummaryCards';
-import { StorageClustersTable } from './StorageClustersTable';
-import { InfrastructureSummaryCard } from './InfrastructureSummaryCard';
-import { ComponentsTable } from './ComponentsTable';
-import { ComponentTypeSummaryTable } from './ComponentTypeSummaryTable';
-import { DesignAlerts } from './DesignAlerts';
-import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
-import { usePowerCalculations } from '@/hooks/design/usePowerCalculations';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Card } from '@/components/ui/card';
-import { PowerEnergySection } from './PowerEnergySection';
-import { DetailedCostAnalysisCard } from './DetailedCostAnalysisCard';
+import { LoadingSpinner } from './LoadingSpinner';
+import { ResultsHeader } from './ResultsHeader';
+import { DesignResultsContent } from './DesignResultsContent';
+import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 
 export const ResultsPanel: React.FC = () => {
-  // Use primitive selectors instead of object selectors to prevent unnecessary re-renders
   const activeDesign = useDesignStore(state => state.activeDesign);
   const saveDesign = useDesignStore(state => state.saveDesign);
   const componentRoles = useDesignStore(state => state.componentRoles);
-  const calculationBreakdowns = useDesignStore(state => state.calculationBreakdowns);
   
   const [isLoading, setIsLoading] = useState(true);
   const [hasCalculated, setHasCalculated] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
   
   // Use memoized design calculations through dedicated hook
-  const {
-    totalCost,
-    totalPower,
-    totalRackUnits,
-    componentsByType,
-    storageClustersMetrics,
-    actualHardwareTotals,
-    resourceMetrics,
-    resourceUtilization,
-    costPerVCPU,
-    costPerTB,
-    designErrors,
-    hasValidDesign,
-    amortizedCostsByType
-  } = useDesignCalculations();
-  
-  // Get power calculations which are separate from design calculations
-  const { powerUsage, energyCosts } = usePowerCalculations();
-  
-  // Calculate these simple values directly for better stability
-  // In a complex app, these would ideally be moved to their own memoized hooks
-  const capitalCost = activeDesign?.components?.reduce(
-    (total, c) => total + (c.cost * (c.quantity || 1)), 
-    0
-  ) || 0;
-  
-  // Calculate operational costs based on design requirements and power usage
-  const operationalCosts = React.useMemo(() => {
-    if (!activeDesign || !activeDesign.requirements) {
-      return {
-        racksMonthly: 0,
-        energyMonthly: 0,
-        amortizedMonthly: 0,
-        totalMonthly: 0
-      };
-    }
-    
-    const racksMonthly = (
-      (activeDesign.requirements.physicalConstraints?.useColoRacks ? 
-        (activeDesign.requirements.physicalConstraints.rackCostPerMonthEuros || 2000) : 0) * 
-      (activeDesign.requirements.physicalConstraints?.computeStorageRackQuantity || 1)
-    );
-    
-    const energyMonthly = powerUsage?.operationalPower ? 
-      ((powerUsage.operationalPower / 1000) * 
-       (activeDesign.requirements.physicalConstraints?.electricityPricePerKwh || 0.25) * 
-       24 * 30) : 0;
-    
-    const totalMonthly = racksMonthly + energyMonthly + (amortizedCostsByType?.total || 0);
-    
-    return {
-      racksMonthly,
-      energyMonthly,
-      amortizedMonthly: amortizedCostsByType?.total || 0,
-      totalMonthly
-    };
-  }, [activeDesign, powerUsage?.operationalPower, amortizedCostsByType?.total]);
-  
-  // Calculate TCO
-  const totalCostOfOwnership = React.useMemo(() => {
-    return capitalCost + (operationalCosts.totalMonthly * 12);
-  }, [capitalCost, operationalCosts.totalMonthly]);
+  const { designErrors, hasValidDesign } = useDesignCalculations();
   
   // Force recalculation when the component mounts, but only once
   useEffect(() => {
@@ -180,149 +105,31 @@ export const ResultsPanel: React.FC = () => {
   
   // Derived state
   const hasNoDesign = !hasValidDesign;
-  
-  // Calculate power per rack value
-  const powerPerRack = resourceMetrics?.totalRackQuantity 
-    ? (totalPower / resourceMetrics.totalRackQuantity)
-    : 0;
 
   // Show loading state while calculating
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold">Design Results</h2>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
-            <p className="text-muted-foreground">Calculating design results...</p>
-          </div>
-        </div>
+        <ResultsHeader 
+          onRecalculate={handleRecalculate}
+          onForceFullRecalculation={handleForceFullRecalculation}
+        />
+        <LoadingSpinner />
       </div>
     );
   }
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold">Design Results</h2>
-        <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" onClick={() => setShowDebug(true)}>
-                <Info className="h-4 w-4 mr-1" />
-                Debug
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
-              <DialogHeader>
-                <DialogTitle>Calculation Debug Info</DialogTitle>
-              </DialogHeader>
-              <div className="mt-4">
-                <h3 className="text-lg font-medium mb-2">Component Roles</h3>
-                <Card className="p-3 mb-4 bg-slate-50 overflow-auto max-h-[200px]">
-                  <pre className="text-xs">
-                    {JSON.stringify(componentRoles.map(role => ({
-                      id: role.id,
-                      role: role.role,
-                      assignedComponentId: role.assignedComponentId,
-                      requiredCount: role.requiredCount,
-                      adjustedRequiredCount: role.adjustedRequiredCount,
-                      hasCluster: !!role.clusterInfo
-                    })), null, 2)}
-                  </pre>
-                </Card>
-                
-                <h3 className="text-lg font-medium mb-2">Calculation Breakdowns</h3>
-                <Card className="p-3 mb-4 bg-slate-50 overflow-auto max-h-[200px]">
-                  <pre className="text-xs">
-                    {JSON.stringify(calculationBreakdowns, null, 2)}
-                  </pre>
-                </Card>
-                
-                <div className="flex justify-center mt-4">
-                  <Button onClick={handleForceFullRecalculation} className="w-full">
-                    Force Full Recalculation
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-          
-          <Button 
-            onClick={handleRecalculate} 
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Recalculate Design
-          </Button>
-        </div>
-      </div>
-      
-      <DesignAlerts 
-        errors={designErrors} 
-        hasNoDesign={hasNoDesign} 
+      <ResultsHeader 
+        onRecalculate={handleRecalculate}
+        onForceFullRecalculation={handleForceFullRecalculation}
       />
       
-      {!hasNoDesign && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <ResourceSummaryCard
-              totalVCPUs={actualHardwareTotals.totalVCPUs}
-              totalComputeMemoryTB={actualHardwareTotals.totalComputeMemoryTB}
-              totalStorageTB={actualHardwareTotals.totalStorageTB}
-              totalRackQuantity={resourceMetrics.totalRackQuantity}
-              totalRackUnits={totalRackUnits}
-              totalPower={totalPower}
-              powerPerRack={powerPerRack}
-            />
-            
-            <CostAnalysisCard
-              totalCost={totalCost}
-              costPerVCPU={costPerVCPU}
-              costPerTB={costPerTB}
-            />
-          </div>
-          
-          <PowerEnergySection 
-            powerUsage={powerUsage}
-            energyCosts={energyCosts}
-          />
-          
-          <DetailedCostAnalysisCard 
-            capitalCost={capitalCost}
-            operationalCosts={operationalCosts}
-            amortizedCostsByType={amortizedCostsByType}
-            totalCostOfOwnership={totalCostOfOwnership}
-          />
-          
-          <StorageClustersTable clusters={storageClustersMetrics} />
-          
-          <div className="mb-8">
-            <ResourceUtilizationChart 
-              powerUtilization={resourceUtilization.powerUtilization}
-              spaceUtilization={resourceUtilization.spaceUtilization}
-              leafNetworkUtilization={resourceUtilization.leafNetworkUtilization}
-              mgmtNetworkUtilization={resourceUtilization.mgmtNetworkUtilization}
-            />
-          </div>
-          
-          <InfrastructureSummaryCard
-            totalServers={resourceMetrics.totalServers}
-            totalLeafSwitches={resourceMetrics.totalLeafSwitches}
-            totalMgmtSwitches={resourceMetrics.totalMgmtSwitches}
-            totalRackUnits={resourceMetrics.totalRackUnits}
-            totalPower={resourceMetrics.totalPower}
-          />
-          
-          {activeDesign?.components && (
-            <ComponentsTable components={activeDesign.components} />
-          )}
-          
-          <ComponentTypeSummaryTable componentsByType={componentsByType} />
-        </>
-      )}
+      <DesignResultsContent 
+        designErrors={designErrors}
+        hasNoDesign={hasNoDesign}
+      />
     </div>
   );
 };
