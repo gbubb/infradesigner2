@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   InfrastructureDesign,
@@ -12,87 +11,6 @@ import { Separator } from '@/components/ui/separator';
 import { CompareCostMetrics } from './sections/CompareCostMetrics';
 import { CompareResourceMetrics } from './sections/CompareResourceMetrics';
 import { ComparePowerMetrics } from './sections/ComparePowerMetrics';
-
-interface DesignComparisonProps {
-  designA: InfrastructureDesign;
-  designB: InfrastructureDesign;
-}
-
-export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, designB }) => {
-  // Calculate important metrics for each design
-  const metricsA = calculateDesignMetrics(designA);
-  const metricsB = calculateDesignMetrics(designB);
-  
-  // Helper to determine percentage difference
-  const getPercentDifference = (valueA: number, valueB: number) => {
-    if (valueA === 0 && valueB === 0) return 0;
-    if (valueA === 0) return 100; // Avoid division by zero
-    
-    return ((valueB - valueA) / valueA) * 100;
-  };
-  
-  // Determine which metrics have significant differences (>10%)
-  const significantDifferences = {
-    totalCost: Math.abs(getPercentDifference(metricsA.totalCost, metricsB.totalCost)) > 10,
-    costPerVCPU: Math.abs(getPercentDifference(metricsA.costPerVCPU, metricsB.costPerVCPU)) > 10,
-    costPerTB: Math.abs(getPercentDifference(metricsA.costPerTB, metricsB.costPerTB)) > 10,
-    totalPower: Math.abs(getPercentDifference(metricsA.totalPower, metricsB.totalPower)) > 10,
-    totalVCPUs: Math.abs(getPercentDifference(metricsA.totalVCPUs, metricsB.totalVCPUs)) > 10,
-    totalMemoryTB: Math.abs(getPercentDifference(metricsA.totalMemoryTB, metricsB.totalMemoryTB)) > 10,
-    totalStorageTB: Math.abs(getPercentDifference(metricsA.totalStorageTB, metricsB.totalStorageTB)) > 10,
-    monthlyCost: Math.abs(getPercentDifference(metricsA.monthlyCost, metricsB.monthlyCost)) > 10,
-  };
-  
-  return (
-    <div className="space-y-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Design Comparison: {designA.name} vs {designB.name}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground mb-4">
-            This comparison highlights the differences between the selected designs across various metrics.
-            Significant differences (>10%) are highlighted.
-          </p>
-          
-          <div className="grid grid-cols-3 gap-4 mb-4 text-center font-medium">
-            <div>Metrics</div>
-            <div>{designA.name}</div>
-            <div>{designB.name}</div>
-          </div>
-          
-          <CompareCostMetrics 
-            designAName={designA.name}
-            designBName={designB.name}
-            metricsA={metricsA}
-            metricsB={metricsB}
-            significantDifferences={significantDifferences}
-          />
-          
-          <Separator className="my-6" />
-          
-          <CompareResourceMetrics
-            designAName={designA.name}
-            designBName={designB.name}
-            metricsA={metricsA}
-            metricsB={metricsB}
-            significantDifferences={significantDifferences}
-          />
-          
-          <Separator className="my-6" />
-          
-          <ComparePowerMetrics
-            designAName={designA.name}
-            designBName={designB.name}
-            metricsA={metricsA}
-            metricsB={metricsB}
-            significantDifferences={significantDifferences}
-          />
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
 
 // Helper function to calculate all relevant metrics from a design
 function calculateDesignMetrics(design: InfrastructureDesign) {
@@ -219,3 +137,84 @@ function calculateDesignMetrics(design: InfrastructureDesign) {
   
   return metrics;
 }
+
+interface DesignComparisonProps {
+  designA: InfrastructureDesign;
+  designB: InfrastructureDesign;
+}
+
+export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, designB }) => {
+  // Calculate important metrics for each design
+  const metricsA = calculateDesignMetrics(designA);
+  const metricsB = calculateDesignMetrics(designB);
+  
+  // Helper to determine percentage difference
+  const getPercentDifference = (valueA: number, valueB: number) => {
+    if (valueA === 0 && valueB === 0) return 0;
+    if (valueA === 0) return 100; // Avoid division by zero
+    
+    return ((valueB - valueA) / valueA) * 100;
+  };
+  
+  // Determine which metrics have significant differences (>10%)
+  const significantDifferences = {
+    totalCost: Math.abs(getPercentDifference(metricsA.totalCost, metricsB.totalCost)) > 10,
+    costPerVCPU: Math.abs(getPercentDifference(metricsA.costPerVCPU, metricsB.costPerVCPU)) > 10,
+    costPerTB: Math.abs(getPercentDifference(metricsA.costPerTB, metricsB.costPerTB)) > 10,
+    totalPower: Math.abs(getPercentDifference(metricsA.totalPower, metricsB.totalPower)) > 10,
+    totalVCPUs: Math.abs(getPercentDifference(metricsA.totalVCPUs, metricsB.totalVCPUs)) > 10,
+    totalMemoryTB: Math.abs(getPercentDifference(metricsA.totalMemoryTB, metricsB.totalMemoryTB)) > 10,
+    totalStorageTB: Math.abs(getPercentDifference(metricsA.totalStorageTB, metricsB.totalStorageTB)) > 10,
+    monthlyCost: Math.abs(getPercentDifference(metricsA.monthlyCost, metricsB.monthlyCost)) > 10,
+  };
+  
+  return (
+    <div className="space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Design Comparison: {designA.name} vs {designB.name}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground mb-4">
+            This comparison highlights the differences between the selected designs across various metrics.
+            Significant differences ({">"} 10%) are highlighted.
+          </p>
+          
+          <div className="grid grid-cols-3 gap-4 mb-4 text-center font-medium">
+            <div>Metrics</div>
+            <div>{designA.name}</div>
+            <div>{designB.name}</div>
+          </div>
+          
+          <CompareCostMetrics 
+            designAName={designA.name}
+            designBName={designB.name}
+            metricsA={metricsA}
+            metricsB={metricsB}
+            significantDifferences={significantDifferences}
+          />
+          
+          <Separator className="my-6" />
+          
+          <CompareResourceMetrics
+            designAName={designA.name}
+            designBName={designB.name}
+            metricsA={metricsA}
+            metricsB={metricsB}
+            significantDifferences={significantDifferences}
+          />
+          
+          <Separator className="my-6" />
+          
+          <ComparePowerMetrics
+            designAName={designA.name}
+            designBName={designB.name}
+            metricsA={metricsA}
+            metricsB={metricsB}
+            significantDifferences={significantDifferences}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
