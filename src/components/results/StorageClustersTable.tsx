@@ -22,10 +22,7 @@ interface StorageClustersTableProps {
 }
 
 export const StorageClustersTable: React.FC<StorageClustersTableProps> = ({ clusters }) => {
-  // Add another safety check to ensure clusters is an array
-  const validClusters = Array.isArray(clusters) ? clusters : [];
-  
-  if (validClusters.length === 0) {
+  if (clusters.length === 0) {
     return null;
   }
   
@@ -47,7 +44,7 @@ export const StorageClustersTable: React.FC<StorageClustersTableProps> = ({ clus
             </TableRow>
           </TableHeader>
           <TableBody>
-            {validClusters.map((cluster) => (
+            {clusters.map((cluster) => (
               <TableRow key={cluster.id}>
                 <TableCell className="font-medium">{cluster.name}</TableCell>
                 <TableCell>{cluster.poolType}</TableCell>

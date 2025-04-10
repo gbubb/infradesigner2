@@ -1,7 +1,12 @@
 
-// Storage efficiency factors
+/**
+ * Constants for infrastructure calculations
+ */
+
+// Storage conversion factors
 export const TB_TO_TIB_FACTOR = 0.909495;
 
+// Storage pool efficiency factors for different configurations
 export const StoragePoolEfficiencyFactors: Record<string, number> = {
   '3 Replica': 0.33333,
   '2 Replica': 0.5,

@@ -1,53 +1,59 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useDesignStore } from '@/store/designStore';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { RefreshCw, Info } from 'lucide-react';
+import { useDesignStore, manualRecalculateDesign } from '@/store/designStore';
+import { ResourceUtilizationChart } from './PowerDistributionChart';
+import { ResourceSummaryCard, CostAnalysisCard } from './ResultsSummaryCards';
+import { StorageClustersTable } from './StorageClustersTable';
+import { InfrastructureSummaryCard } from './InfrastructureSummaryCard';
+import { ComponentsTable } from './ComponentsTable';
+import { ComponentTypeSummaryTable } from './ComponentTypeSummaryTable';
+import { DesignAlerts } from './DesignAlerts';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
+import { PowerEnergySection } from './PowerEnergySection';
+import { DetailedCostAnalysisCard } from './DetailedCostAnalysisCard';
 import { toast } from 'sonner';
-import { LoadingIndicator } from './LoadingIndicator';
-import { ResultsHeader } from './ResultsHeader';
-import { ResultsContent } from './ResultsContent';
-import { useRecalculation } from '@/hooks/useRecalculation';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card } from '@/components/ui/card';
 
-/**
- * Results panel component for displaying design calculations
- * This implementation is hardened against undefined values and React hook dependency issues
- */
 export const ResultsPanel: React.FC = () => {
-  // Component state
+  const { activeDesign, saveDesign, componentRoles, calculationBreakdowns } = useDesignStore();
   const [isLoading, setIsLoading] = useState(true);
   const [hasCalculated, setHasCalculated] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   
-  // Get store state - using direct access pattern to avoid destructuring undefined values
-  const store = useDesignStore();
-  const activeDesign = store.activeDesign || {};
-  const designId = activeDesign?.id; // Use this for dependencies
+  const {
+    totalCost,
+    totalPower,
+    totalRackUnits,
+    componentsByType,
+    storageClustersMetrics,
+    actualHardwareTotals,
+    resourceMetrics,
+    resourceUtilization,
+    costPerVCPU,
+    costPerTB,
+    designErrors,
+    hasValidDesign,
+    monthlyAmortizedComputeCost,
+    monthlyAmortizedStorageCost,
+    monthlyAmortizedNetworkCost,
+    totalMonthlyAmortizedCost
+  } = useDesignCalculations();
   
-  // Get the recalculation handlers
-  const recalculationHooks = useRecalculation() || {};
-  const handleRecalculate = recalculationHooks.handleRecalculate || (() => {});
-  const handleForceFullRecalculation = recalculationHooks.handleForceFullRecalculation || (() => {});
-  
-  // Always call useDesignCalculations - this ensures consistent hook ordering
-  const designCalculations = useDesignCalculations() || {};
-  
-  // Create stable callback references
-  const recalculate = useCallback(() => {
-    try {
-      handleRecalculate();
-      setHasCalculated(true);
-    } catch (error) {
-      console.error("Error during calculation:", error);
-    }
-  }, [handleRecalculate]);
-  
-  // Effect to handle initial calculation - use primitive designId in dependency
   useEffect(() => {
-    if (!hasCalculated && designId) {
+    if (!hasCalculated) {
       setIsLoading(true);
       
       const timer = setTimeout(() => {
         try {
-          // Use the recalculation handler
-          recalculate();
+          manualRecalculateDesign();
+          
+          if (activeDesign) {
+            saveDesign();
+          }
+          
+          setHasCalculated(true);
         } catch (error) {
           console.error("Error during initial calculation:", error);
           toast.error("Failed to calculate design. Please try again.");
@@ -57,95 +63,213 @@ export const ResultsPanel: React.FC = () => {
       }, 300);
       
       return () => clearTimeout(timer);
-    } else if (!designId) {
-      // No active design, no need to calculate
+    }
+  }, [activeDesign?.id, hasCalculated, saveDesign]);
+  
+  const handleRecalculate = useCallback(() => {
+    setIsLoading(true);
+    
+    try {
+      manualRecalculateDesign();
+      
+      if (activeDesign) {
+        saveDesign();
+      }
+      
+      setHasCalculated(true);
+      toast.success("Design recalculated successfully");
+    } catch (error) {
+      console.error("Error during manual recalculation:", error);
+      toast.error("Failed to recalculate design. Please try again.");
+    } finally {
       setIsLoading(false);
     }
-  }, [designId, hasCalculated, recalculate]);
-  
-  // Wrapper for recalculate to set loading state
-  const onRecalculate = useCallback(() => {
+  }, [activeDesign, saveDesign]);
+
+  const handleForceFullRecalculation = useCallback(() => {
     setIsLoading(true);
+    
     try {
-      handleRecalculate();
-      setHasCalculated(true);
+      const assignedRoles = componentRoles.filter(role => role.assignedComponentId);
+      console.log(`Force recalculating ${assignedRoles.length} assigned components`);
+      
+      const { calculateRequiredQuantity } = useDesignStore.getState();
+      assignedRoles.forEach(role => {
+        if (role.assignedComponentId) {
+          console.log(`Recalculating ${role.role} (${role.id})`);
+          const newQuantity = calculateRequiredQuantity(role.id, role.assignedComponentId);
+          console.log(`New quantity for ${role.role}: ${newQuantity}`);
+        }
+      });
+      
+      manualRecalculateDesign();
+      
+      if (activeDesign) {
+        saveDesign();
+      }
+      
+      toast.success(`Recalculated ${assignedRoles.length} components`);
+    } catch (error) {
+      console.error("Error during force recalculation:", error);
+      toast.error("Failed to recalculate components. Please try again.");
     } finally {
-      // Using a slight delay for loading state to ensure UI updates
-      setTimeout(() => setIsLoading(false), 100);
+      setIsLoading(false);
     }
-  }, [handleRecalculate]);
+  }, [componentRoles, activeDesign, saveDesign]);
   
-  // Wrapper for force recalculation to set loading state
-  const onForceFullRecalculation = useCallback(() => {
-    setIsLoading(true);
-    try {
-      handleForceFullRecalculation();
-      setHasCalculated(true);
-    } finally {
-      // Using a slight delay for loading state to ensure UI updates
-      setTimeout(() => setIsLoading(false), 100);
-    }
-  }, [handleForceFullRecalculation]);
+  const hasNoDesign = !hasValidDesign;
   
-  const hasNoDesign = !designCalculations.hasValidDesign;
+  const powerPerRack = resourceMetrics?.totalRackQuantity 
+    ? (totalPower / resourceMetrics.totalRackQuantity)
+    : 0;
+    
+  const energyPricePerKwh = activeDesign?.requirements?.physicalConstraints?.operationalCosts?.energyPricePerKwh || 0.25;
 
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <ResultsHeader 
-          onRecalculate={onRecalculate}
-          onForceFullRecalculation={onForceFullRecalculation}
-        />
-        <LoadingIndicator />
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-semibold">Design Results</h2>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+            <p className="text-muted-foreground">Calculating design results...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Get components with type safety
-  const components = Array.isArray(activeDesign?.components) ? activeDesign.components : [];
-
-  // Ensure all props have safe default values
   return (
     <div className="max-w-4xl mx-auto">
-      <ResultsHeader 
-        onRecalculate={onRecalculate}
-        onForceFullRecalculation={onForceFullRecalculation}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold">Design Results</h2>
+        <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" onClick={() => setShowDebug(true)}>
+                <Info className="h-4 w-4 mr-1" />
+                Debug
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
+              <DialogHeader>
+                <DialogTitle>Calculation Debug Info</DialogTitle>
+              </DialogHeader>
+              <div className="mt-4">
+                <h3 className="text-lg font-medium mb-2">Component Roles</h3>
+                <Card className="p-3 mb-4 bg-slate-50 overflow-auto max-h-[200px]">
+                  <pre className="text-xs">
+                    {JSON.stringify(componentRoles.map(role => ({
+                      id: role.id,
+                      role: role.role,
+                      assignedComponentId: role.assignedComponentId,
+                      requiredCount: role.requiredCount,
+                      adjustedRequiredCount: role.adjustedRequiredCount,
+                      hasCluster: !!role.clusterInfo
+                    })), null, 2)}
+                  </pre>
+                </Card>
+                
+                <h3 className="text-lg font-medium mb-2">Calculation Breakdowns</h3>
+                <Card className="p-3 mb-4 bg-slate-50 overflow-auto max-h-[200px]">
+                  <pre className="text-xs">
+                    {JSON.stringify(calculationBreakdowns, null, 2)}
+                  </pre>
+                </Card>
+                
+                <div className="flex justify-center mt-4">
+                  <Button onClick={handleForceFullRecalculation} className="w-full">
+                    Force Full Recalculation
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Button 
+            onClick={handleRecalculate} 
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Recalculate Design
+          </Button>
+        </div>
+      </div>
+      
+      <DesignAlerts 
+        errors={designErrors} 
+        hasNoDesign={hasNoDesign} 
       />
       
-      <ResultsContent 
-        hasNoDesign={hasNoDesign}
-        designErrors={Array.isArray(designCalculations.designErrors) ? designCalculations.designErrors : []}
-        totalCost={typeof designCalculations.totalCost === 'number' ? designCalculations.totalCost : 0}
-        totalPower={typeof designCalculations.totalPower === 'number' ? designCalculations.totalPower : 0}
-        totalRackUnits={typeof designCalculations.totalRackUnits === 'number' ? designCalculations.totalRackUnits : 0}
-        componentsByType={designCalculations.componentsByType || {}}
-        storageClustersMetrics={Array.isArray(designCalculations.storageClustersMetrics) ? 
-          designCalculations.storageClustersMetrics : []}
-        actualHardwareTotals={designCalculations.actualHardwareTotals || {
-          totalVCPUs: 0,
-          totalComputeMemoryTB: 0,
-          totalStorageTB: 0,
-          totalMemoryTB: 0
-        }}
-        resourceMetrics={designCalculations.resourceMetrics || {}}
-        resourceUtilization={designCalculations.resourceUtilization || {
-          powerUtilization: { percentage: 0, used: 0, total: 0 },
-          spaceUtilization: { percentage: 0, used: 0, total: 0 },
-          leafNetworkUtilization: { percentage: 0, used: 0, total: 0 },
-          mgmtNetworkUtilization: { percentage: 0, used: 0, total: 0 }
-        }}
-        costPerVCPU={typeof designCalculations.costPerVCPU === 'number' ? designCalculations.costPerVCPU : 0}
-        costPerTB={typeof designCalculations.costPerTB === 'number' ? designCalculations.costPerTB : 0}
-        monthlyAmortizedComputeCost={typeof designCalculations.monthlyAmortizedComputeCost === 'number' ? 
-          designCalculations.monthlyAmortizedComputeCost : 0}
-        monthlyAmortizedStorageCost={typeof designCalculations.monthlyAmortizedStorageCost === 'number' ? 
-          designCalculations.monthlyAmortizedStorageCost : 0}
-        monthlyAmortizedNetworkCost={typeof designCalculations.monthlyAmortizedNetworkCost === 'number' ? 
-          designCalculations.monthlyAmortizedNetworkCost : 0}
-        totalMonthlyAmortizedCost={typeof designCalculations.totalMonthlyAmortizedCost === 'number' ? 
-          designCalculations.totalMonthlyAmortizedCost : 0}
-        components={components}
-      />
+      {!hasNoDesign && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <ResourceSummaryCard
+              totalVCPUs={actualHardwareTotals.totalVCPUs}
+              totalComputeMemoryTB={actualHardwareTotals.totalComputeMemoryTB}
+              totalStorageTB={actualHardwareTotals.totalStorageTB}
+              totalRackQuantity={resourceMetrics.totalRackQuantity}
+              totalRackUnits={totalRackUnits}
+              totalPower={totalPower}
+              powerPerRack={powerPerRack}
+            />
+            
+            <CostAnalysisCard
+              totalCost={totalCost}
+              costPerVCPU={costPerVCPU}
+              costPerTB={costPerTB}
+            />
+          </div>
+          
+          <PowerEnergySection
+            minimumPower={resourceMetrics.minimumPower}
+            operationalPower={resourceMetrics.operationalPower}
+            maximumPower={resourceMetrics.totalPower}
+            dailyEnergyCost={resourceMetrics.dailyEnergyCost}
+            monthlyEnergyCost={resourceMetrics.monthlyEnergyCost}
+            energyPricePerKwh={energyPricePerKwh}
+          />
+          
+          <DetailedCostAnalysisCard
+            totalCost={totalCost}
+            componentsByType={componentsByType}
+            monthlyEnergyCost={resourceMetrics.monthlyEnergyCost}
+            monthlyColoCost={resourceMetrics.monthlyColoCost}
+            totalRackQuantity={resourceMetrics.totalRackQuantity}
+            monthlyAmortizedComputeCost={monthlyAmortizedComputeCost}
+            monthlyAmortizedStorageCost={monthlyAmortizedStorageCost}
+            monthlyAmortizedNetworkCost={monthlyAmortizedNetworkCost}
+            totalMonthlyAmortizedCost={totalMonthlyAmortizedCost}
+          />
+          
+          <StorageClustersTable clusters={storageClustersMetrics} />
+          
+          <div className="mb-8">
+            <ResourceUtilizationChart 
+              powerUtilization={resourceUtilization.powerUtilization}
+              spaceUtilization={resourceUtilization.spaceUtilization}
+              leafNetworkUtilization={resourceUtilization.leafNetworkUtilization}
+              mgmtNetworkUtilization={resourceUtilization.mgmtNetworkUtilization}
+            />
+          </div>
+          
+          <InfrastructureSummaryCard
+            totalServers={resourceMetrics.totalServers}
+            totalLeafSwitches={resourceMetrics.totalLeafSwitches}
+            totalMgmtSwitches={resourceMetrics.totalMgmtSwitches}
+            totalRackUnits={resourceMetrics.totalRackUnits}
+            totalPower={resourceMetrics.totalPower}
+          />
+          
+          {activeDesign?.components && (
+            <ComponentsTable components={activeDesign.components} />
+          )}
+          
+          <ComponentTypeSummaryTable componentsByType={componentsByType} />
+        </>
+      )}
     </div>
   );
 };

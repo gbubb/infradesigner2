@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Header } from '@/components/layout/header';
 import { RequirementsPanel } from '@/components/requirements/RequirementsPanel';
@@ -7,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDesignStore } from '@/store/designStore';
 import { ComponentLibrary } from '@/components/sidebar/ComponentLibrary';
 import { ComparePanel } from '@/components/compare/ComparePanel';
-import { ResultsErrorBoundary } from '@/components/results/ResultsErrorBoundary';
 
 export const AppLayout: React.FC = () => {
   const { activeDesign } = useDesignStore();
@@ -34,10 +34,7 @@ export const AppLayout: React.FC = () => {
             <DesignPanel />
           </TabsContent>
           <TabsContent value="results" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
-            {/* Wrap ResultsPanel with error boundary to prevent app crashes */}
-            <ResultsErrorBoundary>
-              <ResultsPanel />
-            </ResultsErrorBoundary>
+            <ResultsPanel />
           </TabsContent>
           <TabsContent value="compare" className="flex-1 overflow-auto m-0 pt-6 px-6 relative">
             <ComparePanel />

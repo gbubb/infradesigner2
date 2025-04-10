@@ -1,118 +1,71 @@
+
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
-import { 
-  InfrastructureComponent, 
-  InfrastructureDesign, 
-  DesignRequirements, 
-  StorageClusterRequirement 
-} from '@/types/infrastructure';
+import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/types/infrastructure';
 
-/**
- * Custom hook to calculate storage cluster metrics from the current design.
- * 
- * IMPORTANT: This implementation avoids passing potentially undefined values in the
- * dependency array by using stable empty objects as fallbacks and explicit dependency checks.
- */
 export const useStorageClusters = () => {
-  // Access store values with guaranteed non-undefined defaults
-  const storeState = useDesignStore();
+  const { activeDesign, requirements } = useDesignStore();
   
-  // Extract and validate the data we need
+  // Calculate storage clusters metrics
   const storageClustersMetrics = useMemo(() => {
-    // Safely access store state with fallbacks at every level
-    const activeDesign = storeState?.activeDesign || {};
-    const requirements = storeState?.requirements || {};
-    const components = Array.isArray(activeDesign?.components) ? activeDesign.components : [];
-    const storageRequirements = requirements?.storageRequirements || { storageClusters: [] };
-    const storageClusters = Array.isArray(storageRequirements?.storageClusters) 
-      ? storageRequirements.storageClusters 
-      : [];
-    
-    // Early return if we don't have enough data
-    if (components.length === 0 || storageClusters.length === 0) {
+    if (!activeDesign?.components || !requirements.storageRequirements.storageClusters) {
       return [];
     }
-    
-    // Process each cluster with defensive coding
-    return storageClusters
-      .filter(cluster => cluster && typeof cluster === 'object' && cluster.id)
-      .map(cluster => {
-        // Find storage nodes for this cluster
-        const clusterNodes = components.filter(
-          component => component && 
-          component.role === 'storageNode' && 
-          component.clusterInfo && 
-          component.clusterInfo.clusterId === cluster.id
-        );
+
+    return requirements.storageRequirements.storageClusters.map(cluster => {
+      // Find storage nodes for this cluster
+      const clusterNodes = activeDesign.components.filter(
+        component => component.role === 'storageNode' && 
+        (component as any).clusterInfo?.clusterId === cluster.id
+      );
+      
+      // Calculate total raw capacity
+      let totalRawCapacityTB = 0;
+      let totalNodeCost = 0;
+      
+      clusterNodes.forEach(node => {
+        const quantity = node.quantity || 1;
+        totalNodeCost += node.cost * quantity;
         
-        if (clusterNodes.length === 0) {
-          return null;
-        }
-        
-        // Calculate total raw capacity and cost
-        let totalRawCapacityTB = 0;
-        let totalNodeCost = 0;
-        
-        clusterNodes.forEach(node => {
-          if (!node) return;
-          
-          const quantity = typeof node.quantity === 'number' ? node.quantity : 1;
-          totalNodeCost += (typeof node.cost === 'number' ? node.cost : 0) * quantity;
-          
-          // Add attached disks capacity
-          const disks = Array.isArray(node.attachedDisks) ? node.attachedDisks : [];
-          disks.forEach(disk => {
-            if (disk && typeof disk === 'object' && typeof disk.capacityTB === 'number') {
-              const diskQuantity = typeof disk.quantity === 'number' ? disk.quantity : 1;
-              totalRawCapacityTB += disk.capacityTB * diskQuantity * quantity;
+        // Add attached disks capacity if available
+        if ('attachedDisks' in node) {
+          const disks = (node as any).attachedDisks || [];
+          disks.forEach((disk: any) => {
+            if (disk && 'capacityTB' in disk) {
+              totalRawCapacityTB += disk.capacityTB * (disk.quantity || 1) * quantity;
             }
           });
-        });
-        
-        // Calculate usable capacity based on pool type
-        const poolType = typeof cluster.poolType === 'string' ? cluster.poolType : '3 Replica';
-        const poolEfficiencyFactor = typeof StoragePoolEfficiencyFactors[poolType] === 'number' 
-          ? StoragePoolEfficiencyFactors[poolType] 
-          : (1/3);
-        
-        const maxFillFactor = typeof cluster.maxFillFactor === 'number' 
-          ? cluster.maxFillFactor / 100 
-          : 0.8;
-        
-        const usableCapacityTB = totalRawCapacityTB * poolEfficiencyFactor;
-        const usableCapacityTiB = usableCapacityTB * TB_TO_TIB_FACTOR;
-        const effectiveCapacityTiB = usableCapacityTiB * maxFillFactor;
-        
-        // Calculate cost per TiB
-        const costPerTiB = usableCapacityTiB > 0 ? totalNodeCost / usableCapacityTiB : 0;
-        
-        // Calculate total node count
-        const nodeCount = clusterNodes.reduce((sum, node) => {
-          const nodeQuantity = typeof node?.quantity === 'number' ? node.quantity : 1;
-          return sum + nodeQuantity;
-        }, 0);
-        
-        return {
-          id: cluster.id,
-          name: typeof cluster.name === 'string' ? cluster.name : '',
-          poolType: poolType,
-          maxFillFactor: typeof cluster.maxFillFactor === 'number' ? cluster.maxFillFactor : 80,
-          totalRawCapacityTB,
-          usableCapacityTB,
-          usableCapacityTiB,
-          effectiveCapacityTiB,
-          totalNodeCost,
-          costPerTiB,
-          nodeCount
-        };
-      })
-      .filter(Boolean);
-  // CRITICAL: Use concrete primitive value in dependency array, not objects that could be undefined
-  // This is the key to fixing the "Cannot read properties of undefined (reading 'length')" error
-  }, [storeState.activeDesign?.id, storeState.requirements?.id]);
-  
+        }
+      });
+      
+      // Calculate usable capacity based on pool type
+      const poolEfficiencyFactor = StoragePoolEfficiencyFactors[cluster.poolType || '3 Replica'] || (1/3);
+      const maxFillFactor = (cluster.maxFillFactor || 80) / 100;
+      
+      const usableCapacityTB = totalRawCapacityTB * poolEfficiencyFactor;
+      const usableCapacityTiB = usableCapacityTB * TB_TO_TIB_FACTOR;
+      const effectiveCapacityTiB = usableCapacityTiB * maxFillFactor;
+      
+      // Calculate cost per TiB
+      const costPerTiB = usableCapacityTiB > 0 ? totalNodeCost / usableCapacityTiB : 0;
+      
+      return {
+        id: cluster.id,
+        name: cluster.name,
+        poolType: cluster.poolType,
+        maxFillFactor: cluster.maxFillFactor,
+        totalRawCapacityTB,
+        usableCapacityTB,
+        usableCapacityTiB,
+        effectiveCapacityTiB,
+        totalNodeCost,
+        costPerTiB,
+        nodeCount: clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0)
+      };
+    });
+  }, [activeDesign, requirements]);
+
   return {
-    storageClustersMetrics: Array.isArray(storageClustersMetrics) ? storageClustersMetrics : []
+    storageClustersMetrics
   };
 };

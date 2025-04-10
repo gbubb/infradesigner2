@@ -15,14 +15,3 @@ export {
   TB_TO_TIB_FACTOR,
   StoragePoolEfficiencyFactors 
 } from './constants';
-
-// Re-export the new resource calculation utilities
-export {
-  calculateAmortizedCosts,
-  calculatePowerMetrics,
-  calculateEnergyCosts,
-  calculateUtilizationMetrics,
-  getDeviceLifespans,
-  getOperationalSettings,
-  countComponentsByType
-} from '@/hooks/design/utils/resourceCalculationUtils';
