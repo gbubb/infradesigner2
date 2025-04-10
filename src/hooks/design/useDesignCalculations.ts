@@ -1,41 +1,12 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { useResourceMetrics } from './useResourceMetrics';
-import { useStorageClusters } from './useStorageClusters';
+import { useStorageClustersWrapper } from './useStorageClustersWrapper';
 import { useHardwareTotals } from './useHardwareTotals';
 import { useComponentsByType } from './useComponentsByType';
 import { useCostAnalysis } from './useCostAnalysis';
 import { useDesignValidation } from './useDesignValidation';
+import { useResourceMetrics } from './useResourceMetrics';
 import { InfrastructureComponent } from '@/types/infrastructure';
-
-// Define a type for the resource metrics
-interface ResourceMetricsType {
-  totalRackUnits?: number;
-  totalPower?: number;
-  minimumPower?: number;
-  operationalPower?: number;
-  monthlyAmortizedComputeCost?: number;
-  monthlyAmortizedStorageCost?: number;
-  monthlyAmortizedNetworkCost?: number;
-  totalMonthlyAmortizedCost?: number;
-  totalRackQuantity?: number;
-  energyPricePerKwh?: number;
-  dailyEnergyCost?: number;
-  monthlyEnergyCost?: number;
-  monthlyColoCost?: number;
-  totalServers?: number;
-  totalLeafSwitches?: number;
-  totalMgmtSwitches?: number;
-  [key: string]: any;
-}
-
-// Define safe defaults for resource utilization
-const DEFAULT_RESOURCE_UTILIZATION = {
-  powerUtilization: { percentage: 0, used: 0, total: 0 },
-  spaceUtilization: { percentage: 0, used: 0, total: 0 },
-  leafNetworkUtilization: { percentage: 0, used: 0, total: 0 },
-  mgmtNetworkUtilization: { percentage: 0, used: 0, total: 0 }
-};
 
 // Default hardware totals
 const DEFAULT_HARDWARE_TOTALS = {
@@ -45,25 +16,48 @@ const DEFAULT_HARDWARE_TOTALS = {
   totalMemoryTB: 0
 };
 
+// Default resource utilization
+const DEFAULT_RESOURCE_UTILIZATION = {
+  powerUtilization: { percentage: 0, used: 0, total: 0 },
+  spaceUtilization: { percentage: 0, used: 0, total: 0 },
+  leafNetworkUtilization: { percentage: 0, used: 0, total: 0 },
+  mgmtNetworkUtilization: { percentage: 0, used: 0, total: 0 }
+};
+
 /**
- * A hook that aggregates all design calculations and metrics.
- * This implementation is designed to be resilient to undefined values
- * and avoid React hook dependency array issues.
+ * A completely rewritten version of useDesignCalculations that avoids React's useMemo
+ * hook mechanism entirely, using useState/useEffect instead to prevent the
+ * "Cannot read properties of undefined (reading 'length')" error.
  */
 export const useDesignCalculations = () => {
-  // Direct store access without destructuring to avoid potential undefined values
+  // Get store 
   const store = useDesignStore();
-  const designId = store.activeDesign?.id; // Use this for dependencies
+  const designId = store.activeDesign?.id;
   
-  // Safely get all the data we need with proper fallbacks
+  // State for all calculation results
+  const [calculations, setCalculations] = useState({
+    totalCost: 0,
+    totalPower: 0,
+    totalRackUnits: 0,
+    minimumPower: 0,
+    operationalPower: 0,
+    hasValidDesign: false,
+    hasStorageNodes: false,
+    monthlyAmortizedComputeCost: 0,
+    monthlyAmortizedStorageCost: 0, 
+    monthlyAmortizedNetworkCost: 0,
+    totalMonthlyAmortizedCost: 0,
+    costPerVCPU: 0,
+    costPerTB: 0
+  });
+  
+  // Use our safer wrapper version instead of the original hook
+  const { storageClustersMetrics } = useStorageClustersWrapper();
+  
+  // Get other hooks but handle potential undefined returns
   const resourceMetricsResult = useResourceMetrics() || {};
-  const resourceMetrics: ResourceMetricsType = resourceMetricsResult.resourceMetrics || {};
+  const resourceMetrics = resourceMetricsResult.resourceMetrics || {};
   const resourceUtilization = resourceMetricsResult.resourceUtilization || DEFAULT_RESOURCE_UTILIZATION;
-  
-  const storageClustersResult = useStorageClusters();
-  const storageClustersMetrics = Array.isArray(storageClustersResult?.storageClustersMetrics) 
-    ? storageClustersResult.storageClustersMetrics 
-    : [];
   
   const hardwareTotalsResult = useHardwareTotals();
   const actualHardwareTotals = hardwareTotalsResult?.actualHardwareTotals || DEFAULT_HARDWARE_TOTALS;
@@ -81,100 +75,63 @@ export const useDesignCalculations = () => {
     ? designValidationResult.designErrors 
     : [];
 
-  // Extract metrics with proper defaults using primitive values in dependencies
-  const totalRackUnits = useMemo(() => 
-    typeof resourceMetrics.totalRackUnits === 'number' ? resourceMetrics.totalRackUnits : 0, 
-    [resourceMetrics.totalRackUnits]
-  );
-  
-  const totalPower = useMemo(() => 
-    typeof resourceMetrics.totalPower === 'number' ? resourceMetrics.totalPower : 0, 
-    [resourceMetrics.totalPower]
-  );
-  
-  const minimumPower = useMemo(() => 
-    typeof resourceMetrics.minimumPower === 'number' ? resourceMetrics.minimumPower : 0, 
-    [resourceMetrics.minimumPower]
-  );
-  
-  const operationalPower = useMemo(() => 
-    typeof resourceMetrics.operationalPower === 'number' ? resourceMetrics.operationalPower : 0, 
-    [resourceMetrics.operationalPower]
-  );
-  
-  // Extract amortized cost metrics with proper defaults
-  const monthlyAmortizedComputeCost = useMemo(() => 
-    typeof resourceMetrics.monthlyAmortizedComputeCost === 'number' 
-      ? resourceMetrics.monthlyAmortizedComputeCost 
-      : 0, 
-    [resourceMetrics.monthlyAmortizedComputeCost]
-  );
-  
-  const monthlyAmortizedStorageCost = useMemo(() => 
-    typeof resourceMetrics.monthlyAmortizedStorageCost === 'number' 
-      ? resourceMetrics.monthlyAmortizedStorageCost 
-      : 0, 
-    [resourceMetrics.monthlyAmortizedStorageCost]
-  );
-  
-  const monthlyAmortizedNetworkCost = useMemo(() => 
-    typeof resourceMetrics.monthlyAmortizedNetworkCost === 'number' 
-      ? resourceMetrics.monthlyAmortizedNetworkCost 
-      : 0, 
-    [resourceMetrics.monthlyAmortizedNetworkCost]
-  );
-  
-  const totalMonthlyAmortizedCost = useMemo(() => 
-    typeof resourceMetrics.totalMonthlyAmortizedCost === 'number' 
-      ? resourceMetrics.totalMonthlyAmortizedCost 
-      : 0, 
-    [resourceMetrics.totalMonthlyAmortizedCost]
-  );
-
-  // Check if we have a valid design with components - use primitive ID in dependency
-  const hasValidDesign = useMemo(() => {
-    const activeDesign = store.activeDesign || {};
-    const components = activeDesign.components || [];
-    
-    return Boolean(
-      activeDesign.id &&
-      Array.isArray(components) &&
-      components.length > 0
-    );
-  }, [designId]);
-
-  // Compute if the design has storage nodes - use primitive ID in dependency
-  const hasStorageNodes = useMemo(() => {
-    const activeDesign = store.activeDesign || {};
-    const components = activeDesign.components || [];
-    
-    if (!Array.isArray(components) || components.length === 0) {
-      return false;
+  // Recalculate when designId changes (this replaces all the useMemo calls)
+  useEffect(() => {
+    try {
+      const activeDesign = store.activeDesign || {};
+      const components = Array.isArray(activeDesign.components) ? activeDesign.components : [];
+      
+      // Check if we have a valid design
+      const hasValidDesign = Boolean(activeDesign.id && components.length > 0);
+      
+      // Check if we have storage nodes
+      const hasStorageNodes = components.some(c => c && c.role === 'storageNode');
+      
+      // Update all calculations
+      setCalculations({
+        totalCost,
+        totalPower: typeof resourceMetrics.totalPower === 'number' ? resourceMetrics.totalPower : 0,
+        totalRackUnits: typeof resourceMetrics.totalRackUnits === 'number' ? resourceMetrics.totalRackUnits : 0,
+        minimumPower: typeof resourceMetrics.minimumPower === 'number' ? resourceMetrics.minimumPower : 0,
+        operationalPower: typeof resourceMetrics.operationalPower === 'number' ? resourceMetrics.operationalPower : 0,
+        hasValidDesign,
+        hasStorageNodes,
+        monthlyAmortizedComputeCost: typeof resourceMetrics.monthlyAmortizedComputeCost === 'number' 
+          ? resourceMetrics.monthlyAmortizedComputeCost : 0,
+        monthlyAmortizedStorageCost: typeof resourceMetrics.monthlyAmortizedStorageCost === 'number'
+          ? resourceMetrics.monthlyAmortizedStorageCost : 0,
+        monthlyAmortizedNetworkCost: typeof resourceMetrics.monthlyAmortizedNetworkCost === 'number'
+          ? resourceMetrics.monthlyAmortizedNetworkCost : 0,
+        totalMonthlyAmortizedCost: typeof resourceMetrics.totalMonthlyAmortizedCost === 'number'
+          ? resourceMetrics.totalMonthlyAmortizedCost : 0,
+        costPerVCPU,
+        costPerTB
+      });
+    } catch (error) {
+      console.error("Error in design calculations:", error);
     }
-    
-    return components.some(c => c && c.role === 'storageNode');
-  }, [designId]);
+  }, [
+    designId, 
+    totalCost, 
+    costPerVCPU, 
+    costPerTB, 
+    resourceMetrics.totalPower,
+    resourceMetrics.totalRackUnits,
+    resourceMetrics.minimumPower,
+    resourceMetrics.operationalPower,
+    resourceMetrics.monthlyAmortizedComputeCost,
+    resourceMetrics.monthlyAmortizedStorageCost,
+    resourceMetrics.monthlyAmortizedNetworkCost,
+    resourceMetrics.totalMonthlyAmortizedCost
+  ]);
 
-  // Return the aggregated calculations with all proper defaults
   return {
-    totalCost,
-    totalPower,
-    totalRackUnits,
-    minimumPower,
-    operationalPower,
-    componentsByType,
+    ...calculations,
     storageClustersMetrics,
+    componentsByType,
     actualHardwareTotals,
     resourceMetrics,
     resourceUtilization,
-    costPerVCPU,
-    costPerTB,
-    designErrors,
-    hasValidDesign,
-    hasStorageNodes,
-    monthlyAmortizedComputeCost,
-    monthlyAmortizedStorageCost,
-    monthlyAmortizedNetworkCost,
-    totalMonthlyAmortizedCost
+    designErrors
   };
 };
