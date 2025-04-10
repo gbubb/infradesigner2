@@ -10,14 +10,18 @@ import {
 } from '@/types/infrastructure';
 
 export const useStorageClusters = () => {
-  // Create stable references to state from the store with explicit null defaults
-  const activeDesign = useDesignStore(state => state.activeDesign || null);
-  const requirements = useDesignStore(state => state.requirements || null);
+  // Create stable EMPTY references to prevent undefined values in dependency arrays
+  // It's critical to use {} instead of null to prevent the React hook dependency comparison error
+  const activeDesign = useDesignStore(state => state.activeDesign || {});
+  const requirementsFromStore = useDesignStore(state => state.requirements);
+  
+  // Create a stable reference that is guaranteed to be an object, never undefined
+  const requirements = useMemo(() => requirementsFromStore || {}, [requirementsFromStore]);
   
   // Calculate storage clusters metrics
   const storageClustersMetrics = useMemo(() => {
-    // Early return with empty array if either dependency is null/undefined
-    if (!activeDesign || !requirements) {
+    // Early return with empty array if either dependency doesn't have required properties
+    if (!activeDesign.id || !requirements) {
       return [];
     }
     
@@ -101,7 +105,7 @@ export const useStorageClusters = () => {
         nodeCount
       };
     }).filter(Boolean); // Filter out null values
-  }, [activeDesign, requirements]); // Use stable references as dependencies
+  }, [activeDesign, requirements]); // Now these dependencies will NEVER be undefined
 
   return {
     storageClustersMetrics: Array.isArray(storageClustersMetrics) ? storageClustersMetrics : []

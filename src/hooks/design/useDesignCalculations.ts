@@ -31,20 +31,30 @@ interface ResourceMetricsType {
 }
 
 export const useDesignCalculations = () => {
-  // Get store state with proper typing and default null value to ensure stable reference
-  const activeDesign = useDesignStore(state => state.activeDesign || null);
+  // Get store state with proper typing and NEVER-UNDEFINED default value for stable reference
+  // Critical: Use empty object {} instead of null to prevent React hook comparison errors
+  const activeDesign = useDesignStore(state => state.activeDesign || {});
   
-  // Import all the individual hooks with stable references
-  const resourceMetricsHook = useResourceMetrics();
+  // Import all the individual hooks with stable references, ensuring they never return undefined
+  const resourceMetricsHook = useResourceMetrics() || {};
   const resourceMetrics: ResourceMetricsType = resourceMetricsHook?.resourceMetrics || {};
   const resourceUtilization = resourceMetricsHook?.resourceUtilization || {};
   
-  // Get all metrics with proper null checks and default values
-  const { storageClustersMetrics = [] } = useStorageClusters() || { storageClustersMetrics: [] };
-  const { actualHardwareTotals = {} } = useHardwareTotals() || { actualHardwareTotals: {} };
-  const { componentsByType = {} } = useComponentsByType() || { componentsByType: {} };
-  const { totalCost = 0, costPerVCPU = 0, costPerTB = 0 } = useCostAnalysis() || { totalCost: 0, costPerVCPU: 0, costPerTB: 0 };
-  const { designErrors = [] } = useDesignValidation() || { designErrors: [] };
+  // Get all metrics with proper null checks and default values that are GUARANTEED to be non-undefined
+  const storageClustersHook = useStorageClusters() || { storageClustersMetrics: [] };
+  const storageClustersMetrics = storageClustersHook.storageClustersMetrics || [];
+  
+  const hardwareTotalsHook = useHardwareTotals() || { actualHardwareTotals: {} };
+  const actualHardwareTotals = hardwareTotalsHook.actualHardwareTotals || {};
+  
+  const componentsByTypeHook = useComponentsByType() || { componentsByType: {} };
+  const componentsByType = componentsByTypeHook.componentsByType || {};
+  
+  const costAnalysisHook = useCostAnalysis() || { totalCost: 0, costPerVCPU: 0, costPerTB: 0 };
+  const { totalCost = 0, costPerVCPU = 0, costPerTB = 0 } = costAnalysisHook;
+  
+  const designValidationHook = useDesignValidation() || { designErrors: [] };
+  const designErrors = designValidationHook.designErrors || [];
   
   // Calculate total rack units (extracted from resourceMetrics for convenience)
   const totalRackUnits = useMemo(() => resourceMetrics?.totalRackUnits || 0, [resourceMetrics]);
@@ -67,6 +77,7 @@ export const useDesignCalculations = () => {
     resourceMetrics?.totalMonthlyAmortizedCost || 0, [resourceMetrics]);
 
   // Check if we have a valid design with components
+  // Always use explicit properties rather than the whole object in the dependency array
   const hasValidDesign = useMemo(() => {
     return Boolean(
       activeDesign && 
@@ -74,13 +85,14 @@ export const useDesignCalculations = () => {
       Array.isArray(activeDesign.components) &&
       activeDesign.components.length > 0
     );
-  }, [activeDesign]);
+  }, [activeDesign.id, activeDesign.components]);
 
   // Compute if the design has storage nodes with proper null checks
+  // Always use explicit properties rather than the whole object in the dependency array
   const hasStorageNodes = useMemo(() => {
     if (!activeDesign?.components || !Array.isArray(activeDesign.components)) return false;
     return activeDesign.components.some(c => c && c.role === 'storageNode');
-  }, [activeDesign]);
+  }, [activeDesign.id, activeDesign.components]);
 
   // Ensure defaults for all returned values
   const defaultResourceUtilization = {

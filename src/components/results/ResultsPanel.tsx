@@ -13,8 +13,8 @@ export const ResultsPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasCalculated, setHasCalculated] = useState(false);
   
-  // Get store state with null check - call hooks consistently before any conditionals
-  const activeDesign = useDesignStore(state => state.activeDesign);
+  // Get store state with empty object default - NEVER use null as default for React hook dependencies
+  const activeDesign = useDesignStore(state => state.activeDesign || {});
   
   // Get the recalculation handlers next
   const { handleRecalculate, handleForceFullRecalculation } = useRecalculation();

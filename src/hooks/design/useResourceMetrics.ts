@@ -13,7 +13,8 @@ import {
 import { useComponentCosts } from './utils/useComponentCosts';
 
 export const useResourceMetrics = () => {
-  const { activeDesign } = useDesignStore();
+  // Use empty object {} as default - NEVER use null/undefined in useStore or hook dependencies
+  const activeDesign = useDesignStore(state => state.activeDesign || {});
   
   // Calculate resource metrics
   const resourceMetrics = useMemo(() => {
