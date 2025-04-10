@@ -13,11 +13,13 @@ import { v4 as uuidv4 } from 'uuid';
 interface ComputeClusterFormProps {
   clusters: ComputeClusterRequirement[];
   onUpdate: (clusters: ComputeClusterRequirement[]) => void;
+  showHeader?: boolean;
 }
 
 export const ComputeClusterForm: React.FC<ComputeClusterFormProps> = ({
   clusters,
   onUpdate,
+  showHeader = true,
 }) => {
   const addCluster = () => {
     const newCluster: ComputeClusterRequirement = {
@@ -51,13 +53,15 @@ export const ComputeClusterForm: React.FC<ComputeClusterFormProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Compute Clusters</h3>
-        <Button variant="outline" size="sm" onClick={addCluster}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Cluster
-        </Button>
-      </div>
+      {showHeader && (
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium">Compute Clusters</h3>
+          <Button variant="outline" size="sm" onClick={addCluster}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Cluster
+          </Button>
+        </div>
+      )}
       
       {clusters.length === 0 ? (
         <Card>
@@ -80,13 +84,15 @@ export const ComputeClusterForm: React.FC<ComputeClusterFormProps> = ({
                   onChange={(e) => updateCluster(index, 'name', e.target.value)}
                   className="font-medium text-lg h-8 w-72"
                 />
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => removeCluster(index)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                {showHeader && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => removeCluster(index)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">

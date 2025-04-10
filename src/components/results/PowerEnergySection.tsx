@@ -29,6 +29,17 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
   const opPercent = (operationalPower / totalAvailablePower) * 100;
   const maxPercent = (maximumPower / totalAvailablePower) * 100;
   
+  // Helper function to format power values
+  const formatPower = (watts: number) => {
+    if (watts >= 10000) {
+      return `${(watts / 1000).toFixed(1)} kW`;
+    }
+    return `${Math.round(watts)} W`;
+  };
+  
+  // Calculate unused power
+  const unusedPower = totalAvailablePower - maximumPower;
+  
   return (
     <Card className="mb-8">
       <CardHeader>
@@ -39,7 +50,7 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-sm font-medium">Power Usage Levels</span>
-              <span className="text-sm font-medium">{Math.round(totalAvailablePower)} W Available</span>
+              <span className="text-sm font-medium">{formatPower(totalAvailablePower)} Available</span>
             </div>
             
             <div className="h-10 bg-gray-200 relative rounded-full overflow-hidden">
@@ -64,9 +75,9 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
               {/* Labels */}
               <div className="absolute inset-0 flex items-center px-3">
                 <div className="flex justify-between w-full text-xs z-10">
-                  <span className="font-semibold text-white">{Math.round(minimumPower)} W Min</span>
-                  <span className="font-semibold text-white">{Math.round(operationalPower)} W Op</span>
-                  <span className="font-semibold text-white">{Math.round(maximumPower)} W Max</span>
+                  <span className="font-semibold text-white">{formatPower(minimumPower)} Min</span>
+                  <span className="font-semibold text-white">{formatPower(operationalPower)} Op</span>
+                  <span className="font-semibold text-white">{formatPower(maximumPower)} Max</span>
                 </div>
               </div>
             </div>
@@ -87,7 +98,7 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-gray-200 rounded-sm mr-1"></div>
-                <span>Unused ({Math.round(totalAvailablePower - maximumPower)} W)</span>
+                <span>Unused ({formatPower(unusedPower)})</span>
               </div>
             </div>
           </div>

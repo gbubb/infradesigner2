@@ -120,6 +120,7 @@ export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
           <ComputeClusterForm
             clusters={[cluster]} 
             onUpdate={(updatedClusters) => handleClusterUpdate(cluster.id, updatedClusters[0])}
+            showHeader={false}
           />
           <Button
             variant="ghost"
