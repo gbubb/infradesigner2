@@ -43,7 +43,7 @@ export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
             <span className="font-medium">{totalComputeMemoryTB.toFixed(2)} TB memory</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Total Storage:</span>
+            <span className="text-muted-foreground">Usable Storage:</span>
             <span className="font-medium">{totalStorageTB.toFixed(2)} TiB</span>
           </div>
           <div className="flex justify-between">
@@ -56,12 +56,18 @@ export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Total Power:</span>
-            <span className="font-medium">{totalPower.toLocaleString()} W</span>
+            <span className="font-medium">
+              {totalPower >= 10000 ? 
+                `${(totalPower / 1000).toFixed(2)} kW` : 
+                `${totalPower.toLocaleString()} W`}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Power per Rack:</span>
             <span className="font-medium">
-              {powerPerRack.toLocaleString(undefined, { maximumFractionDigits: 0 })} W
+              {powerPerRack >= 10000 ?
+                `${(powerPerRack / 1000).toFixed(2)} kW` :
+                `${powerPerRack.toLocaleString(undefined, { maximumFractionDigits: 0 })} W`}
             </span>
           </div>
         </div>

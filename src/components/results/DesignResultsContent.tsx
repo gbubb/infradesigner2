@@ -36,7 +36,7 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
     amortizedCostsByType
   } = useDesignCalculations();
 
-  const { powerUsage, energyCosts } = usePowerCalculations();
+  const { powerUsage, energyCosts, hasDedicatedNetworkRacks } = usePowerCalculations();
 
   // Calculate capital cost directly
   const capitalCost = activeDesign?.components?.reduce(
@@ -116,6 +116,7 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
           <PowerEnergySection 
             powerUsage={powerUsage}
             energyCosts={energyCosts}
+            hasDedicatedNetworkRacks={hasDedicatedNetworkRacks}
           />
           
           <DetailedCostAnalysisCard 

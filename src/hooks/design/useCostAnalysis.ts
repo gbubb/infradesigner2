@@ -60,19 +60,29 @@ export const useCostAnalysis = () => {
       const quantity = component.quantity || 1;
       const componentCost = component.cost * quantity;
       
-      // Determine component category and lifespan
-      let lifespan = 3; // Default
-      
-      if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
-        computeTotal += componentCost;
-        lifespan = computeLifespan;
-      } else if (component.type === ComponentType.Disk) {
+      // Determine which category this component belongs to
+      if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
+        // Storage nodes and disks are part of storage costs
         storageTotal += componentCost;
-        lifespan = storageLifespan;
-      } else if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
-        networkTotal += componentCost;
-        lifespan = networkLifespan;
       }
+      else if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
+        // All other servers and GPUs are compute costs
+        computeTotal += componentCost;
+      }
+      else if (
+        component.type === ComponentType.Switch || 
+        component.type === ComponentType.Router || 
+        component.type === ComponentType.Firewall
+      ) {
+        // Network equipment
+        networkTotal += componentCost;
+      }
+    });
+    
+    console.log('Amortization calculation with lifespan values:', {
+      compute: { cost: computeTotal, lifespan: computeLifespan },
+      storage: { cost: storageTotal, lifespan: storageLifespan },
+      network: { cost: networkTotal, lifespan: networkLifespan }
     });
     
     // Calculate monthly amortized cost for each category
@@ -115,13 +125,15 @@ export const useCostAnalysis = () => {
     return capitalCost + (operationalCosts.totalMonthly * 12);
   }, [capitalCost, operationalCosts.totalMonthly]);
   
-  // Cost metrics
+  // Calculate cost per vCPU - use only compute-related costs divided by vCPU count
   const costPerVCPU = useMemo(() => {
-    if (!actualHardwareTotals.totalVCPUs || actualHardwareTotals.totalVCPUs === 0 || !capitalCost) return 0;
+    if (!actualHardwareTotals.totalVCPUs || actualHardwareTotals.totalVCPUs === 0) return 0;
     
     // Calculate compute-related capital costs
     const computeCapitalCost = activeDesign?.components?.reduce((total, component) => {
-      if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
+      // Only include compute nodes in the compute cluster costs
+      if ((component.role === 'computeNode' || component.role === 'gpuNode') && 
+          (component as any).clusterInfo) {
         const quantity = component.quantity || 1;
         return total + (component.cost * quantity);
       }
@@ -129,14 +141,15 @@ export const useCostAnalysis = () => {
     }, 0) || 0;
     
     return computeCapitalCost / actualHardwareTotals.totalVCPUs;
-  }, [actualHardwareTotals.totalVCPUs, activeDesign?.components, capitalCost]);
+  }, [actualHardwareTotals.totalVCPUs, activeDesign?.components]);
   
+  // Calculate cost per TB - use storage-related costs divided by usable TB
   const costPerTB = useMemo(() => {
     if (!actualHardwareTotals.totalStorageTB || actualHardwareTotals.totalStorageTB === 0) return 0;
     
     // Calculate storage-related capital costs
     const storageCapitalCost = activeDesign?.components?.reduce((total, component) => {
-      if (component.type === ComponentType.Disk || (component.type === ComponentType.Server && component.role === 'storageNode')) {
+      if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
         const quantity = component.quantity || 1;
         return total + (component.cost * quantity);
       }

@@ -1,16 +1,22 @@
-
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { PowerUsage } from '@/types/infrastructure';
+import { useResourceMetrics } from '@/hooks/design/useResourceMetrics';
 
 export const usePowerCalculations = () => {
   const { activeDesign } = useDesignStore();
+  const { resourceMetrics } = useResourceMetrics();
   
   // Extract operational load percentage from requirements
   const operationalLoadPercentage = useMemo(() => {
     return activeDesign?.requirements?.physicalConstraints?.operationalLoadPercentage ?? 50;
   }, [activeDesign?.requirements?.physicalConstraints?.operationalLoadPercentage]);
 
+  // Determine if we have dedicated network racks
+  const hasDedicatedNetworkRacks = useMemo(() => {
+    return Boolean(activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks);
+  }, [activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks]);
+  
   // Calculate power usage for the entire design
   const powerUsage = useMemo(() => {
     if (!activeDesign?.components || activeDesign.components.length === 0) {
@@ -19,30 +25,72 @@ export const usePowerCalculations = () => {
     
     // Calculate maximum power for all components
     let totalMaximumPower = 0;
+    let networkRackMaximumPower = 0;
+    let computeRackMaximumPower = 0;
     
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
       const power = component.powerRequired || 0;
+      const componentPower = power * quantity;
       
-      totalMaximumPower += power * quantity;
+      // Separate network components if needed
+      if (hasDedicatedNetworkRacks && 
+          ['spineSwitch', 'coreSwitch', 'borderLeafSwitch']
+          .includes(component.role || '')) {
+        networkRackMaximumPower += componentPower;
+      } else {
+        computeRackMaximumPower += componentPower;
+      }
+      
+      totalMaximumPower += componentPower;
     });
     
     // Calculate minimum power (1/3 of maximum)
     const totalMinimumPower = totalMaximumPower / 3;
+    const networkRackMinimumPower = networkRackMaximumPower / 3;
+    const computeRackMinimumPower = computeRackMaximumPower / 3;
     
     // Calculate operational power: minimum power + (operational load % * remaining power)
     const remainingPower = totalMaximumPower - totalMinimumPower;
+    const networkRackRemainingPower = networkRackMaximumPower - networkRackMinimumPower;
+    const computeRackRemainingPower = computeRackMaximumPower - computeRackMinimumPower;
+    
     const loadFactor = operationalLoadPercentage / 100;
-    const operationalComponent = remainingPower * loadFactor;
     
-    const totalOperationalPower = totalMinimumPower + operationalComponent;
+    const totalOperationalComponent = remainingPower * loadFactor;
+    const networkRackOperationalComponent = networkRackRemainingPower * loadFactor;
+    const computeRackOperationalComponent = computeRackRemainingPower * loadFactor;
     
+    const totalOperationalPower = totalMinimumPower + totalOperationalComponent;
+    const networkRackOperationalPower = networkRackMinimumPower + networkRackOperationalComponent;
+    const computeRackOperationalPower = computeRackMinimumPower + computeRackOperationalComponent;
+    
+    // If we have separate network racks, provide both sets of power metrics
+    if (hasDedicatedNetworkRacks) {
+      return {
+        minimumPower: Math.round(totalMinimumPower),
+        operationalPower: Math.round(totalOperationalPower),
+        maximumPower: Math.round(totalMaximumPower),
+        networkRack: {
+          minimumPower: Math.round(networkRackMinimumPower),
+          operationalPower: Math.round(networkRackOperationalPower),
+          maximumPower: Math.round(networkRackMaximumPower)
+        },
+        computeRack: {
+          minimumPower: Math.round(computeRackMinimumPower),
+          operationalPower: Math.round(computeRackOperationalPower),
+          maximumPower: Math.round(computeRackMaximumPower)
+        }
+      };
+    }
+    
+    // Otherwise return the combined metrics
     return {
       minimumPower: Math.round(totalMinimumPower),
       operationalPower: Math.round(totalOperationalPower),
       maximumPower: Math.round(totalMaximumPower)
     };
-  }, [activeDesign?.components, operationalLoadPercentage]);
+  }, [activeDesign?.components, operationalLoadPercentage, hasDedicatedNetworkRacks]);
   
   // Calculate energy costs based on operational power
   const energyCosts = useMemo(() => {
@@ -54,16 +102,44 @@ export const usePowerCalculations = () => {
     const monthlyEnergyCost = dailyEnergyCost * 30; // Approximate month
     const yearlyEnergyCost = dailyEnergyCost * 365;
     
+    // If we have dedicated network racks, calculate their energy costs separately
+    if ('networkRack' in powerUsage) {
+      const networkOperationalPowerKw = (powerUsage as any).networkRack.operationalPower / 1000;
+      const computeOperationalPowerKw = (powerUsage as any).computeRack.operationalPower / 1000;
+      
+      return {
+        hourlyEnergyCost,
+        dailyEnergyCost,
+        monthlyEnergyCost,
+        yearlyEnergyCost,
+        networkRack: {
+          hourlyEnergyCost: networkOperationalPowerKw * electricityPrice,
+          dailyEnergyCost: networkOperationalPowerKw * electricityPrice * 24,
+          monthlyEnergyCost: networkOperationalPowerKw * electricityPrice * 24 * 30,
+          yearlyEnergyCost: networkOperationalPowerKw * electricityPrice * 24 * 365,
+        },
+        computeRack: {
+          hourlyEnergyCost: computeOperationalPowerKw * electricityPrice,
+          dailyEnergyCost: computeOperationalPowerKw * electricityPrice * 24,
+          monthlyEnergyCost: computeOperationalPowerKw * electricityPrice * 24 * 30,
+          yearlyEnergyCost: computeOperationalPowerKw * electricityPrice * 24 * 365,
+        }
+      };
+    }
+    
+    // Otherwise return the combined costs
     return {
       hourlyEnergyCost,
       dailyEnergyCost,
       monthlyEnergyCost,
       yearlyEnergyCost
     };
-  }, [powerUsage.operationalPower, activeDesign?.requirements?.physicalConstraints?.electricityPricePerKwh]);
+  }, [powerUsage, activeDesign?.requirements?.physicalConstraints?.electricityPricePerKwh]);
   
+  // Return the calculated values
   return {
     powerUsage,
-    energyCosts
+    energyCosts,
+    hasDedicatedNetworkRacks
   };
 };
