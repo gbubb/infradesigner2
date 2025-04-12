@@ -130,16 +130,26 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
       requiredCount: leafSwitchCount
     });
     
-    if (dedicatedStorageNetwork && storageClusters.length > 0) {
-      const totalStorageAZs = storageClusters.reduce((sum, cluster) => 
-        sum + (cluster.availabilityZoneQuantity || 3), 0);
+    if (dedicatedStorageNetwork) {
+      // Calculate storage switches: we need 2 switches per AZ for each storage cluster
+      let totalStorageSwitches = 0;
       
-      newRoles.push({
-        id: uuidv4(),
-        role: 'storageSwitch',
-        description: 'Provides network connectivity for storage nodes',
-        requiredCount: totalStorageAZs * 2
-      });
+      // Sum up the number of AZs used by all storage clusters
+      for (const cluster of storageClusters) {
+        const azCount = cluster.availabilityZoneQuantity || 3;
+        // Each AZ needs 2 switches for redundancy
+        totalStorageSwitches += azCount * 2;
+      }
+      
+      // Only add storage switches if we actually have storage clusters
+      if (storageClusters.length > 0) {
+        newRoles.push({
+          id: uuidv4(),
+          role: 'storageSwitch',
+          description: 'Provides network connectivity for storage nodes',
+          requiredCount: totalStorageSwitches
+        });
+      }
     }
     
     newRoles.push({

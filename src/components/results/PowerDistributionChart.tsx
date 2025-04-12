@@ -25,13 +25,21 @@ interface ResourceUtilizationProps {
     used: number;
     total: number;
   };
+  storageNetworkUtilization?: {
+    percentage: number;
+    used: number;
+    total: number;
+  };
+  hasDedicatedStorageNetwork?: boolean;
 }
 
 export const ResourceUtilizationChart: React.FC<ResourceUtilizationProps> = ({ 
   powerUtilization, 
   spaceUtilization, 
   leafNetworkUtilization,
-  mgmtNetworkUtilization
+  mgmtNetworkUtilization,
+  storageNetworkUtilization,
+  hasDedicatedStorageNetwork
 }) => {
   // Function to determine if a utilization is over capacity
   const isOverCapacity = (percentage: number) => percentage > 100;
@@ -131,6 +139,45 @@ export const ResourceUtilizationChart: React.FC<ResourceUtilizationProps> = ({
             }
           />
         </div>
+        
+        {/* Storage Network Utilization - Only display when dedicated storage network is enabled */}
+        {hasDedicatedStorageNetwork && storageNetworkUtilization && (
+          <div className="mb-6">
+            <div className="flex justify-between mb-1">
+              <span className="text-sm font-medium">Storage Network Port Utilization</span>
+              <div className="flex items-center">
+                <span 
+                  className={`text-sm ${
+                    isOverCapacity(storageNetworkUtilization.percentage) || 
+                    isMissingResource(storageNetworkUtilization.used, storageNetworkUtilization.total) 
+                      ? 'text-red-500 font-bold' : 'text-muted-foreground'
+                  } mr-2`}
+                >
+                  {storageNetworkUtilization.used} Ports / {storageNetworkUtilization.total} Ports
+                  {storageNetworkUtilization.total > 0 
+                    ? ` (${Math.round(storageNetworkUtilization.percentage)}%)` 
+                    : storageNetworkUtilization.used > 0 
+                      ? ' (Missing storage switches!)' 
+                      : ''
+                  }
+                </span>
+                {(isOverCapacity(storageNetworkUtilization.percentage) || 
+                  isMissingResource(storageNetworkUtilization.used, storageNetworkUtilization.total)) && (
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                )}
+              </div>
+            </div>
+            <Progress 
+              value={storageNetworkUtilization.total > 0 ? Math.min(storageNetworkUtilization.percentage, 100) : 100}
+              className="h-2" 
+              indicatorClassName={
+                isMissingResource(storageNetworkUtilization.used, storageNetworkUtilization.total)
+                  ? 'bg-red-500'
+                  : getIndicatorClass(storageNetworkUtilization.percentage)
+              }
+            />
+          </div>
+        )}
         
         {/* Management Network Utilization */}
         <div className="mb-2">

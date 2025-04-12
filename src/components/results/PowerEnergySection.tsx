@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PowerUsage } from '@/types/infrastructure';
@@ -32,11 +31,11 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
   energyCosts,
   hasDedicatedNetworkRacks
 }) => {
-  const { minimumPower, operationalPower, maximumPower } = powerUsage;
+  const { minimumPower, operationalPower, maximumPower, totalAvailablePower } = powerUsage;
   const { resourceUtilization } = useResourceMetrics();
   
-  // Get the total available power from the resource metrics
-  const totalAvailablePower = resourceUtilization.powerUtilization.total || maximumPower;
+  // Get the total available power either from the usage object or fallback to resource metrics
+  const availablePower = totalAvailablePower || resourceUtilization.powerUtilization.total || maximumPower;
   
   // Helper function to format power values
   const formatPower = (watts: number) => {
@@ -47,25 +46,20 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
   };
   
   // Calculate unused power
-  const unusedPower = totalAvailablePower - maximumPower;
-  
-  // Calculate widths for power bar segments
-  const minSegmentWidth = (minimumPower / totalAvailablePower) * 100;
-  const operationalSegmentWidth = ((operationalPower - minimumPower) / totalAvailablePower) * 100;
-  const maxSegmentWidth = ((maximumPower - operationalPower) / totalAvailablePower) * 100;
-  const unusedSegmentWidth = (unusedPower / totalAvailablePower) * 100;
+  const unusedPower = availablePower - maximumPower;
   
   // Create power bar
   const renderPowerBar = (powerData: {
     minimumPower: number;
     operationalPower: number;
     maximumPower: number;
+    availablePower?: number;
   }, title?: string) => {
     // Calculate segment percentages for this power data
     const min = powerData.minimumPower;
     const op = powerData.operationalPower;
     const max = powerData.maximumPower;
-    const avail = totalAvailablePower; // Use the same total for consistent scaling
+    const avail = powerData.availablePower || availablePower; // Use specific rack available power if provided
     const unused = avail - max;
     
     // Calculate widths for power bar segments
@@ -142,15 +136,26 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Render the main power bar */}
-          {renderPowerBar(powerUsage, "Power Usage Levels")}
-          
-          {/* If we have dedicated network racks, render power bars for each type */}
-          {hasDedicatedNetworkRacks && 'networkRack' in powerUsage && 'computeRack' in powerUsage && (
+          {/* When dedicated network racks are enabled, only show separate rack power bars */}
+          {hasDedicatedNetworkRacks && 'networkRack' in powerUsage && 'computeRack' in powerUsage ? (
             <>
-              {renderPowerBar((powerUsage as any).computeRack, "Compute/Storage Rack Power")}
-              {renderPowerBar((powerUsage as any).networkRack, "Network Core Rack Power")}
+              {renderPowerBar({
+                minimumPower: (powerUsage as any).computeRack.minimumPower,
+                operationalPower: (powerUsage as any).computeRack.operationalPower,
+                maximumPower: (powerUsage as any).computeRack.maximumPower,
+                availablePower: (powerUsage as any).computeRack.availablePower
+              }, "Compute/Storage Rack Power")}
+              
+              {renderPowerBar({
+                minimumPower: (powerUsage as any).networkRack.minimumPower,
+                operationalPower: (powerUsage as any).networkRack.operationalPower,
+                maximumPower: (powerUsage as any).networkRack.maximumPower,
+                availablePower: (powerUsage as any).networkRack.availablePower
+              }, "Network Core Rack Power")}
             </>
+          ) : (
+            // Otherwise show the combined power bar
+            renderPowerBar(powerUsage, "Power Usage Levels")
           )}
           
           {/* Power legend */}

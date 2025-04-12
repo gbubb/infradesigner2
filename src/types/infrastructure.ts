@@ -1,4 +1,3 @@
-
 // Core Infrastructure Types
 export enum ComponentType {
   Server = 'Server',
@@ -318,6 +317,19 @@ export interface PowerUsage {
   minimumPower: number;
   operationalPower: number;
   maximumPower: number;
+  totalAvailablePower?: number;
+  networkRack?: {
+    minimumPower: number;
+    operationalPower: number;
+    maximumPower: number;
+    availablePower: number;
+  };
+  computeRack?: {
+    minimumPower: number;
+    operationalPower: number;
+    maximumPower: number;
+    availablePower: number;
+  };
 }
 
 // Cost analysis breakdown

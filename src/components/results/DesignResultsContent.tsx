@@ -36,7 +36,7 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
     amortizedCostsByType
   } = useDesignCalculations();
 
-  const { powerUsage, energyCosts, hasDedicatedNetworkRacks } = usePowerCalculations();
+  const { powerUsage, energyCosts, hasDedicatedNetworkRacks, hasDedicatedStorageNetwork } = usePowerCalculations();
 
   // Calculate capital cost directly
   const capitalCost = activeDesign?.components?.reduce(
@@ -134,6 +134,8 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
               spaceUtilization={resourceUtilization.spaceUtilization}
               leafNetworkUtilization={resourceUtilization.leafNetworkUtilization}
               mgmtNetworkUtilization={resourceUtilization.mgmtNetworkUtilization}
+              storageNetworkUtilization={(resourceUtilization as any).storageNetworkUtilization}
+              hasDedicatedStorageNetwork={hasDedicatedStorageNetwork}
             />
           </div>
           

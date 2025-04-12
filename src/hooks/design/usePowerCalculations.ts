@@ -16,6 +16,11 @@ export const usePowerCalculations = () => {
   const hasDedicatedNetworkRacks = useMemo(() => {
     return Boolean(activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks);
   }, [activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks]);
+
+  // Determine if we have dedicated storage network 
+  const hasDedicatedStorageNetwork = useMemo(() => {
+    return Boolean(activeDesign?.requirements?.networkRequirements?.dedicatedStorageNetwork);
+  }, [activeDesign?.requirements?.networkRequirements?.dedicatedStorageNetwork]);
   
   // Calculate power usage for the entire design
   const powerUsage = useMemo(() => {
@@ -65,21 +70,33 @@ export const usePowerCalculations = () => {
     const networkRackOperationalPower = networkRackMinimumPower + networkRackOperationalComponent;
     const computeRackOperationalPower = computeRackMinimumPower + computeRackOperationalComponent;
     
+    // Calculate available power based on rack type - FIX: Use the correct rack quantities
+    const powerPerRack = activeDesign?.requirements?.physicalConstraints?.powerPerRackWatts || 0;
+    const computeRackQuantity = activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity || 1;
+    const networkRackQuantity = hasDedicatedNetworkRacks ? 2 : 0; // Network racks are always a pair
+
+    const totalAvailablePower = powerPerRack * (computeRackQuantity + networkRackQuantity);
+    const computeAvailablePower = powerPerRack * computeRackQuantity;
+    const networkAvailablePower = powerPerRack * networkRackQuantity;
+    
     // If we have separate network racks, provide both sets of power metrics
     if (hasDedicatedNetworkRacks) {
       return {
         minimumPower: Math.round(totalMinimumPower),
         operationalPower: Math.round(totalOperationalPower),
         maximumPower: Math.round(totalMaximumPower),
+        totalAvailablePower: Math.round(totalAvailablePower),
         networkRack: {
           minimumPower: Math.round(networkRackMinimumPower),
           operationalPower: Math.round(networkRackOperationalPower),
-          maximumPower: Math.round(networkRackMaximumPower)
+          maximumPower: Math.round(networkRackMaximumPower),
+          availablePower: Math.round(networkAvailablePower),
         },
         computeRack: {
           minimumPower: Math.round(computeRackMinimumPower),
           operationalPower: Math.round(computeRackOperationalPower),
-          maximumPower: Math.round(computeRackMaximumPower)
+          maximumPower: Math.round(computeRackMaximumPower),
+          availablePower: Math.round(computeAvailablePower),
         }
       };
     }
@@ -88,9 +105,10 @@ export const usePowerCalculations = () => {
     return {
       minimumPower: Math.round(totalMinimumPower),
       operationalPower: Math.round(totalOperationalPower),
-      maximumPower: Math.round(totalMaximumPower)
+      maximumPower: Math.round(totalMaximumPower),
+      totalAvailablePower: Math.round(totalAvailablePower)
     };
-  }, [activeDesign?.components, operationalLoadPercentage, hasDedicatedNetworkRacks]);
+  }, [activeDesign?.components, operationalLoadPercentage, hasDedicatedNetworkRacks, activeDesign?.requirements?.physicalConstraints]);
   
   // Calculate energy costs based on operational power
   const energyCosts = useMemo(() => {
@@ -140,6 +158,7 @@ export const usePowerCalculations = () => {
   return {
     powerUsage,
     energyCosts,
-    hasDedicatedNetworkRacks
+    hasDedicatedNetworkRacks,
+    hasDedicatedStorageNetwork
   };
 };
