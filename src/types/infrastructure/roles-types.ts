@@ -1,0 +1,18 @@
+
+// Component role interfaces
+export interface ComponentRole {
+  id: string;
+  role: string;
+  description: string;
+  requiredCount: number;
+  adjustedRequiredCount?: number;
+  assignedComponentId?: string;
+  clusterInfo?: ClusterInfo;
+}
+
+// ClusterInfo interface
+export interface ClusterInfo {
+  clusterId: string;
+  clusterName: string;
+  clusterIndex: number;
+}
