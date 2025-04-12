@@ -143,21 +143,21 @@ export const useCostAnalysis = () => {
     return computeCapitalCost / actualHardwareTotals.totalVCPUs;
   }, [actualHardwareTotals.totalVCPUs, activeDesign?.components]);
   
-  // Calculate cost per TB - use storage-related costs divided by usable TB
+  // Calculate cost per TB - use combined storage and memory costs divided by memory TB
   const costPerTB = useMemo(() => {
-    if (!actualHardwareTotals.totalStorageTB || actualHardwareTotals.totalStorageTB === 0) return 0;
+    if (!actualHardwareTotals.totalComputeMemoryTB || actualHardwareTotals.totalComputeMemoryTB === 0) return 0;
     
-    // Calculate storage-related capital costs
-    const storageCapitalCost = activeDesign?.components?.reduce((total, component) => {
-      if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
+    // Calculate storage and memory-related capital costs
+    const memoryCapitalCost = activeDesign?.components?.reduce((total, component) => {
+      if (component.role === 'computeNode' || component.role === 'gpuNode') {
         const quantity = component.quantity || 1;
         return total + (component.cost * quantity);
       }
       return total;
     }, 0) || 0;
     
-    return storageCapitalCost / actualHardwareTotals.totalStorageTB;
-  }, [actualHardwareTotals.totalStorageTB, activeDesign?.components]);
+    return memoryCapitalCost / actualHardwareTotals.totalComputeMemoryTB;
+  }, [actualHardwareTotals.totalComputeMemoryTB, activeDesign?.components]);
 
   return {
     capitalCost,

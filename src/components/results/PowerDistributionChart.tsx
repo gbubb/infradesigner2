@@ -34,7 +34,6 @@ interface ResourceUtilizationProps {
 }
 
 export const ResourceUtilizationChart: React.FC<ResourceUtilizationProps> = ({ 
-  powerUtilization, 
   spaceUtilization, 
   leafNetworkUtilization,
   mgmtNetworkUtilization,
@@ -61,27 +60,6 @@ export const ResourceUtilizationChart: React.FC<ResourceUtilizationProps> = ({
         <CardTitle>Resource Utilization</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Power Utilization */}
-        <div className="mb-6">
-          <div className="flex justify-between mb-1">
-            <span className="text-sm font-medium">Power Utilization</span>
-            <div className="flex items-center">
-              <span className={`text-sm ${isOverCapacity(powerUtilization.percentage) ? 'text-red-500 font-bold' : 'text-muted-foreground'} mr-2`}>
-                {powerUtilization.used.toLocaleString()} W / {powerUtilization.total.toLocaleString()} W
-                ({Math.round(powerUtilization.percentage)}%)
-              </span>
-              {isOverCapacity(powerUtilization.percentage) && (
-                <AlertCircle className="h-4 w-4 text-red-500" />
-              )}
-            </div>
-          </div>
-          <Progress 
-            value={Math.min(powerUtilization.percentage, 100)} 
-            className="h-2" 
-            indicatorClassName={getIndicatorClass(powerUtilization.percentage)}
-          />
-        </div>
-        
         {/* Space Utilization */}
         <div className="mb-6">
           <div className="flex justify-between mb-1">

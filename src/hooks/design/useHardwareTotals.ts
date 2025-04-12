@@ -58,7 +58,7 @@ export const useHardwareTotals = () => {
       // Get overcommit ratio from individual compute clusters if available
       if ((component as any).clusterInfo) {
         const clusterId = (component as any).clusterInfo.clusterId;
-        const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
+        const matchingCluster = requirements?.computeRequirements?.computeClusters?.find(c => c.id === clusterId);
         overcommitRatio = matchingCluster?.overcommitRatio || 1;
         
         console.log(`${component.role} in cluster ${(component as any).clusterInfo.clusterName}, coresPerServer: ${coresPerServer}, overcommit: ${overcommitRatio}, total vCPUs: ${coresPerServer * quantity * overcommitRatio}`);
@@ -92,7 +92,7 @@ export const useHardwareTotals = () => {
     });
     
     // Calculate storage capacity from storage clusters
-    const storageClusters = requirements.storageRequirements.storageClusters || [];
+    const storageClusters = requirements?.storageRequirements?.storageClusters || [];
     
     // Group storage nodes by cluster
     const storageNodesByCluster = activeDesign.components
@@ -140,30 +140,6 @@ export const useHardwareTotals = () => {
       
       console.log(`Storage cluster ${cluster.name}: Raw capacity: ${clusterRawCapacityTB} TB, Usable: ${usableCapacityTiB.toFixed(2)} TiB (using pool efficiency ${poolEfficiencyFactor})`);
     });
-    
-    // Calculate other memory (non-compute cluster memory) for totals
-    let otherMemoryGB = 0;
-    activeDesign.components
-      .filter(component => 
-        !(component.role === 'computeNode' || component.role === 'gpuNode') &&
-        component.type === ComponentType.Server
-      )
-      .forEach(component => {
-        const quantity = component.quantity || 1;
-        let componentMemoryGB = 0;
-        
-        if ('memoryCapacity' in component && component.memoryCapacity > 0) {
-          componentMemoryGB = component.memoryCapacity;
-        } else if ('memoryGB' in component && component.memoryGB > 0) {
-          componentMemoryGB = component.memoryGB;
-        } else if ('memoryTB' in component && (component as any).memoryTB > 0) {
-          componentMemoryGB = (component as any).memoryTB * 1024;
-        }
-        
-        otherMemoryGB += componentMemoryGB * quantity;
-      });
-    
-    totalMemoryGB = computeMemoryGB + otherMemoryGB;
     
     const totalMemoryTB = totalMemoryGB / 1024;
     const computeMemoryTB = computeMemoryGB / 1024;
