@@ -28,68 +28,84 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [attempts, setAttempts] = useState(0);
   
   const role = componentRoles.find(r => r.id === roleId);
   const clusterName = role?.clusterInfo?.clusterName;
   const roleType = role?.role || '';
   
-  // Update breakdown steps whenever the dialog state changes or when role/assignment changes
+  // Update breakdown steps whenever the dialog state changes
   useEffect(() => {
-    if (isOpen && role && role.assignedComponentId) {
-      // Set loading state
+    if (isOpen && role) {
       setIsLoading(true);
       
-      // First ensure we have a fresh calculation
-      const fetchCalculation = async () => {
-        console.log(`Calculating for ${roleId} with component ${role.assignedComponentId} (attempt ${attempts + 1})`);
-        
-        // Force a calculation first 
+      // If the role has an assigned component, make sure we have a fresh calculation
+      if (role.assignedComponentId) {
+        // Force a calculation first
         calculateRequiredQuantity(roleId, role.assignedComponentId);
         
         // Add a small delay to ensure the calculation has had time to update state
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        // Now get the breakdown steps
-        const steps = getCalculationBreakdown(roleId);
-        console.log(`Got breakdown steps for ${roleId}:`, steps?.length || 0);
-        
-        if (steps && steps.length > 0) {
-          setBreakdownSteps(steps);
-          setIsLoading(false);
-        } else if (attempts < 3) {
-          console.log(`No breakdown steps found for ${roleId}, retrying...`);
-          // Increment the attempt counter
-          setAttempts(prevAttempts => prevAttempts + 1);
+        setTimeout(() => {
+          // Now get the breakdown steps
+          const steps = getCalculationBreakdown(roleId);
+          console.log(`Got breakdown steps for ${roleId}:`, steps?.length || 0);
           
-          // Try again with a longer delay
-          setTimeout(() => {
-            fetchCalculation();
-          }, 300);
-        } else {
-          // After 3 attempts, stop trying and show whatever we have
-          console.log(`Still no breakdown steps after ${attempts} attempts.`);
-          setBreakdownSteps(getCalculationBreakdown(roleId) || []);
+          if (steps && steps.length > 0) {
+            setBreakdownSteps(steps);
+          } else {
+            // If no steps are found, populate with default information
+            const defaultSteps = generateDefaultBreakdown(role);
+            setBreakdownSteps(defaultSteps);
+          }
           setIsLoading(false);
-        }
-      };
-      
-      fetchCalculation();
-    } else {
-      // Reset attempts when dialog closes
-      setAttempts(0);
+        }, 300);
+      } else {
+        // Generate default steps for unassigned roles
+        const defaultSteps = generateDefaultBreakdown(role);
+        setBreakdownSteps(defaultSteps);
+        setIsLoading(false);
+      }
     }
-  }, [isOpen, role, roleId, getCalculationBreakdown, calculateRequiredQuantity, attempts]);
+  }, [isOpen, role, roleId, getCalculationBreakdown, calculateRequiredQuantity]);
   
-  // Handle calculation when dialog opens
+  // Generate a default breakdown for roles without specific calculations
+  const generateDefaultBreakdown = (role: any) => {
+    const steps: string[] = [];
+    
+    // Include role basic information
+    steps.push(`Role: ${roleName} (${roleType})`);
+    steps.push(`Required quantity: ${role.requiredCount}`);
+    
+    if (role.clusterInfo) {
+      steps.push(`Cluster: ${role.clusterInfo.clusterName || 'Unnamed cluster'}`);
+    }
+    
+    // Add information based on the role type
+    if (roleType === 'controllerNode') {
+      steps.push(`Controller nodes requirement is defined in the compute requirements.`);
+      steps.push(`The default controller node count is 3 for high availability.`);
+    } else if (roleType === 'infrastructureNode') {
+      steps.push(`Infrastructure node count is defined in the compute requirements.`);
+      steps.push(`Required for monitoring, logging, and management services.`);
+    } else if (roleType === 'managementSwitch') {
+      steps.push(`Management switch requirement is calculated based on the network topology.`);
+      steps.push(`One management switch per rack is required for redundancy.`);
+    } else if (roleType === 'leafSwitch' || roleType === 'spineSwitch' || roleType === 'borderLeafSwitch') {
+      steps.push(`Switch quantity is calculated based on the network topology and number of availability zones.`);
+      steps.push(`Spine-leaf architecture requires redundancy for each network segment.`);
+    } else if (roleType === 'firewall') {
+      steps.push(`Firewall quantity is determined by the physical firewalls requirement.`);
+      steps.push(`Standard configuration uses two firewalls for redundancy.`);
+    } else if (!role.assignedComponentId) {
+      steps.push(`No component assigned to this role yet.`);
+      steps.push(`Please assign a component to see a detailed calculation.`);
+    }
+    
+    return steps;
+  };
+  
+  // Handle dialog open state
   const handleDialogOpen = useCallback((open: boolean) => {
     setIsOpen(open);
-    
-    if (!open) {
-      // Reset state when dialog closes
-      setAttempts(0);
-      setIsLoading(false);
-    }
   }, []);
   
   // Build the title with cluster name if available
