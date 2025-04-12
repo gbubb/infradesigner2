@@ -13,13 +13,13 @@ export const useResourceMetrics = () => {
     totalPower: physicalMetrics.totalPower,
     totalRackUnits: physicalMetrics.totalRackUnits,
     totalServers: physicalMetrics.totalServers,
-    totalLeafSwitches: physicalMetrics.totalLeafSwitches,
-    totalMgmtSwitches: physicalMetrics.totalMgmtSwitches,
     totalRackQuantity: physicalMetrics.totalRackQuantity,
     totalAvailableRU: physicalMetrics.totalAvailableRU,
     totalAvailablePower: physicalMetrics.totalAvailablePower,
     
     // Network metrics
+    totalLeafSwitches: networkMetrics.totalLeafSwitches,
+    totalMgmtSwitches: networkMetrics.totalMgmtSwitches,
     leafPortsUsed: networkMetrics.leafPortsUsed,
     leafPortsAvailable: networkMetrics.leafPortsAvailable,
     mgmtPortsUsed: networkMetrics.mgmtPortsUsed,
