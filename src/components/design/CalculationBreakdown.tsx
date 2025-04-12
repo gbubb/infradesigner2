@@ -89,11 +89,8 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       // Reset state when dialog closes
       setAttempts(0);
       setIsLoading(false);
-    } else if (open && role && role.assignedComponentId) {
-      // Immediately trigger a calculation when dialog opens
-      calculateRequiredQuantity(roleId, role.assignedComponentId);
     }
-  }, [roleId, role, calculateRequiredQuantity]);
+  }, []);
   
   // Build the title with cluster name if available
   const titleText = clusterName 

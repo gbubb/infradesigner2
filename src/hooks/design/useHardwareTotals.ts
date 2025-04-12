@@ -58,7 +58,7 @@ export const useHardwareTotals = () => {
       // Get overcommit ratio from individual compute clusters if available
       if ((component as any).clusterInfo) {
         const clusterId = (component as any).clusterInfo.clusterId;
-        const matchingCluster = requirements?.computeRequirements?.computeClusters.find(c => c.id === clusterId);
+        const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
         overcommitRatio = matchingCluster?.overcommitRatio || 1;
         
         console.log(`${component.role} in cluster ${(component as any).clusterInfo.clusterName}, coresPerServer: ${coresPerServer}, overcommit: ${overcommitRatio}, total vCPUs: ${coresPerServer * quantity * overcommitRatio}`);
@@ -92,7 +92,7 @@ export const useHardwareTotals = () => {
     });
     
     // Calculate storage capacity from storage clusters
-    const storageClusters = requirements?.storageRequirements?.storageClusters || [];
+    const storageClusters = requirements.storageRequirements.storageClusters || [];
     
     // Group storage nodes by cluster
     const storageNodesByCluster = activeDesign.components
@@ -169,10 +169,10 @@ export const useHardwareTotals = () => {
     const computeMemoryTB = computeMemoryGB / 1024;
     
     console.log('Final hardware totals calculated:', {
-      totalVCPUs,
+      totalVCPUs,  // Only includes compute cluster vCPUs
       totalMemoryTB,
       computeMemoryTB,
-      totalStorageTB
+      totalStorageTB  // Usable storage in TiB
     });
     
     return {
