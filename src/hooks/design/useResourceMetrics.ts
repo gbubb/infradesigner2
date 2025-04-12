@@ -23,7 +23,9 @@ export const useResourceMetrics = () => {
         mgmtPortsAvailable: 0,
         totalAvailableRU: 0,
         totalAvailablePower: 0,
-        totalRackQuantity: 0
+        totalRackQuantity: 0,
+        computeRackUnits: 0,
+        networkRackUnits: 0
       };
     }
     
@@ -36,6 +38,10 @@ export const useResourceMetrics = () => {
     
     const totalAvailableRU = totalRackQuantity * ruPerRack;
     const totalAvailablePower = totalRackQuantity * powerPerRack;
+    
+    // Calculate available RUs for compute vs network racks
+    const computeRackRUs = computeStorageRacks * ruPerRack;
+    const networkRackRUs = networkCoreRacks * ruPerRack;
     
     let totalServers = 0;
     let totalLeafSwitches = 0;
@@ -53,10 +59,13 @@ export const useResourceMetrics = () => {
     const ipmiNetwork = activeDesign.requirements?.networkRequirements?.ipmiNetwork || 'Management converged';
     const managementNetwork = activeDesign.requirements?.networkRequirements?.managementNetwork || 'Dual Home';
     const isConvergedManagement = managementNetwork === 'Converged Management Plane';
+    const hasDedicatedNetworkRacks = Boolean(activeDesign.requirements?.networkRequirements?.dedicatedNetworkCoreRacks);
     
     // Calculate total power and rack units
     let totalPower = 0;
     let totalRackUnits = 0;
+    let computeRackUnits = 0;
+    let networkRackUnits = 0;
     
     // Track storage nodes for dedicated storage network calculation
     const storageNodes = [];
@@ -69,7 +78,20 @@ export const useResourceMetrics = () => {
       
       // Add to total rack units if applicable
       if ('rackUnitsConsumed' in component) {
-        totalRackUnits += (component as any).rackUnitsConsumed * quantity;
+        const componentRU = (component as any).rackUnitsConsumed * quantity;
+        totalRackUnits += componentRU;
+        
+        // Determine if this component is in compute/storage racks or network racks
+        // Network switches and routers go in network racks if dedicated racks are enabled
+        const isNetworkComponent = 
+          hasDedicatedNetworkRacks && 
+          (component.role === 'spineSwitch' || component.role === 'coreRouter');
+        
+        if (isNetworkComponent) {
+          networkRackUnits += componentRU;
+        } else {
+          computeRackUnits += componentRU;
+        }
       }
       
       if (component.type === ComponentType.Server) {
@@ -151,7 +173,12 @@ export const useResourceMetrics = () => {
       totalAvailableRU,
       totalAvailablePower,
       totalRackQuantity,
-      hasDedicatedStorageNetwork
+      hasDedicatedStorageNetwork,
+      hasDedicatedNetworkRacks,
+      computeRackUnits,
+      networkRackUnits,
+      computeRackRUs,
+      networkRackRUs
     };
   }, [activeDesign]);
   
@@ -168,15 +195,15 @@ export const useResourceMetrics = () => {
       mgmtPortsAvailable,
       totalAvailableRU,
       totalAvailablePower,
-      hasDedicatedStorageNetwork
+      hasDedicatedStorageNetwork,
+      computeRackUnits,
+      networkRackUnits,
+      computeRackRUs,
+      networkRackRUs,
+      hasDedicatedNetworkRacks
     } = resourceMetrics;
     
-    const result = {
-      powerUtilization: {
-        percentage: totalAvailablePower > 0 ? (totalPower / totalAvailablePower) * 100 : 0,
-        used: totalPower,
-        total: totalAvailablePower
-      },
+    const result: any = {
       spaceUtilization: {
         percentage: totalAvailableRU > 0 ? (totalRackUnits / totalAvailableRU) * 100 : 0,
         used: totalRackUnits,
@@ -194,9 +221,24 @@ export const useResourceMetrics = () => {
       }
     };
     
+    // Add compute/network space utilization if dedicated network racks are enabled
+    if (hasDedicatedNetworkRacks) {
+      result.computeSpaceUtilization = {
+        percentage: computeRackRUs > 0 ? (computeRackUnits / computeRackRUs) * 100 : 0,
+        used: computeRackUnits,
+        total: computeRackRUs
+      };
+      
+      result.networkSpaceUtilization = {
+        percentage: networkRackRUs > 0 ? (networkRackUnits / networkRackRUs) * 100 : 0,
+        used: networkRackUnits,
+        total: networkRackRUs
+      };
+    }
+    
     // Only add storage network utilization if dedicated storage network is enabled
     if (hasDedicatedStorageNetwork) {
-      (result as any).storageNetworkUtilization = {
+      result.storageNetworkUtilization = {
         percentage: storagePortsAvailable > 0 ? (storagePortsUsed / storagePortsAvailable) * 100 : (storagePortsUsed > 0 ? 100 : 0),
         used: storagePortsUsed,
         total: storagePortsAvailable

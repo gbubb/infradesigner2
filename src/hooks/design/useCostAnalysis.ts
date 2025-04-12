@@ -26,7 +26,7 @@ export const useCostAnalysis = () => {
     activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros
   ]);
   
-  // Calculate total capital cost
+  // Calculate total capital cost (hardware acquisition cost)
   const capitalCost = useMemo(() => {
     if (!activeDesign?.components || activeDesign.components.length === 0) return 0;
     return activeDesign.components.reduce((total, component) => {
@@ -129,7 +129,7 @@ export const useCostAnalysis = () => {
   const costPerVCPU = useMemo(() => {
     if (!actualHardwareTotals.totalVCPUs || actualHardwareTotals.totalVCPUs === 0) return 0;
     
-    // Calculate compute-related capital costs
+    // Calculate compute-related capital costs (only compute nodes and GPUs)
     const computeCapitalCost = activeDesign?.components?.reduce((total, component) => {
       // Only include compute nodes in the compute cluster costs
       if ((component.role === 'computeNode' || component.role === 'gpuNode') && 
@@ -143,21 +143,31 @@ export const useCostAnalysis = () => {
     return computeCapitalCost / actualHardwareTotals.totalVCPUs;
   }, [actualHardwareTotals.totalVCPUs, activeDesign?.components]);
   
-  // Calculate cost per TB - use storage-related costs divided by usable TB
+  // Calculate cost per TB - use both memory and storage costs
   const costPerTB = useMemo(() => {
-    if (!actualHardwareTotals.totalStorageTB || actualHardwareTotals.totalStorageTB === 0) return 0;
+    // Combine both memory and storage capacity
+    const totalCapacityTB = actualHardwareTotals.totalComputeMemoryTB + actualHardwareTotals.totalStorageTB;
     
-    // Calculate storage-related capital costs
-    const storageCapitalCost = activeDesign?.components?.reduce((total, component) => {
-      if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
+    if (!totalCapacityTB || totalCapacityTB === 0) return 0;
+    
+    // Calculate storage and memory related capital costs
+    const storageAndMemoryCost = activeDesign?.components?.reduce((total, component) => {
+      if (component.role === 'storageNode' || 
+          component.type === ComponentType.Disk ||
+          component.role === 'computeNode' || 
+          component.role === 'gpuNode') {
         const quantity = component.quantity || 1;
         return total + (component.cost * quantity);
       }
       return total;
     }, 0) || 0;
     
-    return storageCapitalCost / actualHardwareTotals.totalStorageTB;
-  }, [actualHardwareTotals.totalStorageTB, activeDesign?.components]);
+    return storageAndMemoryCost / totalCapacityTB;
+  }, [
+    actualHardwareTotals.totalStorageTB, 
+    actualHardwareTotals.totalComputeMemoryTB, 
+    activeDesign?.components
+  ]);
 
   return {
     capitalCost,
