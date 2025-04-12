@@ -86,6 +86,32 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
     ? (totalPower / resourceMetrics.totalRackQuantity)
     : 0;
 
+  // Adapt powerUsage to match PowerUsage interface expected by PowerEnergySection
+  const adaptedPowerUsage = React.useMemo(() => {
+    if (!powerUsage) return null;
+    
+    // Map the properties to match what's expected by PowerEnergySection
+    return {
+      maxPower: powerUsage.maximumPower,
+      operationalPower: powerUsage.operationalPower,
+      ...(powerUsage.networkRack && powerUsage.computeRack ? {
+        networkRackPower: powerUsage.networkRack.operationalPower,
+        computeRackPower: powerUsage.computeRack.operationalPower
+      } : {})
+    };
+  }, [powerUsage]);
+
+  // Adapt energyCosts to match EnergyCosts interface expected by PowerEnergySection
+  const adaptedEnergyCosts = React.useMemo(() => {
+    if (!energyCosts) return null;
+    
+    return {
+      dailyEnergyCost: energyCosts.dailyEnergyCost,
+      monthlyEnergyCost: energyCosts.monthlyEnergyCost,
+      annualEnergyCost: energyCosts.yearlyEnergyCost
+    };
+  }, [energyCosts]);
+
   return (
     <>
       <DesignAlerts 
@@ -114,8 +140,8 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
           </div>
           
           <PowerEnergySection 
-            powerUsage={powerUsage}
-            energyCosts={energyCosts}
+            powerUsage={adaptedPowerUsage}
+            energyCosts={adaptedEnergyCosts}
             hasDedicatedNetworkRacks={hasDedicatedNetworkRacks}
           />
           
@@ -135,6 +161,9 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
               mgmtNetworkUtilization={resourceUtilization.mgmtNetworkUtilization}
               storageNetworkUtilization={(resourceUtilization as any).storageNetworkUtilization}
               hasDedicatedStorageNetwork={hasDedicatedStorageNetwork}
+              computeSpaceUtilization={resourceUtilization.computeSpaceUtilization}
+              networkSpaceUtilization={resourceUtilization.networkSpaceUtilization}
+              hasDedicatedNetworkRacks={hasDedicatedNetworkRacks}
             />
           </div>
           
