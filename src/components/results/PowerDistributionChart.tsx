@@ -5,7 +5,8 @@ import { Progress } from '@/components/ui/progress';
 import { AlertCircle } from 'lucide-react';
 
 interface ResourceUtilizationProps {
-  powerUtilization: {
+  // Make powerUtilization optional since we've removed this visualization
+  powerUtilization?: {
     percentage: number;
     used: number;
     total: number;
