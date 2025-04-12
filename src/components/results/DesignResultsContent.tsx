@@ -130,6 +130,7 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
           
           <div className="mb-8">
             <ResourceUtilizationChart 
+              powerUtilization={resourceUtilization.powerUtilization}
               spaceUtilization={resourceUtilization.spaceUtilization}
               leafNetworkUtilization={resourceUtilization.leafNetworkUtilization}
               mgmtNetworkUtilization={resourceUtilization.mgmtNetworkUtilization}

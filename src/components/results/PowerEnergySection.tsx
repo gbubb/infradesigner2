@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PowerUsage } from '@/types/infrastructure';
+import { useResourceMetrics } from '@/hooks/design/useResourceMetrics';
 
 interface PowerEnergySectionProps {
   powerUsage: PowerUsage;
@@ -23,141 +23,204 @@ interface PowerEnergySectionProps {
       yearlyEnergyCost: number;
     };
   };
-  hasDedicatedNetworkRacks: boolean;
+  hasDedicatedNetworkRacks?: boolean;
 }
 
-export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
+export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({ 
   powerUsage,
   energyCosts,
   hasDedicatedNetworkRacks
 }) => {
-  // Format power in kW or W based on magnitude
+  const { minimumPower, operationalPower, maximumPower, totalAvailablePower } = powerUsage;
+  const { resourceUtilization } = useResourceMetrics();
+  
+  // Get the total available power either from the usage object or fallback to resource metrics
+  const availablePower = totalAvailablePower || resourceUtilization.powerUtilization.total || maximumPower;
+  
+  // Helper function to format power values
   const formatPower = (watts: number) => {
-    return watts >= 10000 
-      ? `${(watts / 1000).toFixed(2)} kW` 
-      : `${Math.round(watts)} W`;
+    if (watts >= 10000) {
+      return `${(watts / 1000).toFixed(1)} kW`;
+    }
+    return `${Math.round(watts)} W`;
   };
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Power Usage</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {hasDedicatedNetworkRacks && powerUsage.networkRack && powerUsage.computeRack ? (
-            <>
-              <h3 className="text-lg font-medium mb-4">Compute Racks Power Usage</h3>
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Minimum Power:</span>
-                  <span className="font-medium">{formatPower(powerUsage.computeRack.minimumPower)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Operational Power:</span>
-                  <span className="font-medium">{formatPower(powerUsage.computeRack.operationalPower)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Maximum Power:</span>
-                  <span className="font-medium">{formatPower(powerUsage.computeRack.maximumPower)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Available Power:</span>
-                  <span className="font-medium">{formatPower(powerUsage.computeRack.availablePower)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Power Utilization:</span>
-                  <span className="font-medium">
-                    {Math.round((powerUsage.computeRack.operationalPower / powerUsage.computeRack.availablePower) * 100)}%
-                  </span>
-                </div>
-              </div>
-              
-              <h3 className="text-lg font-medium mb-4">Network Core Racks Power Usage</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Minimum Power:</span>
-                  <span className="font-medium">{formatPower(powerUsage.networkRack.minimumPower)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Operational Power:</span>
-                  <span className="font-medium">{formatPower(powerUsage.networkRack.operationalPower)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Maximum Power:</span>
-                  <span className="font-medium">{formatPower(powerUsage.networkRack.maximumPower)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Available Power:</span>
-                  <span className="font-medium">{formatPower(powerUsage.networkRack.availablePower)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Power Utilization:</span>
-                  <span className="font-medium">
-                    {Math.round((powerUsage.networkRack.operationalPower / powerUsage.networkRack.availablePower) * 100)}%
-                  </span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Minimum Power:</span>
-                <span className="font-medium">{formatPower(powerUsage.minimumPower)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Operational Power:</span>
-                <span className="font-medium">{formatPower(powerUsage.operationalPower)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Maximum Power:</span>
-                <span className="font-medium">{formatPower(powerUsage.maximumPower)}</span>
-              </div>
-              {powerUsage.totalAvailablePower && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Available Power:</span>
-                  <span className="font-medium">{formatPower(powerUsage.totalAvailablePower)}</span>
-                </div>
-              )}
-              {powerUsage.totalAvailablePower && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Power Utilization:</span>
-                  <span className="font-medium">
-                    {Math.round((powerUsage.operationalPower / powerUsage.totalAvailablePower) * 100)}%
-                  </span>
-                </div>
-              )}
+  
+  // Calculate unused power
+  const unusedPower = availablePower - maximumPower;
+  
+  // Create power bar
+  const renderPowerBar = (powerData: {
+    minimumPower: number;
+    operationalPower: number;
+    maximumPower: number;
+    availablePower?: number;
+  }, title?: string) => {
+    // Calculate segment percentages for this power data
+    const min = powerData.minimumPower;
+    const op = powerData.operationalPower;
+    const max = powerData.maximumPower;
+    const avail = powerData.availablePower || availablePower; // Use specific rack available power if provided
+    const unused = avail - max;
+    
+    // Calculate widths for power bar segments
+    const minWidth = (min / avail) * 100;
+    const opWidth = ((op - min) / avail) * 100;
+    const maxWidth = ((max - op) / avail) * 100;
+    const unusedWidth = (unused / avail) * 100;
+    
+    return (
+      <div className="space-y-2">
+        {title && (
+          <div className="flex justify-between">
+            <span className="text-sm font-medium">{title}</span>
+          </div>
+        )}
+        
+        <div className="h-10 bg-gray-200 relative rounded-full overflow-hidden">
+          {/* Minimum power segment (blue) - exactly 1/3 of maximum */}
+          <div 
+            className="absolute h-full bg-blue-400 flex items-center px-2 text-xs text-white font-medium"
+            style={{ width: `${minWidth}%` }}
+          >
+            {minWidth > 7 ? formatPower(min) : ''}
+          </div>
+          
+          {/* Operational power segment (green) - between min and operational */}
+          <div 
+            className="absolute h-full bg-green-500 flex items-center px-2 text-xs text-white font-medium"
+            style={{ 
+              width: `${opWidth}%`,
+              left: `${minWidth}%`
+            }}
+          >
+            {opWidth > 7 ? formatPower(op) : ''}
+          </div>
+          
+          {/* Maximum power segment (orange) - between operational and max */}
+          <div 
+            className="absolute h-full bg-orange-400 flex items-center px-2 text-xs text-white font-medium"
+            style={{ 
+              width: `${maxWidth}%`,
+              left: `${minWidth + opWidth}%` 
+            }}
+          >
+            {maxWidth > 7 ? formatPower(max) : ''}
+          </div>
+          
+          {/* Unused power segment (gray) - remaining space */}
+          {unused > 0 && (
+            <div 
+              className="absolute h-full flex items-center px-2 text-xs text-gray-600 font-medium"
+              style={{ 
+                width: `${unusedWidth}%`,
+                left: `${minWidth + opWidth + maxWidth}%` 
+              }}
+            >
+              {unusedWidth > 7 ? formatPower(unused) : ''}
             </div>
           )}
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Energy Costs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <div className="text-sm text-muted-foreground mb-2">
-                Based on operational power of {formatPower(powerUsage.operationalPower)}
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Daily:</span>
-                <span className="font-medium">€{energyCosts.dailyEnergyCost.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Monthly:</span>
-                <span className="font-medium">€{energyCosts.monthlyEnergyCost.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between font-medium">
-                <span>Annual:</span>
-                <span>€{energyCosts.yearlyEnergyCost.toFixed(2)}</span>
-              </div>
+          
+          {/* Total Power Available - shown at the far right end */}
+          <div className="absolute right-2 h-full flex items-center text-xs font-medium text-gray-700">
+            Total: {formatPower(avail)}
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  return (
+    <Card className="mb-8">
+      <CardHeader>
+        <CardTitle>Power and Energy</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {/* When dedicated network racks are enabled, only show separate rack power bars */}
+          {hasDedicatedNetworkRacks && 'networkRack' in powerUsage && 'computeRack' in powerUsage ? (
+            <>
+              {renderPowerBar({
+                minimumPower: (powerUsage as any).computeRack.minimumPower,
+                operationalPower: (powerUsage as any).computeRack.operationalPower,
+                maximumPower: (powerUsage as any).computeRack.maximumPower,
+                availablePower: (powerUsage as any).computeRack.availablePower
+              }, "Compute/Storage Rack Power")}
+              
+              {renderPowerBar({
+                minimumPower: (powerUsage as any).networkRack.minimumPower,
+                operationalPower: (powerUsage as any).networkRack.operationalPower,
+                maximumPower: (powerUsage as any).networkRack.maximumPower,
+                availablePower: (powerUsage as any).networkRack.availablePower
+              }, "Network Core Rack Power")}
+            </>
+          ) : (
+            // Otherwise show the combined power bar
+            renderPowerBar(powerUsage, "Power Usage Levels")
+          )}
+          
+          {/* Power legend */}
+          <div className="flex flex-wrap items-center text-xs pt-1 gap-x-4">
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-blue-400 rounded-sm mr-1"></div>
+              <span>Minimum</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-green-500 rounded-sm mr-1"></div>
+              <span>Operational</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-orange-400 rounded-sm mr-1"></div>
+              <span>Maximum</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-gray-200 rounded-sm mr-1"></div>
+              <span>Unused</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          
+          {/* Energy cost sections */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Daily Energy Cost</h4>
+              <div className="text-2xl font-bold">€{energyCosts.dailyEnergyCost.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">
+                Based on operational power of {(operationalPower / 1000).toFixed(2)} kW
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Monthly Energy Cost</h4>
+              <div className="text-2xl font-bold">€{energyCosts.monthlyEnergyCost.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">
+                Approximately {(energyCosts.monthlyEnergyCost / 30).toFixed(2)} € per day
+              </p>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">Annual Energy Cost</h4>
+            <div className="text-xl font-bold">€{energyCosts.yearlyEnergyCost.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              Approximately {(energyCosts.yearlyEnergyCost / 12).toFixed(2)} € per month
+            </p>
+          </div>
+          
+          {/* Separated energy costs if we have dedicated network racks */}
+          {hasDedicatedNetworkRacks && energyCosts.networkRack && energyCosts.computeRack && (
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Compute Rack Energy</h4>
+                <div className="text-lg font-bold">€{energyCosts.computeRack.monthlyEnergyCost.toFixed(2)}/month</div>
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Network Rack Energy</h4>
+                <div className="text-lg font-bold">€{energyCosts.networkRack.monthlyEnergyCost.toFixed(2)}/month</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };

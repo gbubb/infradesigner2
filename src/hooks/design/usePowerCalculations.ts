@@ -70,7 +70,7 @@ export const usePowerCalculations = () => {
     const networkRackOperationalPower = networkRackMinimumPower + networkRackOperationalComponent;
     const computeRackOperationalPower = computeRackMinimumPower + computeRackOperationalComponent;
     
-    // Calculate available power based on rack type
+    // Calculate available power based on rack type - FIX: Use the correct rack quantities
     const powerPerRack = activeDesign?.requirements?.physicalConstraints?.powerPerRackWatts || 0;
     const computeRackQuantity = activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity || 1;
     const networkRackQuantity = hasDedicatedNetworkRacks ? 2 : 0; // Network racks are always a pair
@@ -120,6 +120,32 @@ export const usePowerCalculations = () => {
     const monthlyEnergyCost = dailyEnergyCost * 30; // Approximate month
     const yearlyEnergyCost = dailyEnergyCost * 365;
     
+    // If we have dedicated network racks, calculate their energy costs separately
+    if ('networkRack' in powerUsage) {
+      const networkOperationalPowerKw = (powerUsage as any).networkRack.operationalPower / 1000;
+      const computeOperationalPowerKw = (powerUsage as any).computeRack.operationalPower / 1000;
+      
+      return {
+        hourlyEnergyCost,
+        dailyEnergyCost,
+        monthlyEnergyCost,
+        yearlyEnergyCost,
+        networkRack: {
+          hourlyEnergyCost: networkOperationalPowerKw * electricityPrice,
+          dailyEnergyCost: networkOperationalPowerKw * electricityPrice * 24,
+          monthlyEnergyCost: networkOperationalPowerKw * electricityPrice * 24 * 30,
+          yearlyEnergyCost: networkOperationalPowerKw * electricityPrice * 24 * 365,
+        },
+        computeRack: {
+          hourlyEnergyCost: computeOperationalPowerKw * electricityPrice,
+          dailyEnergyCost: computeOperationalPowerKw * electricityPrice * 24,
+          monthlyEnergyCost: computeOperationalPowerKw * electricityPrice * 24 * 30,
+          yearlyEnergyCost: computeOperationalPowerKw * electricityPrice * 24 * 365,
+        }
+      };
+    }
+    
+    // Otherwise return the combined costs
     return {
       hourlyEnergyCost,
       dailyEnergyCost,
