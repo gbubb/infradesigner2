@@ -2,58 +2,55 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { AlertCircle } from 'lucide-react';
 
-interface ResourceUtilizationProps {
-  powerUtilization: {
-    percentage: number;
-    used: number;
-    total: number;
-  };
-  spaceUtilization: {
-    percentage: number;
-    used: number;
-    total: number;
-  };
-  leafNetworkUtilization: {
-    percentage: number;
-    used: number;
-    total: number;
-  };
-  mgmtNetworkUtilization: {
-    percentage: number;
-    used: number;
-    total: number;
-  };
-  storageNetworkUtilization?: {
-    percentage: number;
-    used: number;
-    total: number;
-  };
+interface ResourceUtilizationChartProps {
+  spaceUtilization?: { percentage: number; used: number; total: number };
+  powerUtilization?: { percentage: number; used: number; total: number };
+  leafNetworkUtilization?: { percentage: number; used: number; total: number };
+  mgmtNetworkUtilization?: { percentage: number; used: number; total: number };
+  storageNetworkUtilization?: { percentage: number; used: number; total: number };
   hasDedicatedStorageNetwork?: boolean;
+  hasDedicatedNetworkRacks?: boolean;
+  computeRackSpace?: { percentage: number; used: number; total: number };
+  networkRackSpace?: { percentage: number; used: number; total: number };
 }
 
-export const ResourceUtilizationChart: React.FC<ResourceUtilizationProps> = ({ 
-  powerUtilization, 
-  spaceUtilization, 
+export const ResourceUtilizationChart: React.FC<ResourceUtilizationChartProps> = ({
+  spaceUtilization,
   leafNetworkUtilization,
   mgmtNetworkUtilization,
   storageNetworkUtilization,
-  hasDedicatedStorageNetwork
+  hasDedicatedStorageNetwork,
+  hasDedicatedNetworkRacks
 }) => {
-  // Function to determine if a utilization is over capacity
-  const isOverCapacity = (percentage: number) => percentage > 100;
-  
-  // Function to determine if a resources is missing (denominator is zero)
-  const isMissingResource = (utilized: number, available: number) => utilized > 0 && available === 0;
-  
-  // Function to determine indicator color based on utilization percentage
-  const getIndicatorClass = (percentage: number) => {
-    if (percentage > 100) return 'bg-red-500';
-    if (percentage > 90) return 'bg-amber-500';
-    if (percentage > 75) return 'bg-yellow-500';
-    return 'bg-green-500';
+  // Function to determine color based on percentage
+  const getUtilizationColor = (percentage: number) => {
+    if (percentage >= 90) return "bg-red-500";
+    if (percentage >= 70) return "bg-yellow-500";
+    return "bg-green-500";
   };
+
+  // Function to format percentage value
+  const formatPercentage = (value: number) => {
+    return `${Math.min(Math.round(value * 10) / 10, 100).toFixed(1)}%`;
+  };
+
+  // Check if compute rack and network rack space need to be displayed separately
+  const showSeparateRackSpace = hasDedicatedNetworkRacks && spaceUtilization;
+
+  // Calculate separate space utilization for compute and network racks if needed
+  // This is just a placeholder logic - adjust according to your actual data structure
+  const computeRackSpace = showSeparateRackSpace ? {
+    percentage: spaceUtilization.percentage,  // You need to implement the correct calculation here
+    used: spaceUtilization.used,
+    total: spaceUtilization.total
+  } : undefined;
+  
+  const networkRackSpace = showSeparateRackSpace ? {
+    percentage: spaceUtilization.percentage,  // You need to implement the correct calculation here
+    used: 0,
+    total: 0
+  } : undefined;
 
   return (
     <Card>
@@ -61,159 +58,113 @@ export const ResourceUtilizationChart: React.FC<ResourceUtilizationProps> = ({
         <CardTitle>Resource Utilization</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Power Utilization */}
-        <div className="mb-6">
-          <div className="flex justify-between mb-1">
-            <span className="text-sm font-medium">Power Utilization</span>
-            <div className="flex items-center">
-              <span className={`text-sm ${isOverCapacity(powerUtilization.percentage) ? 'text-red-500 font-bold' : 'text-muted-foreground'} mr-2`}>
-                {powerUtilization.used.toLocaleString()} W / {powerUtilization.total.toLocaleString()} W
-                ({Math.round(powerUtilization.percentage)}%)
-              </span>
-              {isOverCapacity(powerUtilization.percentage) && (
-                <AlertCircle className="h-4 w-4 text-red-500" />
-              )}
-            </div>
-          </div>
-          <Progress 
-            value={Math.min(powerUtilization.percentage, 100)} 
-            className="h-2" 
-            indicatorClassName={getIndicatorClass(powerUtilization.percentage)}
-          />
-        </div>
-        
-        {/* Space Utilization */}
-        <div className="mb-6">
-          <div className="flex justify-between mb-1">
-            <span className="text-sm font-medium">Rack Space Utilization</span>
-            <div className="flex items-center">
-              <span className={`text-sm ${isOverCapacity(spaceUtilization.percentage) ? 'text-red-500 font-bold' : 'text-muted-foreground'} mr-2`}>
-                {spaceUtilization.used} RU / {spaceUtilization.total} RU
-                ({Math.round(spaceUtilization.percentage)}%)
-              </span>
-              {isOverCapacity(spaceUtilization.percentage) && (
-                <AlertCircle className="h-4 w-4 text-red-500" />
-              )}
-            </div>
-          </div>
-          <Progress 
-            value={Math.min(spaceUtilization.percentage, 100)} 
-            className="h-2" 
-            indicatorClassName={getIndicatorClass(spaceUtilization.percentage)}
-          />
-        </div>
-        
-        {/* Leaf Network Utilization */}
-        <div className="mb-6">
-          <div className="flex justify-between mb-1">
-            <span className="text-sm font-medium">Leaf Network Port Utilization</span>
-            <div className="flex items-center">
-              <span 
-                className={`text-sm ${
-                  isOverCapacity(leafNetworkUtilization.percentage) || 
-                  isMissingResource(leafNetworkUtilization.used, leafNetworkUtilization.total) 
-                    ? 'text-red-500 font-bold' : 'text-muted-foreground'
-                } mr-2`}
-              >
-                {leafNetworkUtilization.used} Ports / {leafNetworkUtilization.total} Ports
-                {leafNetworkUtilization.total > 0 
-                  ? ` (${Math.round(leafNetworkUtilization.percentage)}%)` 
-                  : leafNetworkUtilization.used > 0 
-                    ? ' (Missing switches!)' 
-                    : ''
-                }
-              </span>
-              {(isOverCapacity(leafNetworkUtilization.percentage) || 
-                isMissingResource(leafNetworkUtilization.used, leafNetworkUtilization.total)) && (
-                <AlertCircle className="h-4 w-4 text-red-500" />
-              )}
-            </div>
-          </div>
-          <Progress 
-            value={leafNetworkUtilization.total > 0 ? Math.min(leafNetworkUtilization.percentage, 100) : 100}
-            className="h-2" 
-            indicatorClassName={
-              isMissingResource(leafNetworkUtilization.used, leafNetworkUtilization.total)
-                ? 'bg-red-500'
-                : getIndicatorClass(leafNetworkUtilization.percentage)
-            }
-          />
-        </div>
-        
-        {/* Storage Network Utilization - Only display when dedicated storage network is enabled */}
-        {hasDedicatedStorageNetwork && storageNetworkUtilization && (
-          <div className="mb-6">
-            <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium">Storage Network Port Utilization</span>
-              <div className="flex items-center">
-                <span 
-                  className={`text-sm ${
-                    isOverCapacity(storageNetworkUtilization.percentage) || 
-                    isMissingResource(storageNetworkUtilization.used, storageNetworkUtilization.total) 
-                      ? 'text-red-500 font-bold' : 'text-muted-foreground'
-                  } mr-2`}
-                >
-                  {storageNetworkUtilization.used} Ports / {storageNetworkUtilization.total} Ports
-                  {storageNetworkUtilization.total > 0 
-                    ? ` (${Math.round(storageNetworkUtilization.percentage)}%)` 
-                    : storageNetworkUtilization.used > 0 
-                      ? ' (Missing storage switches!)' 
-                      : ''
-                  }
+        <div className="space-y-6">
+          {/* Display separate rack space utilization for compute and network racks */}
+          {showSeparateRackSpace ? (
+            <>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-medium">Compute/Storage Rack Space</h4>
+                  <span className="text-sm font-medium">{computeRackSpace?.used} / {computeRackSpace?.total} RU</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Progress 
+                    value={computeRackSpace?.percentage} 
+                    className={getUtilizationColor(computeRackSpace?.percentage || 0)} 
+                  />
+                  <span className="text-xs font-medium w-12 text-right">
+                    {formatPercentage(computeRackSpace?.percentage || 0)}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-medium">Network Core Rack Space</h4>
+                  <span className="text-sm font-medium">{networkRackSpace?.used} / {networkRackSpace?.total} RU</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Progress 
+                    value={networkRackSpace?.percentage} 
+                    className={getUtilizationColor(networkRackSpace?.percentage || 0)} 
+                  />
+                  <span className="text-xs font-medium w-12 text-right">
+                    {formatPercentage(networkRackSpace?.percentage || 0)}
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Regular combined rack space utilization */
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <h4 className="text-sm font-medium">Rack Space Utilization</h4>
+                <span className="text-sm font-medium">{spaceUtilization?.used || 0} / {spaceUtilization?.total || 0} RU</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Progress 
+                  value={spaceUtilization?.percentage || 0} 
+                  className={getUtilizationColor(spaceUtilization?.percentage || 0)} 
+                />
+                <span className="text-xs font-medium w-12 text-right">
+                  {formatPercentage(spaceUtilization?.percentage || 0)}
                 </span>
-                {(isOverCapacity(storageNetworkUtilization.percentage) || 
-                  isMissingResource(storageNetworkUtilization.used, storageNetworkUtilization.total)) && (
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                )}
               </div>
             </div>
-            <Progress 
-              value={storageNetworkUtilization.total > 0 ? Math.min(storageNetworkUtilization.percentage, 100) : 100}
-              className="h-2" 
-              indicatorClassName={
-                isMissingResource(storageNetworkUtilization.used, storageNetworkUtilization.total)
-                  ? 'bg-red-500'
-                  : getIndicatorClass(storageNetworkUtilization.percentage)
-              }
-            />
-          </div>
-        )}
-        
-        {/* Management Network Utilization */}
-        <div className="mb-2">
-          <div className="flex justify-between mb-1">
-            <span className="text-sm font-medium">Management Network Port Utilization</span>
-            <div className="flex items-center">
-              <span 
-                className={`text-sm ${
-                  isOverCapacity(mgmtNetworkUtilization.percentage) || 
-                  isMissingResource(mgmtNetworkUtilization.used, mgmtNetworkUtilization.total) 
-                    ? 'text-red-500 font-bold' : 'text-muted-foreground'
-                } mr-2`}
-              >
-                {mgmtNetworkUtilization.used} Ports / {mgmtNetworkUtilization.total} Ports
-                {mgmtNetworkUtilization.total > 0 
-                  ? ` (${Math.round(mgmtNetworkUtilization.percentage)}%)` 
-                  : mgmtNetworkUtilization.used > 0 
-                    ? ' (Missing switches!)' 
-                    : ''
-                }
+          )}
+
+          {/* Leaf Network Ports */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <h4 className="text-sm font-medium">Leaf Network Ports</h4>
+              <span className="text-sm font-medium">{leafNetworkUtilization?.used || 0} / {leafNetworkUtilization?.total || 0} ports</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Progress 
+                value={leafNetworkUtilization?.percentage || 0} 
+                className={getUtilizationColor(leafNetworkUtilization?.percentage || 0)} 
+              />
+              <span className="text-xs font-medium w-12 text-right">
+                {formatPercentage(leafNetworkUtilization?.percentage || 0)}
               </span>
-              {(isOverCapacity(mgmtNetworkUtilization.percentage) || 
-                isMissingResource(mgmtNetworkUtilization.used, mgmtNetworkUtilization.total)) && (
-                <AlertCircle className="h-4 w-4 text-red-500" />
-              )}
             </div>
           </div>
-          <Progress 
-            value={mgmtNetworkUtilization.total > 0 ? Math.min(mgmtNetworkUtilization.percentage, 100) : 100}
-            className="h-2" 
-            indicatorClassName={
-              isMissingResource(mgmtNetworkUtilization.used, mgmtNetworkUtilization.total)
-                ? 'bg-red-500'
-                : getIndicatorClass(mgmtNetworkUtilization.percentage)
-            }
-          />
+
+          {/* Management Network Ports */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <h4 className="text-sm font-medium">Management Network Ports</h4>
+              <span className="text-sm font-medium">{mgmtNetworkUtilization?.used || 0} / {mgmtNetworkUtilization?.total || 0} ports</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Progress 
+                value={mgmtNetworkUtilization?.percentage || 0} 
+                className={getUtilizationColor(mgmtNetworkUtilization?.percentage || 0)} 
+              />
+              <span className="text-xs font-medium w-12 text-right">
+                {formatPercentage(mgmtNetworkUtilization?.percentage || 0)}
+              </span>
+            </div>
+          </div>
+
+          {/* Storage Network Ports (only if dedicated storage network is enabled) */}
+          {hasDedicatedStorageNetwork && storageNetworkUtilization && (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <h4 className="text-sm font-medium">Storage Network Ports</h4>
+                <span className="text-sm font-medium">{storageNetworkUtilization.used} / {storageNetworkUtilization.total} ports</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Progress 
+                  value={storageNetworkUtilization.percentage} 
+                  className={getUtilizationColor(storageNetworkUtilization.percentage)} 
+                />
+                <span className="text-xs font-medium w-12 text-right">
+                  {formatPercentage(storageNetworkUtilization.percentage)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

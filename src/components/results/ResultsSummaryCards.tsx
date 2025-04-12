@@ -12,10 +12,10 @@ interface ResourceSummaryProps {
   powerPerRack: number;
 }
 
-interface CostAnalysisProps {
-  totalCost: number;
+interface KeyMetricsProps {
+  totalCapitalCost: number;
   costPerVCPU: number;
-  costPerTB: number;
+  costTBMemory: number;
 }
 
 export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
@@ -76,29 +76,29 @@ export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
   );
 };
 
-export const CostAnalysisCard: React.FC<CostAnalysisProps> = ({
-  totalCost,
+export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
+  totalCapitalCost,
   costPerVCPU,
-  costPerTB
+  costTBMemory
 }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Cost Analysis</CardTitle>
+        <CardTitle>Key Metrics</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Total Cost:</span>
-            <span className="font-medium">${totalCost.toLocaleString()}</span>
+            <span className="text-muted-foreground">Total Capital Cost:</span>
+            <span className="font-medium">${totalCapitalCost.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Cost per vCPU:</span>
             <span className="font-medium">${costPerVCPU.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Cost per TB:</span>
-            <span className="font-medium">${costPerTB.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+            <span className="text-muted-foreground">Cost TB/Memory:</span>
+            <span className="font-medium">${costTBMemory.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
           </div>
         </div>
       </CardContent>

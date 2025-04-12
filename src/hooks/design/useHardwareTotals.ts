@@ -9,7 +9,7 @@ export const useHardwareTotals = () => {
   
   // Calculate actual hardware totals (including redundancy)
   const actualHardwareTotals = useMemo(() => {
-    if (!activeDesign?.components) {
+    if (!activeDesign?.components || !requirements?.computeRequirements?.computeClusters) {
       return {
         totalVCPUs: 0,
         totalMemoryTB: 0,
@@ -59,12 +59,17 @@ export const useHardwareTotals = () => {
       if ((component as any).clusterInfo) {
         const clusterId = (component as any).clusterInfo.clusterId;
         const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
-        overcommitRatio = matchingCluster?.overcommitRatio || 1;
-        
-        console.log(`${component.role} in cluster ${(component as any).clusterInfo.clusterName}, coresPerServer: ${coresPerServer}, overcommit: ${overcommitRatio}, total vCPUs: ${coresPerServer * quantity * overcommitRatio}`);
+        if (matchingCluster) {
+          overcommitRatio = matchingCluster.overcommitRatio || 1;
+          console.log(`${component.role} in cluster ${(component as any).clusterInfo.clusterName}, coresPerServer: ${coresPerServer}, overcommit: ${overcommitRatio}`);
+        }
       }
       
-      totalVCPUs += coresPerServer * quantity * overcommitRatio;
+      const serverVCPUs = coresPerServer * overcommitRatio;
+      const totalServerVCPUs = serverVCPUs * quantity;
+      totalVCPUs += totalServerVCPUs;
+      
+      console.log(`Server ${component.name} has ${serverVCPUs} vCPUs per server × ${quantity} servers = ${totalServerVCPUs} total vCPUs`);
       
       // SIMPLIFIED MEMORY CALCULATION - Use memoryCapacity as the primary source of truth
       let componentMemoryGB = 0;
@@ -88,7 +93,9 @@ export const useHardwareTotals = () => {
         console.warn(`Compute Server ${component.name} has no valid memory configuration!`);
       }
       
-      computeMemoryGB += componentMemoryGB * quantity;
+      const totalServerMemoryGB = componentMemoryGB * quantity;
+      computeMemoryGB += totalServerMemoryGB;
+      console.log(`Server ${component.name} has ${componentMemoryGB}GB per server × ${quantity} servers = ${totalServerMemoryGB}GB total memory`);
     });
     
     // Calculate storage capacity from storage clusters
@@ -138,7 +145,7 @@ export const useHardwareTotals = () => {
       // Add to total storage (we use usable capacity, not including fill factor)
       totalStorageTB += usableCapacityTiB;
       
-      console.log(`Storage cluster ${cluster.name}: Raw capacity: ${clusterRawCapacityTB} TB, Usable: ${usableCapacityTiB.toFixed(2)} TiB (using pool efficiency ${poolEfficiencyFactor})`);
+      console.log(`Storage cluster ${cluster.name}: Raw capacity: ${clusterRawCapacityTB.toFixed(2)} TB, Usable: ${usableCapacityTiB.toFixed(2)} TiB (using pool efficiency ${poolEfficiencyFactor})`);
     });
     
     // Calculate other memory (non-compute cluster memory) for totals

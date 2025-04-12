@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ResourceSummaryCard, CostAnalysisCard } from './ResultsSummaryCards';
+import { ResourceSummaryCard, KeyMetricsCard } from './ResultsSummaryCards';
 import { StorageClustersTable } from './StorageClustersTable';
 import { ResourceUtilizationChart } from './PowerDistributionChart';
 import { InfrastructureSummaryCard } from './InfrastructureSummaryCard';
@@ -106,10 +106,10 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
               powerPerRack={powerPerRack}
             />
             
-            <CostAnalysisCard
-              totalCost={capitalCost}
+            <KeyMetricsCard
+              totalCapitalCost={capitalCost}
               costPerVCPU={costPerVCPU}
-              costPerTB={costPerTB}
+              costTBMemory={costPerTB}
             />
           </div>
           
@@ -130,12 +130,13 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
           
           <div className="mb-8">
             <ResourceUtilizationChart 
-              powerUtilization={resourceUtilization.powerUtilization}
-              spaceUtilization={resourceUtilization.spaceUtilization}
-              leafNetworkUtilization={resourceUtilization.leafNetworkUtilization}
-              mgmtNetworkUtilization={resourceUtilization.mgmtNetworkUtilization}
-              storageNetworkUtilization={(resourceUtilization as any).storageNetworkUtilization}
+              powerUtilization={resourceUtilization?.powerUtilization}
+              spaceUtilization={resourceUtilization?.spaceUtilization}
+              leafNetworkUtilization={resourceUtilization?.leafNetworkUtilization}
+              mgmtNetworkUtilization={resourceUtilization?.mgmtNetworkUtilization}
+              storageNetworkUtilization={(resourceUtilization as any)?.storageNetworkUtilization}
               hasDedicatedStorageNetwork={hasDedicatedStorageNetwork}
+              hasDedicatedNetworkRacks={hasDedicatedNetworkRacks}
             />
           </div>
           

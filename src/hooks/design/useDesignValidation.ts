@@ -9,7 +9,11 @@ export const useDesignValidation = () => {
   const designErrors = useMemo(() => {
     const errors = [];
     
-    if (resourceUtilization.spaceUtilization.percentage > 100) {
+    if (!resourceUtilization) {
+      return errors;
+    }
+    
+    if (resourceUtilization.spaceUtilization?.percentage > 100) {
       errors.push({
         id: 'ru-exceeded',
         title: 'Rack Space Exceeded',
@@ -17,7 +21,7 @@ export const useDesignValidation = () => {
       });
     }
     
-    if (resourceUtilization.powerUtilization.percentage > 100) {
+    if (resourceUtilization.powerUtilization?.percentage > 100) {
       errors.push({
         id: 'power-exceeded',
         title: 'Power Capacity Exceeded',
@@ -25,7 +29,8 @@ export const useDesignValidation = () => {
       });
     }
     
-    if (resourceUtilization.leafNetworkUtilization.percentage > 100 || (resourceUtilization.leafNetworkUtilization.used > 0 && resourceUtilization.leafNetworkUtilization.total === 0)) {
+    if ((resourceUtilization.leafNetworkUtilization?.percentage > 100) || 
+        (resourceUtilization.leafNetworkUtilization?.used > 0 && resourceUtilization.leafNetworkUtilization.total === 0)) {
       errors.push({
         id: 'leaf-network-exceeded',
         title: 'Leaf Network Port Capacity Exceeded',
@@ -33,7 +38,8 @@ export const useDesignValidation = () => {
       });
     }
     
-    if (resourceUtilization.mgmtNetworkUtilization.percentage > 100 || (resourceUtilization.mgmtNetworkUtilization.used > 0 && resourceUtilization.mgmtNetworkUtilization.total === 0)) {
+    if ((resourceUtilization.mgmtNetworkUtilization?.percentage > 100) || 
+        (resourceUtilization.mgmtNetworkUtilization?.used > 0 && resourceUtilization.mgmtNetworkUtilization.total === 0)) {
       errors.push({
         id: 'mgmt-network-exceeded',
         title: 'Management Network Port Capacity Exceeded',

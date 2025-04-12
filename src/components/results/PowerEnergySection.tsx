@@ -31,11 +31,13 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
   energyCosts,
   hasDedicatedNetworkRacks
 }) => {
-  const { minimumPower, operationalPower, maximumPower, totalAvailablePower } = powerUsage;
+  const { minimumPower, operationalPower, maximumPower, totalAvailablePower } = powerUsage || {};
   const { resourceUtilization } = useResourceMetrics();
   
   // Get the total available power either from the usage object or fallback to resource metrics
-  const availablePower = totalAvailablePower || resourceUtilization.powerUtilization.total || maximumPower;
+  const availablePower = totalAvailablePower || 
+                        (resourceUtilization?.powerUtilization?.total) || 
+                        (maximumPower || 0);
   
   // Helper function to format power values
   const formatPower = (watts: number) => {
@@ -46,27 +48,27 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
   };
   
   // Calculate unused power
-  const unusedPower = availablePower - maximumPower;
+  const unusedPower = availablePower - (maximumPower || 0);
   
   // Create power bar
   const renderPowerBar = (powerData: {
-    minimumPower: number;
-    operationalPower: number;
-    maximumPower: number;
+    minimumPower?: number;
+    operationalPower?: number;
+    maximumPower?: number;
     availablePower?: number;
-  }, title?: string) => {
+  } = {}, title?: string) => {
     // Calculate segment percentages for this power data
-    const min = powerData.minimumPower;
-    const op = powerData.operationalPower;
-    const max = powerData.maximumPower;
+    const min = powerData.minimumPower || 0;
+    const op = powerData.operationalPower || 0;
+    const max = powerData.maximumPower || 0;
     const avail = powerData.availablePower || availablePower; // Use specific rack available power if provided
     const unused = avail - max;
     
     // Calculate widths for power bar segments
-    const minWidth = (min / avail) * 100;
-    const opWidth = ((op - min) / avail) * 100;
-    const maxWidth = ((max - op) / avail) * 100;
-    const unusedWidth = (unused / avail) * 100;
+    const minWidth = avail > 0 ? (min / avail) * 100 : 0;
+    const opWidth = avail > 0 ? ((op - min) / avail) * 100 : 0;
+    const maxWidth = avail > 0 ? ((max - op) / avail) * 100 : 0;
+    const unusedWidth = avail > 0 ? (unused / avail) * 100 : 0;
     
     return (
       <div className="space-y-2">
@@ -137,25 +139,29 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
       <CardContent>
         <div className="space-y-6">
           {/* When dedicated network racks are enabled, only show separate rack power bars */}
-          {hasDedicatedNetworkRacks && 'networkRack' in powerUsage && 'computeRack' in powerUsage ? (
+          {hasDedicatedNetworkRacks && powerUsage && 'networkRack' in powerUsage && 'computeRack' in powerUsage ? (
             <>
               {renderPowerBar({
-                minimumPower: (powerUsage as any).computeRack.minimumPower,
-                operationalPower: (powerUsage as any).computeRack.operationalPower,
-                maximumPower: (powerUsage as any).computeRack.maximumPower,
-                availablePower: (powerUsage as any).computeRack.availablePower
+                minimumPower: (powerUsage as any).computeRack?.minimumPower,
+                operationalPower: (powerUsage as any).computeRack?.operationalPower,
+                maximumPower: (powerUsage as any).computeRack?.maximumPower,
+                availablePower: (powerUsage as any).computeRack?.availablePower
               }, "Compute/Storage Rack Power")}
               
               {renderPowerBar({
-                minimumPower: (powerUsage as any).networkRack.minimumPower,
-                operationalPower: (powerUsage as any).networkRack.operationalPower,
-                maximumPower: (powerUsage as any).networkRack.maximumPower,
-                availablePower: (powerUsage as any).networkRack.availablePower
+                minimumPower: (powerUsage as any).networkRack?.minimumPower,
+                operationalPower: (powerUsage as any).networkRack?.operationalPower,
+                maximumPower: (powerUsage as any).networkRack?.maximumPower,
+                availablePower: (powerUsage as any).networkRack?.availablePower
               }, "Network Core Rack Power")}
             </>
           ) : (
             // Otherwise show the combined power bar
-            renderPowerBar(powerUsage, "Power Usage Levels")
+            renderPowerBar({
+              minimumPower,
+              operationalPower,
+              maximumPower
+            }, "Power Usage Levels")
           )}
           
           {/* Power legend */}
@@ -178,47 +184,26 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
             </div>
           </div>
           
-          {/* Energy cost sections */}
+          {/* Energy cost sections - simplified version */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Daily Energy Cost</h4>
-              <div className="text-2xl font-bold">€{energyCosts.dailyEnergyCost.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">
-                Based on operational power of {(operationalPower / 1000).toFixed(2)} kW
-              </p>
+              <div className="text-2xl font-bold">€{energyCosts?.dailyEnergyCost.toFixed(2)}</div>
             </div>
             
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Monthly Energy Cost</h4>
-              <div className="text-2xl font-bold">€{energyCosts.monthlyEnergyCost.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">
-                Approximately {(energyCosts.monthlyEnergyCost / 30).toFixed(2)} € per day
-              </p>
+              <div className="text-2xl font-bold">€{energyCosts?.monthlyEnergyCost.toFixed(2)}</div>
             </div>
           </div>
           
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Annual Energy Cost</h4>
-            <div className="text-xl font-bold">€{energyCosts.yearlyEnergyCost.toFixed(2)}</div>
+            <div className="text-xl font-bold">€{energyCosts?.yearlyEnergyCost.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              Approximately {(energyCosts.yearlyEnergyCost / 12).toFixed(2)} € per month
+              Based on operational power of {formatPower(operationalPower || 0)}
             </p>
           </div>
-          
-          {/* Separated energy costs if we have dedicated network racks */}
-          {hasDedicatedNetworkRacks && energyCosts.networkRack && energyCosts.computeRack && (
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Compute Rack Energy</h4>
-                <div className="text-lg font-bold">€{energyCosts.computeRack.monthlyEnergyCost.toFixed(2)}/month</div>
-              </div>
-              
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Network Rack Energy</h4>
-                <div className="text-lg font-bold">€{energyCosts.networkRack.monthlyEnergyCost.toFixed(2)}/month</div>
-              </div>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
