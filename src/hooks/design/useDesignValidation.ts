@@ -9,7 +9,13 @@ export const useDesignValidation = () => {
   const designErrors = useMemo(() => {
     const errors = [];
     
-    if (resourceUtilization.spaceUtilization.percentage > 100) {
+    // Check if resourceUtilization exists and has the expected properties
+    if (!resourceUtilization) {
+      return errors;
+    }
+    
+    // Check for rack space utilization
+    if (resourceUtilization.spaceUtilization && resourceUtilization.spaceUtilization.percentage > 100) {
       errors.push({
         id: 'ru-exceeded',
         title: 'Rack Space Exceeded',
@@ -17,7 +23,9 @@ export const useDesignValidation = () => {
       });
     }
     
-    if (resourceUtilization.powerUtilization.percentage > 100) {
+    // Check for power utilization - powerUtilization may no longer exist in the updated codebase
+    // Only check if it exists
+    if (resourceUtilization.powerUtilization && resourceUtilization.powerUtilization.percentage > 100) {
       errors.push({
         id: 'power-exceeded',
         title: 'Power Capacity Exceeded',
@@ -25,20 +33,30 @@ export const useDesignValidation = () => {
       });
     }
     
-    if (resourceUtilization.leafNetworkUtilization.percentage > 100 || (resourceUtilization.leafNetworkUtilization.used > 0 && resourceUtilization.leafNetworkUtilization.total === 0)) {
-      errors.push({
-        id: 'leaf-network-exceeded',
-        title: 'Leaf Network Port Capacity Exceeded',
-        description: `The design requires ${resourceUtilization.leafNetworkUtilization.used} leaf network ports, but only ${resourceUtilization.leafNetworkUtilization.total} ports are available.`
-      });
+    // Check for leaf network utilization
+    if (resourceUtilization.leafNetworkUtilization) {
+      if (resourceUtilization.leafNetworkUtilization.percentage > 100 || 
+          (resourceUtilization.leafNetworkUtilization.used > 0 && 
+           resourceUtilization.leafNetworkUtilization.total === 0)) {
+        errors.push({
+          id: 'leaf-network-exceeded',
+          title: 'Leaf Network Port Capacity Exceeded',
+          description: `The design requires ${resourceUtilization.leafNetworkUtilization.used} leaf network ports, but only ${resourceUtilization.leafNetworkUtilization.total} ports are available.`
+        });
+      }
     }
     
-    if (resourceUtilization.mgmtNetworkUtilization.percentage > 100 || (resourceUtilization.mgmtNetworkUtilization.used > 0 && resourceUtilization.mgmtNetworkUtilization.total === 0)) {
-      errors.push({
-        id: 'mgmt-network-exceeded',
-        title: 'Management Network Port Capacity Exceeded',
-        description: `The design requires ${resourceUtilization.mgmtNetworkUtilization.used} management network ports, but only ${resourceUtilization.mgmtNetworkUtilization.total} ports are available.`
-      });
+    // Check for management network utilization
+    if (resourceUtilization.mgmtNetworkUtilization) {
+      if (resourceUtilization.mgmtNetworkUtilization.percentage > 100 || 
+          (resourceUtilization.mgmtNetworkUtilization.used > 0 && 
+           resourceUtilization.mgmtNetworkUtilization.total === 0)) {
+        errors.push({
+          id: 'mgmt-network-exceeded',
+          title: 'Management Network Port Capacity Exceeded',
+          description: `The design requires ${resourceUtilization.mgmtNetworkUtilization.used} management network ports, but only ${resourceUtilization.mgmtNetworkUtilization.total} ports are available.`
+        });
+      }
     }
     
     return errors;
