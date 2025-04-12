@@ -13,7 +13,8 @@ export const useDesignCalculations = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   
   // Import all the individual hooks - these will use the same activeDesign from the store
-  const { resourceMetrics, resourceUtilization } = useResourceMetrics();
+  const resourceMetrics = useResourceMetrics();
+  const { resourceUtilization } = resourceMetrics;
   const { storageClustersMetrics } = useStorageClusters();
   const { actualHardwareTotals } = useHardwareTotals();
   const { componentsByType } = useComponentsByType();

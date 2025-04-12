@@ -50,8 +50,7 @@ export const useDesignValidation = () => {
     }
     
     // Add check for storage network utilization if it exists
-    if ('storageNetworkUtilization' in resourceUtilization && 
-        resourceUtilization.storageNetworkUtilization && 
+    if (resourceUtilization.storageNetworkUtilization && 
         ((resourceUtilization.storageNetworkUtilization.percentage > 100) || 
         (resourceUtilization.storageNetworkUtilization.used > 0 && resourceUtilization.storageNetworkUtilization.total === 0))) {
       errors.push({

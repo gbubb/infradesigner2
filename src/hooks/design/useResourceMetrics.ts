@@ -9,9 +9,11 @@ export const useResourceMetrics = () => {
   const resourceUtilization = useResourceUtilization();
   
   return {
-    // Combine all metrics into a single object for backward compatibility
+    // Physical resource metrics
     ...physicalMetrics,
+    // Network metrics
     ...networkMetrics,
+    // Resource utilization data
     resourceUtilization,
   };
 };

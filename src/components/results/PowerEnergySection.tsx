@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PowerUsage } from '@/types/infrastructure';
-import { useResourceMetrics } from '@/hooks/design/useResourceMetrics';
+import { useResourceUtilization } from '@/hooks/design/useResourceUtilization';
 
 interface PowerEnergySectionProps {
   powerUsage: PowerUsage;
@@ -32,7 +33,7 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
   hasDedicatedNetworkRacks
 }) => {
   const { minimumPower, operationalPower, maximumPower, totalAvailablePower } = powerUsage || {};
-  const { resourceUtilization } = useResourceMetrics();
+  const resourceUtilization = useResourceUtilization();
   
   // Get the total available power either from the usage object or fallback to resource metrics
   const availablePower = totalAvailablePower || 
@@ -201,7 +202,9 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
             <h4 className="text-sm font-medium">Annual Energy Cost</h4>
             <div className="text-xl font-bold">€{energyCosts?.yearlyEnergyCost.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              Based on operational power of {formatPower(operationalPower || 0)}
+              Based on operational power of {operationalPower ? (operationalPower >= 10000 ? 
+                `${(operationalPower / 1000).toFixed(1)} kW` : 
+                `${Math.round(operationalPower)} W`) : '0 W'}
             </p>
           </div>
         </div>
