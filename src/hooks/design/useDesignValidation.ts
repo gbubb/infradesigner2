@@ -1,9 +1,9 @@
 
 import { useMemo } from 'react';
-import { useResourceMetrics } from './useResourceMetrics';
+import { useResourceUtilization } from './useResourceUtilization';
 
 export const useDesignValidation = () => {
-  const { resourceUtilization } = useResourceMetrics();
+  const resourceUtilization = useResourceUtilization();
   
   // Check for implausible scenarios
   const designErrors = useMemo(() => {
@@ -46,6 +46,18 @@ export const useDesignValidation = () => {
         id: 'mgmt-network-exceeded',
         title: 'Management Network Port Capacity Exceeded',
         description: `The design requires ${resourceUtilization.mgmtNetworkUtilization.used} management network ports, but only ${resourceUtilization.mgmtNetworkUtilization.total} ports are available.`
+      });
+    }
+    
+    // Add check for storage network utilization if it exists
+    if ('storageNetworkUtilization' in resourceUtilization && 
+        resourceUtilization.storageNetworkUtilization && 
+        ((resourceUtilization.storageNetworkUtilization.percentage > 100) || 
+        (resourceUtilization.storageNetworkUtilization.used > 0 && resourceUtilization.storageNetworkUtilization.total === 0))) {
+      errors.push({
+        id: 'storage-network-exceeded',
+        title: 'Storage Network Port Capacity Exceeded',
+        description: `The design requires ${resourceUtilization.storageNetworkUtilization.used} storage network ports, but only ${resourceUtilization.storageNetworkUtilization.total} ports are available.`
       });
     }
     
