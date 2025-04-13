@@ -1,4 +1,4 @@
-
+// src/components/design/CalculationBreakdown.tsx
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
@@ -29,6 +29,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Find the role by ID to get its information
   const role = componentRoles.find(r => r.id === roleId);
   const clusterName = role?.clusterInfo?.clusterName;
   const roleType = role?.role || '';
@@ -40,24 +41,31 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       
       // If the role has an assigned component, make sure we have a fresh calculation
       if (role.assignedComponentId) {
-        // Force a calculation first
-        calculateRequiredQuantity(roleId, role.assignedComponentId);
-        
-        // Add a small delay to ensure the calculation has had time to update state
-        setTimeout(() => {
-          // Now get the breakdown steps
-          const steps = getCalculationBreakdown(roleId);
-          console.log(`Got breakdown steps for ${roleId}:`, steps?.length || 0);
+        try {
+          // Force a calculation first
+          calculateRequiredQuantity(roleId, role.assignedComponentId);
           
-          if (steps && steps.length > 0) {
-            setBreakdownSteps(steps);
-          } else {
-            // If no steps are found, populate with default information
-            const defaultSteps = generateDefaultBreakdown(role);
-            setBreakdownSteps(defaultSteps);
-          }
+          // Add a small delay to ensure the calculation has had time to update state
+          setTimeout(() => {
+            // Now get the breakdown steps
+            const steps = getCalculationBreakdown(roleId);
+            console.log(`Got breakdown steps for ${roleId} (${roleType}):`, steps?.length || 0);
+            
+            if (steps && steps.length > 0) {
+              setBreakdownSteps(steps);
+            } else {
+              // If no steps are found, populate with default information
+              const defaultSteps = generateDefaultBreakdown(role);
+              setBreakdownSteps(defaultSteps);
+            }
+            setIsLoading(false);
+          }, 300);
+        } catch (error) {
+          console.error(`Error calculating quantity for ${roleType} (${roleId}):`, error);
+          const defaultSteps = generateDefaultBreakdown(role);
+          setBreakdownSteps(defaultSteps);
           setIsLoading(false);
-        }, 300);
+        }
       } else {
         // Generate default steps for unassigned roles
         const defaultSteps = generateDefaultBreakdown(role);
@@ -65,7 +73,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         setIsLoading(false);
       }
     }
-  }, [isOpen, role, roleId, getCalculationBreakdown, calculateRequiredQuantity]);
+  }, [isOpen, role, roleId, getCalculationBreakdown, calculateRequiredQuantity, roleType]);
   
   // Generate a default breakdown for roles without specific calculations
   const generateDefaultBreakdown = (role: any) => {
@@ -73,14 +81,32 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     
     // Include role basic information
     steps.push(`Role: ${roleName} (${roleType})`);
-    steps.push(`Required quantity: ${role.requiredCount}`);
+    steps.push(`Required quantity: ${role.adjustedRequiredCount || role.requiredCount}`);
     
     if (role.clusterInfo) {
       steps.push(`Cluster: ${role.clusterInfo.clusterName || 'Unnamed cluster'}`);
     }
     
     // Add information based on the role type
-    if (roleType === 'controllerNode') {
+    if (roleType === 'computeNode') {
+      steps.push(`Compute nodes are sized based on vCPU and memory requirements.`);
+      steps.push(`The calculation takes into account the CPU overcommit ratio and availability zone distribution.`);
+      if (role.clusterInfo) {
+        steps.push(`This compute node is part of cluster: ${role.clusterInfo.clusterName}`);
+      }
+    } else if (roleType === 'gpuNode') {
+      steps.push(`GPU nodes are sized based on CPU, memory, and GPU requirements.`);
+      steps.push(`The calculation takes into account the CPU overcommit ratio and availability zone distribution.`);
+      if (role.clusterInfo) {
+        steps.push(`This GPU node is part of cluster: ${role.clusterInfo.clusterName}`);
+      }
+    } else if (roleType === 'storageNode') {
+      steps.push(`Storage node quantity is calculated based on the total required capacity and the capacity provided by each node.`);
+      steps.push(`The calculation takes into account the storage pool type efficiency factor and maximum fill percentage.`);
+      if (role.clusterInfo) {
+        steps.push(`This storage node is part of cluster: ${role.clusterInfo.clusterName}`);
+      }
+    } else if (roleType === 'controllerNode') {
       steps.push(`Controller nodes requirement is defined in the compute requirements.`);
       steps.push(`The default controller node count is 3 for high availability.`);
     } else if (roleType === 'infrastructureNode') {
