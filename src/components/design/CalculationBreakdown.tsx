@@ -12,7 +12,6 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calculator } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface CalculationBreakdownProps {
@@ -206,10 +205,133 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         steps.push(`The calculation takes into account the CPU overcommit ratio and availability zone distribution.`);
       }
     } else if (roleType === 'storageNode') {
-      // Storage node calculation logic...
-      // (implementation similar to compute node but for storage)
-    }
-    // Other role types...
+      if (role.clusterInfo?.clusterId) {
+        const clusterId = role.clusterInfo.clusterId;
+        const storageCluster = store.requirements.storageRequirements.storageClusters.find(c => c.id === clusterId);
+        
+        if (storageCluster) {
+          steps.push(`Storage Cluster: ${storageCluster.name}`);
+          steps.push(`Required Usable Capacity: ${storageCluster.totalCapacityTB.toLocaleString()} TiB`);
+          steps.push(`Storage Pool Type: ${storageCluster.poolType}`);
+          steps.push(`Maximum Fill Factor: ${storageCluster.maxFillFactor}%`);
+          steps.push(`Availability Zone Quantity: ${storageCluster.availabilityZoneQuantity}`);
+          
+          // Show component and disk details if available
+          if (component) {
+            const roleDiskConfigs = store.selectedDisksByRole[roleId] || [];
+            
+            if (roleDiskConfigs.length > 0) {
+              let totalRawCapacityTB = 0;
+              
+              steps.push(`Server Model: ${component.manufacturer} ${component.model} with attached disks`);
+              
+              // List all disks and calculate total raw capacity
+              steps.push(`Attached Disks:`);
+              roleDiskConfigs.forEach(diskConfig => {
+                const disk = store.componentTemplates.find(c => c.id === diskConfig.diskId);
+                if (disk && disk.type === 'Disk' && 'capacityTB' in disk) {
+                  const diskCapacityTB = disk.capacityTB * diskConfig.quantity;
+                  totalRawCapacityTB += diskCapacityTB;
+                  steps.push(`- ${disk.name}: ${disk.capacityTB} TB × ${diskConfig.quantity} = ${diskCapacityTB} TB`);
+                }
+              });
+              
+              steps.push(`Raw Capacity per Node: ${totalRawCapacityTB.toFixed(2)} TB`);
+              
+              // Calculate usable capacity based on pool type
+              const TB_TO_TIB_FACTOR = 0.909495; // Convert TB to TiB
+              const poolEfficiencyFactors: Record<string, number> = {
+                '3 Replica': 0.33333,
+                '2 Replica': 0.5,
+                'Erasure Coding 4+2': 0.66666,
+                'Erasure Coding 8+3': 0.72727,
+                'Erasure Coding 8+4': 0.66666,
+                'Erasure Coding 10+4': 0.71428
+              };
+              
+              const poolType = storageCluster.poolType || '3 Replica';
+              const poolEfficiencyFactor = poolEfficiencyFactors[poolType] || (1/3);
+              const fillFactorAdjustment = storageCluster.maxFillFactor / 100;
+              
+              steps.push(`Pool Efficiency Factor: ${poolEfficiencyFactor.toFixed(4)} (based on ${poolType})`);
+              steps.push(`Fill Factor Adjustment: ${fillFactorAdjustment.toFixed(2)} (${storageCluster.maxFillFactor}% of total capacity)`);
+              
+              const rawCapacityTiB = totalRawCapacityTB * TB_TO_TIB_FACTOR;
+              const effectiveCapacityPerNodeTiB = rawCapacityTiB * poolEfficiencyFactor * fillFactorAdjustment;
+              
+              steps.push(`Effective Capacity per Node: ${rawCapacityTiB.toFixed(2)} TiB × ${poolEfficiencyFactor.toFixed(4)} × ${fillFactorAdjustment.toFixed(2)} = ${effectiveCapacityPerNodeTiB.toFixed(2)} TiB`);
+              
+              const requiredNodeCount = Math.ceil(storageCluster.totalCapacityTB / effectiveCapacityPerNodeTiB);
+              steps.push(`Minimum Nodes Needed: ${storageCluster.totalCapacityTB.toFixed(2)} TiB ÷ ${effectiveCapacityPerNodeTiB.toFixed(2)} TiB = ${requiredNodeCount} nodes`);
+              
+              // Calculate final node count based on AZ requirements
+              const minNodesForAZ = storageCluster.availabilityZoneQuantity;
+              const finalNodeCount = Math.max(requiredNodeCount, minNodesForAZ);
+              
+              if (finalNodeCount > requiredNodeCount) {
+                steps.push(`Final Node Count: ${finalNodeCount} (increased from ${requiredNodeCount} to ensure minimum of ${minNodesForAZ} nodes for AZ distribution)`);
+              } else {
+                steps.push(`Final Node Count: ${finalNodeCount} nodes`);
+              }
+              
+              // Calculate actual capacity
+              const actualUsableCapacity = effectiveCapacityPerNodeTiB * finalNodeCount;
+              steps.push(`Total Usable Capacity: ${finalNodeCount} nodes × ${effectiveCapacityPerNodeTiB.toFixed(2)} TiB = ${actualUsableCapacity.toFixed(2)} TiB`);
+              
+              if (actualUsableCapacity > storageCluster.totalCapacityTB) {
+                const excessCapacity = actualUsableCapacity - storageCluster.totalCapacityTB;
+                steps.push(`This provides ${excessCapacity.toFixed(2)} TiB of excess capacity above the ${storageCluster.totalCapacityTB.toFixed(2)} TiB requirement.`);
+              }
+              
+              // Save the calculated quantity for comparison
+              if (calculatedQty === undefined) {
+                setCalculatedQuantity(finalNodeCount);
+              }
+            } else {
+              steps.push(`No disk configuration found - using default count of ${storageCluster.availabilityZoneQuantity} nodes`);
+              steps.push(`To perform a more accurate calculation, please add disks to this storage node.`);
+            }
+          }
+        }
+      } else {
+        steps.push(`Storage nodes are sized based on capacity requirements and redundancy configuration.`);
+        steps.push(`The calculation takes into account the storage pool type, efficiency factor, and availability zone distribution.`);
+      }
+    } else if (roleType.includes('Switch')) {
+      // Network switch calculation
+      const networkReqs = store.requirements.networkRequirements;
+      const physicalConstraints = store.requirements.physicalConstraints;
+      
+      steps.push(`Network Topology: ${networkReqs.networkTopology || 'Spine-Leaf'}`);
+      steps.push(`Total Availability Zones: ${physicalConstraints.totalAvailabilityZones || 1}`);
+      
+      if (roleType === 'leafSwitch') {
+        const leafSwitchesPerAZ = networkReqs.leafSwitchesPerAZ || 2;
+        const totalAZs = physicalConstraints.totalAvailabilityZones || 1;
+        
+        steps.push(`Leaf Switches Per AZ: ${leafSwitchesPerAZ}`);
+        steps.push(`Total Leaf Switches: ${leafSwitchesPerAZ} switches × ${totalAZs} AZs = ${leafSwitchesPerAZ * totalAZs} switches`);
+      } else if (roleType === 'managementSwitch') {
+        const mgmtSwitchesPerAZ = (networkReqs.managementNetwork === 'Dual Home') ? 2 : 1;
+        const totalAZs = physicalConstraints.totalAvailabilityZones || 1;
+        
+        steps.push(`Management Network: ${networkReqs.managementNetwork}`);
+        steps.push(`Management Switches Per AZ: ${mgmtSwitchesPerAZ}`);
+        
+        let totalMgmtSwitches = mgmtSwitchesPerAZ * totalAZs;
+        
+        // Account for IPMI switches if needed
+        if (networkReqs.ipmiNetwork === 'Dedicated IPMI switch') {
+          steps.push(`IPMI Network: Dedicated IPMI switches (requires 1 additional switch per AZ)`);
+          totalMgmtSwitches += totalAZs;
+        }
+        
+        steps.push(`Total Management Switches: ${totalMgmtSwitches}`);
+      } else if (roleType === 'spineSwitch') {
+        steps.push(`Spine switches connect all leaf switches in a full mesh topology.`);
+        steps.push(`For redundancy, a minimum of 2 spine switches are required.`);
+      }
+    } 
     
     return steps;
   };
@@ -291,21 +413,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
                 <div className="py-4 text-center text-muted-foreground">
                   <p>No detailed calculation available for this component.</p>
                   <p className="mt-2">Try assigning a component to see the calculation breakdown.</p>
-                </div>
-              )}
-              
-              <div className="mt-4 text-sm text-muted-foreground border-t pt-4">
-                <p><strong>How this works:</strong> The initial "Required quantity" value is typically set when 
-                the component roles are first created based on your requirements. The detailed calculation shown above 
-                demonstrates what the value would be based on current inputs.</p>
-              </div>
-              
-              {/* Show button to fix this */}
-              {hasDiscrepancy && (
-                <div className="mt-4 text-center">
-                  <Button onClick={() => alert("This would need to be fixed by updating the code in src/store/slices/requirements/roleCalculator.ts")}>
-                    Learn About Fixing This
-                  </Button>
                 </div>
               )}
             </div>
