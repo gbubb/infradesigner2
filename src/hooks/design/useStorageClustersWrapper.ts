@@ -1,7 +1,7 @@
 
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/types/infrastructure';
+import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
 
 export const useStorageClustersWrapper = () => {
   const { activeDesign, requirements } = useDesignStore();
@@ -69,4 +69,3 @@ export const useStorageClustersWrapper = () => {
     storageClustersMetrics
   };
 };
-

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { ComponentType } from '@/types/infrastructure';
@@ -54,6 +55,7 @@ export const useHardwareTotalsWrapper = () => {
         
         // Calculate vCPUs - use consistent naming and log details
         let coresPerServer = 0;
+        // Initialize overcommitRatio variable just once
         let overcommitRatio = 1;
         
         // Expanded property check patterns for CPU cores
@@ -72,7 +74,7 @@ export const useHardwareTotalsWrapper = () => {
         }
         
         // Get overcommit ratio from compute requirements if possible
-        let overcommitRatio = 1;
+        // REMOVED duplicate declaration of overcommitRatio here and just use the assignment
         if (requirements?.computeRequirements?.cpuOvercommitRatio) {
           overcommitRatio = requirements.computeRequirements.cpuOvercommitRatio;
         }
@@ -128,7 +130,7 @@ export const useHardwareTotalsWrapper = () => {
             acc[clusterId].push(node);
           }
           return acc;
-        }, {});
+        }, {} as Record<string, any[]>); // Type annotation added to prevent TS error
       
       // Calculate usable storage for each cluster
       Object.entries(storageNodesByCluster).forEach(([clusterId, nodes]) => {

@@ -4,10 +4,16 @@ import { useNetworkPortsMetrics } from './useNetworkPortsMetrics';
 import { useResourceUtilization } from './useResourceUtilization';
 
 export const useResourceMetrics = () => {
+  // Get data from physical resource metrics
   const physicalMetrics = usePhysicalResourceMetrics();
+  
+  // Get data from network ports metrics
   const networkMetrics = useNetworkPortsMetrics();
+  
+  // Get resource utilization data
   const resourceUtilization = useResourceUtilization();
   
+  // Combine and return all metrics
   return {
     // Physical resource metrics
     totalPower: physicalMetrics.totalPower,

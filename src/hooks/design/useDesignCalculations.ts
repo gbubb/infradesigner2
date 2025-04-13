@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useStorageClustersWrapper } from './useStorageClustersWrapper';
@@ -32,25 +33,48 @@ export const useDesignCalculations = () => {
   const { storageClustersMetrics } = useStorageClustersWrapper();
   const { actualHardwareTotals } = useHardwareTotalsWrapper();
   
-  // Get other hooks but handle potential undefined returns
-  const resourceMetricsResult = useResourceMetrics() || {};
-  const resourceMetrics = resourceMetricsResult.resourceMetrics || {};
-  const resourceUtilization = resourceMetricsResult.resourceUtilization || {
+  // Get resource metrics with proper typing
+  const resourceMetricsResult = useResourceMetrics();
+  // Ensure we have a valid resourceMetrics object
+  const resourceMetrics = {
+    totalPower: 0,
+    totalRackUnits: 0,
+    totalServers: 0,
+    totalRackQuantity: 0,
+    totalAvailableRU: 0,
+    totalAvailablePower: 0,
+    totalLeafSwitches: 0,
+    totalMgmtSwitches: 0,
+    leafPortsUsed: 0,
+    leafPortsAvailable: 0,
+    mgmtPortsUsed: 0,
+    mgmtPortsAvailable: 0,
+    storagePortsUsed: 0,
+    storagePortsAvailable: 0,
+    hasDedicatedStorageNetwork: false,
+    ...resourceMetricsResult
+  };
+  
+  // Ensure we have a valid resourceUtilization object
+  const resourceUtilization = resourceMetricsResult?.resourceUtilization || {
     powerUtilization: { percentage: 0, used: 0, total: 0 },
     spaceUtilization: { percentage: 0, used: 0, total: 0 },
     leafNetworkUtilization: { percentage: 0, used: 0, total: 0 },
     mgmtNetworkUtilization: { percentage: 0, used: 0, total: 0 }
   };
   
+  // Get componentsByType with proper typing
   const componentsByTypeResult = useComponentsByType();
   const componentsByType = componentsByTypeResult?.componentsByType || {};
   
-  const costAnalysisResult = useCostAnalysis() || {};
-  const totalCost = typeof costAnalysisResult.capitalCost === 'number' ? costAnalysisResult.capitalCost : 0;
-  const costPerVCPU = typeof costAnalysisResult.costPerVCPU === 'number' ? costAnalysisResult.costPerVCPU : 0;
-  const costPerTB = typeof costAnalysisResult.costPerTB === 'number' ? costAnalysisResult.costPerTB : 0;
-  const amortizedCostsByType = costAnalysisResult.amortizedCostsByType || {};
+  // Get cost analysis with proper typing
+  const costAnalysisResult = useCostAnalysis();
+  const totalCost = typeof costAnalysisResult?.capitalCost === 'number' ? costAnalysisResult.capitalCost : 0;
+  const costPerVCPU = typeof costAnalysisResult?.costPerVCPU === 'number' ? costAnalysisResult.costPerVCPU : 0;
+  const costPerTB = typeof costAnalysisResult?.costPerTB === 'number' ? costAnalysisResult.costPerTB : 0;
+  const amortizedCostsByType = costAnalysisResult?.amortizedCostsByType || {};
   
+  // Get design validation with proper typing
   const designValidationResult = useDesignValidation();
   const designErrors = Array.isArray(designValidationResult?.designErrors) 
     ? designValidationResult.designErrors 
