@@ -182,9 +182,6 @@ getCalculationBreakdown: (roleId: string): string[] => {
       return calculateStorageNodeCapacity(roleId, state.selectedDisksByRole, state.componentTemplates || []);
     },
     
-    getCalculationBreakdown: (roleId: string): string[] => {
-      return get().calculationBreakdowns[roleId] || [];
-    },
     
     assignComponentToRole: (roleId: string, componentId: string) => {
       // Get current state before making any updates
