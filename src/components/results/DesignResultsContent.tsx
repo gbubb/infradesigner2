@@ -38,6 +38,15 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
 
   const { powerUsage, energyCosts, hasDedicatedNetworkRacks, hasDedicatedStorageNetwork } = usePowerCalculations();
 
+  // Create default amortized costs object with safe access
+  const safeAmortizedCosts = {
+    compute: 0,
+    storage: 0,
+    network: 0,
+    total: 0,
+    ...(amortizedCostsByType || {})
+  };
+
   // Calculate capital cost directly
   const capitalCost = activeDesign?.components?.reduce(
     (total, c) => total + (c.cost * (c.quantity || 1)), 
@@ -66,15 +75,15 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
        (activeDesign.requirements.physicalConstraints?.electricityPricePerKwh || 0.25) * 
        24 * 30) : 0;
     
-    const totalMonthly = racksMonthly + energyMonthly + (amortizedCostsByType?.total || 0);
+    const totalMonthly = racksMonthly + energyMonthly + (safeAmortizedCosts.total || 0);
     
     return {
       racksMonthly,
       energyMonthly,
-      amortizedMonthly: amortizedCostsByType?.total || 0,
+      amortizedMonthly: safeAmortizedCosts.total || 0,
       totalMonthly
     };
-  }, [activeDesign, powerUsage?.operationalPower, amortizedCostsByType?.total]);
+  }, [activeDesign, powerUsage?.operationalPower, safeAmortizedCosts.total]);
   
   // Calculate TCO
   const totalCostOfOwnership = React.useMemo(() => {
@@ -122,7 +131,7 @@ export const DesignResultsContent: React.FC<DesignResultsContentProps> = ({
           <DetailedCostAnalysisCard 
             capitalCost={capitalCost}
             operationalCosts={operationalCosts}
-            amortizedCostsByType={amortizedCostsByType}
+            amortizedCostsByType={safeAmortizedCosts}
             totalCostOfOwnership={totalCostOfOwnership}
           />
           

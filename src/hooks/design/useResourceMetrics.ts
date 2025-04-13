@@ -13,8 +13,8 @@ export const useResourceMetrics = () => {
   // Get resource utilization data
   const resourceUtilization = useResourceUtilization();
   
-  // Combine and return all metrics
-  return {
+  // Create a properly structured return object
+  const result = {
     // Physical resource metrics
     totalPower: physicalMetrics.totalPower,
     totalRackUnits: physicalMetrics.totalRackUnits,
@@ -37,4 +37,6 @@ export const useResourceMetrics = () => {
     // Resource utilization data
     resourceUtilization,
   };
+
+  return result;
 };

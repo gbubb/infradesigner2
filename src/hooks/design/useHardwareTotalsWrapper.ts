@@ -73,10 +73,16 @@ export const useHardwareTotalsWrapper = () => {
           console.log(`Compute Server ${component.name} has ${coresPerServer} cores (from totalCores property)`);
         }
         
-        // Get overcommit ratio from compute requirements if possible
-        // REMOVED duplicate declaration of overcommitRatio here and just use the assignment
-        if (requirements?.computeRequirements?.cpuOvercommitRatio) {
-          overcommitRatio = requirements.computeRequirements.cpuOvercommitRatio;
+        // Get global overcommit ratio if it exists in the requirements
+        // We need to access this more safely
+        const globalOvercommitRatio = 
+          requirements?.computeRequirements?.computeClusters?.length > 0 
+            ? requirements.computeRequirements.computeClusters[0]?.overcommitRatio || 1 
+            : 1;
+        
+        if (globalOvercommitRatio !== 1) {
+          overcommitRatio = globalOvercommitRatio;
+          console.log(`Using global overcommit ratio: ${overcommitRatio}`);
         }
         
         // Try to get cluster-specific overcommit ratio if component is part of a cluster
@@ -210,7 +216,7 @@ export const useHardwareTotalsWrapper = () => {
     } catch (error) {
       console.error('Error calculating hardware totals:', error);
     }
-  }, [designId]); // Only depend on the designId, not the entire objects
+  }, [designId, store]); // Only depend on the designId, not the entire objects
 
   return {
     actualHardwareTotals

@@ -7,6 +7,7 @@ import { useComponentsByType } from './useComponentsByType';
 import { useCostAnalysis } from './useCostAnalysis';
 import { useDesignValidation } from './useDesignValidation';
 import { useResourceMetrics } from './useResourceMetrics';
+import { InfrastructureDesign } from '@/types/infrastructure';
 
 /**
  * A completely rewritten version of useDesignCalculations that avoids React's useMemo
@@ -72,7 +73,12 @@ export const useDesignCalculations = () => {
   const totalCost = typeof costAnalysisResult?.capitalCost === 'number' ? costAnalysisResult.capitalCost : 0;
   const costPerVCPU = typeof costAnalysisResult?.costPerVCPU === 'number' ? costAnalysisResult.costPerVCPU : 0;
   const costPerTB = typeof costAnalysisResult?.costPerTB === 'number' ? costAnalysisResult.costPerTB : 0;
-  const amortizedCostsByType = costAnalysisResult?.amortizedCostsByType || {};
+  const amortizedCostsByType = costAnalysisResult?.amortizedCostsByType || {
+    compute: 0,
+    storage: 0, 
+    network: 0,
+    total: 0
+  };
   
   // Get design validation with proper typing
   const designValidationResult = useDesignValidation();
@@ -83,7 +89,16 @@ export const useDesignCalculations = () => {
   // Recalculate when designId changes (this replaces all the useMemo calls)
   useEffect(() => {
     try {
-      const activeDesign = store.activeDesign || {};
+      const activeDesign: InfrastructureDesign = store.activeDesign || {
+        id: '',
+        name: '',
+        description: '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        requirements: store.requirements,
+        components: []
+      };
+      
       const components = Array.isArray(activeDesign.components) ? activeDesign.components : [];
       
       // Check if we have a valid design
@@ -111,7 +126,8 @@ export const useDesignCalculations = () => {
     costPerVCPU, 
     costPerTB, 
     resourceMetrics.totalPower,
-    resourceMetrics.totalRackUnits
+    resourceMetrics.totalRackUnits,
+    store
   ]);
 
   return {
