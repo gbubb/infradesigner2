@@ -97,21 +97,23 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                     {roleId ? (
                       <div className="flex items-center gap-2">
                         <div className="font-medium">{quantity}</div>
-                        <CalculationBreakdown roleId={roleId} roleName={roleName}>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-blue-500 hover:bg-blue-50">
-                                  <Calculator className="h-3.5 w-3.5 mr-1" />
-                                  View
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>View calculation details</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </CalculationBreakdown>
+                        {role && role.assignedComponentId && (
+                          <CalculationBreakdown roleId={roleId} roleName={roleName}>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-7 px-2 text-blue-500 hover:bg-blue-50">
+                                    <Calculator className="h-3.5 w-3.5 mr-1" />
+                                    View
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>View calculation details</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </CalculationBreakdown>
+                        )}
                       </div>
                     ) : (
                       <div className="font-medium">{quantity}</div>
