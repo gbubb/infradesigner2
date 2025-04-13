@@ -1,26 +1,26 @@
 // src/components/design/CalculationBreakdown.tsx
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useDesignStore } from '@/store/designStore';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Calculator } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CalculationBreakdownProps {
   roleId: string;
   roleName: string;
-  children: React.ReactNode;
 }
 
 export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ 
   roleId, 
-  roleName,
-  children 
+  roleName
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
@@ -130,20 +130,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     return steps;
   };
   
-  // Handle dialog open state
-  const handleDialogOpen = (open: boolean) => {
-    setIsOpen(open);
-    if (!open) {
-      // Reset steps when closing
-      setBreakdownSteps([]);
-    }
-  };
-  
-  // Build the title with cluster name if available
-  const titleText = clusterName 
-    ? `Calculation Breakdown for ${roleName} (${clusterName})` 
-    : `Calculation Breakdown for ${roleName}`;
-
   // Determine a specific note based on the role type
   const getContextNote = () => {
     if (roleType === 'storageNode') {
@@ -159,46 +145,75 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     }
   };
   
+  // Build the title with cluster name if available
+  const titleText = clusterName 
+    ? `Calculation Breakdown for ${roleName} (${clusterName})` 
+    : `Calculation Breakdown for ${roleName}`;
+  
+  // Handle opening the dialog
+  const handleOpenDialog = () => {
+    console.log("Opening calculation dialog for:", roleId);
+    setIsOpen(true);
+  };
+  
   return (
-    <Dialog open={isOpen} onOpenChange={handleDialogOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{titleText}</DialogTitle>
-          <DialogDescription>
-            How the required quantity was calculated
-          </DialogDescription>
-        </DialogHeader>
-        
-        {isLoading ? (
-          <div className="py-8 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-2"></div>
-            <p className="text-sm text-muted-foreground">Calculating...</p>
-          </div>
-        ) : breakdownSteps && breakdownSteps.length > 0 ? (
-          <div className="space-y-2 py-4">
-            <Card className="p-4 bg-slate-50">
-              <ol className="list-decimal list-inside space-y-2">
-                {breakdownSteps.map((step, index) => (
-                  <li key={index} className="text-sm mb-2">
-                    {step}
-                  </li>
-                ))}
-              </ol>
-            </Card>
-            <div className="mt-4 text-sm text-muted-foreground border-t pt-4">
-              <p>{getContextNote()}</p>
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 px-2 text-blue-500 hover:bg-blue-50"
+              onClick={handleOpenDialog}
+            >
+              <Calculator className="h-3.5 w-3.5 mr-1" />
+              View
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>View calculation details</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{titleText}</DialogTitle>
+            <DialogDescription>
+              How the required quantity was calculated
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isLoading ? (
+            <div className="py-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-2"></div>
+              <p className="text-sm text-muted-foreground">Calculating...</p>
             </div>
-          </div>
-        ) : (
-          <div className="py-4 text-center text-muted-foreground">
-            <p>No detailed calculation available for this component.</p>
-            <p className="mt-2">Try assigning a component to see the calculation breakdown.</p>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          ) : breakdownSteps && breakdownSteps.length > 0 ? (
+            <div className="space-y-2 py-4">
+              <Card className="p-4 bg-slate-50">
+                <ol className="list-decimal list-inside space-y-2">
+                  {breakdownSteps.map((step, index) => (
+                    <li key={index} className="text-sm mb-2">
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </Card>
+              <div className="mt-4 text-sm text-muted-foreground border-t pt-4">
+                <p>{getContextNote()}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="py-4 text-center text-muted-foreground">
+              <p>No detailed calculation available for this component.</p>
+              <p className="mt-2">Try assigning a component to see the calculation breakdown.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
