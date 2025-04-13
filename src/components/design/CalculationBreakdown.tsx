@@ -22,19 +22,19 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   roleName,
   children 
 }) => {
-  const getCalculationBreakdown = useDesignStore(state => state.getCalculationBreakdown);
-  const componentRoles = useDesignStore(state => state.componentRoles);
-  const calculateRequiredQuantity = useDesignStore(state => state.calculateRequiredQuantity);
   const [isOpen, setIsOpen] = useState(false);
   const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Get store methods directly to avoid re-renders
+  const { getCalculationBreakdown, calculateRequiredQuantity, componentRoles } = useDesignStore();
   
   // Find the role by ID to get its information
   const role = componentRoles.find(r => r.id === roleId);
   const clusterName = role?.clusterInfo?.clusterName;
   const roleType = role?.role || '';
   
-  // Update breakdown steps whenever the dialog state changes
+  // Update breakdown steps whenever the dialog opens
   useEffect(() => {
     if (isOpen && role) {
       setIsLoading(true);
@@ -43,7 +43,8 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       if (role.assignedComponentId) {
         try {
           // Force a calculation first
-          calculateRequiredQuantity(roleId, role.assignedComponentId);
+          const requiredQuantity = calculateRequiredQuantity(roleId, role.assignedComponentId);
+          console.log(`Calculated quantity for ${roleId} (${roleType}): ${requiredQuantity}`);
           
           // Add a small delay to ensure the calculation has had time to update state
           setTimeout(() => {
@@ -73,7 +74,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         setIsLoading(false);
       }
     }
-  }, [isOpen, role, roleId, getCalculationBreakdown, calculateRequiredQuantity, roleType]);
+  }, [isOpen, role, roleId, roleType, calculateRequiredQuantity, getCalculationBreakdown]);
   
   // Generate a default breakdown for roles without specific calculations
   const generateDefaultBreakdown = (role: any) => {
@@ -130,9 +131,13 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   };
   
   // Handle dialog open state
-  const handleDialogOpen = useCallback((open: boolean) => {
+  const handleDialogOpen = (open: boolean) => {
     setIsOpen(open);
-  }, []);
+    if (!open) {
+      // Reset steps when closing
+      setBreakdownSteps([]);
+    }
+  };
   
   // Build the title with cluster name if available
   const titleText = clusterName 
