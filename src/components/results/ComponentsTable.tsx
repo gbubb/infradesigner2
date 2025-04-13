@@ -5,9 +5,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
-import { Button } from '@/components/ui/button';
-import { Calculator } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CalculationBreakdown } from '../design/CalculationBreakdown';
 
 interface ComponentsTableProps {
@@ -94,28 +91,10 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                     </div>
                   </TableCell>
                   <TableCell>
-                    {roleId ? (
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium">{quantity}</div>
-                        <CalculationBreakdown roleId={roleId} roleName={roleName}>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-blue-500 hover:bg-blue-50">
-                                  <Calculator className="h-3.5 w-3.5 mr-1" />
-                                  View
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>View calculation details</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </CalculationBreakdown>
-                      </div>
-                    ) : (
+                    <div className="flex items-center gap-2">
                       <div className="font-medium">{quantity}</div>
-                    )}
+                      {roleId && <CalculationBreakdown roleId={roleId} roleName={roleName} />}
+                    </div>
                   </TableCell>
                   <TableCell>${component.cost.toLocaleString()}</TableCell>
                   <TableCell>${totalComponentCost.toLocaleString()}</TableCell>
