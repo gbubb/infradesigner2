@@ -123,23 +123,60 @@ export const createRequirementsSlice: StateCreator<
       set({ componentRoles: newRoles });
     },
     
-    calculateRequiredQuantity: (roleId: string, componentId: string): number => {
-      const state = get();
-      
-      // Calculate and get calculation details
-      const { requiredQuantity, calculationSteps } = calculateQuantity(roleId, componentId, state);
-      
-      // Save calculation steps to the store
-      set(state => ({
-        calculationBreakdowns: {
-          ...state.calculationBreakdowns,
-          [roleId]: calculationSteps
-        }
-      }));
-      
-      return requiredQuantity;
-    },
+// Update the calculateRequiredQuantity function in src/store/slices/requirementsSlice.ts
+
+calculateRequiredQuantity: (roleId: string, componentId: string): number => {
+  console.log(`Store: calculateRequiredQuantity called for role ${roleId} with component ${componentId}`);
+  const state = get();
+  
+  // Calculate and get calculation details
+  const { requiredQuantity, calculationSteps } = calculateQuantity(roleId, componentId, state);
+  
+  // Log what we're storing for debugging
+  console.log(`Storing calculation for ${roleId}: ${requiredQuantity} with ${calculationSteps.length} steps`);
+  
+  // Store the role and component info for better debugging
+  const role = state.componentRoles.find(r => r.id === roleId);
+  const component = state.componentTemplates.find(c => c.id === componentId);
+  console.log(`Role: ${role?.role}, Component: ${component?.name}`);
+  
+  // Save calculation steps to the store
+  set(state => {
+    // Ensure we preserve existing breakdown entries
+    const updatedBreakdowns = {
+      ...state.calculationBreakdowns,
+      [roleId]: calculationSteps
+    };
     
+    console.log(`Updated breakdowns now has ${Object.keys(updatedBreakdowns).length} entries`);
+    
+    // Important: Also update the role's required count to match the calculation
+    const updatedRoles = state.componentRoles.map(r => {
+      if (r.id === roleId) {
+        return {
+          ...r,
+          adjustedRequiredCount: requiredQuantity
+        };
+      }
+      return r;
+    });
+    
+    return {
+      calculationBreakdowns: updatedBreakdowns,
+      componentRoles: updatedRoles
+    };
+  });
+  
+  return requiredQuantity;
+},
+
+// Also fix the getCalculationBreakdown function to ensure it's properly retrieving steps
+getCalculationBreakdown: (roleId: string): string[] => {
+  const state = get();
+  const steps = state.calculationBreakdowns[roleId];
+  console.log(`Retrieved ${steps?.length || 0} calculation steps for ${roleId}`);
+  return steps || [];
+},    
     calculateStorageNodeCapacity: (roleId: string): number => {
       const state = get();
       return calculateStorageNodeCapacity(roleId, state.selectedDisksByRole, state.componentTemplates || []);
