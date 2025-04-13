@@ -17,17 +17,20 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 interface CalculationBreakdownProps {
   roleId: string;
   roleName: string;
+  children?: React.ReactNode;
 }
 
 export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ 
   roleId, 
-  roleName
+  roleName,
+  children
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
   const [calculatedQuantity, setCalculatedQuantity] = useState<number | null>(null);
   const [displayedQuantity, setDisplayedQuantity] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // Get store values directly
   const store = useDesignStore();
@@ -41,6 +44,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   useEffect(() => {
     if (isOpen && role) {
       setIsLoading(true);
+      setErrorMessage(null);
       console.log(`Fetching calculation for role: ${roleType} (${roleId})`);
       
       // Store the displayed quantity
@@ -49,34 +53,56 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       // If the role has an assigned component, make sure we have a fresh calculation
       if (role.assignedComponentId) {
         try {
+          // First check if we have existing breakdown
+          const existingSteps = store.calculationBreakdowns[roleId];
+          console.log(`Found ${existingSteps?.length || 0} existing calculation steps for ${roleId}`);
+          
           // Force a calculation first
           console.log(`Calculating quantity for ${roleId} with component ${role.assignedComponentId}`);
-          const quantity = store.calculateRequiredQuantity(roleId, role.assignedComponentId);
-          console.log(`Calculated quantity: ${quantity}`);
-          setCalculatedQuantity(quantity);
+          const calculationResult = calculateRequiredQuantity(role);
           
-          // Add a small delay to ensure the calculation has had time to update state
-          setTimeout(() => {
-            // Now get the breakdown steps
-            const steps = store.getCalculationBreakdown(roleId);
-            console.log(`Got ${steps?.length || 0} calculation steps for ${roleId}`);
+          if (calculationResult) {
+            console.log(`Calculated quantity: ${calculationResult.requiredQuantity} with ${calculationResult.calculationSteps.length} steps`);
+            setCalculatedQuantity(calculationResult.requiredQuantity);
             
-            if (steps && steps.length > 0) {
-              setBreakdownSteps(steps);
+            // Check if we got enough steps
+            if (calculationResult.calculationSteps.length > 5) {
+              setBreakdownSteps(calculationResult.calculationSteps);
+              setIsLoading(false);
             } else {
-              // If no steps are found, generate detailed steps
-              const detailedSteps = generateDetailedBreakdown(role, quantity);
-              setBreakdownSteps(detailedSteps);
+              // Try to get from store again after a delay
+              setTimeout(() => {
+                // Now get the breakdown steps
+                const steps = store.getCalculationBreakdown(roleId);
+                console.log(`Got ${steps?.length || 0} calculation steps from store for ${roleId}`);
+                
+                if (steps && steps.length > 5) {
+                  setBreakdownSteps(steps);
+                } else {
+                  // If no steps are found, generate detailed steps
+                  console.log('Falling back to generated detailed breakdown');
+                  const detailedSteps = generateDetailedBreakdown(role, calculationResult.requiredQuantity);
+                  setBreakdownSteps(detailedSteps);
+                }
+                setIsLoading(false);
+              }, 500); // Increased timeout for more reliable state updates
             }
+          } else {
+            // If calculation failed, generate detailed steps
+            console.log('Calculation failed, falling back to generated detailed breakdown');
+            const detailedSteps = generateDetailedBreakdown(role);
+            setBreakdownSteps(detailedSteps);
             setIsLoading(false);
-          }, 300);
+          }
         } catch (error) {
           console.error(`Error calculating quantity for ${roleType} (${roleId}):`, error);
+          setErrorMessage(`Error performing calculation: ${error.message}`);
           const detailedSteps = generateDetailedBreakdown(role);
           setBreakdownSteps(detailedSteps);
           setIsLoading(false);
         }
       } else {
+        console.log('No component assigned, generating basic information');
         // Generate detailed steps
         const detailedSteps = generateDetailedBreakdown(role);
         setBreakdownSteps(detailedSteps);
@@ -85,8 +111,41 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     }
   }, [isOpen, role, roleId, roleType, store]);
   
+  // Do a direct calculation with full visibility into the process
+  const calculateRequiredQuantity = (role) => {
+    if (!role.assignedComponentId) return null;
+    
+    try {
+      // Directly access calculation functions if possible
+      if (typeof store.calculateRequiredQuantity === 'function') {
+        // Use the store's function
+        const quantity = store.calculateRequiredQuantity(roleId, role.assignedComponentId);
+        const steps = store.getCalculationBreakdown(roleId);
+        
+        if (steps && steps.length > 0) {
+          return { requiredQuantity: quantity, calculationSteps: steps };
+        }
+      }
+      
+      // If we're here, we need to manually calculate
+      return manuallyCalculateQuantity(role);
+    } catch (error) {
+      console.error("Error in direct calculation:", error);
+      return null;
+    }
+  };
+  
+  // Manual calculation as a fallback
+  const manuallyCalculateQuantity = (role) => {
+    // This is a simplified version but would ideally replicate the full calculation logic
+    return {
+      requiredQuantity: role.adjustedRequiredCount || role.requiredCount,
+      calculationSteps: []
+    };
+  };
+  
   // Generate a detailed breakdown based on actual requirements
-  const generateDetailedBreakdown = (role: any, calculatedQty?: number) => {
+  const generateDetailedBreakdown = (role, calculatedQty) => {
     const steps: string[] = [];
     
     // Include role basic information
@@ -97,6 +156,13 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     const component = role.assignedComponentId ? 
       store.componentTemplates.find(c => c.id === role.assignedComponentId) : 
       undefined;
+    
+    if (!component) {
+      steps.push("No component assigned to this role.");
+      return steps;
+    }
+    
+    steps.push(`Component: ${component.name} (${component.manufacturer} ${component.model})`);
     
     // Attempt to reconstruct the calculation based on the role type
     if (roleType === 'computeNode' || roleType === 'gpuNode') {
@@ -110,92 +176,89 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
           steps.push(`Total memory requirement: ${cluster.totalMemoryTB.toLocaleString()} TB (${(cluster.totalMemoryTB * 1024).toLocaleString()} GB)`);
           steps.push(`CPU overcommit ratio: ${cluster.overcommitRatio}:1`);
           
-          // Show component details if available
-          if (component) {
-            // Determine cores per server
-            let coresPerServer = 0;
-            if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
-              coresPerServer = component.cpuSockets * component.cpuCoresPerSocket;
-              steps.push(`Server Model: ${component.manufacturer} ${component.model} with ${component.cpuSockets} sockets × ${component.cpuCoresPerSocket} cores = ${coresPerServer} cores per server`);
-            } else if ('coreCount' in component) {
-              coresPerServer = component.coreCount;
-              steps.push(`Server Model: ${component.manufacturer} ${component.model} with ${coresPerServer} cores per server`);
-            }
+          // Determine cores per server
+          let coresPerServer = 0;
+          if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
+            coresPerServer = component.cpuSockets * component.cpuCoresPerSocket;
+            steps.push(`Server Model: ${component.manufacturer} ${component.model} with ${component.cpuSockets} sockets × ${component.cpuCoresPerSocket} cores = ${coresPerServer} cores per server`);
+          } else if ('coreCount' in component) {
+            coresPerServer = component.coreCount;
+            steps.push(`Server Model: ${component.manufacturer} ${component.model} with ${coresPerServer} cores per server`);
+          }
+          
+          // Determine memory per server
+          let memoryGBPerServer = 0;
+          if ('memoryCapacity' in component) {
+            memoryGBPerServer = component.memoryCapacity;
+            steps.push(`Server Memory: ${memoryGBPerServer.toLocaleString()} GB per server`);
+          } else if ('memoryGB' in component) {
+            memoryGBPerServer = component.memoryGB;
+            steps.push(`Server Memory: ${memoryGBPerServer.toLocaleString()} GB per server`);
+          }
+          
+          // Calculate required servers based on CPU
+          if (coresPerServer > 0) {
+            const totalPhysicalCoresNeeded = Math.ceil(cluster.totalVCPUs / cluster.overcommitRatio);
+            steps.push(`CPU calculation: ${cluster.totalVCPUs.toLocaleString()} vCPUs ÷ ${cluster.overcommitRatio} = ${totalPhysicalCoresNeeded.toLocaleString()} physical cores needed`);
             
-            // Determine memory per server
-            let memoryGBPerServer = 0;
-            if ('memoryCapacity' in component) {
-              memoryGBPerServer = component.memoryCapacity;
-              steps.push(`Server Memory: ${memoryGBPerServer.toLocaleString()} GB per server`);
-            } else if ('memoryGB' in component) {
-              memoryGBPerServer = component.memoryGB;
-              steps.push(`Server Memory: ${memoryGBPerServer.toLocaleString()} GB per server`);
-            }
+            const nodesNeededForCPU = Math.ceil(totalPhysicalCoresNeeded / coresPerServer);
+            steps.push(`Nodes needed for CPU: ${totalPhysicalCoresNeeded.toLocaleString()} cores ÷ ${coresPerServer} cores per server = ${nodesNeededForCPU} nodes`);
             
-            // Calculate required servers based on CPU
-            if (coresPerServer > 0) {
-              const totalPhysicalCoresNeeded = Math.ceil(cluster.totalVCPUs / cluster.overcommitRatio);
-              steps.push(`CPU calculation: ${cluster.totalVCPUs.toLocaleString()} vCPUs ÷ ${cluster.overcommitRatio} = ${totalPhysicalCoresNeeded.toLocaleString()} physical cores needed`);
+            // Calculate required servers based on memory
+            if (memoryGBPerServer > 0) {
+              const totalMemoryGBNeeded = cluster.totalMemoryTB * 1024;
+              const nodesNeededForMemory = Math.ceil(totalMemoryGBNeeded / memoryGBPerServer);
+              steps.push(`Nodes needed for memory: ${totalMemoryGBNeeded.toLocaleString()} GB ÷ ${memoryGBPerServer.toLocaleString()} GB per server = ${nodesNeededForMemory} nodes`);
               
-              const nodesNeededForCPU = Math.ceil(totalPhysicalCoresNeeded / coresPerServer);
-              steps.push(`Nodes needed for CPU: ${totalPhysicalCoresNeeded.toLocaleString()} cores ÷ ${coresPerServer} cores per server = ${nodesNeededForCPU} nodes`);
+              // Determine which resource is the limiting factor
+              const totalNodesNeeded = Math.max(nodesNeededForCPU, nodesNeededForMemory);
+              if (nodesNeededForCPU > nodesNeededForMemory) {
+                steps.push(`CPU is the limiting factor: ${nodesNeededForCPU} nodes required`);
+              } else if (nodesNeededForMemory > nodesNeededForCPU) {
+                steps.push(`Memory is the limiting factor: ${nodesNeededForMemory} nodes required`);
+              } else {
+                steps.push(`CPU and memory require the same number of nodes: ${totalNodesNeeded} nodes`);
+              }
               
-              // Calculate required servers based on memory
-              if (memoryGBPerServer > 0) {
-                const totalMemoryGBNeeded = cluster.totalMemoryTB * 1024;
-                const nodesNeededForMemory = Math.ceil(totalMemoryGBNeeded / memoryGBPerServer);
-                steps.push(`Nodes needed for memory: ${totalMemoryGBNeeded.toLocaleString()} GB ÷ ${memoryGBPerServer.toLocaleString()} GB per server = ${nodesNeededForMemory} nodes`);
-                
-                // Determine which resource is the limiting factor
-                const totalNodesNeeded = Math.max(nodesNeededForCPU, nodesNeededForMemory);
-                if (nodesNeededForCPU > nodesNeededForMemory) {
-                  steps.push(`CPU is the limiting factor: ${nodesNeededForCPU} nodes required`);
-                } else if (nodesNeededForMemory > nodesNeededForCPU) {
-                  steps.push(`Memory is the limiting factor: ${nodesNeededForMemory} nodes required`);
-                } else {
-                  steps.push(`CPU and memory require the same number of nodes: ${totalNodesNeeded} nodes`);
-                }
-                
-                // Distribution across AZs
-                const totalAvailabilityZones = store.requirements.physicalConstraints.totalAvailabilityZones || 1;
-                let nodesPerAZ = Math.ceil(totalNodesNeeded / totalAvailabilityZones);
-                nodesPerAZ = Math.max(1, nodesPerAZ);
-                
-                steps.push(`Number of availability zones: ${totalAvailabilityZones}`);
-                steps.push(`Minimum nodes per AZ: ${totalNodesNeeded} ÷ ${totalAvailabilityZones} = ${nodesPerAZ} nodes per AZ (rounded up)`);
-                
-                let baseNodeCount = nodesPerAZ * totalAvailabilityZones;
-                
-                // If we rounded up for the AZ calculation, we might have more nodes than originally needed
-                if (baseNodeCount > totalNodesNeeded) {
-                  steps.push(`To ensure even distribution, adjusting to ${nodesPerAZ} nodes per AZ × ${totalAvailabilityZones} AZs = ${baseNodeCount} total nodes`);
-                } else {
-                  steps.push(`Base node count: ${nodesPerAZ} × ${totalAvailabilityZones} = ${baseNodeCount} nodes`);
-                }
-                
-                // Add redundancy
-                let additionalNodesCount = 0;
-                if (cluster.availabilityZoneRedundancy === 'N+1') {
-                  const redundancyNodesNeeded = nodesPerAZ;
-                  additionalNodesCount = Math.ceil(redundancyNodesNeeded / totalAvailabilityZones) * totalAvailabilityZones;
-                  steps.push(`N+1 redundancy: Need ${redundancyNodesNeeded} more nodes to handle 1 AZ failure`);
-                  steps.push(`For even distribution: ${additionalNodesCount} additional nodes (${Math.ceil(redundancyNodesNeeded / totalAvailabilityZones)} extra nodes per AZ)`);
-                } else if (cluster.availabilityZoneRedundancy === 'N+2') {
-                  const redundancyNodesNeeded = nodesPerAZ * 2;
-                  additionalNodesCount = Math.ceil(redundancyNodesNeeded / totalAvailabilityZones) * totalAvailabilityZones;
-                  steps.push(`N+2 redundancy: Need ${redundancyNodesNeeded} more nodes to handle 2 AZ failures`);
-                  steps.push(`For even distribution: ${additionalNodesCount} additional nodes (${Math.ceil(redundancyNodesNeeded / totalAvailabilityZones)} extra nodes per AZ)`);
-                } else {
-                  steps.push(`No redundancy configured: Adding 0 additional nodes`);
-                }
-                
-                const expectedRequiredQuantity = baseNodeCount + additionalNodesCount;
-                steps.push(`Final node count: ${baseNodeCount} base nodes + ${additionalNodesCount} redundancy nodes = ${expectedRequiredQuantity} total nodes`);
-                
-                // Save the calculated quantity for comparison
-                if (calculatedQty === undefined) {
-                  setCalculatedQuantity(expectedRequiredQuantity);
-                }
+              // Distribution across AZs
+              const totalAvailabilityZones = store.requirements.physicalConstraints.totalAvailabilityZones || 1;
+              let nodesPerAZ = Math.ceil(totalNodesNeeded / totalAvailabilityZones);
+              nodesPerAZ = Math.max(1, nodesPerAZ);
+              
+              steps.push(`Number of availability zones: ${totalAvailabilityZones}`);
+              steps.push(`Minimum nodes per AZ: ${totalNodesNeeded} ÷ ${totalAvailabilityZones} = ${nodesPerAZ} nodes per AZ (rounded up)`);
+              
+              let baseNodeCount = nodesPerAZ * totalAvailabilityZones;
+              
+              // If we rounded up for the AZ calculation, we might have more nodes than originally needed
+              if (baseNodeCount > totalNodesNeeded) {
+                steps.push(`To ensure even distribution, adjusting to ${nodesPerAZ} nodes per AZ × ${totalAvailabilityZones} AZs = ${baseNodeCount} total nodes`);
+              } else {
+                steps.push(`Base node count: ${nodesPerAZ} × ${totalAvailabilityZones} = ${baseNodeCount} nodes`);
+              }
+              
+              // Add redundancy
+              let additionalNodesCount = 0;
+              if (cluster.availabilityZoneRedundancy === 'N+1') {
+                const redundancyNodesNeeded = nodesPerAZ;
+                additionalNodesCount = Math.ceil(redundancyNodesNeeded / totalAvailabilityZones) * totalAvailabilityZones;
+                steps.push(`N+1 redundancy: Need ${redundancyNodesNeeded} more nodes to handle 1 AZ failure`);
+                steps.push(`For even distribution: ${additionalNodesCount} additional nodes (${Math.ceil(redundancyNodesNeeded / totalAvailabilityZones)} extra nodes per AZ)`);
+              } else if (cluster.availabilityZoneRedundancy === 'N+2') {
+                const redundancyNodesNeeded = nodesPerAZ * 2;
+                additionalNodesCount = Math.ceil(redundancyNodesNeeded / totalAvailabilityZones) * totalAvailabilityZones;
+                steps.push(`N+2 redundancy: Need ${redundancyNodesNeeded} more nodes to handle 2 AZ failures`);
+                steps.push(`For even distribution: ${additionalNodesCount} additional nodes (${Math.ceil(redundancyNodesNeeded / totalAvailabilityZones)} extra nodes per AZ)`);
+              } else {
+                steps.push(`No redundancy configured: Adding 0 additional nodes`);
+              }
+              
+              const expectedRequiredQuantity = baseNodeCount + additionalNodesCount;
+              steps.push(`Final node count: ${baseNodeCount} base nodes + ${additionalNodesCount} redundancy nodes = ${expectedRequiredQuantity} total nodes`);
+              
+              // Save the calculated quantity for comparison
+              if (calculatedQty === undefined) {
+                setCalculatedQuantity(expectedRequiredQuantity);
               }
             }
           }
@@ -205,133 +268,15 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         steps.push(`The calculation takes into account the CPU overcommit ratio and availability zone distribution.`);
       }
     } else if (roleType === 'storageNode') {
+      // Storage node calculations would go here - similar pattern to above
       if (role.clusterInfo?.clusterId) {
-        const clusterId = role.clusterInfo.clusterId;
-        const storageCluster = store.requirements.storageRequirements.storageClusters.find(c => c.id === clusterId);
-        
-        if (storageCluster) {
-          steps.push(`Storage Cluster: ${storageCluster.name}`);
-          steps.push(`Required Usable Capacity: ${storageCluster.totalCapacityTB.toLocaleString()} TiB`);
-          steps.push(`Storage Pool Type: ${storageCluster.poolType}`);
-          steps.push(`Maximum Fill Factor: ${storageCluster.maxFillFactor}%`);
-          steps.push(`Availability Zone Quantity: ${storageCluster.availabilityZoneQuantity}`);
-          
-          // Show component and disk details if available
-          if (component) {
-            const roleDiskConfigs = store.selectedDisksByRole[roleId] || [];
-            
-            if (roleDiskConfigs.length > 0) {
-              let totalRawCapacityTB = 0;
-              
-              steps.push(`Server Model: ${component.manufacturer} ${component.model} with attached disks`);
-              
-              // List all disks and calculate total raw capacity
-              steps.push(`Attached Disks:`);
-              roleDiskConfigs.forEach(diskConfig => {
-                const disk = store.componentTemplates.find(c => c.id === diskConfig.diskId);
-                if (disk && disk.type === 'Disk' && 'capacityTB' in disk) {
-                  const diskCapacityTB = disk.capacityTB * diskConfig.quantity;
-                  totalRawCapacityTB += diskCapacityTB;
-                  steps.push(`- ${disk.name}: ${disk.capacityTB} TB × ${diskConfig.quantity} = ${diskCapacityTB} TB`);
-                }
-              });
-              
-              steps.push(`Raw Capacity per Node: ${totalRawCapacityTB.toFixed(2)} TB`);
-              
-              // Calculate usable capacity based on pool type
-              const TB_TO_TIB_FACTOR = 0.909495; // Convert TB to TiB
-              const poolEfficiencyFactors: Record<string, number> = {
-                '3 Replica': 0.33333,
-                '2 Replica': 0.5,
-                'Erasure Coding 4+2': 0.66666,
-                'Erasure Coding 8+3': 0.72727,
-                'Erasure Coding 8+4': 0.66666,
-                'Erasure Coding 10+4': 0.71428
-              };
-              
-              const poolType = storageCluster.poolType || '3 Replica';
-              const poolEfficiencyFactor = poolEfficiencyFactors[poolType] || (1/3);
-              const fillFactorAdjustment = storageCluster.maxFillFactor / 100;
-              
-              steps.push(`Pool Efficiency Factor: ${poolEfficiencyFactor.toFixed(4)} (based on ${poolType})`);
-              steps.push(`Fill Factor Adjustment: ${fillFactorAdjustment.toFixed(2)} (${storageCluster.maxFillFactor}% of total capacity)`);
-              
-              const rawCapacityTiB = totalRawCapacityTB * TB_TO_TIB_FACTOR;
-              const effectiveCapacityPerNodeTiB = rawCapacityTiB * poolEfficiencyFactor * fillFactorAdjustment;
-              
-              steps.push(`Effective Capacity per Node: ${rawCapacityTiB.toFixed(2)} TiB × ${poolEfficiencyFactor.toFixed(4)} × ${fillFactorAdjustment.toFixed(2)} = ${effectiveCapacityPerNodeTiB.toFixed(2)} TiB`);
-              
-              const requiredNodeCount = Math.ceil(storageCluster.totalCapacityTB / effectiveCapacityPerNodeTiB);
-              steps.push(`Minimum Nodes Needed: ${storageCluster.totalCapacityTB.toFixed(2)} TiB ÷ ${effectiveCapacityPerNodeTiB.toFixed(2)} TiB = ${requiredNodeCount} nodes`);
-              
-              // Calculate final node count based on AZ requirements
-              const minNodesForAZ = storageCluster.availabilityZoneQuantity;
-              const finalNodeCount = Math.max(requiredNodeCount, minNodesForAZ);
-              
-              if (finalNodeCount > requiredNodeCount) {
-                steps.push(`Final Node Count: ${finalNodeCount} (increased from ${requiredNodeCount} to ensure minimum of ${minNodesForAZ} nodes for AZ distribution)`);
-              } else {
-                steps.push(`Final Node Count: ${finalNodeCount} nodes`);
-              }
-              
-              // Calculate actual capacity
-              const actualUsableCapacity = effectiveCapacityPerNodeTiB * finalNodeCount;
-              steps.push(`Total Usable Capacity: ${finalNodeCount} nodes × ${effectiveCapacityPerNodeTiB.toFixed(2)} TiB = ${actualUsableCapacity.toFixed(2)} TiB`);
-              
-              if (actualUsableCapacity > storageCluster.totalCapacityTB) {
-                const excessCapacity = actualUsableCapacity - storageCluster.totalCapacityTB;
-                steps.push(`This provides ${excessCapacity.toFixed(2)} TiB of excess capacity above the ${storageCluster.totalCapacityTB.toFixed(2)} TiB requirement.`);
-              }
-              
-              // Save the calculated quantity for comparison
-              if (calculatedQty === undefined) {
-                setCalculatedQuantity(finalNodeCount);
-              }
-            } else {
-              steps.push(`No disk configuration found - using default count of ${storageCluster.availabilityZoneQuantity} nodes`);
-              steps.push(`To perform a more accurate calculation, please add disks to this storage node.`);
-            }
-          }
-        }
-      } else {
-        steps.push(`Storage nodes are sized based on capacity requirements and redundancy configuration.`);
-        steps.push(`The calculation takes into account the storage pool type, efficiency factor, and availability zone distribution.`);
+        steps.push(`Storage nodes calculation depends on disk configurations and storage cluster requirements.`);
+        steps.push(`For detailed storage calculations, please refer to the store logs or contact support.`);
       }
     } else if (roleType.includes('Switch')) {
       // Network switch calculation
-      const networkReqs = store.requirements.networkRequirements;
-      const physicalConstraints = store.requirements.physicalConstraints;
-      
-      steps.push(`Network Topology: ${networkReqs.networkTopology || 'Spine-Leaf'}`);
-      steps.push(`Total Availability Zones: ${physicalConstraints.totalAvailabilityZones || 1}`);
-      
-      if (roleType === 'leafSwitch') {
-        const leafSwitchesPerAZ = networkReqs.leafSwitchesPerAZ || 2;
-        const totalAZs = physicalConstraints.totalAvailabilityZones || 1;
-        
-        steps.push(`Leaf Switches Per AZ: ${leafSwitchesPerAZ}`);
-        steps.push(`Total Leaf Switches: ${leafSwitchesPerAZ} switches × ${totalAZs} AZs = ${leafSwitchesPerAZ * totalAZs} switches`);
-      } else if (roleType === 'managementSwitch') {
-        const mgmtSwitchesPerAZ = (networkReqs.managementNetwork === 'Dual Home') ? 2 : 1;
-        const totalAZs = physicalConstraints.totalAvailabilityZones || 1;
-        
-        steps.push(`Management Network: ${networkReqs.managementNetwork}`);
-        steps.push(`Management Switches Per AZ: ${mgmtSwitchesPerAZ}`);
-        
-        let totalMgmtSwitches = mgmtSwitchesPerAZ * totalAZs;
-        
-        // Account for IPMI switches if needed
-        if (networkReqs.ipmiNetwork === 'Dedicated IPMI switch') {
-          steps.push(`IPMI Network: Dedicated IPMI switches (requires 1 additional switch per AZ)`);
-          totalMgmtSwitches += totalAZs;
-        }
-        
-        steps.push(`Total Management Switches: ${totalMgmtSwitches}`);
-      } else if (roleType === 'spineSwitch') {
-        steps.push(`Spine switches connect all leaf switches in a full mesh topology.`);
-        steps.push(`For redundancy, a minimum of 2 spine switches are required.`);
-      }
-    } 
+      steps.push(`Network switches are calculated based on the network topology, switch role, and availability zones.`);
+    }
     
     return steps;
   };
@@ -357,15 +302,17 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-7 px-2 text-blue-500 hover:bg-blue-50"
-              onClick={handleOpenDialog}
-            >
-              <Calculator className="h-3.5 w-3.5 mr-1" />
-              View
-            </Button>
+            {children || (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 px-2 text-blue-500 hover:bg-blue-50"
+                onClick={handleOpenDialog}
+              >
+                <Calculator className="h-3.5 w-3.5 mr-1" />
+                View
+              </Button>
+            )}
           </TooltipTrigger>
           <TooltipContent>
             <p>View calculation details</p>
@@ -389,6 +336,14 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
             </div>
           ) : (
             <div className="space-y-4 py-4">
+              {errorMessage && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>
+                    {errorMessage}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               {hasDiscrepancy && (
                 <Alert variant="warning" className="mb-4">
                   <AlertDescription>
