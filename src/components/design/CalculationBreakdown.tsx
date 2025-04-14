@@ -31,7 +31,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const [displayedQuantity, setDisplayedQuantity] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [titleText, setTitleText] = useState<string>("");
   
   const store = useDesignStore();
   
@@ -39,12 +38,13 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const clusterName = role?.clusterInfo?.clusterName;
   const roleType = role?.role || '';
   
+  // Calculate title text outside of the useEffect to prevent loops
+  const titleText = clusterName 
+    ? `Calculation Breakdown for ${roleName} (${clusterName})` 
+    : `Calculation Breakdown for ${roleName}`;
+  
   useEffect(() => {
-    // Set the title text based on cluster info
-    setTitleText(clusterName 
-      ? `Calculation Breakdown for ${roleName} (${clusterName})` 
-      : `Calculation Breakdown for ${roleName}`);
-      
+    // Only run this effect when the dialog is open and we have a role
     if (isOpen && role) {
       setIsLoading(true);
       setErrorMessage(null);
@@ -102,7 +102,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         setIsLoading(false);
       }
     }
-  }, [isOpen, role, roleId, roleType, store, roleName, clusterName]);
+  }, [isOpen, role, roleId, roleType, store]); // Remove roleName and clusterName from dependencies
   
   const calculateRequiredQuantity = (role) => {
     if (!role.assignedComponentId) return null;
