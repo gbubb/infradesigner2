@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useStorageClustersWrapper } from './useStorageClustersWrapper';
 import { useHardwareTotalsWrapper } from './useHardwareTotalsWrapper';
@@ -25,8 +26,9 @@ export const useDesignCalculations = () => {
   
   // Get resource metrics with proper typing
   const resourceMetricsResult = useResourceMetrics();
-  // Ensure we have a valid resourceMetrics object
-  const resourceMetrics = {
+  
+  // Memoize the resource metrics to avoid recalculations
+  const resourceMetrics = useMemo(() => ({
     totalPower: 0,
     totalRackUnits: 0,
     totalServers: 0,
@@ -43,44 +45,70 @@ export const useDesignCalculations = () => {
     storagePortsAvailable: 0,
     hasDedicatedStorageNetwork: false,
     ...resourceMetricsResult
-  };
+  }), [resourceMetricsResult]);
   
-  // Ensure we have a valid resourceUtilization object
-  const resourceUtilization = resourceMetricsResult?.resourceUtilization || {
+  // Memoize the resource utilization to avoid recalculations
+  const resourceUtilization = useMemo(() => resourceMetricsResult?.resourceUtilization || {
     powerUtilization: { percentage: 0, used: 0, total: 0 },
     spaceUtilization: { percentage: 0, used: 0, total: 0 },
     leafNetworkUtilization: { percentage: 0, used: 0, total: 0 },
     mgmtNetworkUtilization: { percentage: 0, used: 0, total: 0 }
-  };
+  }, [resourceMetricsResult?.resourceUtilization]);
   
   // Get componentsByType with proper typing
   const componentsByTypeResult = useComponentsByType();
-  const componentsByType = componentsByTypeResult?.componentsByType || {};
+  const componentsByType = useMemo(() => 
+    componentsByTypeResult?.componentsByType || {}
+  , [componentsByTypeResult?.componentsByType]);
   
   // Get cost analysis with proper typing
   const costAnalysisResult = useCostAnalysis();
-  const totalCost = typeof costAnalysisResult?.capitalCost === 'number' ? costAnalysisResult.capitalCost : 0;
-  const costPerVCPU = typeof costAnalysisResult?.costPerVCPU === 'number' ? costAnalysisResult.costPerVCPU : 0;
-  const costPerTB = typeof costAnalysisResult?.costPerTB === 'number' ? costAnalysisResult.costPerTB : 0;
-  const amortizedCostsByType = costAnalysisResult?.amortizedCostsByType || {
+  const totalCost = useMemo(() => 
+    typeof costAnalysisResult?.capitalCost === 'number' ? costAnalysisResult.capitalCost : 0
+  , [costAnalysisResult?.capitalCost]);
+  
+  const costPerVCPU = useMemo(() => 
+    typeof costAnalysisResult?.costPerVCPU === 'number' ? costAnalysisResult.costPerVCPU : 0
+  , [costAnalysisResult?.costPerVCPU]);
+  
+  const costPerTB = useMemo(() => 
+    typeof costAnalysisResult?.costPerTB === 'number' ? costAnalysisResult.costPerTB : 0
+  , [costAnalysisResult?.costPerTB]);
+  
+  const amortizedCostsByType = useMemo(() => costAnalysisResult?.amortizedCostsByType || {
     compute: 0,
     storage: 0, 
     network: 0,
     total: 0
-  };
+  }, [costAnalysisResult?.amortizedCostsByType]);
   
   // Get design validation with proper typing
   const designValidationResult = useDesignValidation();
-  const designErrors = Array.isArray(designValidationResult?.designErrors) 
+  const designErrors = useMemo(() => Array.isArray(designValidationResult?.designErrors) 
     ? designValidationResult.designErrors 
-    : [];
+    : []
+  , [designValidationResult?.designErrors]);
 
-  // Directly calculate values previously handled by useEffect
-  const components = Array.isArray(activeDesign?.components) ? activeDesign.components : [];
-  const hasValidDesign = Boolean(activeDesign?.id && components.length > 0);
-  const hasStorageNodes = components.some(c => c && c.role === 'storageNode');
-  const currentTotalPower = typeof resourceMetrics.totalPower === 'number' ? resourceMetrics.totalPower : 0;
-  const currentTotalRackUnits = typeof resourceMetrics.totalRackUnits === 'number' ? resourceMetrics.totalRackUnits : 0;
+  // Directly calculate values that don't need to be in state
+  const components = useMemo(() => 
+    Array.isArray(activeDesign?.components) ? activeDesign.components : []
+  , [activeDesign?.components]);
+  
+  const hasValidDesign = useMemo(() => 
+    Boolean(activeDesign?.id && components.length > 0)
+  , [activeDesign?.id, components.length]);
+  
+  const hasStorageNodes = useMemo(() => 
+    components.some(c => c && c.role === 'storageNode')
+  , [components]);
+  
+  const currentTotalPower = useMemo(() => 
+    typeof resourceMetrics.totalPower === 'number' ? resourceMetrics.totalPower : 0
+  , [resourceMetrics.totalPower]);
+  
+  const currentTotalRackUnits = useMemo(() => 
+    typeof resourceMetrics.totalRackUnits === 'number' ? resourceMetrics.totalRackUnits : 0
+  , [resourceMetrics.totalRackUnits]);
 
   return {
     totalCost,

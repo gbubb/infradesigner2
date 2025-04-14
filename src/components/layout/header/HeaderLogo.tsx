@@ -1,10 +1,11 @@
+
 import React from 'react';
 
 export const HeaderLogo: React.FC = () => {
   return (
     <div className="flex items-center">
       <img 
-        src="/lovable-uploads/471a9da5-ea26-4145-ba48-e8ccd2540995.png" 
+        src="/lovable-uploads/471a9da5-ea26-4145-ba48-e5e9a7b8510d.png" 
         alt="Infrastructure Design Tool Logo" 
         className="h-8 w-auto mr-2"
       />

@@ -5,7 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
-import { CalculationBreakdown } from '../design/CalculationBreakdown';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Calculator } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ComponentsTableProps {
   components: InfrastructureComponent[];
@@ -93,11 +95,36 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                     </div>
                   </TableCell>
                   <TableCell>
-                    {/* Wrap the quantity display with CalculationBreakdown */}
+                    {/* Simple display of quantity with calculation breakdown in tooltip */}
                     {roleId ? (
-                      <CalculationBreakdown roleId={roleId} roleName={roleName}>
-                        <div className="font-medium cursor-help">{quantity}</div>
-                      </CalculationBreakdown>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">{quantity}</span>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-5 w-5 rounded-full" 
+                                type="button"
+                              >
+                                <Calculator className="h-3 w-3" />
+                                <span className="sr-only">View calculation</span>
+                              </Button>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-md p-4">
+                            <div className="space-y-3">
+                              <h4 className="font-medium text-sm">
+                                Calculation for {roleName} {component.clusterInfo?.clusterName || ''}
+                              </h4>
+                              <div className="text-xs">
+                                To view detailed calculation breakdown, use the debug panel.
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     ) : (
                       <div className="font-medium">{quantity}</div>
                     )}

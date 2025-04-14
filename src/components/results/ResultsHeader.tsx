@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
@@ -16,7 +17,7 @@ export const ResultsHeader: React.FC<ResultsHeaderProps> = ({
   onForceFullRecalculation 
 }) => {
   return (
-    <div className="flex justify-between items-center mb-6">
+    <div className="flex justify-between items-center mb-6 relative">
       <h2 className="text-2xl font-semibold">Design Results</h2>
       <div className="flex gap-2">
         <DesignDebugDialog onForceRecalculation={onForceFullRecalculation} />
