@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
@@ -50,7 +49,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     ? `Calculation Breakdown for ${roleName} (${clusterName})` 
     : `Calculation Breakdown for ${roleName}`;
   
-  const calculateRequiredQuantity = useCallback((role) => {
+  const calculateRequiredQuantity = (role) => {
     if (!role.assignedComponentId) return null;
     
     try {
@@ -73,7 +72,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       console.error("Error in direct calculation:", error);
       return null;
     }
-  }, [store]);
+  };
   
   const manuallyCalculateQuantity = (role) => {
     return {
@@ -131,9 +130,8 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [role, roleId, roleType, calculateRequiredQuantity]);
+  }, [role, roleId, roleType, store]);
   
-  // Use this effect only when the dialog is opened
   useEffect(() => {
     if (isOpen && role) {
       performCalculation();
@@ -268,40 +266,22 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
                          breakdownData.displayedQuantity !== null && 
                          breakdownData.calculatedQuantity !== breakdownData.displayedQuantity;
   
-  // Separate trigger button and content to avoid nesting issues
-  const renderTriggerButton = () => {
-    if (children) {
-      // If children are passed, use them as the trigger
-      return React.cloneElement(children as React.ReactElement, {
-        onClick: (e: React.MouseEvent) => {
-          e.stopPropagation(); // Prevent event bubbling
-          handleOpenDialog();
-        }
-      });
-    }
-    
-    return (
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="h-7 px-2 text-blue-500 hover:bg-blue-50"
-        onClick={(e) => {
-          e.stopPropagation(); // Prevent event bubbling
-          handleOpenDialog();
-        }}
-      >
-        <Calculator className="h-3.5 w-3.5 mr-1" />
-        View
-      </Button>
-    );
-  };
-  
   return (
     <>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            {renderTriggerButton()}
+            {children || (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 px-2 text-blue-500 hover:bg-blue-50"
+                onClick={handleOpenDialog}
+              >
+                <Calculator className="h-3.5 w-3.5 mr-1" />
+                View
+              </Button>
+            )}
           </TooltipTrigger>
           <TooltipContent>
             <p>View calculation details</p>
