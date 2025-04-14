@@ -38,24 +38,17 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       setCalculatedQuantity(null);
       setBreakdownSteps([]);
       
-      console.log(`Fetching calculation for role: ${roleType} (${roleId})`);
-      setDisplayedQuantity(role.adjustedRequiredCount || role.requiredCount);
-      
       if (role.assignedComponentId) {
         try {
-          console.log(`Attempting calculation for ${roleId} with component ${role.assignedComponentId}`);
           const calculationResult = calculateRequiredQuantity(role, roleId);
           
           if (calculationResult) {
-            console.log(`Calculation successful: Qty=${calculationResult.requiredQuantity}, Steps=${calculationResult.calculationSteps.length}`);
             setCalculatedQuantity(calculationResult.requiredQuantity);
             
             if (calculationResult.calculationSteps && calculationResult.calculationSteps.length > 0) {
-               console.log(`Using ${calculationResult.calculationSteps.length} steps from calculation result.`);
                setBreakdownSteps(calculationResult.calculationSteps);
                setIsLoading(false);
             } else {
-              console.log('Calculation result missing steps, generating detailed breakdown.');
               setTimeout(() => {
                 const { steps: detailedSteps, generatedQty } = generateDetailedBreakdown(role, calculationResult.requiredQuantity, roleId);
                 setBreakdownSteps(detailedSteps);
@@ -66,7 +59,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
               }, 100);
             }
           } else {
-            console.log('Primary calculation failed or returned null, generating detailed breakdown.');
             const { steps: detailedSteps, generatedQty } = generateDetailedBreakdown(role, undefined, roleId);
             setBreakdownSteps(detailedSteps);
             if (generatedQty !== null) {
@@ -75,7 +67,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
             setIsLoading(false);
           }
         } catch (error) {
-          console.error(`Error calculating quantity for ${roleType} (${roleId}):`, error);
           setErrorMessage(`Error performing calculation: ${error.message || 'Unknown error'}`);
           const { steps: detailedSteps, generatedQty } = generateDetailedBreakdown(role, undefined, roleId);
           setBreakdownSteps(detailedSteps);
@@ -85,7 +76,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
           setIsLoading(false);
         }
       } else {
-        console.log('No component assigned, generating basic information.');
         const { steps: detailedSteps, generatedQty } = generateDetailedBreakdown(role, undefined, roleId);
         setBreakdownSteps(detailedSteps);
         if (generatedQty !== null) {
@@ -94,7 +84,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         setIsLoading(false);
       }
     }
-  }, [roleId, role?.assignedComponentId, calculateFn, getBreakdownFn, role]);
+  }, [roleId, role?.assignedComponentId]);
   
   const calculateRequiredQuantity = (role, roleId?: string) => {
     if (!role.assignedComponentId) return null;
@@ -249,9 +239,11 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     return { steps, generatedQty };
   };
   
+  const currentDisplayedQuantity = role ? (role.adjustedRequiredCount || role.requiredCount) : null;
+  
   const hasDiscrepancy = calculatedQuantity !== null && 
-                         displayedQuantity !== null && 
-                         calculatedQuantity !== displayedQuantity;
+                         currentDisplayedQuantity !== null && 
+                         calculatedQuantity !== currentDisplayedQuantity;
   
   return (
     <>
@@ -280,7 +272,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
                   {hasDiscrepancy && (
                     <Alert variant="warning" className="mb-2">
                       <AlertDescription className="text-xs">
-                        <strong>Notice:</strong> Displayed quantity ({displayedQuantity ?? 'N/A'}) differs from calculated ({calculatedQuantity ?? 'N/A'}). Breakdown reflects calculation.
+                        <strong>Notice:</strong> Displayed quantity ({currentDisplayedQuantity ?? 'N/A'}) differs from calculated ({calculatedQuantity ?? 'N/A'}). Breakdown reflects calculation.
                       </AlertDescription>
                     </Alert>
                   )}
