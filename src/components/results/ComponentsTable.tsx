@@ -20,13 +20,6 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
   
   // Helper function to find the corresponding role for a component
   const findRoleForComponent = (component: InfrastructureComponent) => {
-    console.log("findRoleForComponent: Searching for component:", { 
-      role: component.role, 
-      clusterId: component.clusterInfo?.clusterId, 
-      componentName: component.name 
-    });
-    console.log("findRoleForComponent: Searching within componentRoles:", componentRoles);
-    
     if (!component.role) return null;
     
     // If the component has a clusterInfo property, we need to match on both role and clusterId
@@ -36,13 +29,11 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
              r.clusterInfo && 
              r.clusterInfo.clusterId === component.clusterInfo.clusterId
       );
-      console.log("findRoleForComponent (with cluster): Found role?", foundRoleWithCluster);
       return foundRoleWithCluster;
     }
     
     // Otherwise just match on role
     const foundRoleSimple = componentRoles.find(r => r.role === component.role);
-    console.log("findRoleForComponent (simple): Found role?", foundRoleSimple);
     return foundRoleSimple;
   };
   

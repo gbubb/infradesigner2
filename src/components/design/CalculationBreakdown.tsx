@@ -15,7 +15,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   roleName,
   children
 }) => {
-  console.log(`CalculationBreakdown: Rendering for ${roleName} (ID: ${roleId})`, { children });
   const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
   const [calculatedQuantity, setCalculatedQuantity] = useState<number | null>(null);
   const [displayedQuantity, setDisplayedQuantity] = useState<number | null>(null);
@@ -28,8 +27,11 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const clusterName = role?.clusterInfo?.clusterName;
   const roleType = role?.role || '';
   
+  // Get potentially stable store functions
+  const calculateFn = store.calculateRequiredQuantity;
+  const getBreakdownFn = store.getCalculationBreakdown;
+  
   useEffect(() => {
-    console.log(`CalculationBreakdown Effect: Triggered for ${roleName} (ID: ${roleId})`);
     if (role) {
       setIsLoading(true);
       setErrorMessage(null);
@@ -92,17 +94,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         setIsLoading(false);
       }
     }
-  }, [role, roleId, roleType, store]);
-  
-  useEffect(() => {
-    console.log(`CalculationBreakdown State Update for ${roleName} (ID: ${roleId}):`, {
-      isLoading,
-      errorMessage,
-      breakdownStepsLength: breakdownSteps.length,
-      calculatedQuantity,
-      displayedQuantity,
-    });
-  }, [isLoading, errorMessage, breakdownSteps, calculatedQuantity, displayedQuantity]);
+  }, [roleId, role?.assignedComponentId, calculateFn, getBreakdownFn, role]);
   
   const calculateRequiredQuantity = (role, roleId?: string) => {
     if (!role.assignedComponentId) return null;
@@ -110,9 +102,9 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     try {
       const currentRoleId = roleId || role.id;
       
-      if (typeof store.calculateRequiredQuantity === 'function') {
-        const quantity = store.calculateRequiredQuantity(currentRoleId, role.assignedComponentId);
-        const steps = store.getCalculationBreakdown(currentRoleId);
+      if (typeof calculateFn === 'function') {
+        const quantity = calculateFn(currentRoleId, role.assignedComponentId);
+        const steps = getBreakdownFn(currentRoleId);
         
         if (steps && steps.length > 0) {
           return { requiredQuantity: quantity, calculationSteps: steps };
@@ -260,8 +252,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const hasDiscrepancy = calculatedQuantity !== null && 
                          displayedQuantity !== null && 
                          calculatedQuantity !== displayedQuantity;
-  
-  console.log(`CalculationBreakdown: Preparing render for ${roleName}`, { hasDiscrepancy });
   
   return (
     <>
