@@ -298,14 +298,3 @@ export const manualRecalculateDesign = () => {
     });
   }, 100);
 };
-  
-  // Log verification after recalculation
-  setTimeout(() => {
-    const newState = useDesignStore.getState();
-    console.log("After recalculation:", {
-      roleCount: newState.componentRoles.length,
-      assignedRoles: newState.componentRoles.filter(r => r.assignedComponentId).length,
-      hasBreakdowns: Object.keys(newState.calculationBreakdowns).length > 0
-    });
-  }, 100);
-};
