@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -102,7 +101,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         setIsLoading(false);
       }
     }
-  }, [isOpen, role, roleId, roleType, store]); // Remove roleName and clusterName from dependencies
+  }, [isOpen, role, roleId, roleType]); // Removed store from dependencies
   
   const calculateRequiredQuantity = (role) => {
     if (!role.assignedComponentId) return null;
