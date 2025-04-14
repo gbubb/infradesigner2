@@ -91,10 +91,14 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
+                    {/* Wrap the quantity display with CalculationBreakdown */}
+                    {roleId ? (
+                      <CalculationBreakdown roleId={roleId} roleName={roleName}>
+                        <div className="font-medium cursor-help">{quantity}</div>
+                      </CalculationBreakdown>
+                    ) : (
                       <div className="font-medium">{quantity}</div>
-                      {roleId && <CalculationBreakdown roleId={roleId} roleName={roleName} />}
-                    </div>
+                    )}
                   </TableCell>
                   <TableCell>${component.cost.toLocaleString()}</TableCell>
                   <TableCell>${totalComponentCost.toLocaleString()}</TableCell>
