@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export const HeaderLogo: React.FC = () => {
@@ -9,7 +8,10 @@ export const HeaderLogo: React.FC = () => {
         alt="Infrastructure Design Tool Logo" 
         className="h-8 w-auto mr-2"
       />
-      <h1 className="text-white text-xl font-semibold">Infrastructure Design Tool</h1>
+      <h1 className="text-white text-xl font-semibold">
+        Infrastructure Design Tool
+        <span className="text-xs font-normal ml-2 opacity-80">v11</span>
+      </h1>
     </div>
   );
 };
