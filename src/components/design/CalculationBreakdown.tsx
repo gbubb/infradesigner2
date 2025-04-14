@@ -1,4 +1,3 @@
-// src/components/design/CalculationBreakdown.tsx
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -32,102 +31,87 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  // Get store values directly
   const store = useDesignStore();
   
-  // Find the role by ID to get its information
   const role = store.componentRoles.find(r => r.id === roleId);
   const clusterName = role?.clusterInfo?.clusterName;
   const roleType = role?.role || '';
   
-  // Update breakdown steps whenever the dialog opens
   useEffect(() => {
     if (isOpen && role) {
       setIsLoading(true);
       setErrorMessage(null);
       console.log(`Fetching calculation for role: ${roleType} (${roleId})`);
       
-      // Store the displayed quantity
       setDisplayedQuantity(role.adjustedRequiredCount || role.requiredCount);
       
-      // If the role has an assigned component, make sure we have a fresh calculation
       if (role.assignedComponentId) {
         try {
-          // First check if we have existing breakdown
           const existingSteps = store.calculationBreakdowns[roleId];
           console.log(`Found ${existingSteps?.length || 0} existing calculation steps for ${roleId}`);
           
-          // Force a calculation first
           console.log(`Calculating quantity for ${roleId} with component ${role.assignedComponentId}`);
-          const calculationResult = calculateRequiredQuantity(role);
+          const calculationResult = calculateRequiredQuantity(role, roleId);
           
           if (calculationResult) {
             console.log(`Calculated quantity: ${calculationResult.requiredQuantity} with ${calculationResult.calculationSteps.length} steps`);
             setCalculatedQuantity(calculationResult.requiredQuantity);
             
-            // Check if we got enough steps
             if (calculationResult.calculationSteps.length > 5) {
               setBreakdownSteps(calculationResult.calculationSteps);
               setIsLoading(false);
             } else {
-              // Try to get from store again after a delay
               setTimeout(() => {
-                // Now get the breakdown steps
                 const steps = store.getCalculationBreakdown(roleId);
                 console.log(`Got ${steps?.length || 0} calculation steps from store for ${roleId}`);
                 
                 if (steps && steps.length > 5) {
                   setBreakdownSteps(steps);
                 } else {
-                  // If no steps are found, generate detailed steps
                   console.log('Falling back to generated detailed breakdown');
-                  const detailedSteps = generateDetailedBreakdown(role, calculationResult.requiredQuantity);
+                  const detailedSteps = generateDetailedBreakdown(role, calculationResult.requiredQuantity, roleId);
                   setBreakdownSteps(detailedSteps);
                 }
                 setIsLoading(false);
-              }, 500); // Increased timeout for more reliable state updates
+              }, 500);
             }
           } else {
-            // If calculation failed, generate detailed steps
             console.log('Calculation failed, falling back to generated detailed breakdown');
-            const detailedSteps = generateDetailedBreakdown(role);
+            const detailedSteps = generateDetailedBreakdown(role, roleId);
             setBreakdownSteps(detailedSteps);
             setIsLoading(false);
           }
         } catch (error) {
           console.error(`Error calculating quantity for ${roleType} (${roleId}):`, error);
           setErrorMessage(`Error performing calculation: ${error.message}`);
-          const detailedSteps = generateDetailedBreakdown(role);
+          const detailedSteps = generateDetailedBreakdown(role, roleId);
           setBreakdownSteps(detailedSteps);
           setIsLoading(false);
         }
       } else {
         console.log('No component assigned, generating basic information');
-        // Generate detailed steps
-        const detailedSteps = generateDetailedBreakdown(role);
+        const detailedSteps = generateDetailedBreakdown(role, roleId);
         setBreakdownSteps(detailedSteps);
         setIsLoading(false);
       }
     }
   }, [isOpen, role, roleId, roleType, store]);
   
-  // Do a direct calculation with full visibility into the process
-  const calculateRequiredQuantity = (role) => {
+  const calculateRequiredQuantity = (role, roleId?: string) => {
     if (!role.assignedComponentId) return null;
     
     try {
-      // Directly access calculation functions if possible
+      const currentRoleId = roleId || role.id;
+      
       if (typeof store.calculateRequiredQuantity === 'function') {
-        // Use the store's function
-        const quantity = store.calculateRequiredQuantity(roleId, role.assignedComponentId);
-        const steps = store.getCalculationBreakdown(roleId);
+        const quantity = store.calculateRequiredQuantity(currentRoleId, role.assignedComponentId);
+        const steps = store.getCalculationBreakdown(currentRoleId);
         
         if (steps && steps.length > 0) {
           return { requiredQuantity: quantity, calculationSteps: steps };
         }
       }
       
-      // If we're here, we need to manually calculate
       return manuallyCalculateQuantity(role);
     } catch (error) {
       console.error("Error in direct calculation:", error);
@@ -135,24 +119,23 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     }
   };
   
-  // Manual calculation as a fallback
-  const manuallyCalculateQuantity = (role) => {
-    // This is a simplified version but would ideally replicate the full calculation logic
+  const manuallyCalculateQuantity = (role, roleId?: string) => {
     return {
       requiredQuantity: role.adjustedRequiredCount || role.requiredCount,
       calculationSteps: []
     };
   };
   
-  // Generate a detailed breakdown based on actual requirements
-  const generateDetailedBreakdown = (role, calculatedQty) => {
+  const generateDetailedBreakdown = (role, calculatedQty?: number, roleId?: string) => {
     const steps: string[] = [];
     
-    // Include role basic information
+    const titleText = clusterName 
+      ? `Calculation Breakdown for ${roleName} (${clusterName})` 
+      : `Calculation Breakdown for ${roleName}`;
+    
     steps.push(`Role: ${roleName} (${roleType})`);
     steps.push(`Required quantity: ${role.adjustedRequiredCount || role.requiredCount}`);
     
-    // Find any matching component for additional info
     const component = role.assignedComponentId ? 
       store.componentTemplates.find(c => c.id === role.assignedComponentId) : 
       undefined;
@@ -164,7 +147,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     
     steps.push(`Component: ${component.name} (${component.manufacturer} ${component.model})`);
     
-    // Attempt to reconstruct the calculation based on the role type
     if (roleType === 'computeNode' || roleType === 'gpuNode') {
       if (role.clusterInfo?.clusterId) {
         const clusterId = role.clusterInfo.clusterId;
@@ -176,7 +158,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
           steps.push(`Total memory requirement: ${cluster.totalMemoryTB.toLocaleString()} TB (${(cluster.totalMemoryTB * 1024).toLocaleString()} GB)`);
           steps.push(`CPU overcommit ratio: ${cluster.overcommitRatio}:1`);
           
-          // Determine cores per server
           let coresPerServer = 0;
           if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
             coresPerServer = component.cpuSockets * component.cpuCoresPerSocket;
@@ -186,7 +167,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
             steps.push(`Server Model: ${component.manufacturer} ${component.model} with ${coresPerServer} cores per server`);
           }
           
-          // Determine memory per server
           let memoryGBPerServer = 0;
           if ('memoryCapacity' in component) {
             memoryGBPerServer = component.memoryCapacity;
@@ -196,7 +176,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
             steps.push(`Server Memory: ${memoryGBPerServer.toLocaleString()} GB per server`);
           }
           
-          // Calculate required servers based on CPU
           if (coresPerServer > 0) {
             const totalPhysicalCoresNeeded = Math.ceil(cluster.totalVCPUs / cluster.overcommitRatio);
             steps.push(`CPU calculation: ${cluster.totalVCPUs.toLocaleString()} vCPUs ÷ ${cluster.overcommitRatio} = ${totalPhysicalCoresNeeded.toLocaleString()} physical cores needed`);
@@ -204,13 +183,11 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
             const nodesNeededForCPU = Math.ceil(totalPhysicalCoresNeeded / coresPerServer);
             steps.push(`Nodes needed for CPU: ${totalPhysicalCoresNeeded.toLocaleString()} cores ÷ ${coresPerServer} cores per server = ${nodesNeededForCPU} nodes`);
             
-            // Calculate required servers based on memory
             if (memoryGBPerServer > 0) {
               const totalMemoryGBNeeded = cluster.totalMemoryTB * 1024;
               const nodesNeededForMemory = Math.ceil(totalMemoryGBNeeded / memoryGBPerServer);
               steps.push(`Nodes needed for memory: ${totalMemoryGBNeeded.toLocaleString()} GB ÷ ${memoryGBPerServer.toLocaleString()} GB per server = ${nodesNeededForMemory} nodes`);
               
-              // Determine which resource is the limiting factor
               const totalNodesNeeded = Math.max(nodesNeededForCPU, nodesNeededForMemory);
               if (nodesNeededForCPU > nodesNeededForMemory) {
                 steps.push(`CPU is the limiting factor: ${nodesNeededForCPU} nodes required`);
@@ -220,7 +197,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
                 steps.push(`CPU and memory require the same number of nodes: ${totalNodesNeeded} nodes`);
               }
               
-              // Distribution across AZs
               const totalAvailabilityZones = store.requirements.physicalConstraints.totalAvailabilityZones || 1;
               let nodesPerAZ = Math.ceil(totalNodesNeeded / totalAvailabilityZones);
               nodesPerAZ = Math.max(1, nodesPerAZ);
@@ -230,14 +206,12 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
               
               let baseNodeCount = nodesPerAZ * totalAvailabilityZones;
               
-              // If we rounded up for the AZ calculation, we might have more nodes than originally needed
               if (baseNodeCount > totalNodesNeeded) {
                 steps.push(`To ensure even distribution, adjusting to ${nodesPerAZ} nodes per AZ × ${totalAvailabilityZones} AZs = ${baseNodeCount} total nodes`);
               } else {
                 steps.push(`Base node count: ${nodesPerAZ} × ${totalAvailabilityZones} = ${baseNodeCount} nodes`);
               }
               
-              // Add redundancy
               let additionalNodesCount = 0;
               if (cluster.availabilityZoneRedundancy === 'N+1') {
                 const redundancyNodesNeeded = nodesPerAZ;
@@ -256,7 +230,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
               const expectedRequiredQuantity = baseNodeCount + additionalNodesCount;
               steps.push(`Final node count: ${baseNodeCount} base nodes + ${additionalNodesCount} redundancy nodes = ${expectedRequiredQuantity} total nodes`);
               
-              // Save the calculated quantity for comparison
               if (calculatedQty === undefined) {
                 setCalculatedQuantity(expectedRequiredQuantity);
               }
@@ -268,31 +241,22 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         steps.push(`The calculation takes into account the CPU overcommit ratio and availability zone distribution.`);
       }
     } else if (roleType === 'storageNode') {
-      // Storage node calculations would go here - similar pattern to above
       if (role.clusterInfo?.clusterId) {
         steps.push(`Storage nodes calculation depends on disk configurations and storage cluster requirements.`);
         steps.push(`For detailed storage calculations, please refer to the store logs or contact support.`);
       }
     } else if (roleType.includes('Switch')) {
-      // Network switch calculation
       steps.push(`Network switches are calculated based on the network topology, switch role, and availability zones.`);
     }
     
     return steps;
   };
   
-  // Build the title with cluster name if available
-  const titleText = clusterName 
-    ? `Calculation Breakdown for ${roleName} (${clusterName})` 
-    : `Calculation Breakdown for ${roleName}`;
-  
-  // Handle opening the dialog
   const handleOpenDialog = () => {
     console.log("Opening calculation dialog for:", roleId);
     setIsOpen(true);
   };
   
-  // Determine if there's a discrepancy between calculated and displayed values
   const hasDiscrepancy = calculatedQuantity !== null && 
                          displayedQuantity !== null && 
                          calculatedQuantity !== displayedQuantity;
