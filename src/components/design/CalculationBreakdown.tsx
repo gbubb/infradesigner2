@@ -49,6 +49,38 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     ? `Calculation Breakdown for ${roleName} (${clusterName})` 
     : `Calculation Breakdown for ${roleName}`;
   
+  const calculateRequiredQuantity = (role) => {
+    if (!role.assignedComponentId) return null;
+    
+    try {
+      const currentRoleId = role.id;
+      
+      // Only calculate once and store all needed data
+      if (typeof store.calculateRequiredQuantity === 'function') {
+        const quantity = store.calculateRequiredQuantity(currentRoleId, role.assignedComponentId);
+        const steps = store.getCalculationBreakdown(currentRoleId);
+        
+        // Return both pieces of data together
+        return { 
+          requiredQuantity: quantity, 
+          calculationSteps: steps || [] 
+        };
+      }
+      
+      return manuallyCalculateQuantity(role);
+    } catch (error) {
+      console.error("Error in direct calculation:", error);
+      return null;
+    }
+  };
+  
+  const manuallyCalculateQuantity = (role) => {
+    return {
+      requiredQuantity: role.adjustedRequiredCount || role.requiredCount,
+      calculationSteps: []
+    };
+  };
+  
   const performCalculation = useCallback(() => {
     if (!role) return;
     
@@ -57,39 +89,19 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     
     try {
       if (role.assignedComponentId) {
-        const existingSteps = store.calculationBreakdowns[roleId];
-        console.log(`Found ${existingSteps?.length || 0} existing calculation steps for ${roleId}`);
+        // Get calculation result once
+        const result = calculateRequiredQuantity(role);
         
-        const calculationResult = calculateRequiredQuantity(role);
-        
-        if (calculationResult) {
-          if (calculationResult.calculationSteps.length > 5) {
-            setBreakdownData({
-              steps: calculationResult.calculationSteps,
-              calculatedQuantity: calculationResult.requiredQuantity,
-              displayedQuantity,
-              errorMessage: null
-            });
-          } else {
-            const steps = store.getCalculationBreakdown(roleId);
-            if (steps && steps.length > 5) {
-              setBreakdownData({
-                steps,
-                calculatedQuantity: calculationResult.requiredQuantity,
-                displayedQuantity,
-                errorMessage: null
-              });
-            } else {
-              const { steps: detailedSteps, expectedQuantity } = generateDetailedBreakdown(role);
-              setBreakdownData({
-                steps: detailedSteps,
-                calculatedQuantity: expectedQuantity,
-                displayedQuantity,
-                errorMessage: null
-              });
-            }
-          }
+        // Use the result or fall back to detailed breakdown
+        if (result && result.calculationSteps.length > 0) {
+          setBreakdownData({
+            steps: result.calculationSteps,
+            calculatedQuantity: result.requiredQuantity,
+            displayedQuantity,
+            errorMessage: null
+          });
         } else {
+          // Only generate detailed breakdown if we don't have calculation results
           const { steps: detailedSteps, expectedQuantity } = generateDetailedBreakdown(role);
           setBreakdownData({
             steps: detailedSteps,
@@ -109,10 +121,9 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       }
     } catch (error) {
       console.error(`Error calculating quantity for ${roleType} (${roleId}):`, error);
-      const { steps: detailedSteps, expectedQuantity } = generateDetailedBreakdown(role);
       setBreakdownData({
-        steps: detailedSteps,
-        calculatedQuantity: expectedQuantity,
+        steps: [],
+        calculatedQuantity: null,
         displayedQuantity,
         errorMessage: `Error performing calculation: ${error.message}`
       });
@@ -126,35 +137,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       performCalculation();
     }
   }, [isOpen, role, performCalculation]);
-  
-  const calculateRequiredQuantity = (role) => {
-    if (!role.assignedComponentId) return null;
-    
-    try {
-      const currentRoleId = role.id;
-      
-      if (typeof store.calculateRequiredQuantity === 'function') {
-        const quantity = store.calculateRequiredQuantity(currentRoleId, role.assignedComponentId);
-        const steps = store.getCalculationBreakdown(currentRoleId);
-        
-        if (steps && steps.length > 0) {
-          return { requiredQuantity: quantity, calculationSteps: steps };
-        }
-      }
-      
-      return manuallyCalculateQuantity(role);
-    } catch (error) {
-      console.error("Error in direct calculation:", error);
-      return null;
-    }
-  };
-  
-  const manuallyCalculateQuantity = (role) => {
-    return {
-      requiredQuantity: role.adjustedRequiredCount || role.requiredCount,
-      calculationSteps: []
-    };
-  };
   
   const generateDetailedBreakdown = (role) => {
     const steps: string[] = [];
