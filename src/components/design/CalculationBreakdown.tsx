@@ -272,7 +272,10 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     if (children) {
       // If children are passed, use them as the trigger
       return React.cloneElement(children as React.ReactElement, {
-        onClick: handleOpenDialog
+        onClick: (e: React.MouseEvent) => {
+          e.stopPropagation(); // Prevent event bubbling
+          handleOpenDialog();
+        }
       });
     }
     
@@ -281,7 +284,10 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         variant="ghost" 
         size="sm" 
         className="h-7 px-2 text-blue-500 hover:bg-blue-50"
-        onClick={handleOpenDialog}
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent event bubbling
+          handleOpenDialog();
+        }}
       >
         <Calculator className="h-3.5 w-3.5 mr-1" />
         View
