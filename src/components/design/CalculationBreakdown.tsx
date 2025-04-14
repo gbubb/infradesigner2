@@ -133,6 +133,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     }
   }, [role, roleId, roleType, calculateRequiredQuantity]);
   
+  // Use this effect only when the dialog is opened
   useEffect(() => {
     if (isOpen && role) {
       performCalculation();
@@ -267,7 +268,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
                          breakdownData.displayedQuantity !== null && 
                          breakdownData.calculatedQuantity !== breakdownData.displayedQuantity;
   
-  // Create separate trigger and content components to avoid nesting problems
+  // Separate trigger button and content to avoid nesting issues
   const renderTriggerButton = () => {
     if (children) {
       // If children are passed, use them as the trigger

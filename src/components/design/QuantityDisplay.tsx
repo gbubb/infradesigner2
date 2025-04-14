@@ -4,7 +4,6 @@ import { CalculationBreakdown } from './CalculationBreakdown';
 import { Calculator } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface QuantityDisplayProps {
   roleId: string;
