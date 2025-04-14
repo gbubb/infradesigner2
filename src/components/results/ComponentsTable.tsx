@@ -1,13 +1,12 @@
-// src/components/results/ComponentsTable.tsx
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Calculator } from 'lucide-react';
+import { CalculationBreakdown } from '@/components/design/CalculationBreakdown';
 import { Button } from '@/components/ui/button';
+import { Calculator } from 'lucide-react';
 
 interface ComponentsTableProps {
   components: InfrastructureComponent[];
@@ -95,36 +94,24 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                     </div>
                   </TableCell>
                   <TableCell>
-                    {/* Simple display of quantity with calculation breakdown in tooltip */}
                     {roleId ? (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">{quantity}</span>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-5 w-5 rounded-full" 
-                                type="button"
-                              >
-                                <Calculator className="h-3 w-3" />
-                                <span className="sr-only">View calculation</span>
-                              </Button>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-md p-4">
-                            <div className="space-y-3">
-                              <h4 className="font-medium text-sm">
-                                Calculation for {roleName} {component.clusterInfo?.clusterName || ''}
-                              </h4>
-                              <div className="text-xs">
-                                To view detailed calculation breakdown, use the debug panel.
-                              </div>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <CalculationBreakdown 
+                        roleId={roleId} 
+                        roleName={roleName}
+                      >
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">{quantity}</span>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-5 w-5 rounded-full" 
+                            type="button"
+                          >
+                            <Calculator className="h-3 w-3" />
+                            <span className="sr-only">View calculation</span>
+                          </Button>
+                        </div>
+                      </CalculationBreakdown>
                     ) : (
                       <div className="font-medium">{quantity}</div>
                     )}
