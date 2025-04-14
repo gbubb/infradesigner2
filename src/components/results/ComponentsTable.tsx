@@ -93,10 +93,12 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                   <TableCell>
                     {/* Wrap the quantity display with CalculationBreakdown */}
                     {roleId ? (
+                      (console.log(`ComponentsTable: Rendering CalculationBreakdown for ${roleName} (ID: ${roleId})`),
                       <CalculationBreakdown roleId={roleId} roleName={roleName}>
                         <div className="font-medium cursor-help">{quantity}</div>
-                      </CalculationBreakdown>
+                      </CalculationBreakdown>)
                     ) : (
+                      console.log(`ComponentsTable: Not rendering CalculationBreakdown for ${roleName} (no roleId)`),
                       <div className="font-medium">{quantity}</div>
                     )}
                   </TableCell>
