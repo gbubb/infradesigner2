@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,18 +25,11 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   children
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [breakdownData, setBreakdownData] = useState<{
-    steps: string[];
-    calculatedQuantity: number | null;
-    displayedQuantity: number | null;
-    errorMessage: string | null;
-  }>({
-    steps: [],
-    calculatedQuantity: null,
-    displayedQuantity: null,
-    errorMessage: null
-  });
+  const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
+  const [calculatedQuantity, setCalculatedQuantity] = useState<number | null>(null);
+  const [displayedQuantity, setDisplayedQuantity] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const store = useDesignStore();
   
@@ -49,22 +42,80 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     ? `Calculation Breakdown for ${roleName} (${clusterName})` 
     : `Calculation Breakdown for ${roleName}`;
   
+  useEffect(() => {
+    // Only run this effect when the dialog is open and we have a role
+    if (isOpen && role) {
+      setIsLoading(true);
+      setErrorMessage(null);
+      console.log(`Fetching calculation for role: ${roleType} (${roleId})`);
+      
+      setDisplayedQuantity(role.adjustedRequiredCount || role.requiredCount);
+      
+      if (role.assignedComponentId) {
+        try {
+          const existingSteps = store.calculationBreakdowns[roleId];
+          console.log(`Found ${existingSteps?.length || 0} existing calculation steps for ${roleId}`);
+          
+          console.log(`Calculating quantity for ${roleId} with component ${role.assignedComponentId}`);
+          const calculationResult = calculateRequiredQuantity(role);
+          
+          if (calculationResult) {
+            console.log(`Calculated quantity: ${calculationResult.requiredQuantity} with ${calculationResult.calculationSteps.length} steps`);
+            setCalculatedQuantity(calculationResult.requiredQuantity);
+            
+            if (calculationResult.calculationSteps.length > 5) {
+              setBreakdownSteps(calculationResult.calculationSteps);
+              setIsLoading(false);
+            } else {
+              setTimeout(() => {
+                const steps = store.getCalculationBreakdown(roleId);
+                console.log(`Got ${steps?.length || 0} calculation steps from store for ${roleId}`);
+                
+                if (steps && steps.length > 5) {
+                  setBreakdownSteps(steps);
+                } else {
+                  console.log('Falling back to generated detailed breakdown');
+                  const detailedSteps = generateDetailedBreakdown(role);
+                  setBreakdownSteps(detailedSteps);
+                }
+                setIsLoading(false);
+              }, 500);
+            }
+          } else {
+            console.log('Calculation failed, falling back to generated detailed breakdown');
+            const detailedSteps = generateDetailedBreakdown(role);
+            setBreakdownSteps(detailedSteps);
+            setIsLoading(false);
+          }
+        } catch (error) {
+          console.error(`Error calculating quantity for ${roleType} (${roleId}):`, error);
+          setErrorMessage(`Error performing calculation: ${error.message}`);
+          const detailedSteps = generateDetailedBreakdown(role);
+          setBreakdownSteps(detailedSteps);
+          setIsLoading(false);
+        }
+      } else {
+        console.log('No component assigned, generating basic information');
+        const detailedSteps = generateDetailedBreakdown(role);
+        setBreakdownSteps(detailedSteps);
+        setIsLoading(false);
+      }
+    }
+  }, [isOpen, role, roleId, roleType]); // Removed store from dependencies
+  
   const calculateRequiredQuantity = (role) => {
     if (!role.assignedComponentId) return null;
     
     try {
       const currentRoleId = role.id;
       
-      // Only calculate once and store all needed data
       if (typeof store.calculateRequiredQuantity === 'function') {
         const quantity = store.calculateRequiredQuantity(currentRoleId, role.assignedComponentId);
         const steps = store.getCalculationBreakdown(currentRoleId);
         
-        // Return both pieces of data together
-        return { 
-          requiredQuantity: quantity, 
-          calculationSteps: steps || [] 
-        };
+        if (steps && steps.length > 0) {
+          return { requiredQuantity: quantity, calculationSteps: steps };
+        }
       }
       
       return manuallyCalculateQuantity(role);
@@ -81,66 +132,8 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     };
   };
   
-  const performCalculation = useCallback(() => {
-    if (!role) return;
-    
-    setIsLoading(true);
-    const displayedQuantity = role.adjustedRequiredCount || role.requiredCount;
-    
-    try {
-      if (role.assignedComponentId) {
-        // Get calculation result once
-        const result = calculateRequiredQuantity(role);
-        
-        // Use the result or fall back to detailed breakdown
-        if (result && result.calculationSteps.length > 0) {
-          setBreakdownData({
-            steps: result.calculationSteps,
-            calculatedQuantity: result.requiredQuantity,
-            displayedQuantity,
-            errorMessage: null
-          });
-        } else {
-          // Only generate detailed breakdown if we don't have calculation results
-          const { steps: detailedSteps, expectedQuantity } = generateDetailedBreakdown(role);
-          setBreakdownData({
-            steps: detailedSteps,
-            calculatedQuantity: expectedQuantity,
-            displayedQuantity,
-            errorMessage: null
-          });
-        }
-      } else {
-        const { steps: detailedSteps, expectedQuantity } = generateDetailedBreakdown(role);
-        setBreakdownData({
-          steps: detailedSteps,
-          calculatedQuantity: expectedQuantity,
-          displayedQuantity,
-          errorMessage: null
-        });
-      }
-    } catch (error) {
-      console.error(`Error calculating quantity for ${roleType} (${roleId}):`, error);
-      setBreakdownData({
-        steps: [],
-        calculatedQuantity: null,
-        displayedQuantity,
-        errorMessage: `Error performing calculation: ${error.message}`
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [role, roleId, roleType, store]);
-  
-  useEffect(() => {
-    if (isOpen && role) {
-      performCalculation();
-    }
-  }, [isOpen, role, performCalculation]);
-  
-  const generateDetailedBreakdown = (role) => {
+  const generateDetailedBreakdown = (role, calculatedQty?: number) => {
     const steps: string[] = [];
-    let expectedQuantity = role.adjustedRequiredCount || role.requiredCount;
     
     steps.push(`Role: ${roleName} (${roleType})`);
     steps.push(`Required quantity: ${role.adjustedRequiredCount || role.requiredCount}`);
@@ -151,7 +144,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     
     if (!component) {
       steps.push("No component assigned to this role.");
-      return { steps, expectedQuantity };
+      return steps;
     }
     
     steps.push(`Component: ${component.name} (${component.manufacturer} ${component.model})`);
@@ -236,8 +229,12 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
                 steps.push(`No redundancy configured: Adding 0 additional nodes`);
               }
               
-              expectedQuantity = baseNodeCount + additionalNodesCount;
-              steps.push(`Final node count: ${baseNodeCount} base nodes + ${additionalNodesCount} redundancy nodes = ${expectedQuantity} total nodes`);
+              const expectedRequiredQuantity = baseNodeCount + additionalNodesCount;
+              steps.push(`Final node count: ${baseNodeCount} base nodes + ${additionalNodesCount} redundancy nodes = ${expectedRequiredQuantity} total nodes`);
+              
+              if (calculatedQty === undefined) {
+                setCalculatedQuantity(expectedRequiredQuantity);
+              }
             }
           }
         }
@@ -254,7 +251,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       steps.push(`Network switches are calculated based on the network topology, switch role, and availability zones.`);
     }
     
-    return { steps, expectedQuantity };
+    return steps;
   };
   
   const handleOpenDialog = () => {
@@ -262,9 +259,9 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     setIsOpen(true);
   };
   
-  const hasDiscrepancy = breakdownData.calculatedQuantity !== null && 
-                         breakdownData.displayedQuantity !== null && 
-                         breakdownData.calculatedQuantity !== breakdownData.displayedQuantity;
+  const hasDiscrepancy = calculatedQuantity !== null && 
+                         displayedQuantity !== null && 
+                         calculatedQuantity !== displayedQuantity;
   
   return (
     <>
@@ -305,10 +302,10 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
             </div>
           ) : (
             <div className="space-y-4 py-4">
-              {breakdownData.errorMessage && (
+              {errorMessage && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>
-                    {breakdownData.errorMessage}
+                    {errorMessage}
                   </AlertDescription>
                 </Alert>
               )}
@@ -316,17 +313,17 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
               {hasDiscrepancy && (
                 <Alert variant="warning" className="mb-4">
                   <AlertDescription>
-                    <strong>Notice:</strong> The displayed required quantity ({breakdownData.displayedQuantity}) differs from what our 
-                    detailed calculation would produce ({breakdownData.calculatedQuantity}). This may be due to a manual override 
+                    <strong>Notice:</strong> The displayed required quantity ({displayedQuantity}) differs from what our 
+                    detailed calculation would produce ({calculatedQuantity}). This may be due to a manual override 
                     or an initial value set during requirement creation.
                   </AlertDescription>
                 </Alert>
               )}
               
-              {breakdownData.steps && breakdownData.steps.length > 0 ? (
+              {breakdownSteps && breakdownSteps.length > 0 ? (
                 <Card className="p-4 bg-slate-50">
                   <ol className="list-decimal list-inside space-y-2">
-                    {breakdownData.steps.map((step, index) => (
+                    {breakdownSteps.map((step, index) => (
                       <li key={index} className="text-sm mb-2">
                         {step}
                       </li>
