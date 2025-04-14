@@ -1,44 +1,58 @@
-
 import React from 'react';
 import { CalculationBreakdown } from './CalculationBreakdown';
-import { Info, Calculator } from 'lucide-react';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface QuantityDisplayProps {
   roleId: string;
   roleName: string;
-  quantity: number;
+  quantity: number | null;
+  isAdjusted: boolean;
+  onQuantityChange?: (newQuantity: number | null) => void;
+  isEditable?: boolean;
 }
 
 export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
   roleId,
   roleName,
-  quantity
+  quantity,
+  isAdjusted,
+  onQuantityChange,
+  isEditable = false
 }) => {
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (onQuantityChange) {
+      const value = event.target.value;
+      const num = value === '' ? null : parseInt(value, 10);
+      if (value === '' || (!isNaN(num) && num >= 0)) {
+        onQuantityChange(num);
+      }
+    }
+  };
+
+  const displayValue = quantity === null ? '' : quantity.toString();
+
   return (
-    <div className="flex justify-between items-center space-x-2">
-      <span className="text-muted-foreground">Required:</span>
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className="font-medium">
-          {quantity}
-        </Badge>
-        <CalculationBreakdown roleId={roleId} roleName={roleName}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-blue-50 text-blue-500">
-                  <Calculator className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p>View calculation breakdown</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </CalculationBreakdown>
-      </div>
+    <div className="flex items-center space-x-1">
+      {isEditable ? (
+        <Input
+          type="number"
+          value={displayValue}
+          onChange={handleInputChange}
+          className={`h-7 text-sm ${isAdjusted ? 'font-bold text-orange-600' : ''}`}
+          min="0"
+          style={{ width: '60px' }}
+        />
+      ) : (
+        <span className={`text-sm ${isAdjusted ? 'font-bold text-orange-600' : ''}`}>
+          {quantity ?? 'N/A'}
+        </span>
+      )}
+      <CalculationBreakdown roleId={roleId} roleName={roleName} />
+      {isAdjusted && !isEditable && (
+        <span className="text-xs text-orange-500 ml-1">(Adjusted)</span>
+      )}
     </div>
   );
 };
