@@ -47,17 +47,14 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
             
             if (calculationResult.calculationSteps && calculationResult.calculationSteps.length > 0) {
                setBreakdownSteps(calculationResult.calculationSteps);
-               setIsLoading(false);
             } else {
-              setTimeout(() => {
-                const { steps: detailedSteps, generatedQty } = generateDetailedBreakdown(role, calculationResult.requiredQuantity, roleId);
-                setBreakdownSteps(detailedSteps);
-                if (generatedQty !== null) {
-                  setCalculatedQuantity(generatedQty);
-                }
-                setIsLoading(false);
-              }, 100);
+              const { steps: detailedSteps, generatedQty } = generateDetailedBreakdown(role, calculationResult.requiredQuantity, roleId);
+              setBreakdownSteps(detailedSteps);
+              if (generatedQty !== null) {
+                setCalculatedQuantity(generatedQty);
+              }
             }
+            setIsLoading(false);
           } else {
             const { steps: detailedSteps, generatedQty } = generateDetailedBreakdown(role, undefined, roleId);
             setBreakdownSteps(detailedSteps);
