@@ -1,30 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useDesignStore } from '@/store/designStore';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Calculator } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface CalculationBreakdownProps {
   roleId: string;
   roleName: string;
-  children?: React.ReactNode;
 }
 
 export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ 
   roleId, 
   roleName,
-  children
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
   const [calculatedQuantity, setCalculatedQuantity] = useState<number | null>(null);
   const [displayedQuantity, setDisplayedQuantity] = useState<number | null>(null);
@@ -38,7 +27,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const roleType = role?.role || '';
   
   useEffect(() => {
-    if (isOpen && role) {
+    if (role) {
       setIsLoading(true);
       setErrorMessage(null);
       setCalculatedQuantity(null);
@@ -99,14 +88,8 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         }
         setIsLoading(false);
       }
-    } else if (!isOpen) {
-        // Optionally reset state when dialog closes
-        // setIsLoading(false);
-        // setErrorMessage(null);
-        // setCalculatedQuantity(null);
-        // setBreakdownSteps([]);
     }
-  }, [isOpen, role, roleId, roleType, store]);
+  }, [role, roleId, roleType, store]);
   
   const calculateRequiredQuantity = (role, roleId?: string) => {
     if (!role.assignedComponentId) return null;
@@ -140,10 +123,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const generateDetailedBreakdown = (role, calculatedQtyFromEffect?: number, roleId?: string): { steps: string[], generatedQty: number | null } => {
     const steps: string[] = [];
     let generatedQty: number | null = null;
-    
-    const titleText = clusterName 
-      ? `Calculation Breakdown for ${roleName} (${clusterName})` 
-      : `Calculation Breakdown for ${roleName}`;
     
     steps.push(`Role: ${roleName} (${roleType})`);
     steps.push(`Displayed quantity: ${role.adjustedRequiredCount || role.requiredCount}`);
@@ -265,99 +244,65 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     return { steps, generatedQty };
   };
   
-  const handleOpenDialog = () => {
-    console.log("Opening calculation dialog for:", roleId);
-    setIsOpen(true);
-  };
-  
   const hasDiscrepancy = calculatedQuantity !== null && 
                          displayedQuantity !== null && 
                          calculatedQuantity !== displayedQuantity;
   
   return (
     <>
-      <TooltipProvider>
-        <Tooltip>
+      <span className="inline-flex items-center ml-2">
+       <TooltipProvider>
+        <Tooltip delayDuration={100}>
           <TooltipTrigger asChild>
-            {React.isValidElement(children) ? (
-               React.cloneElement(children, {
-                 onClick: (e) => {
-                   handleOpenDialog();
-                   if (typeof children.props.onClick === 'function') {
-                     children.props.onClick(e);
-                   }
-                 }
-               } as React.Attributes)
-             ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-blue-500 hover:bg-blue-50"
-                onClick={handleOpenDialog}
-              >
-                <Calculator className="h-3.5 w-3.5 mr-1" />
-                View
-              </Button>
-            )}
+            <Info className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help" />
           </TooltipTrigger>
-          <TooltipContent>
-            <p>View calculation details for {roleName}</p>
+          <TooltipContent side="top" className="max-w-md p-4 shadow-lg bg-background border rounded-md">
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">
+                 Calculation for {roleName} {clusterName ? `(${clusterName})` : ''}
+              </h4>
+              {isLoading ? (
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                   Loading breakdown...
+                </div>
+              ) : (
+                 <>
+                  {errorMessage && (
+                    <Alert variant="destructive" className="mb-2">
+                      <AlertDescription className="text-xs">{errorMessage}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {hasDiscrepancy && (
+                    <Alert variant="warning" className="mb-2">
+                      <AlertDescription className="text-xs">
+                        <strong>Notice:</strong> Displayed quantity ({displayedQuantity ?? 'N/A'}) differs from calculated ({calculatedQuantity ?? 'N/A'}). Breakdown reflects calculation.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {breakdownSteps && breakdownSteps.length > 0 ? (
+                     <Card className="p-3 bg-slate-50 max-h-[300px] overflow-y-auto">
+                       <ol className="list-decimal list-inside space-y-1.5">
+                         {breakdownSteps.map((step, index) => (
+                           <li key={index} className="text-xs">
+                             {step}
+                           </li>
+                         ))}
+                       </ol>
+                     </Card>
+                  ) : (
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      No detailed calculation available. {!role?.assignedComponentId && "Assign a component."}
+                    </p>
+                  )}
+                 </>
+              )}
+            </div>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{titleText}</DialogTitle>
-            <DialogDescription>
-              How the required quantity was calculated
-            </DialogDescription>
-          </DialogHeader>
-          
-          {isLoading ? (
-            <div className="py-8 text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-2"></div>
-              <p className="text-sm text-muted-foreground">Calculating...</p>
-            </div>
-          ) : (
-            <div className="space-y-4 py-4">
-              {errorMessage && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>
-                    {errorMessage}
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              {hasDiscrepancy && (
-                <Alert variant="warning" className="mb-4">
-                  <AlertDescription>
-                    <strong>Notice:</strong> The displayed quantity ({displayedQuantity ?? 'N/A'}) differs from the calculated quantity ({calculatedQuantity ?? 'N/A'}). This may be due to a manual override or initial value. The breakdown below reflects the calculation based on current settings.
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              {breakdownSteps && breakdownSteps.length > 0 ? (
-                <Card className="p-4 bg-slate-50">
-                  <ol className="list-decimal list-inside space-y-2">
-                    {breakdownSteps.map((step, index) => (
-                      <li key={index} className="text-sm mb-2">
-                        {step}
-                      </li>
-                    ))}
-                  </ol>
-                </Card>
-              ) : (
-                <div className="py-4 text-center text-muted-foreground">
-                  <p>No detailed calculation available or calculation failed.</p>
-                  {!role?.assignedComponentId && <p className="mt-2">Try assigning a component to see the calculation breakdown.</p>}
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      </span>
     </>
   );
 };
