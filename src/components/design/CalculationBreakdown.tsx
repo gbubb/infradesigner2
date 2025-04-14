@@ -75,33 +75,37 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
                   setBreakdownSteps(steps);
                 } else {
                   console.log('Falling back to generated detailed breakdown');
-                  const detailedSteps = generateDetailedBreakdown(role);
+                  const { steps: detailedSteps, expectedQuantity } = generateDetailedBreakdown(role);
                   setBreakdownSteps(detailedSteps);
+                  setCalculatedQuantity(expectedQuantity);
                 }
                 setIsLoading(false);
               }, 500);
             }
           } else {
             console.log('Calculation failed, falling back to generated detailed breakdown');
-            const detailedSteps = generateDetailedBreakdown(role);
+            const { steps: detailedSteps, expectedQuantity } = generateDetailedBreakdown(role);
             setBreakdownSteps(detailedSteps);
+            setCalculatedQuantity(expectedQuantity);
             setIsLoading(false);
           }
         } catch (error) {
           console.error(`Error calculating quantity for ${roleType} (${roleId}):`, error);
           setErrorMessage(`Error performing calculation: ${error.message}`);
-          const detailedSteps = generateDetailedBreakdown(role);
+          const { steps: detailedSteps, expectedQuantity } = generateDetailedBreakdown(role);
           setBreakdownSteps(detailedSteps);
+          setCalculatedQuantity(expectedQuantity);
           setIsLoading(false);
         }
       } else {
         console.log('No component assigned, generating basic information');
-        const detailedSteps = generateDetailedBreakdown(role);
+        const { steps: detailedSteps, expectedQuantity } = generateDetailedBreakdown(role);
         setBreakdownSteps(detailedSteps);
+        setCalculatedQuantity(expectedQuantity);
         setIsLoading(false);
       }
     }
-  }, [isOpen, role, roleId, roleType]); // Removed store from dependencies
+  }, [isOpen, role, roleId, roleType]);
   
   const calculateRequiredQuantity = (role) => {
     if (!role.assignedComponentId) return null;
@@ -132,8 +136,9 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     };
   };
   
-  const generateDetailedBreakdown = (role, calculatedQty?: number) => {
+  const generateDetailedBreakdown = (role) => {
     const steps: string[] = [];
+    let expectedQuantity = role.adjustedRequiredCount || role.requiredCount;
     
     steps.push(`Role: ${roleName} (${roleType})`);
     steps.push(`Required quantity: ${role.adjustedRequiredCount || role.requiredCount}`);
@@ -144,7 +149,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     
     if (!component) {
       steps.push("No component assigned to this role.");
-      return steps;
+      return { steps, expectedQuantity };
     }
     
     steps.push(`Component: ${component.name} (${component.manufacturer} ${component.model})`);
@@ -229,12 +234,8 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
                 steps.push(`No redundancy configured: Adding 0 additional nodes`);
               }
               
-              const expectedRequiredQuantity = baseNodeCount + additionalNodesCount;
-              steps.push(`Final node count: ${baseNodeCount} base nodes + ${additionalNodesCount} redundancy nodes = ${expectedRequiredQuantity} total nodes`);
-              
-              if (calculatedQty === undefined) {
-                setCalculatedQuantity(expectedRequiredQuantity);
-              }
+              expectedQuantity = baseNodeCount + additionalNodesCount;
+              steps.push(`Final node count: ${baseNodeCount} base nodes + ${additionalNodesCount} redundancy nodes = ${expectedQuantity} total nodes`);
             }
           }
         }
@@ -251,7 +252,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       steps.push(`Network switches are calculated based on the network topology, switch role, and availability zones.`);
     }
     
-    return steps;
+    return { steps, expectedQuantity };
   };
   
   const handleOpenDialog = () => {
