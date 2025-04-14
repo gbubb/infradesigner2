@@ -1,3 +1,4 @@
+
 // src/components/results/ComponentsTable.tsx
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
 import { CalculationBreakdown } from '../design/CalculationBreakdown';
+import { Button } from '@/components/ui/button';
+import { Calculator } from 'lucide-react';
 
 interface ComponentsTableProps {
   components: InfrastructureComponent[];
@@ -93,7 +96,18 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="font-medium">{quantity}</div>
-                      {roleId && <CalculationBreakdown roleId={roleId} roleName={roleName} />}
+                      {roleId && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex items-center gap-1 bg-white hover:bg-blue-50 text-blue-600 border-blue-200"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Calculator className="h-3.5 w-3.5" />
+                          <span>View</span>
+                          <CalculationBreakdown roleId={roleId} roleName={roleName} />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>${component.cost.toLocaleString()}</TableCell>
