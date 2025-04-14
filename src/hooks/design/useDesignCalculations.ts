@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useStorageClustersWrapper } from './useStorageClustersWrapper';
@@ -17,18 +16,8 @@ import { InfrastructureDesign } from '@/types/infrastructure';
 export const useDesignCalculations = () => {
   // Get store 
   const store = useDesignStore();
-  const designId = store.activeDesign?.id;
-  
-  // State for all calculation results
-  const [calculations, setCalculations] = useState({
-    totalCost: 0,
-    totalPower: 0,
-    totalRackUnits: 0,
-    hasValidDesign: false,
-    hasStorageNodes: false,
-    costPerVCPU: 0,
-    costPerTB: 0
-  });
+  const activeDesign: InfrastructureDesign | undefined = store.activeDesign;
+  const requirements = store.requirements;
   
   // Use our safer wrapper versions instead of the original hooks
   const { storageClustersMetrics } = useStorageClustersWrapper();
@@ -86,52 +75,21 @@ export const useDesignCalculations = () => {
     ? designValidationResult.designErrors 
     : [];
 
-  // Recalculate when designId changes (this replaces all the useMemo calls)
-  useEffect(() => {
-    try {
-      const activeDesign: InfrastructureDesign = store.activeDesign || {
-        id: '',
-        name: '',
-        description: '',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        requirements: store.requirements,
-        components: []
-      };
-      
-      const components = Array.isArray(activeDesign.components) ? activeDesign.components : [];
-      
-      // Check if we have a valid design
-      const hasValidDesign = Boolean(activeDesign.id && components.length > 0);
-      
-      // Check if we have storage nodes
-      const hasStorageNodes = components.some(c => c && c.role === 'storageNode');
-      
-      // Update all calculations
-      setCalculations({
-        totalCost,
-        totalPower: typeof resourceMetrics.totalPower === 'number' ? resourceMetrics.totalPower : 0,
-        totalRackUnits: typeof resourceMetrics.totalRackUnits === 'number' ? resourceMetrics.totalRackUnits : 0,
-        hasValidDesign,
-        hasStorageNodes,
-        costPerVCPU,
-        costPerTB
-      });
-    } catch (error) {
-      console.error("Error in design calculations:", error);
-    }
-  }, [
-    designId, 
-    totalCost, 
-    costPerVCPU, 
-    costPerTB, 
-    resourceMetrics.totalPower,
-    resourceMetrics.totalRackUnits,
-    store
-  ]);
+  // Directly calculate values previously handled by useEffect
+  const components = Array.isArray(activeDesign?.components) ? activeDesign.components : [];
+  const hasValidDesign = Boolean(activeDesign?.id && components.length > 0);
+  const hasStorageNodes = components.some(c => c && c.role === 'storageNode');
+  const currentTotalPower = typeof resourceMetrics.totalPower === 'number' ? resourceMetrics.totalPower : 0;
+  const currentTotalRackUnits = typeof resourceMetrics.totalRackUnits === 'number' ? resourceMetrics.totalRackUnits : 0;
 
   return {
-    ...calculations,
+    totalCost,
+    totalPower: currentTotalPower,
+    totalRackUnits: currentTotalRackUnits,
+    hasValidDesign,
+    hasStorageNodes,
+    costPerVCPU,
+    costPerTB,
     storageClustersMetrics,
     componentsByType,
     actualHardwareTotals,
