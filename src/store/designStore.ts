@@ -90,11 +90,48 @@ export const recalculateDesign = () => {
     
     // Then update the active design if it exists
     if (state.activeDesign) {
-      // Check if we have stored configurations in the active design
-      if (state.activeDesign.componentRoles && state.activeDesign.componentRoles.length > 0) {
-        // Restore component roles from the design
-        state.componentRoles = state.activeDesign.componentRoles;
+      // Store existing component assignments before recalculation
+      const existingAssignments = {};
+      
+      // First map component IDs from current roles
+      if (state.componentRoles && state.componentRoles.length > 0) {
+        state.componentRoles.forEach(role => {
+          if (role.assignedComponentId) {
+            existingAssignments[role.role] = role.assignedComponentId;
+            console.log(`Preserving assignment for ${role.role}: ${role.assignedComponentId}`);
+          }
+        });
       }
+      
+      // If the design has stored component roles with assignments, use those instead
+      if (state.activeDesign.componentRoles && state.activeDesign.componentRoles.length > 0) {
+        state.activeDesign.componentRoles.forEach(role => {
+          if (role.assignedComponentId) {
+            existingAssignments[role.role] = role.assignedComponentId;
+            console.log(`Found assignment in design for ${role.role}: ${role.assignedComponentId}`);
+          }
+        });
+      }
+
+      // Log what assignments we're preserving
+      console.log("Preserved component assignments:", existingAssignments);
+      
+      // Restore the assignments to the newly calculated roles
+      const updatedRoles = state.componentRoles.map(role => {
+        // If we have a stored assignment for this role type, restore it
+        if (existingAssignments[role.role]) {
+          console.log(`Restoring assignment for ${role.role}: ${existingAssignments[role.role]}`);
+          return {
+            ...role,
+            assignedComponentId: existingAssignments[role.role]
+          };
+        }
+        return role;
+      });
+      
+      // Update component roles with restored assignments
+      useDesignStore.setState({ componentRoles: updatedRoles });
+      console.log(`Restored assignments to ${updatedRoles.filter(r => r.assignedComponentId).length} roles`);
       
       // Restore disk configurations if they exist
       if (state.activeDesign.selectedDisksByRole) {
@@ -107,7 +144,7 @@ export const recalculateDesign = () => {
       }
       
       // Recalculate all component quantities to ensure calculations are fresh
-      state.componentRoles.forEach(role => {
+      updatedRoles.forEach(role => {
         if (role.assignedComponentId) {
           const newQuantity = state.calculateRequiredQuantity(role.id, role.assignedComponentId);
           console.log(`Recalculated ${role.role}: ${newQuantity} units required`);
@@ -115,7 +152,7 @@ export const recalculateDesign = () => {
       });
       
       // Get updated component data based on roles
-      const updatedComponents = state.componentRoles
+      const updatedComponents = updatedRoles
         .filter(role => role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
         .map(role => {
           // Clone the component template and set the quantity and role
@@ -250,6 +287,17 @@ export const manualRecalculateDesign = () => {
   });
   
   recalculateDesign();
+  
+  // Log verification after recalculation
+  setTimeout(() => {
+    const newState = useDesignStore.getState();
+    console.log("After recalculation:", {
+      roleCount: newState.componentRoles.length,
+      assignedRoles: newState.componentRoles.filter(r => r.assignedComponentId).length,
+      hasBreakdowns: Object.keys(newState.calculationBreakdowns).length > 0
+    });
+  }, 100);
+};
   
   // Log verification after recalculation
   setTimeout(() => {
