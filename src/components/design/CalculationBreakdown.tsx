@@ -37,13 +37,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   const clusterName = role?.clusterInfo?.clusterName;
   const roleType = role?.role || '';
   
-  // Calculate title text outside of the useEffect to prevent loops
-  const titleText = clusterName 
-    ? `Calculation Breakdown for ${roleName} (${clusterName})` 
-    : `Calculation Breakdown for ${roleName}`;
-  
   useEffect(() => {
-    // Only run this effect when the dialog is open and we have a role
     if (isOpen && role) {
       setIsLoading(true);
       setErrorMessage(null);
@@ -57,7 +51,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
           console.log(`Found ${existingSteps?.length || 0} existing calculation steps for ${roleId}`);
           
           console.log(`Calculating quantity for ${roleId} with component ${role.assignedComponentId}`);
-          const calculationResult = calculateRequiredQuantity(role);
+          const calculationResult = calculateRequiredQuantity(role, roleId);
           
           if (calculationResult) {
             console.log(`Calculated quantity: ${calculationResult.requiredQuantity} with ${calculationResult.calculationSteps.length} steps`);
@@ -75,7 +69,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
                   setBreakdownSteps(steps);
                 } else {
                   console.log('Falling back to generated detailed breakdown');
-                  const detailedSteps = generateDetailedBreakdown(role);
+                  const detailedSteps = generateDetailedBreakdown(role, calculationResult.requiredQuantity, roleId);
                   setBreakdownSteps(detailedSteps);
                 }
                 setIsLoading(false);
@@ -83,31 +77,31 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
             }
           } else {
             console.log('Calculation failed, falling back to generated detailed breakdown');
-            const detailedSteps = generateDetailedBreakdown(role);
+            const detailedSteps = generateDetailedBreakdown(role, roleId);
             setBreakdownSteps(detailedSteps);
             setIsLoading(false);
           }
         } catch (error) {
           console.error(`Error calculating quantity for ${roleType} (${roleId}):`, error);
           setErrorMessage(`Error performing calculation: ${error.message}`);
-          const detailedSteps = generateDetailedBreakdown(role);
+          const detailedSteps = generateDetailedBreakdown(role, roleId);
           setBreakdownSteps(detailedSteps);
           setIsLoading(false);
         }
       } else {
         console.log('No component assigned, generating basic information');
-        const detailedSteps = generateDetailedBreakdown(role);
+        const detailedSteps = generateDetailedBreakdown(role, roleId);
         setBreakdownSteps(detailedSteps);
         setIsLoading(false);
       }
     }
-  }, [isOpen, role, roleId, roleType]); // Removed store from dependencies
+  }, [isOpen, role, roleId, roleType, store]);
   
-  const calculateRequiredQuantity = (role) => {
+  const calculateRequiredQuantity = (role, roleId?: string) => {
     if (!role.assignedComponentId) return null;
     
     try {
-      const currentRoleId = role.id;
+      const currentRoleId = roleId || role.id;
       
       if (typeof store.calculateRequiredQuantity === 'function') {
         const quantity = store.calculateRequiredQuantity(currentRoleId, role.assignedComponentId);
@@ -125,15 +119,19 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
     }
   };
   
-  const manuallyCalculateQuantity = (role) => {
+  const manuallyCalculateQuantity = (role, roleId?: string) => {
     return {
       requiredQuantity: role.adjustedRequiredCount || role.requiredCount,
       calculationSteps: []
     };
   };
   
-  const generateDetailedBreakdown = (role, calculatedQty?: number) => {
+  const generateDetailedBreakdown = (role, calculatedQty?: number, roleId?: string) => {
     const steps: string[] = [];
+    
+    const titleText = clusterName 
+      ? `Calculation Breakdown for ${roleName} (${clusterName})` 
+      : `Calculation Breakdown for ${roleName}`;
     
     steps.push(`Role: ${roleName} (${roleType})`);
     steps.push(`Required quantity: ${role.adjustedRequiredCount || role.requiredCount}`);
