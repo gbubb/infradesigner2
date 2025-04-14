@@ -1,8 +1,6 @@
 import React from 'react';
 import { CalculationBreakdown } from './CalculationBreakdown';
-import { Info } from 'lucide-react';
 import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
 
 interface QuantityDisplayProps {
   roleId: string;
@@ -19,10 +17,11 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
     <div className="flex justify-between items-center space-x-2">
       <span className="text-muted-foreground">Required:</span>
       <div className="flex items-center gap-2">
-        <Badge variant="outline" className="font-medium">
-          {quantity}
-        </Badge>
-        <CalculationBreakdown roleId={roleId} roleName={roleName} />
+        <CalculationBreakdown roleId={roleId} roleName={roleName}>
+          <Badge variant="outline" className="font-medium cursor-help">
+            {quantity}
+          </Badge>
+        </CalculationBreakdown>
       </div>
     </div>
   );

@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card } from '@/components/ui/card';
-import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface CalculationBreakdownProps {
   roleId: string;
   roleName: string;
+  children: React.ReactNode;
 }
 
 export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ 
   roleId, 
   roleName,
+  children
 }) => {
   const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
   const [calculatedQuantity, setCalculatedQuantity] = useState<number | null>(null);
@@ -250,11 +251,10 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
   
   return (
     <>
-      <span className="inline-flex items-center ml-2">
        <TooltipProvider>
         <Tooltip delayDuration={100}>
           <TooltipTrigger asChild>
-            <Info className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help" />
+            {children}
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-md p-4 shadow-lg bg-background border rounded-md">
             <div className="space-y-3">
@@ -302,7 +302,6 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      </span>
     </>
   );
 };
