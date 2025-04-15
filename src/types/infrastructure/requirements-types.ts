@@ -37,6 +37,8 @@ export interface DesignRequirements {
     deviceLifespanYears?: number;
     copperPatchPanelsPerAZ?: number;
     fiberPatchPanelsPerAZ?: number;
+    copperPatchPanelsPerCoreRack?: number;
+    fiberPatchPanelsPerCoreRack?: number;
   };
   physicalConstraints: {
     computeStorageRackQuantity?: number;
@@ -47,6 +49,7 @@ export interface DesignRequirements {
     rackCostPerMonthEuros?: number;
     electricityPricePerKwh?: number;
     operationalLoadPercentage?: number;
+    networkCoreRackQuantity?: number;
   };
 }
 

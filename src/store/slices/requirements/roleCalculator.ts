@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { ComponentRole, IPMINetworkType, NetworkTopology } from '@/types/infrastructure';
 
@@ -26,9 +27,16 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   const leafSwitchesPerAZ = getValue(requirements, 'networkRequirements.leafSwitchesPerAZ', 2) || 2;
   const dedicatedStorageNetwork = getValue(requirements, 'networkRequirements.dedicatedStorageNetwork', false) || false;
   const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', "Dual Home") || "Dual Home";
-  const copperPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.copperPatchPanelsPerAZ', 2);
-  const fiberPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.fiberPatchPanelsPerAZ', 2);
-  const dedicatedNetworkCoreRacks = getValue(requirements, 'networkRequirements.dedicatedNetworkCoreRacks', true);
+  
+  // Structured cabling requirements
+  const copperPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.copperPatchPanelsPerAZ', 2) || 0;
+  const fiberPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.fiberPatchPanelsPerAZ', 2) || 0;
+  const copperPatchPanelsPerCoreRack = getValue(requirements, 'networkRequirements.copperPatchPanelsPerCoreRack', 1) || 0;
+  const fiberPatchPanelsPerCoreRack = getValue(requirements, 'networkRequirements.fiberPatchPanelsPerCoreRack', 1) || 0;
+  
+  const dedicatedNetworkCoreRacks = getValue(requirements, 'networkRequirements.dedicatedNetworkCoreRacks', true) || false;
+  const networkCoreRackQuantity = getValue(requirements, 'physicalConstraints.networkCoreRackQuantity', 2) || 
+    (dedicatedNetworkCoreRacks ? 2 : 0);
   
   const mgmtSwitchesPerAZ = managementNetwork === 'Dual Home' ? 2 : 1;
   const ipmiNetwork = getValue(requirements, 'networkRequirements.ipmiNetwork', "Management converged") as IPMINetworkType;
@@ -203,28 +211,46 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   }
   
   // Add copper patch panel role
-  if (copperPatchPanelsPerAZ > 0) {
+  if (copperPatchPanelsPerAZ > 0 || copperPatchPanelsPerCoreRack > 0) {
+    // Calculate total copper panels: (panels per AZ * AZ count) + (panels per core rack * core rack count)
     const totalCopperPanels = (copperPatchPanelsPerAZ * totalAvailabilityZones) + 
-      (dedicatedNetworkCoreRacks ? 2 : 0); // Add 2 for core racks if enabled
+      (networkCoreRackQuantity * copperPatchPanelsPerCoreRack);
+    
+    // Add calculation breakdown steps
+    const calculationSteps = [
+      `Copper Patch Panels in AZs: ${copperPatchPanelsPerAZ} panels/AZ × ${totalAvailabilityZones} AZs = ${copperPatchPanelsPerAZ * totalAvailabilityZones} panels`,
+      `Copper Patch Panels in Network Core Racks: ${copperPatchPanelsPerCoreRack} panels/rack × ${networkCoreRackQuantity} racks = ${copperPatchPanelsPerCoreRack * networkCoreRackQuantity} panels`,
+      `Total Copper Patch Panels: ${copperPatchPanelsPerAZ * totalAvailabilityZones} + ${copperPatchPanelsPerCoreRack * networkCoreRackQuantity} = ${totalCopperPanels} panels`
+    ];
     
     newRoles.push({
       id: uuidv4(),
       role: 'copperPatchPanel',
       description: 'Provides copper cable patch panel connectivity',
-      requiredCount: totalCopperPanels
+      requiredCount: totalCopperPanels,
+      calculationSteps: calculationSteps
     });
   }
 
   // Add fiber patch panel role
-  if (fiberPatchPanelsPerAZ > 0) {
+  if (fiberPatchPanelsPerAZ > 0 || fiberPatchPanelsPerCoreRack > 0) {
+    // Calculate total fiber panels: (panels per AZ * AZ count) + (panels per core rack * core rack count)
     const totalFiberPanels = (fiberPatchPanelsPerAZ * totalAvailabilityZones) + 
-      (dedicatedNetworkCoreRacks ? 2 : 0); // Add 2 for core racks if enabled
+      (networkCoreRackQuantity * fiberPatchPanelsPerCoreRack);
+    
+    // Add calculation breakdown steps
+    const calculationSteps = [
+      `Fiber Patch Panels in AZs: ${fiberPatchPanelsPerAZ} panels/AZ × ${totalAvailabilityZones} AZs = ${fiberPatchPanelsPerAZ * totalAvailabilityZones} panels`,
+      `Fiber Patch Panels in Network Core Racks: ${fiberPatchPanelsPerCoreRack} panels/rack × ${networkCoreRackQuantity} racks = ${fiberPatchPanelsPerCoreRack * networkCoreRackQuantity} panels`,
+      `Total Fiber Patch Panels: ${fiberPatchPanelsPerAZ * totalAvailabilityZones} + ${fiberPatchPanelsPerCoreRack * networkCoreRackQuantity} = ${totalFiberPanels} panels`
+    ];
     
     newRoles.push({
       id: uuidv4(),
       role: 'fiberPatchPanel',
       description: 'Provides fiber optic cable patch panel connectivity',
-      requiredCount: totalFiberPanels
+      requiredCount: totalFiberPanels,
+      calculationSteps: calculationSteps
     });
   }
 

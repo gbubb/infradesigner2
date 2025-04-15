@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,10 @@ export const DesignPanel: React.FC = () => {
             componentType = ComponentType.Switch;
           } else if (role.role === 'firewall') {
             componentType = ComponentType.Firewall;
+          } else if (role.role === 'copperPatchPanel') {
+            componentType = ComponentType.CopperPatchPanel;
+          } else if (role.role === 'fiberPatchPanel') {
+            componentType = ComponentType.FiberPatchPanel;
           }
           
           if (componentType) {
@@ -95,6 +100,10 @@ export const DesignPanel: React.FC = () => {
         return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'leaf');
       case 'firewall':
         return componentTemplates.filter(c => c.type === ComponentType.Firewall);
+      case 'copperPatchPanel':
+        return componentTemplates.filter(c => c.type === ComponentType.CopperPatchPanel);
+      case 'fiberPatchPanel':
+        return componentTemplates.filter(c => c.type === ComponentType.FiberPatchPanel);
       default:
         return componentTemplates;
     }
@@ -206,6 +215,13 @@ export const DesignPanel: React.FC = () => {
                             <div className="font-medium">
                               Quantity: {role.adjustedRequiredCount || role.requiredCount}
                             </div>
+                            {role.calculationSteps && role.calculationSteps.length > 0 && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {role.calculationSteps.map((step, index) => (
+                                  <div key={index}>{step}</div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           
                           <Separator />

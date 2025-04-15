@@ -73,6 +73,8 @@ export interface CopperPatchPanel extends InfrastructureComponent {
 
 export interface Cassette extends InfrastructureComponent {
   type: ComponentType.Cassette;
+  portType: ConnectorType;
+  portQuantity: number;
 }
 
 export interface Cable extends InfrastructureComponent {

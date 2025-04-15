@@ -89,6 +89,53 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
         </>
       )}
       
+      {componentType === 'Cassette' && (
+        <>
+          <FormField
+            control={register.control}
+            name="portType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Port Type</FormLabel>
+                <Select 
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a port type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={ConnectorType.RJ45}>{ConnectorType.RJ45}</SelectItem>
+                    <SelectItem value={ConnectorType.MPO12}>{ConnectorType.MPO12}</SelectItem>
+                    <SelectItem value={ConnectorType.SFP}>{ConnectorType.SFP}</SelectItem>
+                    <SelectItem value={ConnectorType.QSFP}>{ConnectorType.QSFP}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={register.control}
+            name="portQuantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Port Quantity</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    {...field} 
+                    onChange={e => field.onChange(Number(e.target.value))}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </>
+      )}
+      
       {componentType === 'Cable' && (
         <>
           <FormField

@@ -190,6 +190,32 @@ export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
                 onChange={handleInputChange}
               />
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="copperPatchPanelsPerCoreRack">Copper Patch Panels Per Core Rack</Label>
+              <Input
+                id="copperPatchPanelsPerCoreRack"
+                name="copperPatchPanelsPerCoreRack"
+                type="number"
+                min="0"
+                placeholder="e.g., 1"
+                value={requirements.copperPatchPanelsPerCoreRack || ''}
+                onChange={handleInputChange}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="fiberPatchPanelsPerCoreRack">Fiber Patch Panels Per Core Rack</Label>
+              <Input
+                id="fiberPatchPanelsPerCoreRack"
+                name="fiberPatchPanelsPerCoreRack"
+                type="number"
+                min="0"
+                placeholder="e.g., 1"
+                value={requirements.fiberPatchPanelsPerCoreRack || ''}
+                onChange={handleInputChange}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

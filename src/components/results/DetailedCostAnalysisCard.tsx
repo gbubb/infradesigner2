@@ -26,6 +26,9 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
   amortizedCostsByType,
   totalCostOfOwnership
 }) => {
+  // Calculate first year operational costs (monthly × 12)
+  const firstYearOperationalCost = operationalCosts.totalMonthly * 12;
+
   return (
     <Card className="mb-8">
       <CardHeader>
@@ -92,11 +95,11 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
           <div>
             <h3 className="text-lg font-medium mb-2">3. Total Cost of Ownership (First Year)</h3>
             <div className="flex justify-between font-bold text-lg">
-              <span>TCO (12 months)</span>
-              <span>€{totalCostOfOwnership.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+              <span>First Year Operational Costs</span>
+              <span>€{firstYearOperationalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Includes capital costs plus 12 months of operational costs
+              Includes 12 months of operational costs (amortization, energy, and rack colocation)
             </p>
           </div>
         </div>

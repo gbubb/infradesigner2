@@ -1,85 +1,193 @@
 
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useDesignStore } from '@/store/designStore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Minus, HardDrive } from 'lucide-react';
-import { useDesignStore } from '@/store/designStore';
-import { ComponentType } from '@/types/infrastructure';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ComponentType, ConnectorType } from '@/types/infrastructure';
 
 interface CassetteConfigurationProps {
   roleId: string;
 }
 
 export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ roleId }) => {
-  const { 
+  const {
     componentTemplates,
     selectedCassettesByRole,
     addCassetteToPanel,
-    removeCassetteFromPanel
+    removeCassetteFromPanel,
+    componentRoles
   } = useDesignStore();
 
-  const cassettes = componentTemplates.filter(c => c.type === ComponentType.Cassette);
-  const selectedCassettes = selectedCassettesByRole[roleId] || [];
+  const [selectedCassetteId, setSelectedCassetteId] = useState<string>('');
+  const [quantity, setQuantity] = useState<number>(1);
 
-  const handleAddCassette = (cassetteId: string) => {
-    if (!cassetteId) return;
-    addCassetteToPanel(roleId, cassetteId, 1);
-  };
+  const cassettes = componentTemplates.filter(
+    c => c.type === ComponentType.Cassette
+  );
 
-  const handleRemoveCassette = (cassetteId: string) => {
-    removeCassetteFromPanel(roleId, cassetteId);
+  const role = componentRoles.find(r => r.id === roleId);
+  const assignedPanel = role?.assignedComponentId 
+    ? componentTemplates.find(c => c.id === role.assignedComponentId)
+    : null;
+
+  const cassetteSlots = assignedPanel?.cassetteCapacity || 0;
+  
+  const currentCassettes = selectedCassettesByRole[roleId] || [];
+  const usedSlots = currentCassettes.reduce((total, item) => total + item.quantity, 0);
+  const availableSlots = Math.max(0, cassetteSlots - usedSlots);
+
+  // For port summary calculation
+  const portSummary = currentCassettes.reduce((summary, cassetteItem) => {
+    const cassette = componentTemplates.find(c => c.id === cassetteItem.cassetteId);
+    if (cassette) {
+      const portType = (cassette as any).portType || 'Unknown';
+      const portQuantity = (cassette as any).portQuantity || 0;
+      const totalPorts = portQuantity * cassetteItem.quantity;
+      
+      if (summary[portType]) {
+        summary[portType] += totalPorts;
+      } else {
+        summary[portType] = totalPorts;
+      }
+    }
+    return summary;
+  }, {} as Record<string, number>);
+
+  const handleAddCassette = () => {
+    if (selectedCassetteId && quantity > 0) {
+      const actualQuantity = Math.min(quantity, availableSlots);
+      if (actualQuantity > 0) {
+        addCassetteToPanel(roleId, selectedCassetteId, actualQuantity);
+        setSelectedCassetteId('');
+        setQuantity(1);
+      }
+    }
   };
 
   return (
     <div className="space-y-4">
-      <Label>Configure Cassettes</Label>
-      <div className="space-y-2">
-        {selectedCassettes.map(({ cassetteId, quantity }) => {
-          const cassette = cassettes.find(c => c.id === cassetteId);
-          if (!cassette) return null;
+      <div className="text-sm font-medium">
+        Cassettes ({usedSlots}/{cassetteSlots} slots used)
+      </div>
+      
+      {availableSlots > 0 ? (
+        <div className="flex items-end gap-3">
+          <div className="flex-grow">
+            <Label htmlFor="cassette-select">Cassette Type</Label>
+            <Select
+              value={selectedCassetteId}
+              onValueChange={setSelectedCassetteId}
+            >
+              <SelectTrigger id="cassette-select">
+                <SelectValue placeholder="Select cassette" />
+              </SelectTrigger>
+              <SelectContent>
+                {cassettes.map(cassette => (
+                  <SelectItem key={cassette.id} value={cassette.id}>
+                    {cassette.name} ({(cassette as any).portQuantity}x {(cassette as any).portType})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-24">
+            <Label htmlFor="quantity">Quantity</Label>
+            <Input
+              id="quantity"
+              type="number"
+              min={1}
+              max={availableSlots}
+              value={quantity}
+              onChange={(e) => setQuantity(Math.min(parseInt(e.target.value) || 1, availableSlots))}
+            />
+          </div>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handleAddCassette}
+            disabled={!selectedCassetteId}
+            className="h-10 w-10"
+          >
+            <PlusCircle className="h-5 w-5" />
+          </Button>
+        </div>
+      ) : (
+        <div className="text-sm text-amber-500">
+          No more cassette slots available in this panel.
+        </div>
+      )}
+      
+      {currentCassettes.length > 0 && (
+        <div className="space-y-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Cassette</TableHead>
+                <TableHead>Port Type</TableHead>
+                <TableHead>Ports/Cassette</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Total Ports</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {currentCassettes.map((item) => {
+                const cassette = componentTemplates.find(c => c.id === item.cassetteId);
+                if (!cassette) return null;
+                
+                return (
+                  <TableRow key={item.cassetteId}>
+                    <TableCell>{cassette.name}</TableCell>
+                    <TableCell>{(cassette as any).portType || 'N/A'}</TableCell>
+                    <TableCell>{(cassette as any).portQuantity || 0}</TableCell>
+                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell>{item.quantity * ((cassette as any).portQuantity || 0)}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeCassetteFromPanel(roleId, item.cassetteId)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
           
-          return (
-            <Card key={cassetteId} className="p-2">
-              <CardContent className="p-0 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <HardDrive className="h-4 w-4" />
-                  <span className="text-sm">
-                    {cassette.name} (x{quantity})
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemoveCassette(cassetteId)}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      <div className="flex gap-2">
-        <Select onValueChange={handleAddCassette}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Add cassette" />
-          </SelectTrigger>
-          <SelectContent>
-            {cassettes.map(cassette => (
-              <SelectItem key={cassette.id} value={cassette.id}>
-                {cassette.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button variant="outline" size="icon">
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
+          <div className="rounded-md border p-4">
+            <div className="font-medium mb-2">Port Summary</div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Port Type</TableHead>
+                  <TableHead>Total Quantity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(portSummary).map(([portType, count]) => (
+                  <TableRow key={portType}>
+                    <TableCell>{portType}</TableCell>
+                    <TableCell>{count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+      
+      {currentCassettes.length === 0 && (
+        <div className="text-sm text-muted-foreground italic">
+          No cassettes added. Add cassettes to provide ports.
+        </div>
+      )}
     </div>
   );
 };
