@@ -25,7 +25,7 @@ export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOp
     if (!newName) return;
     
     // Create new design with copied data
-    createNewDesign(
+    const newDesignId = createNewDesign(
       newName,
       design.description,
       {
@@ -36,6 +36,11 @@ export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOp
         updatedAt: new Date()
       }
     );
+    
+    // Explicitly set the active design to the newly created design
+    if (newDesignId) {
+      setActiveDesign(newDesignId);
+    }
     
     onOpenChange(false);
   };

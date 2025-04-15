@@ -20,7 +20,7 @@ export interface DesignSlice {
   activeDesign: InfrastructureDesign | null;
   
   // Create a new design
-  createNewDesign: (name: string, description?: string, existingDesign?: InfrastructureDesign) => void;
+  createNewDesign: (name: string, description?: string, existingDesign?: InfrastructureDesign) => string;
   
   // Update the active design components
   updateActiveDesign: (components: InfrastructureComponent[]) => void;
@@ -60,11 +60,15 @@ export const createDesignSlice: StateCreator<
   activeDesign: null,
   
   createNewDesign: (name, description, existingDesign = null) => {
+    let newDesignId = '';
+    
     set((state) => {
       const requirements = existingDesign?.requirements || { ...state.requirements };
       
+      newDesignId = uuidv4();
+      
       const newDesign: InfrastructureDesign = {
-        id: uuidv4(),
+        id: newDesignId,
         name,
         description: description || '',
         createdAt: new Date(),
@@ -90,6 +94,8 @@ export const createDesignSlice: StateCreator<
         activeDesign: newDesign
       };
     });
+    
+    return newDesignId;
   },
   
   updateActiveDesign: (components) => {
@@ -206,12 +212,15 @@ export const createDesignSlice: StateCreator<
       toast.success(`Switched to design: ${design.name}`);
       
       // Set active design and restore component roles and disk/gpu configurations
-      // Extract any saved component roles and configurations from the design
       return { 
         activeDesign: design,
         // Reset component roles based on the design requirements
-        componentRoles: [], // This will trigger a recalculation
+        componentRoles: design.componentRoles || [], // Use design's component roles if available
         requirements: design.requirements || state.requirements,
+        // Restore disk configurations
+        selectedDisksByRole: design.selectedDisksByRole || {},
+        // Restore GPU configurations
+        selectedGPUsByRole: design.selectedGPUsByRole || {},
       };
     });
   },
