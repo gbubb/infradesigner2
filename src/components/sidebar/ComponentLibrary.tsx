@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { ComponentProvider } from '@/context/ComponentContext';
 import { useComponents } from '@/context/ComponentContext';
 import { useComponentForm } from '@/hooks/components/useComponentForm';
 import { ComponentFormDialog } from './dialogs/ComponentFormDialog';
@@ -103,75 +102,73 @@ export const ComponentLibrary: React.FC = () => {
   };
 
   return (
-    <ComponentProvider>
-      <div className="container mx-auto py-4">
-        <ComponentLibraryHeader onOpenAddDialog={() => setIsAddDialogOpen(true)} />
-        
-        <div className="flex items-center space-x-4 mb-6">
-          <SearchBar value={searchTerm} onChange={setSearchTerm} />
-          <CategoryFilter 
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-          />
-        </div>
-        
-        <ComponentsTable 
-          components={filteredComponents}
-          isDefaultForTypeAndRole={isDefaultForTypeAndRole}
-          onToggleDefault={handleToggleDefault}
-          onEdit={openEditDialog}
-          onClone={cloneComponentTemplate}
-          onDelete={openDeleteConfirmation}
-        />
-
-        <ComponentFormDialog 
-          isOpen={isAddDialogOpen}
-          onOpenChange={setIsAddDialogOpen}
-          formValues={componentForm}
-          onInputChange={handleInputChange}
-          onSelectChange={handleSelectChange}
-          onTypeChange={handleTypeChange}
-          onSwitchChange={(checked) => {
-            setComponentForm({
-              ...componentForm,
-              isDefault: checked
-            });
-          }}
-          onCancel={() => {
-            resetForm();
-            setIsAddDialogOpen(false);
-          }}
-          onSubmit={handleAddComponent}
-          isEditing={false}
-        />
-        
-        <ComponentFormDialog 
-          isOpen={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          formValues={componentForm}
-          onInputChange={handleInputChange}
-          onSelectChange={handleSelectChange}
-          onTypeChange={handleTypeChange}
-          onSwitchChange={(checked) => {
-            setComponentForm({
-              ...componentForm,
-              isDefault: checked
-            });
-          }}
-          onCancel={() => {
-            resetForm();
-            setIsEditDialogOpen(false);
-          }}
-          onSubmit={handleAddComponent}
-          isEditing={true}
-        />
-        
-        <DeleteConfirmationDialog 
-          isOpen={isDeleteDialogOpen}
-          onOpenChange={setIsDeleteDialogOpen}
-          onConfirm={handleDeleteConfirm}
+    <div className="container mx-auto py-4">
+      <ComponentLibraryHeader onOpenAddDialog={() => setIsAddDialogOpen(true)} />
+      
+      <div className="flex items-center space-x-4 mb-6">
+        <SearchBar value={searchTerm} onChange={setSearchTerm} />
+        <CategoryFilter 
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
         />
       </div>
-    </ComponentProvider>
+      
+      <ComponentsTable 
+        components={filteredComponents}
+        isDefaultForTypeAndRole={isDefaultForTypeAndRole}
+        onToggleDefault={handleToggleDefault}
+        onEdit={openEditDialog}
+        onClone={cloneComponentTemplate}
+        onDelete={openDeleteConfirmation}
+      />
+
+      <ComponentFormDialog 
+        isOpen={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        formValues={componentForm}
+        onInputChange={handleInputChange}
+        onSelectChange={handleSelectChange}
+        onTypeChange={handleTypeChange}
+        onSwitchChange={(checked) => {
+          setComponentForm({
+            ...componentForm,
+            isDefault: checked
+          });
+        }}
+        onCancel={() => {
+          resetForm();
+          setIsAddDialogOpen(false);
+        }}
+        onSubmit={handleAddComponent}
+        isEditing={false}
+      />
+      
+      <ComponentFormDialog 
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        formValues={componentForm}
+        onInputChange={handleInputChange}
+        onSelectChange={handleSelectChange}
+        onTypeChange={handleTypeChange}
+        onSwitchChange={(checked) => {
+          setComponentForm({
+            ...componentForm,
+            isDefault: checked
+          });
+        }}
+        onCancel={() => {
+          resetForm();
+          setIsEditDialogOpen(false);
+        }}
+        onSubmit={handleAddComponent}
+        isEditing={true}
+      />
+      
+      <DeleteConfirmationDialog 
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+      />
+    </div>
   );
 };
