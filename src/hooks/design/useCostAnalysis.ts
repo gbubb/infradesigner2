@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useHardwareTotals } from './useHardwareTotals';
@@ -34,6 +33,22 @@ export const useCostAnalysis = () => {
       return total + (component.cost * quantity);
     }, 0);
   }, [activeDesign?.components]);
+
+  // Recalculate cost per vCPU using only compute nodes
+  const costPerVCPU = useMemo(() => {
+    if (!actualHardwareTotals.totalVCPUs || actualHardwareTotals.totalVCPUs === 0) return 0;
+    
+    // Calculate compute-related capital costs from compute nodes only
+    const computeCapitalCost = activeDesign?.components?.reduce((total, component) => {
+      if (component.role === 'computeNode') {
+        const quantity = component.quantity || 1;
+        return total + (component.cost * quantity);
+      }
+      return total;
+    }, 0) || 0;
+    
+    return computeCapitalCost / actualHardwareTotals.totalVCPUs;
+  }, [actualHardwareTotals.totalVCPUs, activeDesign?.components]);
   
   // Calculate amortized monthly costs by component type
   const amortizedCostsByType = useMemo(() => {
@@ -107,7 +122,10 @@ export const useCostAnalysis = () => {
   
   // Compute operational costs
   const operationalCosts = useMemo(() => {
-    const rackMonthly = rackCostPerMonth * rackQuantity;
+    const totalRackQuantity = rackQuantity + 
+      (activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks ? 2 : 0);
+      
+    const rackMonthly = rackCostPerMonth * totalRackQuantity;
     const energyMonthly = energyCosts.monthlyEnergyCost;
     const amortizedMonthly = amortizedCostsByType.total;
     const totalMonthly = rackMonthly + energyMonthly + amortizedMonthly;
@@ -118,30 +136,12 @@ export const useCostAnalysis = () => {
       amortizedMonthly,
       totalMonthly
     };
-  }, [rackCostPerMonth, rackQuantity, energyCosts.monthlyEnergyCost, amortizedCostsByType.total]);
+  }, [rackCostPerMonth, rackQuantity, energyCosts.monthlyEnergyCost, amortizedCostsByType.total, activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks]);
   
-  // Calculate TCO (Total Cost of Ownership) for 1 year
+  // Calculate TCO for 12 months (operational costs only)
   const totalCostOfOwnership = useMemo(() => {
-    return capitalCost + (operationalCosts.totalMonthly * 12);
-  }, [capitalCost, operationalCosts.totalMonthly]);
-  
-  // Calculate cost per vCPU - use only compute-related costs divided by vCPU count
-  const costPerVCPU = useMemo(() => {
-    if (!actualHardwareTotals.totalVCPUs || actualHardwareTotals.totalVCPUs === 0) return 0;
-    
-    // Calculate compute-related capital costs
-    const computeCapitalCost = activeDesign?.components?.reduce((total, component) => {
-      // Only include compute nodes in the compute cluster costs
-      if ((component.role === 'computeNode' || component.role === 'gpuNode') && 
-          (component as any).clusterInfo) {
-        const quantity = component.quantity || 1;
-        return total + (component.cost * quantity);
-      }
-      return total;
-    }, 0) || 0;
-    
-    return computeCapitalCost / actualHardwareTotals.totalVCPUs;
-  }, [actualHardwareTotals.totalVCPUs, activeDesign?.components]);
+    return operationalCosts.totalMonthly * 12;
+  }, [operationalCosts.totalMonthly]);
   
   // Calculate cost per TB - use storage-related costs divided by usable TB
   const costPerTB = useMemo(() => {

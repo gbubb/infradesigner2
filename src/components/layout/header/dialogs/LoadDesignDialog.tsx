@@ -1,87 +1,79 @@
-
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { FolderOpen, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { useDesignStore } from '@/store/designStore';
-import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
+import { InfrastructureDesign } from '@/types/infrastructure';
 
-interface LoadDesignDialogProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOpenChange }) => {
-  const { savedDesigns, setActiveDesign } = useDesignStore();
-  const [designToDelete, setDesignToDelete] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  const handleLoadDesign = (id: string) => {
-    setActiveDesign(id);
-    onOpenChange(false);
-  };
-
-  // Open delete confirmation dialog
-  const confirmDeleteDesign = (id: string) => {
-    setDesignToDelete(id);
-    setIsDeleteDialogOpen(true);
+export const LoadDesignDialog = () => {
+  const { savedDesigns, setActiveDesign, createNewDesign } = useDesignStore();
+  const [open, setOpen] = useState(false);
+  
+  const handleCloneDesign = (design: InfrastructureDesign) => {
+    // Create a dialog to get the new name
+    const newName = window.prompt('Enter name for cloned design:', `${design.name} (Copy)`);
+    if (!newName) return;
+    
+    // Create new design with copied data
+    createNewDesign(
+      newName,
+      design.description,
+      {
+        ...design,
+        id: undefined, // Let the store generate a new ID
+        name: newName,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    );
+    
+    setOpen(false);
   };
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Load Infrastructure Design</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            {savedDesigns.length > 0 ? (
-              <div className="grid gap-2 max-h-[60vh] overflow-y-auto">
-                {savedDesigns.map((design) => (
-                  <div key={design.id} className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      className="justify-start h-auto py-3 px-4 flex-1"
-                      onClick={() => handleLoadDesign(design.id)}
-                    >
-                      <div className="text-left">
-                        <div className="font-medium">{design.name}</div>
-                        {design.description && (
-                          <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {design.description}
-                          </div>
-                        )}
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Updated: {new Date(design.updatedAt).toLocaleString()}
-                        </div>
-                      </div>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:bg-destructive/10"
-                      onClick={() => confirmDeleteDesign(design.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">Load Design</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Load Design</DialogTitle>
+          <DialogDescription>Select a design to load or clone</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 max-h-[400px] overflow-y-auto">
+          {savedDesigns.map((design) => (
+            <div 
+              key={design.id} 
+              className="flex items-center justify-between p-3 border rounded-lg"
+            >
+              <div>
+                <div className="font-medium">{design.name}</div>
+                {design.description && (
+                  <div className="text-sm text-muted-foreground">{design.description}</div>
+                )}
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No saved designs found. Create a new design to get started.
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleCloneDesign(design)}
+                >
+                  Clone
+                </Button>
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={() => {
+                    setActiveDesign(design.id);
+                    setOpen(false);
+                  }}
+                >
+                  Load
+                </Button>
               </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <DeleteConfirmationDialog
-        isOpen={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        designId={designToDelete}
-        onDeleteCompleted={() => onOpenChange(false)}
-      />
-    </>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };

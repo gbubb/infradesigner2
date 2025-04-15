@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
@@ -21,7 +20,7 @@ export interface DesignSlice {
   activeDesign: InfrastructureDesign | null;
   
   // Create a new design
-  createNewDesign: (name: string, description?: string) => void;
+  createNewDesign: (name: string, description?: string, existingDesign?: InfrastructureDesign) => void;
   
   // Update the active design components
   updateActiveDesign: (components: InfrastructureComponent[]) => void;
@@ -60,9 +59,9 @@ export const createDesignSlice: StateCreator<
   savedDesigns: [],
   activeDesign: null,
   
-  createNewDesign: (name, description) => {
+  createNewDesign: (name, description, existingDesign = null) => {
     set((state) => {
-      const requirements = { ...state.requirements };
+      const requirements = existingDesign?.requirements || { ...state.requirements };
       
       const newDesign: InfrastructureDesign = {
         id: uuidv4(),
@@ -71,7 +70,10 @@ export const createDesignSlice: StateCreator<
         createdAt: new Date(),
         updatedAt: new Date(),
         requirements,
-        components: []
+        components: existingDesign?.components || [],
+        componentRoles: existingDesign?.componentRoles || [],
+        selectedDisksByRole: existingDesign?.selectedDisksByRole || {},
+        selectedGPUsByRole: existingDesign?.selectedGPUsByRole || {}
       };
       
       const updatedDesigns = [...state.savedDesigns, newDesign];
