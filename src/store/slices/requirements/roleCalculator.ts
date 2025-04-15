@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { ComponentRole, IPMINetworkType, NetworkTopology } from '@/types/infrastructure';
 
@@ -27,6 +26,9 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   const leafSwitchesPerAZ = getValue(requirements, 'networkRequirements.leafSwitchesPerAZ', 2) || 2;
   const dedicatedStorageNetwork = getValue(requirements, 'networkRequirements.dedicatedStorageNetwork', false) || false;
   const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', "Dual Home") || "Dual Home";
+  const copperPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.copperPatchPanelsPerAZ', 2);
+  const fiberPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.fiberPatchPanelsPerAZ', 2);
+  const dedicatedNetworkCoreRacks = getValue(requirements, 'networkRequirements.dedicatedNetworkCoreRacks', true);
   
   const mgmtSwitchesPerAZ = managementNetwork === 'Dual Home' ? 2 : 1;
   const ipmiNetwork = getValue(requirements, 'networkRequirements.ipmiNetwork', "Management converged") as IPMINetworkType;
@@ -200,5 +202,31 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
     });
   }
   
+  // Add copper patch panel role
+  if (copperPatchPanelsPerAZ > 0) {
+    const totalCopperPanels = (copperPatchPanelsPerAZ * totalAvailabilityZones) + 
+      (dedicatedNetworkCoreRacks ? 2 : 0); // Add 2 for core racks if enabled
+    
+    newRoles.push({
+      id: uuidv4(),
+      role: 'copperPatchPanel',
+      description: 'Provides copper cable patch panel connectivity',
+      requiredCount: totalCopperPanels
+    });
+  }
+
+  // Add fiber patch panel role
+  if (fiberPatchPanelsPerAZ > 0) {
+    const totalFiberPanels = (fiberPatchPanelsPerAZ * totalAvailabilityZones) + 
+      (dedicatedNetworkCoreRacks ? 2 : 0); // Add 2 for core racks if enabled
+    
+    newRoles.push({
+      id: uuidv4(),
+      role: 'fiberPatchPanel',
+      description: 'Provides fiber optic cable patch panel connectivity',
+      requiredCount: totalFiberPanels
+    });
+  }
+
   return newRoles;
 };

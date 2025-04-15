@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,7 @@ import { Info, LayoutGrid, RotateCw, Save } from 'lucide-react';
 import { DiskConfiguration } from './DiskConfiguration';
 import { GPUConfiguration } from './GPUConfiguration';
 import { useComponentsByType } from '@/hooks/design/useComponentsByType';
+import { CassetteConfiguration } from './CassetteConfiguration';
 
 export const DesignPanel: React.FC = () => {
   const {
@@ -32,20 +32,16 @@ export const DesignPanel: React.FC = () => {
   const [designDescription, setDesignDescription] = useState('');
 
   useEffect(() => {
-    // Set design name from active design if it exists
     if (activeDesign) {
       setDesignName(activeDesign.name);
       setDesignDescription(activeDesign.description || '');
     }
   }, [activeDesign]);
 
-  // Auto-assign default components when roles are loaded or when component templates change
   useEffect(() => {
     if (componentRoles.length > 0) {
       componentRoles.forEach(role => {
-        // Only auto-assign if no component is assigned yet
         if (!role.assignedComponentId) {
-          // Determine component type based on role
           let componentType: ComponentType | undefined;
           
           if (role.role.includes('Node') || role.role.includes('node')) {
@@ -62,7 +58,6 @@ export const DesignPanel: React.FC = () => {
               console.log(`Assigning default ${componentType} for role ${role.role}: ${defaultComponent.name}`);
               assignComponentToRole(role.id, defaultComponent.id);
             } else {
-              // If no default found, try to find any component that matches the role
               const matchingComponents = getComponentsForRole(role.role);
               if (matchingComponents.length > 0) {
                 console.log(`No default ${componentType} found for role ${role.role}, using first available: ${matchingComponents[0].name}`);
@@ -78,7 +73,6 @@ export const DesignPanel: React.FC = () => {
   }, [componentRoles, componentTemplates, findDefaultComponent, assignComponentToRole]);
 
   const getComponentsForRole = (role: string) => {
-    // Filter components based on role
     switch (role) {
       case 'computeNode':
         return componentTemplates.filter(c => c.type === ComponentType.Server && (c as any).serverRole === 'compute');
@@ -112,7 +106,6 @@ export const DesignPanel: React.FC = () => {
       return;
     }
     
-    // Check that all roles have components assigned
     const unassignedRoles = componentRoles.filter(role => !role.assignedComponentId);
     if (unassignedRoles.length > 0) {
       toast.warning(`Please assign components for all roles (${unassignedRoles.length} unassigned)`);
@@ -223,6 +216,10 @@ export const DesignPanel: React.FC = () => {
                           
                           {role.role === 'gpuNode' && (
                             <GPUConfiguration roleId={role.id} />
+                          )}
+                          
+                          {role.role === 'fiberPatchPanel' && (
+                            <CassetteConfiguration roleId={role.id} />
                           )}
                         </>
                       )}

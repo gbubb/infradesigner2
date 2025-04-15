@@ -1,4 +1,3 @@
-
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -34,6 +33,7 @@ export interface RequirementsSlice {
   componentRoles: ComponentRole[];
   selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>;
   selectedGPUsByRole: Record<string, { gpuId: string, quantity: number }[]>;
+  selectedCassettesByRole: Record<string, { cassetteId: string, quantity: number }[]>;
   calculationBreakdowns: Record<string, string[]>;
   
   updateRequirements: (newRequirements: Partial<DesignRequirements>) => void;
@@ -44,6 +44,8 @@ export interface RequirementsSlice {
   removeDiskFromStorageNode: (roleId: string, diskId: string) => void;
   addGPUToComputeNode: (roleId: string, gpuId: string, quantity: number) => void;
   removeGPUFromComputeNode: (roleId: string, gpuId: string) => void;
+  addCassetteToPanel: (roleId: string, cassetteId: string, quantity: number) => void;
+  removeCassetteFromPanel: (roleId: string, cassetteId: string) => void;
   calculateStorageNodeCapacity: (roleId: string) => number;
   getCalculationBreakdown: (roleId: string) => string[];
 }
@@ -87,6 +89,7 @@ export const createRequirementsSlice: StateCreator<
     componentRoles: [],
     selectedDisksByRole: {},
     selectedGPUsByRole: {},
+    selectedCassettesByRole: {},
     calculationBreakdowns: {},
     
     updateRequirements: (newRequirements) => {
@@ -123,86 +126,69 @@ export const createRequirementsSlice: StateCreator<
       set({ componentRoles: newRoles });
     },
     
-// Update the calculateRequiredQuantity function in src/store/slices/requirementsSlice.ts
-
-calculateRequiredQuantity: (roleId: string, componentId: string): number => {
-  console.log(`Store: calculateRequiredQuantity called for role ${roleId} with component ${componentId}`);
-  const state = get();
-  
-  // Calculate and get calculation details
-  const { requiredQuantity, calculationSteps } = calculateQuantity(roleId, componentId, state);
-  
-  // Log what we're storing for debugging
-  console.log(`Storing calculation for ${roleId}: ${requiredQuantity} with ${calculationSteps.length} steps`);
-  
-  // Store the role and component info for better debugging
-  const role = state.componentRoles.find(r => r.id === roleId);
-  const component = state.componentTemplates.find(c => c.id === componentId);
-  console.log(`Role: ${role?.role}, Component: ${component?.name}`);
-  
-  // Save calculation steps to the store
-  set(state => {
-    // Ensure we preserve existing breakdown entries
-    const updatedBreakdowns = {
-      ...state.calculationBreakdowns,
-      [roleId]: calculationSteps
-    };
+    calculateRequiredQuantity: (roleId: string, componentId: string): number => {
+      console.log(`Store: calculateRequiredQuantity called for role ${roleId} with component ${componentId}`);
+      const state = get();
+      
+      const { requiredQuantity, calculationSteps } = calculateQuantity(roleId, componentId, state);
+      
+      console.log(`Storing calculation for ${roleId}: ${requiredQuantity} with ${calculationSteps.length} steps`);
+      
+      const role = state.componentRoles.find(r => r.id === roleId);
+      const component = state.componentTemplates.find(c => c.id === componentId);
+      console.log(`Role: ${role?.role}, Component: ${component?.name}`);
+      
+      const updatedBreakdowns = {
+        ...state.calculationBreakdowns,
+        [roleId]: calculationSteps
+      };
+      
+      console.log(`Updated breakdowns now has ${Object.keys(updatedBreakdowns).length} entries`);
+      
+      const updatedRoles = state.componentRoles.map(r => {
+        if (r.id === roleId) {
+          return {
+            ...r,
+            adjustedRequiredCount: requiredQuantity
+          };
+        }
+        return r;
+      });
+      
+      set({
+        calculationBreakdowns: updatedBreakdowns,
+        componentRoles: updatedRoles
+      });
+      
+      return requiredQuantity;
+    },
     
-    console.log(`Updated breakdowns now has ${Object.keys(updatedBreakdowns).length} entries`);
+    getCalculationBreakdown: (roleId: string): string[] => {
+      const state = get();
+      const steps = state.calculationBreakdowns[roleId];
+      console.log(`Retrieved ${steps?.length || 0} calculation steps for ${roleId}`);
+      return steps || [];
+    },
     
-    // Important: Also update the role's required count to match the calculation
-    const updatedRoles = state.componentRoles.map(r => {
-      if (r.id === roleId) {
-        return {
-          ...r,
-          adjustedRequiredCount: requiredQuantity
-        };
-      }
-      return r;
-    });
-    
-    return {
-      calculationBreakdowns: updatedBreakdowns,
-      componentRoles: updatedRoles
-    };
-  });
-  
-  return requiredQuantity;
-},
-
-// Also fix the getCalculationBreakdown function to ensure it's properly retrieving steps
-getCalculationBreakdown: (roleId: string): string[] => {
-  const state = get();
-  const steps = state.calculationBreakdowns[roleId];
-  console.log(`Retrieved ${steps?.length || 0} calculation steps for ${roleId}`);
-  return steps || [];
-},    
     calculateStorageNodeCapacity: (roleId: string): number => {
       const state = get();
       return calculateStorageNodeCapacity(roleId, state.selectedDisksByRole, state.componentTemplates || []);
     },
     
-    
     assignComponentToRole: (roleId: string, componentId: string) => {
-      // Get current state before making any updates
       const state = get();
       
-      // Update role with assigned component in a single operation
       set((state) => {
-        // First assign the component to the role
         const updatedRoles = assignComponent(state.componentRoles, roleId, componentId);
         
-        // Calculate the required quantity using the updated roles
         const { requiredQuantity, calculationSteps } = calculateQuantity(
           roleId, 
           componentId, 
           {...state, componentRoles: updatedRoles}
         );
         
-        // Update the roles with the calculated quantity and save calculation steps
         const finalRoles = updateRoleRequiredCount(updatedRoles, roleId, requiredQuantity);
         
-        // Return all updates in a single state update to avoid race conditions
         return { 
           componentRoles: finalRoles,
           calculationBreakdowns: {
@@ -214,27 +200,22 @@ getCalculationBreakdown: (roleId: string): string[] => {
     },
     
     addDiskToStorageNode: (roleId: string, diskId: string, quantity: number) => {
-      // Update disks
       set((state) => {
         const updatedSelectedDisks = addDisk(roleId, diskId, quantity, state.selectedDisksByRole);
         return { selectedDisksByRole: updatedSelectedDisks };
       });
       
-      // Recalculate quantity if component is assigned
       const state = get();
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        // Perform calculation and update in a single operation
         set((state) => {
-          // Calculate new quantity
           const { requiredQuantity, calculationSteps } = calculateQuantity(
             roleId, 
             role.assignedComponentId!, 
             state
           );
           
-          // Update roles and calculation steps in one go
           return {
             componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, requiredQuantity),
             calculationBreakdowns: {
@@ -247,27 +228,22 @@ getCalculationBreakdown: (roleId: string): string[] => {
     },
     
     removeDiskFromStorageNode: (roleId: string, diskId: string) => {
-      // Update disks
       set((state) => {
         const updatedSelectedDisks = removeDisk(roleId, diskId, state.selectedDisksByRole);
         return { selectedDisksByRole: updatedSelectedDisks };
       });
       
-      // Recalculate quantity if component is assigned
       const state = get();
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        // Perform calculation and update in a single operation
         set((state) => {
-          // Calculate new quantity
           const { requiredQuantity, calculationSteps } = calculateQuantity(
             roleId, 
             role.assignedComponentId!, 
             state
           );
           
-          // Update roles and calculation steps in one go
           return {
             componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, requiredQuantity),
             calculationBreakdowns: {
@@ -280,27 +256,22 @@ getCalculationBreakdown: (roleId: string): string[] => {
     },
     
     addGPUToComputeNode: (roleId: string, gpuId: string, quantity: number) => {
-      // Update GPUs
       set((state) => {
         const updatedSelectedGPUs = addGPU(roleId, gpuId, quantity, state.selectedGPUsByRole);
         return { selectedGPUsByRole: updatedSelectedGPUs };
       });
       
-      // Recalculate quantity if component is assigned
       const state = get();
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        // Perform calculation and update in a single operation
         set((state) => {
-          // Calculate new quantity
           const { requiredQuantity, calculationSteps } = calculateQuantity(
             roleId, 
             role.assignedComponentId!, 
             state
           );
           
-          // Update roles and calculation steps in one go
           return {
             componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, requiredQuantity),
             calculationBreakdowns: {
@@ -313,27 +284,22 @@ getCalculationBreakdown: (roleId: string): string[] => {
     },
     
     removeGPUFromComputeNode: (roleId: string, gpuId: string) => {
-      // Update GPUs
       set((state) => {
         const updatedSelectedGPUs = removeGPU(roleId, gpuId, state.selectedGPUsByRole);
         return { selectedGPUsByRole: updatedSelectedGPUs };
       });
       
-      // Recalculate quantity if component is assigned
       const state = get();
       const role = getRoleById(state.componentRoles, roleId);
       
       if (role && role.assignedComponentId) {
-        // Perform calculation and update in a single operation
         set((state) => {
-          // Calculate new quantity
           const { requiredQuantity, calculationSteps } = calculateQuantity(
             roleId, 
             role.assignedComponentId!, 
             state
           );
           
-          // Update roles and calculation steps in one go
           return {
             componentRoles: updateRoleRequiredCount(state.componentRoles, roleId, requiredQuantity),
             calculationBreakdowns: {
@@ -343,6 +309,45 @@ getCalculationBreakdown: (roleId: string): string[] => {
           };
         });
       }
+    },
+    
+    addCassetteToPanel: (roleId: string, cassetteId: string, quantity: number) => {
+      set((state) => {
+        const currentCassettes = state.selectedCassettesByRole[roleId] || [];
+        const existingIndex = currentCassettes.findIndex(c => c.cassetteId === cassetteId);
+
+        let updatedCassettes;
+        if (existingIndex >= 0) {
+          updatedCassettes = [...currentCassettes];
+          updatedCassettes[existingIndex] = {
+            ...updatedCassettes[existingIndex],
+            quantity: updatedCassettes[existingIndex].quantity + quantity
+          };
+        } else {
+          updatedCassettes = [...currentCassettes, { cassetteId, quantity }];
+        }
+
+        return {
+          selectedCassettesByRole: {
+            ...state.selectedCassettesByRole,
+            [roleId]: updatedCassettes
+          }
+        };
+      });
+    },
+    
+    removeCassetteFromPanel: (roleId: string, cassetteId: string) => {
+      set((state) => {
+        const currentCassettes = state.selectedCassettesByRole[roleId] || [];
+        const updatedCassettes = currentCassettes.filter(c => c.cassetteId !== cassetteId);
+
+        return {
+          selectedCassettesByRole: {
+            ...state.selectedCassettesByRole,
+            [roleId]: updatedCassettes
+          }
+        };
+      });
     }
   };
 };
