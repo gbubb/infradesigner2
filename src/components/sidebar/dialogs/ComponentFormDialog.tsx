@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -156,9 +155,14 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       length: formValues.length || 3,
       connectorType: formValues.connectorType || ConnectorType.RJ45
     },
+    values: formValues,
   });
 
   const { register, control } = form;
+
+  const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
+    onSubmit();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -172,7 +176,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
         
         <ScrollArea className="max-h-[calc(90vh-8rem)] px-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={control}
@@ -186,6 +190,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                           onTypeChange(value);
                         }}
                         defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -217,7 +222,14 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                     <FormItem>
                       <FormLabel>Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Component Name" {...field} onChange={onInputChange} />
+                        <Input 
+                          placeholder="Component Name" 
+                          {...field} 
+                          onChange={(e) => {
+                            field.onChange(e);
+                            onInputChange(e);
+                          }} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -257,7 +269,14 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                     <FormItem>
                       <FormLabel>Manufacturer</FormLabel>
                       <FormControl>
-                        <Input placeholder="Manufacturer" {...field} onChange={onInputChange} />
+                        <Input 
+                          placeholder="Manufacturer" 
+                          {...field} 
+                          onChange={(e) => {
+                            field.onChange(e);
+                            onInputChange(e);
+                          }} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -271,7 +290,14 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                     <FormItem>
                       <FormLabel>Model</FormLabel>
                       <FormControl>
-                        <Input placeholder="Model" {...field} onChange={onInputChange} />
+                        <Input 
+                          placeholder="Model" 
+                          {...field} 
+                          onChange={(e) => {
+                            field.onChange(e);
+                            onInputChange(e);
+                          }} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -289,7 +315,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                           type="number" 
                           placeholder="Cost" 
                           {...field} 
-                          onChange={e => {
+                          onChange={(e) => {
                             field.onChange(Number(e.target.value));
                             onInputChange(e);
                           }} 
@@ -313,7 +339,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                           type="number" 
                           placeholder="Power Required" 
                           {...field} 
-                          onChange={e => {
+                          onChange={(e) => {
                             field.onChange(Number(e.target.value));
                             onInputChange(e);
                           }}

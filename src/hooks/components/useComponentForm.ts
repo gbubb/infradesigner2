@@ -48,28 +48,29 @@ export const useComponentForm = () => {
     
     if (['cost', 'powerRequired', 'cpuSockets', 'cpuCoresPerSocket', 'memoryCapacity', 
          'diskSlotQuantity', 'ruSize', 'portsConsumedQuantity', 'portCount', 'portSpeed', 
-         'portsProvidedQuantity', 'throughput', 'capacityTB'].includes(name)) {
-      parsedValue = parseFloat(value) || 0;
+         'portsProvidedQuantity', 'throughput', 'capacityTB', 'cassetteCapacity', 
+         'portQuantity', 'length'].includes(name)) {
+      parsedValue = value === '' ? 0 : parseFloat(value);
     }
     
-    setComponentForm({
-      ...componentForm,
+    setComponentForm(prev => ({
+      ...prev,
       [name]: parsedValue
-    });
+    }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setComponentForm({
-      ...componentForm,
+    setComponentForm(prev => ({
+      ...prev,
       [name]: value
-    });
+    }));
   };
 
   const handleTypeChange = (value: string) => {
-    setComponentForm({
-      ...componentForm,
+    setComponentForm(prev => ({
+      ...prev,
       type: value as ComponentType
-    });
+    }));
   };
 
   const validateForm = () => {
