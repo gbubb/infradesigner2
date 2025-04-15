@@ -15,6 +15,7 @@ export interface InfrastructureDesign {
   componentRoles?: ComponentRole[];
   selectedDisksByRole?: Record<string, { diskId: string, quantity: number }[]>;
   selectedGPUsByRole?: Record<string, { gpuId: string, quantity: number }[]>;
+  selectedCassettesByRole?: Record<string, { cassetteId: string, quantity: number }[]>;
 }
 
 // Workspace types for component positioning

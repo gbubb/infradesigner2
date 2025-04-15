@@ -1,3 +1,4 @@
+
 import { 
   InfrastructureComponent, 
   InfrastructureDesign, 
@@ -21,6 +22,9 @@ export interface StoreState {
   
   // Selected GPUs for compute nodes (key is roleId, value is array of GPU configs)
   selectedGPUsByRole: Record<string, { gpuId: string, quantity: number }[]>;
+  
+  // Selected cassettes for patch panels (key is roleId, value is array of cassette configs)
+  selectedCassettesByRole: Record<string, { cassetteId: string, quantity: number }[]>;
   
   // Requirements
   requirements: DesignRequirements;

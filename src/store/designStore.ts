@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { StoreState } from './types';
 import { createRequirementsSlice, RequirementsSlice } from './slices/requirementsSlice';
@@ -44,6 +45,11 @@ export const initializeStore = async () => {
     // Initialize selectedGPUsByRole if it's empty
     if (Object.keys(state.selectedGPUsByRole).length === 0) {
       state.selectedGPUsByRole = {};
+    }
+    
+    // Initialize selectedCassettesByRole if it's empty
+    if (Object.keys(state.selectedCassettesByRole).length === 0) {
+      state.selectedCassettesByRole = {};
     }
     
     // Try to load designs from the database

@@ -1,3 +1,4 @@
+
 import { StateCreator } from 'zustand';
 import { 
   DesignRequirements, 
@@ -332,7 +333,7 @@ export const createRequirementsSlice: StateCreator<
             ...state.selectedCassettesByRole,
             [roleId]: updatedCassettes
           }
-        };
+        } as Partial<StoreState>;
       });
     },
     
@@ -346,7 +347,7 @@ export const createRequirementsSlice: StateCreator<
             ...state.selectedCassettesByRole,
             [roleId]: updatedCassettes
           }
-        };
+        } as Partial<StoreState>;
       });
     }
   };

@@ -61,5 +61,8 @@ export enum DeviceRoleType {
   BorderLeafSwitch = 'borderLeafSwitch',
   SpineSwitch = 'spineSwitch',
   StorageSwitch = 'storageSwitch',
-  Firewall = 'firewall'
+  Firewall = 'firewall',
+  CopperPatchPanel = 'copperPatchPanel',
+  FiberPatchPanel = 'fiberPatchPanel',
+  TorSwitch = 'torSwitch'
 }
