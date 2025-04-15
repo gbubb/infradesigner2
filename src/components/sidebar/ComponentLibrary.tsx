@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,12 @@ import {
   Firewall,
   Disk,
   DiskType,
-  componentTypeToCategory
+  componentTypeToCategory,
+  FiberPatchPanel,
+  CopperPatchPanel,
+  Cassette,
+  Cable,
+  ConnectorType
 } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
 import { useComponentsByType } from '@/hooks/design/useComponentsByType';
