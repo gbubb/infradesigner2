@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useDesignStore } from '@/store/designStore';
 import { InfrastructureDesign } from '@/types/infrastructure';
 
-export const LoadDesignDialog = () => {
+interface LoadDesignDialogProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOpenChange }) => {
   const { savedDesigns, setActiveDesign, createNewDesign } = useDesignStore();
-  const [open, setOpen] = useState(false);
   
   const handleCloneDesign = (design: InfrastructureDesign) => {
     // Create a dialog to get the new name
@@ -26,14 +31,11 @@ export const LoadDesignDialog = () => {
       }
     );
     
-    setOpen(false);
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">Load Design</Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Load Design</DialogTitle>
@@ -64,7 +66,7 @@ export const LoadDesignDialog = () => {
                   size="sm"
                   onClick={() => {
                     setActiveDesign(design.id);
-                    setOpen(false);
+                    onOpenChange(false);
                   }}
                 >
                   Load
