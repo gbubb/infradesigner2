@@ -1,23 +1,95 @@
-
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter,
+  DialogClose
+} from '@/components/ui/dialog';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Save, X } from 'lucide-react';
-import { ServerFormFields } from '../forms/ServerFormFields';
-import { SwitchFormFields } from '../forms/SwitchFormFields';
-import { DiskFormFields } from '../forms/DiskFormFields';
-import { ComponentType } from '@/types/infrastructure';
+import { Button } from '@/components/ui/button';
+import { 
+  ComponentType, 
+  ServerRole, 
+  DiskSlotType, 
+  NetworkPortType, 
+  SwitchRole, 
+  PortSpeed,
+  DiskType,
+  ConnectorType
+} from '@/types/infrastructure';
+import { RouterFirewallFormFields } from '../forms/RouterFirewallFormFields';
+import { CablingFormFields } from '../forms/CablingFormFields';
+
+const formSchema = z.object({
+  type: z.nativeEnum(ComponentType),
+  name: z.string().min(2, {
+    message: 'Component name must be at least 2 characters.',
+  }),
+  manufacturer: z.string().min(2, {
+    message: 'Manufacturer must be at least 2 characters.',
+  }),
+  model: z.string().min(2, {
+    message: 'Model must be at least 2 characters.',
+  }),
+  cost: z.number(),
+  powerRequired: z.number(),
+  isDefault: z.boolean(),
+  // Server specific fields
+  serverRole: z.nativeEnum(ServerRole).optional(),
+  cpuModel: z.string().optional(),
+  cpuCount: z.number().optional(),
+  cpuSockets: z.number().optional(),
+  cpuCoresPerSocket: z.number().optional(),
+  memoryCapacity: z.number().optional(),
+  diskSlotType: z.nativeEnum(DiskSlotType).optional(),
+  diskSlotQuantity: z.number().optional(),
+  ruSize: z.number().optional(),
+  networkPortType: z.nativeEnum(NetworkPortType).optional(),
+  portsConsumedQuantity: z.number().optional(),
+  // Switch specific fields
+  switchRole: z.nativeEnum(SwitchRole).optional(),
+  portCount: z.number().optional(),
+  portSpeed: z.string().optional(),
+  portSpeedType: z.nativeEnum(PortSpeed).optional(),
+  portsProvidedQuantity: z.number().optional(),
+  layer: z.number().optional(),
+  // Disk specific fields
+  capacityTB: z.number().optional(),
+  formFactor: z.string().optional(),
+  interface: z.string().optional(),
+  diskType: z.nativeEnum(DiskType).optional(),
+  rpm: z.number().optional(),
+  iops: z.number().optional(),
+  readSpeed: z.number().optional(),
+  writeSpeed: z.number().optional(),
+  // Router/Firewall specific fields
+  throughput: z.number().optional(),
+  connectionPerSecond: z.number().optional(),
+  concurrentConnections: z.number().optional(),
+  features: z.array(z.string()).optional(),
+  supportedProtocols: z.array(z.string()).optional(),
+  // Cabling specific fields
+  cassetteCapacity: z.number().optional(),
+  portQuantity: z.number().optional(),
+  length: z.number().optional(),
+  connectorType: z.nativeEnum(ConnectorType).optional()
+});
 
 interface ComponentFormDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   formValues: any;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSelectChange: (name: string, value: any) => void;
+  onSelectChange: (name: string, value: string) => void;
   onTypeChange: (value: string) => void;
   onSwitchChange: (checked: boolean) => void;
   onCancel: () => void;
@@ -37,142 +109,588 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   onSubmit,
   isEditing
 }) => {
-  const renderTypeSpecificFormFields = () => {
-    switch(formValues.type) {
-      case ComponentType.Server:
-        return <ServerFormFields 
-                 formValues={formValues} 
-                 onChange={onSelectChange} 
-                 onInputChange={onInputChange} 
-               />;
-      case ComponentType.Switch:
-        return <SwitchFormFields 
-                 formValues={formValues} 
-                 onChange={onSelectChange} 
-                 onInputChange={onInputChange} 
-               />;
-      case ComponentType.Disk:
-        return <DiskFormFields 
-                 formValues={formValues} 
-                 onChange={onSelectChange} 
-                 onInputChange={onInputChange} 
-               />;
-      default:
-        return null;
-    }
-  };
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      type: formValues.type || ComponentType.Server,
+      name: formValues.name || '',
+      manufacturer: formValues.manufacturer || '',
+      model: formValues.model || '',
+      cost: formValues.cost || 0,
+      powerRequired: formValues.powerRequired || 0,
+      isDefault: formValues.isDefault || false,
+      serverRole: formValues.serverRole || ServerRole.Compute,
+      cpuModel: formValues.cpuModel || '',
+      cpuCount: formValues.cpuCount || 1,
+      cpuSockets: formValues.cpuSockets || 1,
+      cpuCoresPerSocket: formValues.cpuCoresPerSocket || 4,
+      memoryCapacity: formValues.memoryCapacity || 0,
+      diskSlotType: formValues.diskSlotType || DiskSlotType.TwoPointFive,
+      diskSlotQuantity: formValues.diskSlotQuantity || 8,
+      ruSize: formValues.ruSize || 1,
+      networkPortType: formValues.networkPortType || NetworkPortType.SFP,
+      portsConsumedQuantity: formValues.portsConsumedQuantity || 2,
+      switchRole: formValues.switchRole || SwitchRole.Access,
+      portCount: formValues.portCount || 24,
+      portSpeed: formValues.portSpeed || '10',
+      portSpeedType: formValues.portSpeedType || PortSpeed.TenG,
+      portsProvidedQuantity: formValues.portsProvidedQuantity || 24,
+      layer: formValues.layer || 3,
+      capacityTB: formValues.capacityTB || 1,
+      formFactor: formValues.formFactor || '2.5"',
+      interface: formValues.interface || 'SATA',
+      diskType: formValues.diskType || DiskType.SATASSD,
+      rpm: formValues.rpm || 7200,
+      iops: formValues.iops || 10000,
+      readSpeed: formValues.readSpeed || 1000,
+      writeSpeed: formValues.writeSpeed || 1000,
+      throughput: formValues.throughput || 10,
+      connectionPerSecond: formValues.connectionPerSecond || 10000,
+      concurrentConnections: formValues.concurrentConnections || 100000,
+      features: formValues.features || [],
+      supportedProtocols: formValues.supportedProtocols || [],
+      cassetteCapacity: formValues.cassetteCapacity || 12,
+      portQuantity: formValues.portQuantity || 24,
+      length: formValues.length || 3,
+      connectorType: formValues.connectorType || ConnectorType.RJ45
+    },
+  });
+
+  const { register, control } = form;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Component' : 'Add New Component'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Component' : 'Add Component'}</DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Update component details' : 'Create a new component for your component library'}
+            {isEditing ? 'Edit an existing component in the library' : 'Add a new component to the library'}
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-4">
-          {!isEditing && (
-            <div className="space-y-2">
-              <Label htmlFor="type">Component Type</Label>
-              <Select
-                value={formValues.type?.toString()}
-                onValueChange={onTypeChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(ComponentType).map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Component Type</FormLabel>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        onTypeChange(value);
+                      }}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={ComponentType.Server}>{ComponentType.Server}</SelectItem>
+                        <SelectItem value={ComponentType.Switch}>{ComponentType.Switch}</SelectItem>
+                        <SelectItem value={ComponentType.Router}>{ComponentType.Router}</SelectItem>
+                        <SelectItem value={ComponentType.Firewall}>{ComponentType.Firewall}</SelectItem>
+                        <SelectItem value={ComponentType.Disk}>{ComponentType.Disk}</SelectItem>
+                        <SelectItem value={ComponentType.GPU}>{ComponentType.GPU}</SelectItem>
+                        <SelectItem value="FiberPatchPanel">Fiber Patch Panel</SelectItem>
+                        <SelectItem value="CopperPatchPanel">Copper Patch Panel</SelectItem>
+                        <SelectItem value="Cassette">Cassette</SelectItem>
+                        <SelectItem value="Cable">Cable</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="isDefault"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-sm">Set as Default</FormLabel>
+                      <FormDescription>
+                        This component will be the default for its type.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked);
+                          onSwitchChange(checked);
+                        }}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
             </div>
-          )}
-          
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              name="name"
-              value={formValues.name || ''}
-              onChange={onInputChange}
-              placeholder="Component name"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="manufacturer">Manufacturer</Label>
-            <Input
-              id="manufacturer"
-              name="manufacturer"
-              value={formValues.manufacturer || ''}
-              onChange={onInputChange}
-              placeholder="Manufacturer"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="model">Model</Label>
-            <Input
-              id="model"
-              name="model"
-              value={formValues.model || ''}
-              onChange={onInputChange}
-              placeholder="Model"
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="cost">Cost ($)</Label>
-              <Input
-                id="cost"
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Component Name" {...field} onChange={onInputChange} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="manufacturer"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Manufacturer</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Manufacturer" {...field} onChange={onInputChange} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={control}
+                name="model"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Model</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Model" {...field} onChange={onInputChange} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
                 name="cost"
-                type="number"
-                value={formValues.cost || 0}
-                onChange={onInputChange}
-                placeholder="0"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cost</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="Cost" 
+                        {...field} 
+                        onChange={e => {
+                          field.onChange(Number(e.target.value));
+                          onInputChange(e);
+                        }} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={control}
+                name="powerRequired"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Power Required (Watts)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="Power Required" 
+                        {...field} 
+                        onChange={e => {
+                          field.onChange(Number(e.target.value));
+                          onInputChange(e);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="powerRequired">Power (W)</Label>
-              <Input
-                id="powerRequired"
-                name="powerRequired"
-                type="number"
-                value={formValues.powerRequired || 0}
-                onChange={onInputChange}
-                placeholder="0"
-              />
-            </div>
-          </div>
+            {formValues.type === ComponentType.Server && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={control}
+                    name="serverRole"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Server Role</FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            onSelectChange('serverRole', value);
+                          }}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={ServerRole.Compute}>{ServerRole.Compute}</SelectItem>
+                            <SelectItem value={ServerRole.GPU}>{ServerRole.GPU}</SelectItem>
+                            <SelectItem value={ServerRole.Storage}>{ServerRole.Storage}</SelectItem>
+                            <SelectItem value={ServerRole.Controller}>{ServerRole.Controller}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={control}
+                    name="ruSize"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Rack Units (RU)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            onChange={e => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={control}
+                    name="cpuModel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CPU Model</FormLabel>
+                        <FormControl>
+                          <Input placeholder="CPU Model" {...field} onChange={onInputChange} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={control}
+                    name="cpuCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CPU Count</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            onChange={e => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={control}
+                    name="cpuSockets"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CPU Sockets</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            onChange={e => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={control}
+                    name="cpuCoresPerSocket"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CPU Cores Per Socket</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            onChange={e => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={control}
+                    name="memoryCapacity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Memory Capacity (GB)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            onChange={e => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={control}
+                    name="diskSlotType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Disk Slot Type</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a slot type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={DiskSlotType.TwoPointFive}>{DiskSlotType.TwoPointFive}</SelectItem>
+                            <SelectItem value={DiskSlotType.ThreePointFive}>{DiskSlotType.ThreePointFive}</SelectItem>
+                            <SelectItem value={DiskSlotType.NVMe}>{DiskSlotType.NVMe}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={control}
+                  name="diskSlotQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Disk Slot Quantity</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field} 
+                          onChange={e => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={control}
+                  name="networkPortType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Network Port Type</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a port type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={NetworkPortType.SFP}>{NetworkPortType.SFP}</SelectItem>
+                          <SelectItem value={NetworkPortType.QSFP}>{NetworkPortType.QSFP}</SelectItem>
+                          <SelectItem value={NetworkPortType.RJ45}>{NetworkPortType.RJ45}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={control}
+                  name="portsConsumedQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ports Consumed Quantity</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field} 
+                          onChange={e => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+            
+            {formValues.type === ComponentType.Switch && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={control}
+                    name="switchRole"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Switch Role</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={SwitchRole.Management}>{SwitchRole.Management}</SelectItem>
+                            <SelectItem value={SwitchRole.Leaf}>{SwitchRole.Leaf}</SelectItem>
+                            <SelectItem value={SwitchRole.Spine}>{SwitchRole.Spine}</SelectItem>
+                            <SelectItem value={SwitchRole.Border}>{SwitchRole.Border}</SelectItem>
+                            <SelectItem value={SwitchRole.Access}>{SwitchRole.Access}</SelectItem>
+                            <SelectItem value={SwitchRole.Edge}>{SwitchRole.Edge}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={control}
+                    name="ruSize"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Rack Units (RU)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            onChange={e => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={control}
+                    name="portCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Port Count</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            onChange={e => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={control}
+                    name="portSpeedType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Port Speed</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a speed" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={PortSpeed.OneG}>{PortSpeed.OneG}</SelectItem>
+                            <SelectItem value={PortSpeed.TenG}>{PortSpeed.TenG}</SelectItem>
+                            <SelectItem value={PortSpeed.TwentyFiveG}>{PortSpeed.TwentyFiveG}</SelectItem>
+                            <SelectItem value={PortSpeed.FortyG}>{PortSpeed.FortyG}</SelectItem>
+                            <SelectItem value={PortSpeed.HundredG}>{PortSpeed.HundredG}</SelectItem>
+                            <SelectItem value={PortSpeed.Speed400G}>{PortSpeed.Speed400G}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={control}
+                  name="portsProvidedQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ports Provided Quantity</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field} 
+                          onChange={e => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+            
+            {formValues.type === ComponentType.Router && (
+              <RouterFirewallFormFields register={{ control }} />
+            )}
+            
+            {formValues.type === ComponentType.Firewall && (
+              <RouterFirewallFormFields register={{ control }} />
+            )}
 
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="isDefault"
-              checked={formValues.isDefault || false}
-              onCheckedChange={onSwitchChange}
-            />
-            <Label htmlFor="isDefault">Set as default for this type/role</Label>
-          </div>
-          
-          {renderTypeSpecificFormFields()}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
-            <X className="mr-2 h-4 w-4" />
-            Cancel
-          </Button>
-          <Button onClick={onSubmit}>
-            <Save className="mr-2 h-4 w-4" />
-            {isEditing ? 'Update Component' : 'Add Component'}
-          </Button>
-        </DialogFooter>
+            {formValues.type === 'FiberPatchPanel' && (
+              <CablingFormFields register={{control}} componentType="FiberPatchPanel" />
+            )}
+
+            {formValues.type === 'CopperPatchPanel' && (
+              <CablingFormFields register={{control}} componentType="CopperPatchPanel" />
+            )}
+
+            {formValues.type === 'Cable' && (
+              <CablingFormFields register={{control}} componentType="Cable" />
+            )}
+
+            <DialogFooter>
+              <Button variant="ghost" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button type="submit">{isEditing ? 'Update' : 'Save'}</Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

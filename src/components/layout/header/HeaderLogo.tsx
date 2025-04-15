@@ -5,7 +5,7 @@ export const HeaderLogo: React.FC = () => {
   return (
     <div className="flex items-center">
       <img 
-        src="/lovable-uploads/471a9da5-ea26-4145-ba48-e5e9a7b8510d.png" 
+        src="/lovable-uploads/c30bf602-d1c6-49c7-b6f1-48f85214b24f.png" 
         alt="Infrastructure Design Tool Logo" 
         className="h-8 w-auto mr-2"
       />

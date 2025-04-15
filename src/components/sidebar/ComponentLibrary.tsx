@@ -251,6 +251,36 @@ export const ComponentLibrary: React.FC = () => {
           writeSpeed: componentForm.writeSpeed
         } as Disk;
         break;
+      case ComponentType.FiberPatchPanel:
+        component = {
+          ...baseComponent,
+          type: ComponentType.FiberPatchPanel,
+          ruSize: componentForm.ruSize || 1,
+          cassetteCapacity: componentForm.cassetteCapacity || 12,
+        } as FiberPatchPanel;
+        break;
+      case ComponentType.CopperPatchPanel:
+        component = {
+          ...baseComponent,
+          type: ComponentType.CopperPatchPanel,
+          ruSize: componentForm.ruSize || 1,
+          portQuantity: componentForm.portQuantity || 24,
+        } as CopperPatchPanel;
+        break;
+      case ComponentType.Cassette:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Cassette,
+        } as Cassette;
+        break;
+      case ComponentType.Cable:
+        component = {
+          ...baseComponent,
+          type: ComponentType.Cable,
+          length: componentForm.length || 1,
+          connectorType: componentForm.connectorType || ConnectorType.RJ45,
+        } as Cable;
+        break;
       default:
         component = {
           ...baseComponent
