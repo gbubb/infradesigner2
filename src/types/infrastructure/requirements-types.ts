@@ -67,5 +67,6 @@ export enum DeviceRoleType {
   Firewall = 'firewall',
   CopperPatchPanel = 'copperPatchPanel',
   FiberPatchPanel = 'fiberPatchPanel',
+  Cassette = 'cassette',
   TorSwitch = 'torSwitch'
 }

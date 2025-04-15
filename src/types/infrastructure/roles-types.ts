@@ -8,6 +8,7 @@ export interface ComponentRole {
   adjustedRequiredCount?: number;
   assignedComponentId?: string;
   clusterInfo?: ClusterInfo;
+  calculationSteps?: string[]; // Add calculationSteps property
 }
 
 // ClusterInfo interface

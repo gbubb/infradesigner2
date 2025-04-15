@@ -1,4 +1,3 @@
-
 // Add the new imports
 import { 
   ComponentType, 
@@ -70,7 +69,7 @@ export const copperPatchPanelTemplates: CopperPatchPanel[] = [
   }
 ];
 
-// Add sample cassettes
+// Add sample cassettes - Fix the missing properties
 export const cassetteTemplates: Cassette[] = [
   {
     id: 'cas-1',
@@ -79,7 +78,9 @@ export const cassetteTemplates: Cassette[] = [
     manufacturer: 'FS',
     model: 'FHD-MPO12-LC',
     cost: 85,
-    powerRequired: 0
+    powerRequired: 0,
+    portType: ConnectorType.MPO12,
+    portQuantity: 12
   }
 ];
 
