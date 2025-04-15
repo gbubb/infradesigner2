@@ -15,7 +15,8 @@ export enum DiskSlotType {
   NVMeBay = 'NVMe Bay',
   PCIeSlot = 'PCIe Slot',
   TwoPointFive = '2.5"',
-  ThreePointFive = '3.5"'
+  ThreePointFive = '3.5"',
+  NVMe = 'NVMe'
 }
 
 export enum NetworkPortType {

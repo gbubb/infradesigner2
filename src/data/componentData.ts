@@ -3,25 +3,20 @@
 import { 
   ComponentType, 
   InfrastructureComponent, 
-  Server, 
-  Switch, 
-  Router, 
-  Firewall, 
-  Disk,
-  ServerRole,
-  DiskSlotType,
-  NetworkPortType,
-  SwitchRole,
-  PortSpeed,
-  DiskType,
-  GPU,
-  GPUMemoryType,
-  FiberPatchPanel,
+  FiberPatchPanel, 
   CopperPatchPanel,
-  Cable,
   Cassette,
+  Cable,
   ConnectorType
 } from '../types/infrastructure';
+
+// Define empty templates for the missing arrays
+const serverTemplates: InfrastructureComponent[] = [];
+const switchTemplates: InfrastructureComponent[] = [];
+const routerTemplates: InfrastructureComponent[] = [];
+const firewallTemplates: InfrastructureComponent[] = [];
+const diskTemplates: InfrastructureComponent[] = [];
+const gpuTemplates: InfrastructureComponent[] = [];
 
 // Add sample fiber patch panels
 export const fiberPatchPanelTemplates: FiberPatchPanel[] = [
