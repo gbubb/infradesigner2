@@ -34,6 +34,7 @@ export const ComponentLibrary: React.FC = () => {
     isEditDialogOpen,
     setIsEditDialogOpen,
     editingComponentId,
+    setEditingComponentId,
     componentForm,
     setComponentForm,
     resetForm,
@@ -68,7 +69,8 @@ export const ComponentLibrary: React.FC = () => {
   const openEditDialog = (component: InfrastructureComponent) => {
     setEditingComponentId(component.id);
     setComponentForm({
-      ...component
+      ...component,
+      isDefault: component.isDefault || false
     });
     setIsEditDialogOpen(true);
   };
