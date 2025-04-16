@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useComponents } from '@/context/ComponentContext';
 import { useComponentForm } from '@/hooks/components/useComponentForm';
@@ -77,11 +76,13 @@ export const ComponentLibrary: React.FC = () => {
   const handleAddComponent = () => {
     if (!validateForm()) return;
 
+    const componentToSave: InfrastructureComponent = { ...componentForm } as InfrastructureComponent;
+
     if (editingComponentId) {
-      updateComponentTemplate(editingComponentId, componentForm);
+      updateComponentTemplate(editingComponentId, componentToSave);
       setIsEditDialogOpen(false);
     } else {
-      addComponentTemplate(componentForm as InfrastructureComponent);
+      addComponentTemplate(componentToSave);
       setIsAddDialogOpen(false);
     }
     

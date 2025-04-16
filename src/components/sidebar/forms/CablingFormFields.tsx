@@ -118,14 +118,14 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
         <>
           <FormField
             control={register.control}
-            name="connectorType"
+            name="portType"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Port Type</FormLabel>
                 <Select 
                   onValueChange={(value) => {
                     field.onChange(value);
-                    onSelectChange('connectorType', value);
+                    onSelectChange('portType', value);
                   }}
                   value={field.value || ''}
                 >
@@ -203,7 +203,10 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
               <FormItem>
                 <FormLabel>Connector Type</FormLabel>
                 <Select 
-                  onValueChange={field.onChange}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    onSelectChange('connectorType', value);
+                  }}
                   value={field.value || ''}
                 >
                   <FormControl>

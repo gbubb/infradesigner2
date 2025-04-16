@@ -82,7 +82,7 @@ const formSchema = z.object({
   cassetteCapacity: z.number().optional(),
   portQuantity: z.number().optional(),
   length: z.number().optional(),
-  connectorType: z.nativeEnum(ConnectorType).optional()
+  portType: z.nativeEnum(ConnectorType).optional()
 });
 
 interface ComponentFormDialogProps {
@@ -153,7 +153,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       cassetteCapacity: formValues.cassetteCapacity || 12,
       portQuantity: formValues.portQuantity || 24,
       length: formValues.length || 3,
-      connectorType: formValues.connectorType || ConnectorType.RJ45
+      portType: formValues.portType || ConnectorType.RJ45
     },
     values: formValues,
   });
