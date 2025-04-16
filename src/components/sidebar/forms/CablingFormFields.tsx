@@ -25,8 +25,8 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    value={field.value || ''}
+                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    value={field.value || 0}
                   />
                 </FormControl>
               </FormItem>
@@ -43,8 +43,8 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    value={field.value || ''}
+                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    value={field.value || 0}
                   />
                 </FormControl>
               </FormItem>
@@ -65,8 +65,8 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    value={field.value || ''}
+                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    value={field.value || 0}
                   />
                 </FormControl>
               </FormItem>
@@ -83,8 +83,8 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    value={field.value || ''}
+                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    value={field.value || 0}
                   />
                 </FormControl>
               </FormItem>
@@ -103,7 +103,6 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                 <FormLabel>Port Type</FormLabel>
                 <Select 
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
                   value={field.value || ''}
                 >
                   <FormControl>
@@ -112,11 +111,11 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={ConnectorType.RJ45}>{ConnectorType.RJ45}</SelectItem>
-                    <SelectItem value={ConnectorType.MPO12}>{ConnectorType.MPO12}</SelectItem>
+                    <SelectItem value={ConnectorType.RJ45}>RJ45</SelectItem>
+                    <SelectItem value={ConnectorType.MPO12}>MPO-12</SelectItem>
                     <SelectItem value={ConnectorType.LC}>LC</SelectItem>
-                    <SelectItem value={ConnectorType.SFP}>{ConnectorType.SFP}</SelectItem>
-                    <SelectItem value={ConnectorType.QSFP}>{ConnectorType.QSFP}</SelectItem>
+                    <SelectItem value={ConnectorType.SFP}>SFP</SelectItem>
+                    <SelectItem value={ConnectorType.QSFP}>QSFP</SelectItem>
                   </SelectContent>
                 </Select>
               </FormItem>
@@ -128,13 +127,13 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
             name="portQuantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Port Quantity Provided</FormLabel>
+                <FormLabel>Port Quantity</FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    value={field.value || ''}
+                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    value={field.value || 0}
                   />
                 </FormControl>
               </FormItem>
@@ -155,8 +154,8 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    value={field.value || ''}
+                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    value={field.value || 0}
                   />
                 </FormControl>
               </FormItem>
@@ -171,7 +170,6 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                 <FormLabel>Connector Type</FormLabel>
                 <Select 
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
                   value={field.value || ''}
                 >
                   <FormControl>
@@ -180,11 +178,11 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={ConnectorType.RJ45}>{ConnectorType.RJ45}</SelectItem>
-                    <SelectItem value={ConnectorType.MPO12}>{ConnectorType.MPO12}</SelectItem>
+                    <SelectItem value={ConnectorType.RJ45}>RJ45</SelectItem>
+                    <SelectItem value={ConnectorType.MPO12}>MPO-12</SelectItem>
                     <SelectItem value={ConnectorType.LC}>LC</SelectItem>
-                    <SelectItem value={ConnectorType.SFP}>{ConnectorType.SFP}</SelectItem>
-                    <SelectItem value={ConnectorType.QSFP}>{ConnectorType.QSFP}</SelectItem>
+                    <SelectItem value={ConnectorType.SFP}>SFP</SelectItem>
+                    <SelectItem value={ConnectorType.QSFP}>QSFP</SelectItem>
                   </SelectContent>
                 </Select>
               </FormItem>

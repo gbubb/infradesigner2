@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useDesignStore } from '@/store/designStore';
@@ -70,11 +69,11 @@ export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ ro
 
   const getPortTypeLabel = (portType: string): string => {
     switch (portType) {
-      case ConnectorType.RJ45: return ConnectorType.RJ45;
-      case ConnectorType.MPO12: return ConnectorType.MPO12;
+      case ConnectorType.RJ45: return 'RJ45';
+      case ConnectorType.MPO12: return 'MPO-12';
       case ConnectorType.LC: return "LC";
-      case ConnectorType.SFP: return ConnectorType.SFP;
-      case ConnectorType.QSFP: return ConnectorType.QSFP;
+      case ConnectorType.SFP: return 'SFP';
+      case ConnectorType.QSFP: return 'QSFP';
       default: return portType;
     }
   };

@@ -1,3 +1,4 @@
+
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureComponent, ComponentType, Server, Switch, Disk, FiberPatchPanel, CopperPatchPanel, Cassette, Cable, ConnectorType } from '@/types/infrastructure';
 import { toast } from 'sonner';
@@ -186,6 +187,9 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
 // Save a component to Supabase
 export const saveComponent = async (component: InfrastructureComponent): Promise<boolean> => {
   try {
+    // Log the component being saved for debugging
+    console.log('Saving component:', component);
+
     // Ensure component has a valid UUID
     const componentWithValidID = ensureValidUUID(component);
     
@@ -224,11 +228,33 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
       Object.assign(specializedFields, rest);
     }
     
+    // Special handling for structured cabling components
+    switch (componentWithValidID.type) {
+      case ComponentType.FiberPatchPanel:
+        specializedFields.ruSize = (componentWithValidID as FiberPatchPanel).ruSize || 0;
+        specializedFields.cassetteCapacity = (componentWithValidID as FiberPatchPanel).cassetteCapacity || 0;
+        break;
+      case ComponentType.CopperPatchPanel:
+        specializedFields.ruSize = (componentWithValidID as CopperPatchPanel).ruSize || 0;
+        specializedFields.portQuantity = (componentWithValidID as CopperPatchPanel).portQuantity || 0;
+        break;
+      case ComponentType.Cassette:
+        specializedFields.portType = (componentWithValidID as Cassette).portType || ConnectorType.RJ45;
+        specializedFields.portQuantity = (componentWithValidID as Cassette).portQuantity || 0;
+        break;
+      case ComponentType.Cable:
+        specializedFields.length = (componentWithValidID as Cable).length || 0;
+        specializedFields.connectorType = (componentWithValidID as Cable).connectorType || ConnectorType.RJ45;
+        break;
+    }
+    
     // Combine into the final object to save
     const componentToSave = {
       ...baseComponent,
       details: specializedFields,
     };
+    
+    console.log('Saving component to database:', componentToSave);
     
     const { error } = await supabase
       .from(TABLES.COMPONENTS)

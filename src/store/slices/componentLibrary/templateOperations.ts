@@ -2,11 +2,14 @@
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { StoreState } from '../../types';
-import { InfrastructureComponent } from '@/types/infrastructure';
+import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { saveComponent, deleteComponent } from '@/services/componentService';
 
 export const handleTemplateOperations = (set: Function, get: () => StoreState) => ({
   addComponentTemplate: (component: InfrastructureComponent) => {
+    // Log the component being added for debugging
+    console.log('Adding component template:', component);
+    
     set((state: StoreState) => {
       const newComponent = {
         ...component,
@@ -16,6 +19,7 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
       return { componentTemplates: [...state.componentTemplates, newComponent] };
     });
     
+    // Make sure we're saving the complete component
     saveComponent(component).then(success => {
       if (success) {
         toast.success(`Added component: ${component.name}`);
@@ -32,14 +36,22 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
         return state;
       }
       
+      // Get the existing component
+      const existingComponent = state.componentTemplates[index];
+      
+      // Create the updated component with all properties preserved
       const updatedComponent = {
-        ...state.componentTemplates[index],
+        ...existingComponent,
         ...updates
       } as InfrastructureComponent;
+      
+      // Log for debugging
+      console.log('Updating component template:', { id, existing: existingComponent, updates, result: updatedComponent });
       
       const updatedTemplates = [...state.componentTemplates];
       updatedTemplates[index] = updatedComponent;
       
+      // Save the full updated component to the database
       saveComponent(updatedComponent).then(success => {
         if (success) {
           toast.success(`Updated component: ${updatedComponent.name}`);

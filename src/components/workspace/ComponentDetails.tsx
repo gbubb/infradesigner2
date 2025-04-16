@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, Copy, Edit, Save, X } from 'lucide-react';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent, ConnectorType } from '@/types/infrastructure';
 
 interface ComponentDetailsProps {
   open: boolean;
@@ -59,7 +59,6 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
 
   const handleEdit = () => {
     if (selectedComponentId) {
-      // Initialize edit form with current values
       setEditForm({
         name: component.name,
         manufacturer: component.manufacturer,
@@ -86,7 +85,6 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
     const { name, value } = e.target;
     let parsedValue: string | number = value;
     
-    // Convert number fields from string to number
     if (name === 'cost' || name === 'powerRequired') {
       parsedValue = parseFloat(value) || 0;
     }
@@ -97,20 +95,16 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
     });
   };
 
-  // Render specific component properties based on type
   const renderComponentSpecificDetails = () => {
     if (isEditing) return null;
     
     switch (component.type) {
       case ComponentType.Server:
-        // Check if component has server properties
         if ('cpuModel' in component) {
-          // Get the total cores based on sockets and cores per socket
           const totalCores = component.cpuSockets && component.cpuCoresPerSocket ? 
             component.cpuSockets * component.cpuCoresPerSocket : 
             component.coreCount || 0;
           
-          // Use memoryCapacity as the primary memory field
           const serverMemory = component.memoryCapacity || component.memoryGB || 0;
           
           return (
@@ -176,7 +170,6 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
         break;
       
       case ComponentType.Switch:
-        // Check if component has network device properties
         if ('portCount' in component && 'portSpeed' in component && 'rackUnitsConsumed' in component) {
           return (
             <>
@@ -206,7 +199,6 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
         break;
       
       case ComponentType.Router:
-        // Check if component has network device properties
         if ('portCount' in component && 'portSpeed' in component && 'rackUnitsConsumed' in component) {
           return (
             <>
@@ -232,7 +224,6 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
         break;
       
       case ComponentType.Disk:
-        // Check if component has disk properties
         if ('capacityTB' in component && 'formFactor' in component && 'interface' in component) {
           return (
             <>
