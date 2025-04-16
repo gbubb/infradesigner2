@@ -327,29 +327,32 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={control}
-                  name="powerRequired"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Power Required (Watts)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="Power Required" 
-                          {...field} 
-                          onChange={(e) => {
-                            field.onChange(Number(e.target.value));
-                            onInputChange(e);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {/* Conditionally render Power Required */} 
+              {!['FiberPatchPanel', 'CopperPatchPanel', 'Cassette'].includes(formValues.type) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={control}
+                    name="powerRequired"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Power Required (Watts)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="Power Required" 
+                            {...field} 
+                            onChange={(e) => {
+                              field.onChange(Number(e.target.value));
+                              onInputChange(e);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
               
               {formValues.type === ComponentType.Server && (
                 <>
@@ -750,15 +753,20 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
               )}
 
               {formValues.type === 'FiberPatchPanel' && (
-                <CablingFormFields register={{control}} componentType="FiberPatchPanel" onInputChange={onInputChange} />
+                <CablingFormFields register={{control}} componentType="FiberPatchPanel" onInputChange={onInputChange} onSelectChange={onSelectChange} />
               )}
 
               {formValues.type === 'CopperPatchPanel' && (
-                <CablingFormFields register={{control}} componentType="CopperPatchPanel" onInputChange={onInputChange} />
+                <CablingFormFields register={{control}} componentType="CopperPatchPanel" onInputChange={onInputChange} onSelectChange={onSelectChange} />
               )}
 
               {formValues.type === 'Cable' && (
-                <CablingFormFields register={{control}} componentType="Cable" onInputChange={onInputChange} />
+                <CablingFormFields register={{control}} componentType="Cable" onInputChange={onInputChange} onSelectChange={onSelectChange} />
+              )}
+
+              {/* Add rendering for Cassette type */}
+              {formValues.type === 'Cassette' && (
+                <CablingFormFields register={{control}} componentType="Cassette" onInputChange={onInputChange} onSelectChange={onSelectChange} />
               )}
             </form>
           </Form>

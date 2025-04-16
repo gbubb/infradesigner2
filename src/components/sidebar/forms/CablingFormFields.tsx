@@ -8,9 +8,10 @@ interface CablingFormFieldsProps {
   register: any;
   componentType: string;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSelectChange: (name: string, value: string) => void;
 }
 
-export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, componentType, onInputChange }) => {
+export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, componentType, onInputChange, onSelectChange }) => {
   return (
     <>
       {componentType === 'FiberPatchPanel' && (
@@ -117,12 +118,15 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
         <>
           <FormField
             control={register.control}
-            name="portType"
+            name="connectorType"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Port Type</FormLabel>
                 <Select 
-                  onValueChange={field.onChange}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    onSelectChange('connectorType', value);
+                  }}
                   value={field.value || ''}
                 >
                   <FormControl>
