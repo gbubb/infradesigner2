@@ -279,6 +279,70 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
         }
         break;
       
+      case ComponentType.FiberPatchPanel:
+        if ('ruSize' in component && 'cassetteCapacity' in component) {
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-500">Rack Units</div>
+                <div>{component.ruSize} RU</div>
+                
+                <div className="text-gray-500">Cassette Capacity</div>
+                <div>{component.cassetteCapacity} slots</div>
+              </div>
+            </>
+          );
+        }
+        break;
+        
+      case ComponentType.CopperPatchPanel:
+        if ('ruSize' in component && 'portQuantity' in component) {
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-500">Rack Units</div>
+                <div>{component.ruSize} RU</div>
+                
+                <div className="text-gray-500">Port Quantity</div>
+                <div>{component.portQuantity} ports</div>
+              </div>
+            </>
+          );
+        }
+        break;
+        
+      case ComponentType.Cassette:
+        if ('portType' in component && 'portQuantity' in component) {
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-500">Port Type</div>
+                <div>{component.portType}</div>
+                
+                <div className="text-gray-500">Port Quantity</div>
+                <div>{component.portQuantity}</div>
+              </div>
+            </>
+          );
+        }
+        break;
+        
+      case ComponentType.Cable:
+        if ('length' in component && 'connectorType' in component) {
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-500">Length</div>
+                <div>{component.length} meters</div>
+                
+                <div className="text-gray-500">Connector Type</div>
+                <div>{component.connectorType}</div>
+              </div>
+            </>
+          );
+        }
+        break;
+      
       default:
         return (
           <div className="text-sm text-gray-500">

@@ -1,5 +1,5 @@
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
-import { InfrastructureComponent, ComponentType, Server, Switch, Disk } from '@/types/infrastructure';
+import { InfrastructureComponent, ComponentType, Server, Switch, Disk, FiberPatchPanel, CopperPatchPanel, Cassette, Cable, ConnectorType } from '@/types/infrastructure';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -132,6 +132,34 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               readSpeed: details.readSpeed || 0,
               writeSpeed: details.writeSpeed || 0,
             } as Disk;
+
+          case ComponentType.FiberPatchPanel:
+            return {
+              ...baseComponent,
+              ruSize: details.ruSize || 1,
+              cassetteCapacity: details.cassetteCapacity || 0,
+            } as FiberPatchPanel;
+            
+          case ComponentType.CopperPatchPanel:
+            return {
+              ...baseComponent,
+              ruSize: details.ruSize || 1,
+              portQuantity: details.portQuantity || 0,
+            } as CopperPatchPanel;
+            
+          case ComponentType.Cassette:
+            return {
+              ...baseComponent,
+              portType: details.portType || ConnectorType.RJ45,
+              portQuantity: details.portQuantity || 0,
+            } as Cassette;
+            
+          case ComponentType.Cable:
+            return {
+              ...baseComponent,
+              length: details.length || 0,
+              connectorType: details.connectorType || ConnectorType.RJ45,
+            } as Cable;
 
           default:
             return {

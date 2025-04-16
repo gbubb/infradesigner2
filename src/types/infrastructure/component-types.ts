@@ -54,6 +54,7 @@ export interface InfrastructureComponent {
 export enum ConnectorType {
   RJ45 = 'RJ45',
   MPO12 = 'MPO-12',
+  LC = 'LC',
   SFP = 'SFP',
   QSFP = 'QSFP'
 }

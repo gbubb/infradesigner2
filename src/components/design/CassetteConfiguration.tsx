@@ -68,6 +68,17 @@ export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ ro
     }
   };
 
+  const getPortTypeLabel = (portType: string): string => {
+    switch (portType) {
+      case ConnectorType.RJ45: return ConnectorType.RJ45;
+      case ConnectorType.MPO12: return ConnectorType.MPO12;
+      case ConnectorType.LC: return "LC";
+      case ConnectorType.SFP: return ConnectorType.SFP;
+      case ConnectorType.QSFP: return ConnectorType.QSFP;
+      default: return portType;
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="text-sm font-medium">
@@ -88,7 +99,7 @@ export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ ro
               <SelectContent>
                 {cassettes.map(cassette => (
                   <SelectItem key={cassette.id} value={cassette.id}>
-                    {cassette.name} ({(cassette as any).portQuantity}x {(cassette as any).portType})
+                    {cassette.name} ({(cassette as any).portQuantity}x {getPortTypeLabel((cassette as any).portType)})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -138,11 +149,12 @@ export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ ro
               {currentCassettes.map((item) => {
                 const cassette = componentTemplates.find(c => c.id === item.cassetteId);
                 if (!cassette) return null;
+                const portType = (cassette as any).portType || 'Unknown';
                 
                 return (
                   <TableRow key={item.cassetteId}>
                     <TableCell>{cassette.name}</TableCell>
-                    <TableCell>{(cassette as any).portType || 'N/A'}</TableCell>
+                    <TableCell>{getPortTypeLabel(portType)}</TableCell>
                     <TableCell>{(cassette as any).portQuantity || 0}</TableCell>
                     <TableCell>{item.quantity}</TableCell>
                     <TableCell>{item.quantity * ((cassette as any).portQuantity || 0)}</TableCell>
@@ -173,7 +185,7 @@ export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ ro
               <TableBody>
                 {Object.entries(portSummary).map(([portType, count]) => (
                   <TableRow key={portType}>
-                    <TableCell>{portType}</TableCell>
+                    <TableCell>{getPortTypeLabel(portType)}</TableCell>
                     <TableCell>{count}</TableCell>
                   </TableRow>
                 ))}
