@@ -1,3 +1,4 @@
+
 // Add the new imports
 import { 
   ComponentType, 
@@ -69,7 +70,7 @@ export const copperPatchPanelTemplates: CopperPatchPanel[] = [
   }
 ];
 
-// Add sample cassettes - Fix the missing properties
+// Add sample cassettes - With the required properties
 export const cassetteTemplates: Cassette[] = [
   {
     id: 'cas-1',

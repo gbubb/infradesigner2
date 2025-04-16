@@ -44,6 +44,10 @@ export const CalculationBreakdownDialog: React.FC<CalculationBreakdownDialogProp
         if (breakdownData && breakdownData.length > 0) {
           setBreakdownSteps(breakdownData);
           setCalculatedQuantity(quantity);
+        } else if (role.calculationSteps && role.calculationSteps.length > 0) {
+          // Use the calculation steps stored in the role if available
+          setBreakdownSteps(role.calculationSteps);
+          setCalculatedQuantity(quantity);
         } else {
           // Fallback if no breakdown is available
           setBreakdownSteps([

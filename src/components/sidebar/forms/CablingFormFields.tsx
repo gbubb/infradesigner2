@@ -100,6 +100,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                 <Select 
                   onValueChange={field.onChange}
                   defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -164,6 +165,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                 <Select 
                   onValueChange={field.onChange}
                   defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>

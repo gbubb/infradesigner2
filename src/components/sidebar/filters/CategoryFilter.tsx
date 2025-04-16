@@ -24,7 +24,9 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({ selectedCategory
     ComponentCategory.Network,
     ComponentCategory.Storage,
     ComponentCategory.Security,
-    ComponentCategory.Acceleration
+    ComponentCategory.Acceleration,
+    ComponentCategory.StructuredCabling,
+    ComponentCategory.Cables
   ];
 
   const getDisplayText = (category: string) => {
