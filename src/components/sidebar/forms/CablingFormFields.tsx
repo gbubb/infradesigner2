@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -8,9 +7,10 @@ import { ConnectorType } from '@/types/infrastructure';
 interface CablingFormFieldsProps {
   register: any;
   componentType: string;
+  onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, componentType }) => {
+export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, componentType, onInputChange }) => {
   return (
     <>
       {componentType === 'FiberPatchPanel' && (
@@ -25,7 +25,12 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    name="ruSize"
+                    onChange={e => {
+                      const value = Number(e.target.value) || 0;
+                      field.onChange(value);
+                      onInputChange(e);
+                    }}
                     value={field.value || 0}
                   />
                 </FormControl>
@@ -43,7 +48,12 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    name="cassetteCapacity"
+                    onChange={e => {
+                      const value = Number(e.target.value) || 0;
+                      field.onChange(value);
+                      onInputChange(e);
+                    }}
                     value={field.value || 0}
                   />
                 </FormControl>
@@ -65,7 +75,12 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    name="ruSize"
+                    onChange={e => {
+                      const value = Number(e.target.value) || 0;
+                      field.onChange(value);
+                      onInputChange(e);
+                    }}
                     value={field.value || 0}
                   />
                 </FormControl>
@@ -83,7 +98,12 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    name="portQuantity"
+                    onChange={e => {
+                      const value = Number(e.target.value) || 0;
+                      field.onChange(value);
+                      onInputChange(e);
+                    }}
                     value={field.value || 0}
                   />
                 </FormControl>
@@ -132,7 +152,12 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    name="portQuantity"
+                    onChange={e => {
+                      const value = Number(e.target.value) || 0;
+                      field.onChange(value);
+                      onInputChange(e);
+                    }}
                     value={field.value || 0}
                   />
                 </FormControl>
@@ -154,7 +179,12 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                   <Input 
                     type="number" 
                     {...field} 
-                    onChange={e => field.onChange(Number(e.target.value) || 0)}
+                    name="length"
+                    onChange={e => {
+                      const value = Number(e.target.value) || 0;
+                      field.onChange(value);
+                      onInputChange(e);
+                    }}
                     value={field.value || 0}
                   />
                 </FormControl>

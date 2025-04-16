@@ -394,7 +394,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              onChange={e => field.onChange(Number(e.target.value))}
+                              name="ruSize"
+                              onChange={e => {
+                                const value = Number(e.target.value) || 0;
+                                field.onChange(value);
+                                onInputChange(e);
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -427,7 +432,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              onChange={e => field.onChange(Number(e.target.value))}
+                              name="cpuCount"
+                              onChange={e => {
+                                const value = Number(e.target.value) || 0;
+                                field.onChange(value);
+                                onInputChange(e);
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -444,7 +454,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              onChange={e => field.onChange(Number(e.target.value))}
+                              name="cpuSockets"
+                              onChange={e => {
+                                const value = Number(e.target.value) || 0;
+                                field.onChange(value);
+                                onInputChange(e);
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -461,7 +476,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              onChange={e => field.onChange(Number(e.target.value))}
+                              name="cpuCoresPerSocket"
+                              onChange={e => {
+                                const value = Number(e.target.value) || 0;
+                                field.onChange(value);
+                                onInputChange(e);
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -480,7 +500,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              onChange={e => field.onChange(Number(e.target.value))}
+                              name="memoryCapacity"
+                              onChange={e => {
+                                const value = Number(e.target.value) || 0;
+                                field.onChange(value);
+                                onInputChange(e);
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -522,7 +547,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              onChange={e => field.onChange(Number(e.target.value))}
+                              name="diskSlotQuantity"
+                              onChange={e => {
+                                const value = Number(e.target.value) || 0;
+                                field.onChange(value);
+                                onInputChange(e);
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -566,7 +596,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              onChange={e => field.onChange(Number(e.target.value))}
+                              name="portsConsumedQuantity"
+                              onChange={e => {
+                                const value = Number(e.target.value) || 0;
+                                field.onChange(value);
+                                onInputChange(e);
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -617,7 +652,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              onChange={e => field.onChange(Number(e.target.value))}
+                              name="ruSize"
+                              onChange={e => {
+                                const value = Number(e.target.value) || 0;
+                                field.onChange(value);
+                                onInputChange(e);
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -634,7 +674,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              onChange={e => field.onChange(Number(e.target.value))}
+                              name="portCount"
+                              onChange={e => {
+                                const value = Number(e.target.value) || 0;
+                                field.onChange(value);
+                                onInputChange(e);
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -681,7 +726,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              onChange={e => field.onChange(Number(e.target.value))}
+                              name="portsProvidedQuantity"
+                              onChange={e => {
+                                const value = Number(e.target.value) || 0;
+                                field.onChange(value);
+                                onInputChange(e);
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -700,15 +750,15 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
               )}
 
               {formValues.type === 'FiberPatchPanel' && (
-                <CablingFormFields register={{control}} componentType="FiberPatchPanel" />
+                <CablingFormFields register={{control}} componentType="FiberPatchPanel" onInputChange={onInputChange} />
               )}
 
               {formValues.type === 'CopperPatchPanel' && (
-                <CablingFormFields register={{control}} componentType="CopperPatchPanel" />
+                <CablingFormFields register={{control}} componentType="CopperPatchPanel" onInputChange={onInputChange} />
               )}
 
               {formValues.type === 'Cable' && (
-                <CablingFormFields register={{control}} componentType="Cable" />
+                <CablingFormFields register={{control}} componentType="Cable" onInputChange={onInputChange} />
               )}
             </form>
           </Form>
