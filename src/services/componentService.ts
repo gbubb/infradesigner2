@@ -1,4 +1,3 @@
-
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureComponent, ComponentType, Server, Switch, Disk, FiberPatchPanel, CopperPatchPanel, Cassette, Cable, ConnectorType } from '@/types/infrastructure';
 import { toast } from 'sonner';
@@ -151,7 +150,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
           case ComponentType.Cassette:
             return {
               ...baseComponent,
-              portType: details.portType || ConnectorType.RJ45,
+              portType: details.portType,
               portQuantity: details.portQuantity || 0,
             } as Cassette;
             
@@ -239,7 +238,7 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
         specializedFields.portQuantity = (componentWithValidID as CopperPatchPanel).portQuantity || 0;
         break;
       case ComponentType.Cassette:
-        specializedFields.portType = (componentWithValidID as Cassette).portType || ConnectorType.RJ45;
+        specializedFields.portType = (componentWithValidID as Cassette).portType;
         specializedFields.portQuantity = (componentWithValidID as Cassette).portQuantity || 0;
         break;
       case ComponentType.Cable:
