@@ -1,10 +1,9 @@
-
 import { create } from 'zustand';
 import { StoreState } from './types';
 import { createRequirementsSlice, RequirementsSlice } from './slices/requirementsSlice';
 import { createDesignSlice, DesignSlice } from './slices/designSlice';
 import { createWorkspaceSlice, WorkspaceSlice } from './slices/workspaceSlice';
-import { createComponentLibrarySlice, ComponentLibrarySlice } from './slices/componentLibrarySlice';
+import { createComponentLibrarySlice, ComponentLibrarySlice } from './slices/componentLibrary';
 import { toast } from 'sonner';
 
 // Combined store type
