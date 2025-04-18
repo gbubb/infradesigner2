@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { DesignStoreState } from './types/designStoreTypes';
 import { createRequirementsSlice } from './slices/requirementsSlice';
-import { createDesignSlice } from './slices/designSlice';
+import { createDesignSlice } from './slices/design';
 import { createWorkspaceSlice } from './slices/workspaceSlice';
 import { createComponentLibrarySlice } from './slices/componentLibrary';
 import { initializeStore } from './initialization/storeInitializer';
@@ -21,3 +21,4 @@ export { initializeStore };
 
 // Export calculation functions
 export { recalculateDesign, manualRecalculateDesign };
+

@@ -1,54 +1,21 @@
-import { StateCreator } from 'zustand';
-import { v4 as uuidv4 } from 'uuid';
-import { toast } from 'sonner';
-import { InfrastructureComponent, InfrastructureDesign } from '@/types/infrastructure';
-import { StoreState } from '../types';
-import { 
-  saveDesign as saveDesignToDb, 
-  deleteDesign as deleteDesignFromDb, 
-  loadDesigns,
-  exportDesign as exportDesignToFile,
-  importDesign as importDesignFromFile,
-  purgeAllDesigns
-} from '@/services/designService';
 
-export interface DesignSlice {
-  // All saved designs
-  savedDesigns: InfrastructureDesign[];
-  
-  // Currently active design
-  activeDesign: InfrastructureDesign | null;
-  
-  // Create a new design
-  createNewDesign: (name: string, description?: string, existingDesign?: InfrastructureDesign) => string;
-  
-  // Update the active design components
-  updateActiveDesign: (components: InfrastructureComponent[]) => void;
-  
-  // Update an existing design
-  updateDesign: (id: string, updates: Partial<InfrastructureDesign>) => void;
-  
-  // Delete a design
-  deleteDesign: (id: string) => void;
-  
-  // Set active design
-  setActiveDesign: (id: string) => void;
-  
-  // Save design to database
-  saveDesign: () => void;
-  
-  // Export design to a file
-  exportDesign: () => void;
-  
-  // Import design from a file
-  importDesign: (file: File) => Promise<void>;
-  
-  // Load designs from database
-  loadDesignsFromDB: () => Promise<void>;
-  
-  // Purge all designs from database
-  purgeAllDesigns: () => Promise<void>;
-}
+import { StateCreator } from 'zustand';
+import { toast } from 'sonner';
+import { StoreState } from '../../types';
+import { DesignSlice } from './types';
+import {
+  saveDesignToDB,
+  deleteDesignFromDB,
+  loadDesignsFromDB,
+  exportDesignToFile,
+  importDesignFromFile,
+  purgeAllDesignsFromDB
+} from './databaseOperations';
+import {
+  createNewDesignOperation,
+  updateDesignOperation,
+  updateActiveDesignOperation
+} from './designOperations';
 
 export const createDesignSlice: StateCreator<
   StoreState,
@@ -63,27 +30,12 @@ export const createDesignSlice: StateCreator<
     let newDesignId = '';
     
     set((state) => {
-      const requirements = existingDesign?.requirements || { ...state.requirements };
-      
-      newDesignId = uuidv4();
-      
-      const newDesign: InfrastructureDesign = {
-        id: newDesignId,
-        name,
-        description: description || '',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        requirements,
-        components: existingDesign?.components || [],
-        componentRoles: existingDesign?.componentRoles || [],
-        selectedDisksByRole: existingDesign?.selectedDisksByRole || {},
-        selectedGPUsByRole: existingDesign?.selectedGPUsByRole || {}
-      };
+      const newDesign = createNewDesignOperation(name, description, existingDesign, state.requirements);
+      newDesignId = newDesign.id;
       
       const updatedDesigns = [...state.savedDesigns, newDesign];
       
-      // Save to Supabase
-      saveDesignToDb(newDesign).then(success => {
+      saveDesignToDB(newDesign).then(success => {
         if (success) {
           toast.success(`Created new design: ${name}`);
         }
@@ -105,19 +57,13 @@ export const createDesignSlice: StateCreator<
         return state;
       }
       
-      const updatedDesign: InfrastructureDesign = {
-        ...state.activeDesign,
-        components,
-        updatedAt: new Date()
-      };
+      const updatedDesign = updateActiveDesignOperation(state.activeDesign, components);
       
-      // Update in the saved designs list
       const updatedDesigns = state.savedDesigns.map(design => 
         design.id === updatedDesign.id ? updatedDesign : design
       );
       
-      // Save to Supabase
-      saveDesignToDb(updatedDesign).then(success => {
+      saveDesignToDB(updatedDesign).then(success => {
         if (success) {
           toast.success(`Updated design: ${updatedDesign.name}`);
         }
@@ -140,23 +86,17 @@ export const createDesignSlice: StateCreator<
       }
       
       const existingDesign = state.savedDesigns[existingDesignIndex];
-      const updatedDesign = {
-        ...existingDesign,
-        ...updates,
-        updatedAt: new Date()
-      };
+      const updatedDesign = updateDesignOperation(existingDesign, updates);
       
       const updatedDesigns = [...state.savedDesigns];
       updatedDesigns[existingDesignIndex] = updatedDesign;
       
-      // If this was the active design, update that too
       const newActiveDesign = 
         state.activeDesign && state.activeDesign.id === id 
           ? updatedDesign 
           : state.activeDesign;
       
-      // Save to Supabase
-      saveDesignToDb(updatedDesign).then(success => {
+      saveDesignToDB(updatedDesign).then(success => {
         if (success) {
           toast.success(`Updated design: ${updatedDesign.name}`);
         }
@@ -180,14 +120,12 @@ export const createDesignSlice: StateCreator<
       
       const updatedDesigns = state.savedDesigns.filter(d => d.id !== id);
       
-      // If this was the active design, set active to null or the first available
       let newActiveDesign = state.activeDesign;
       if (state.activeDesign && state.activeDesign.id === id) {
         newActiveDesign = updatedDesigns.length > 0 ? updatedDesigns[0] : null;
       }
       
-      // Delete from Supabase
-      deleteDesignFromDb(id).then(success => {
+      deleteDesignFromDB(id).then(success => {
         if (success) {
           toast.success(`Deleted design: ${designToDelete.name}`);
         }
@@ -211,15 +149,11 @@ export const createDesignSlice: StateCreator<
       
       toast.success(`Switched to design: ${design.name}`);
       
-      // Set active design and restore component roles and disk/gpu configurations
       return { 
         activeDesign: design,
-        // Reset component roles based on the design requirements
-        componentRoles: design.componentRoles || [], // Use design's component roles if available
+        componentRoles: design.componentRoles || [],
         requirements: design.requirements || state.requirements,
-        // Restore disk configurations
         selectedDisksByRole: design.selectedDisksByRole || {},
-        // Restore GPU configurations
         selectedGPUsByRole: design.selectedGPUsByRole || {},
       };
     });
@@ -232,22 +166,15 @@ export const createDesignSlice: StateCreator<
       return;
     }
     
-    // Save current component roles and configurations to the design
     const updatedDesign = {
       ...state.activeDesign,
-      // Save the component roles
       componentRoles: state.componentRoles,
-      // Save disk configurations
       selectedDisksByRole: state.selectedDisksByRole,
-      // Save GPU configurations
       selectedGPUsByRole: state.selectedGPUsByRole,
-      // Save the requirements
       requirements: state.requirements,
-      // Update timestamp
       updatedAt: new Date()
     };
     
-    // Update the active design in the store
     set((state) => {
       const updatedDesigns = state.savedDesigns.map(design => 
         design.id === updatedDesign.id ? updatedDesign : design
@@ -259,8 +186,7 @@ export const createDesignSlice: StateCreator<
       };
     });
     
-    // Save to Supabase
-    saveDesignToDb(updatedDesign).then(success => {
+    saveDesignToDB(updatedDesign).then(success => {
       if (success) {
         toast.success(`Saved design: ${updatedDesign.name}`);
       }
@@ -285,27 +211,22 @@ export const createDesignSlice: StateCreator<
     }
     
     set((state) => {
-      // Check if a design with the same ID already exists
       const existingDesignIndex = state.savedDesigns.findIndex(d => d.id === importedDesign.id);
       
       if (existingDesignIndex !== -1) {
-        // Update the existing design in the list
         const updatedDesigns = [...state.savedDesigns];
         updatedDesigns[existingDesignIndex] = importedDesign;
         
-        // Save to Supabase
-        saveDesignToDb(importedDesign);
+        saveDesignToDB(importedDesign);
         
         return {
           savedDesigns: updatedDesigns,
           activeDesign: importedDesign
         };
       } else {
-        // Add as a new design
         const updatedDesigns = [...state.savedDesigns, importedDesign];
         
-        // Save to Supabase
-        saveDesignToDb(importedDesign);
+        saveDesignToDB(importedDesign);
         
         return {
           savedDesigns: updatedDesigns,
@@ -317,13 +238,10 @@ export const createDesignSlice: StateCreator<
   
   loadDesignsFromDB: async () => {
     try {
-      const designs = await loadDesigns();
+      const designs = await loadDesignsFromDB();
       
       if (designs && designs.length > 0) {
-        set({ 
-          savedDesigns: designs,
-          // Don't automatically set active design
-        });
+        set({ savedDesigns: designs });
         console.log(`Loaded ${designs.length} designs from database`);
       } else {
         set({ savedDesigns: [] });
@@ -336,7 +254,7 @@ export const createDesignSlice: StateCreator<
   
   purgeAllDesigns: async () => {
     try {
-      const success = await purgeAllDesigns();
+      const success = await purgeAllDesignsFromDB();
       if (success) {
         set({ 
           savedDesigns: [],
@@ -349,3 +267,4 @@ export const createDesignSlice: StateCreator<
     }
   }
 });
+
