@@ -16,9 +16,8 @@ export const useDesignStore = create<DesignStoreState>()((...a) => ({
   ...createComponentLibrarySlice(...a),
 }));
 
-// Initialize the store
-initializeStore();
+// Export initialization function
+export { initializeStore };
 
 // Export calculation functions
 export { recalculateDesign, manualRecalculateDesign };
-
