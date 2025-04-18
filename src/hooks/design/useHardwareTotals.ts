@@ -128,9 +128,8 @@ export const useHardwareTotals = () => {
         const quantity = node.quantity || 1;
         
         // Add attached disks capacity if available
-        if ('attachedDisks' in node) {
-          const disks = (node as any).attachedDisks || [];
-          disks.forEach((disk: any) => {
+        if ('attachedDisks' in node && Array.isArray(node.attachedDisks)) {
+          node.attachedDisks.forEach((disk: any) => {
             if (disk && 'capacityTB' in disk) {
               clusterRawCapacityTB += disk.capacityTB * (disk.quantity || 1) * quantity;
             }

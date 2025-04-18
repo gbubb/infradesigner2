@@ -4,8 +4,8 @@ import {
   saveDesign as saveDesignToDb, 
   deleteDesign as deleteDesignFromDb,
   loadDesigns,
-  exportDesign as exportDesignToFile,
-  importDesign as importDesignFromFile,
+  exportDesign as exportDesignToFileFromService,
+  importDesign as importDesignFromFileFromService,
   purgeAllDesigns as purgeAllDesignsFromDb
 } from '@/services/designService';
 import { InfrastructureDesign } from '@/types/infrastructure';
@@ -30,14 +30,13 @@ export const loadDesignsFromDB = async (): Promise<InfrastructureDesign[]> => {
 };
 
 export const exportDesignToFile = (design: InfrastructureDesign): void => {
-  exportDesignToFile(design);
+  exportDesignToFileFromService(design);
 };
 
 export const importDesignFromFile = async (file: File): Promise<InfrastructureDesign | null> => {
-  return await importDesignFromFile(file);
+  return await importDesignFromFileFromService(file);
 };
 
 export const purgeAllDesignsFromDB = async (): Promise<boolean> => {
   return await purgeAllDesignsFromDb();
 };
-

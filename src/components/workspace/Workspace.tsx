@@ -66,7 +66,7 @@ export const Workspace: React.FC = () => {
         {Object.entries(placedComponents).map(([id, component]) => (
           <PlacedComponent 
             key={id}
-            component={{ id, component, position: { x: 0, y: 0 } }} // Default position, should be updated
+            component={{ id, component, position: component.position || { x: 0, y: 0 } }}
             isSelected={selectedComponentId === id}
             onClick={(e) => {
               e.stopPropagation();
