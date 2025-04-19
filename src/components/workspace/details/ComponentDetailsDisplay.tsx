@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Separator } from '@/components/ui/separator';
-import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
+import { InfrastructureComponent } from '@/types/infrastructure';
 import { renderComponentSpecificDetails } from './componentTypeDetails';
 
 interface ComponentDetailsDisplayProps {
@@ -17,18 +17,18 @@ export const ComponentDetailsDisplay: React.FC<ComponentDetailsDisplayProps> = (
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="text-gray-500">Manufacturer</div>
-        <div>{component.manufacturer}</div>
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="font-medium text-muted-foreground">Manufacturer</div>
+        <div className="font-normal">{component.manufacturer}</div>
         
-        <div className="text-gray-500">Model</div>
-        <div>{component.model}</div>
+        <div className="font-medium text-muted-foreground">Model</div>
+        <div className="font-normal">{component.model}</div>
         
-        <div className="text-gray-500">Cost</div>
-        <div>${component.cost}</div>
+        <div className="font-medium text-muted-foreground">Cost</div>
+        <div className="font-normal">${component.cost}</div>
         
-        <div className="text-gray-500">Power</div>
-        <div>{component.powerRequired} W</div>
+        <div className="font-medium text-muted-foreground">Power</div>
+        <div className="font-normal">{component.powerRequired} W</div>
       </div>
       
       <Separator className="my-4" />
