@@ -7,7 +7,8 @@ import { useDesignStore } from '@/store/designStore';
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  designId: string | null;
+  designId?: string | null;
+  onConfirm: () => void;
   onDeleteCompleted?: () => void;
 }
 
@@ -15,20 +16,9 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
   isOpen, 
   onOpenChange, 
   designId, 
+  onConfirm,
   onDeleteCompleted 
 }) => {
-  const { deleteDesign } = useDesignStore();
-
-  const handleDeleteDesign = () => {
-    if (designId) {
-      deleteDesign(designId);
-      onOpenChange(false);
-      if (onDeleteCompleted) {
-        onDeleteCompleted();
-      }
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
@@ -42,7 +32,7 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={handleDeleteDesign}>
+          <Button variant="destructive" onClick={onConfirm}>
             Delete
           </Button>
         </DialogFooter>

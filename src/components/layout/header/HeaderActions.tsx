@@ -47,11 +47,11 @@ export const HeaderActions = () => {
         </Button>
       )}
       
-      <NewDesignDialog open={newDialogOpen} setOpen={setNewDialogOpen} />
-      <LoadDesignDialog open={loadDialogOpen} setOpen={setLoadDialogOpen} />
+      <NewDesignDialog isOpen={newDialogOpen} onOpenChange={setNewDialogOpen} />
+      <LoadDesignDialog isOpen={loadDialogOpen} onOpenChange={setLoadDialogOpen} />
       <DeleteConfirmationDialog 
-        open={deleteDialogOpen}
-        setOpen={setDeleteDialogOpen}
+        isOpen={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
         onConfirm={() => {
           if (activeDesign) {
             deleteDesign(activeDesign.id);
