@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Download, Trash2, Save, Import, Export } from 'lucide-react';
+import { PlusCircle, Download, Trash2, Save, Import, Upload } from 'lucide-react';
 import { NewDesignDialog } from './dialogs/NewDesignDialog';
 import { LoadDesignDialog } from './dialogs/LoadDesignDialog';
 import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
@@ -74,7 +74,7 @@ export const HeaderActions = () => {
             size="sm"
             onClick={() => exportDesign()}
           >
-            <Export className="mr-2 h-4 w-4" />
+            <Upload className="mr-2 h-4 w-4" />
             Export
           </Button>
           
