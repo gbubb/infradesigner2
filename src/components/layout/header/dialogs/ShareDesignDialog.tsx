@@ -18,7 +18,7 @@ export const ShareDesignDialog: React.FC<ShareDesignDialogProps> = ({
   isOpen, 
   onOpenChange
 }) => {
-  const { activeDesign, togglePublicAccess } = useDesignStore();
+  const { activeDesign, togglePublicAccess, saveDesign } = useDesignStore();
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = () => {
@@ -39,13 +39,18 @@ export const ShareDesignDialog: React.FC<ShareDesignDialogProps> = ({
 
   const handleTogglePublic = () => {
     if (activeDesign) {
-      togglePublicAccess(activeDesign.id);
+      togglePublicAccess(activeDesign.id).then(() => {
+        // Save the design to ensure sharing_id is populated
+        saveDesign();
+      });
     }
   };
   
-  const shareUrl = activeDesign ? 
+  // Ensure we have a valid sharing_id
+  const isValidSharingId = activeDesign?.sharing_id && activeDesign.sharing_id !== 'undefined';
+  const shareUrl = activeDesign && isValidSharingId ? 
     `${window.location.origin}/designs/${activeDesign.sharing_id}` : 
-    '';
+    'Design needs to be saved first';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -70,19 +75,25 @@ export const ShareDesignDialog: React.FC<ShareDesignDialogProps> = ({
           <Input
             value={shareUrl}
             readOnly
-            disabled={!activeDesign?.is_public}
+            disabled={!activeDesign?.is_public || !isValidSharingId}
             className="flex-1"
           />
           <Button 
             variant="outline" 
             size="icon"
-            disabled={!activeDesign?.is_public}
+            disabled={!activeDesign?.is_public || !isValidSharingId}
             onClick={handleCopyLink}
           >
             <Copy className="h-4 w-4" />
           </Button>
         </div>
         
+        {!isValidSharingId && (
+          <p className="text-sm text-amber-500">
+            Save your design first to generate a sharing ID.
+          </p>
+        )}
+
         {!activeDesign?.is_public && (
           <p className="text-sm text-muted-foreground">
             The design must be public to share it with others.

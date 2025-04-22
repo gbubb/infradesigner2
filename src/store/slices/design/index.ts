@@ -19,6 +19,7 @@ import {
   updateActiveDesignOperation
 } from './designOperations';
 import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 export const createDesignSlice: StateCreator<
   StoreState,
@@ -35,6 +36,9 @@ export const createDesignSlice: StateCreator<
     set((state) => {
       const newDesign = createNewDesignOperation(name, description, existingDesign, state.requirements);
       newDesignId = newDesign.id;
+      
+      // Ensure the design has a sharing_id
+      newDesign.sharing_id = uuidv4();
       
       const updatedDesigns = [...state.savedDesigns, newDesign];
       
@@ -102,6 +106,11 @@ export const createDesignSlice: StateCreator<
       
       const existingDesign = state.savedDesigns[existingDesignIndex];
       const updatedDesign = updateDesignOperation(existingDesign, updates);
+      
+      // Ensure the design has a sharing_id
+      if (!updatedDesign.sharing_id) {
+        updatedDesign.sharing_id = uuidv4();
+      }
       
       const updatedDesigns = [...state.savedDesigns];
       updatedDesigns[existingDesignIndex] = updatedDesign;
@@ -195,6 +204,11 @@ export const createDesignSlice: StateCreator<
       requirements: state.requirements,
       updatedAt: new Date()
     };
+    
+    // Ensure the design has a sharing_id
+    if (!updatedDesign.sharing_id) {
+      updatedDesign.sharing_id = uuidv4();
+    }
     
     set((state) => {
       const updatedDesigns = state.savedDesigns.map(design => 
