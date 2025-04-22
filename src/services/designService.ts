@@ -4,11 +4,18 @@ import { InfrastructureDesign } from '@/types/infrastructure';
 import { toast } from 'sonner';
 
 // Load all designs from Supabase
-export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
+export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign[]> => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from(TABLES.DESIGNS)
       .select('*');
+      
+    // If userId is provided, filter designs by user_id
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query;
       
     if (handleSupabaseError(error, 'loading designs')) {
       return [];
@@ -41,7 +48,11 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
             selectedGPUsByRole: parsedGPUsByRole,
             // Convert dates
             createdAt: new Date(design.createdat),
-            updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat)
+            updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat),
+            // Add user and sharing data
+            user_id: design.user_id || null,
+            is_public: design.is_public || false,
+            sharing_id: design.sharing_id || null
           };
         } catch (parseErr) {
           console.error('Error parsing design data:', parseErr, design);
@@ -61,8 +72,67 @@ export const loadDesigns = async (): Promise<InfrastructureDesign[]> => {
   }
 };
 
+// Load a design by sharing ID
+export const loadDesignBySharing = async (sharingId: string): Promise<InfrastructureDesign | null> => {
+  try {
+    const { data, error } = await supabase
+      .from(TABLES.DESIGNS)
+      .select('*')
+      .eq('sharing_id', sharingId)
+      .eq('is_public', true)
+      .single();
+      
+    if (handleSupabaseError(error, 'loading shared design')) {
+      return null;
+    }
+    
+    if (!data) {
+      toast.error('Design not found or not public');
+      return null;
+    }
+    
+    try {
+      // Parse JSON fields - use null coalescing to prevent parsing errors
+      const parsedComponents = data.components ? JSON.parse(String(data.components) || '[]') : [];
+      const parsedRequirements = data.requirements ? JSON.parse(String(data.requirements) || '{}') : {};
+      
+      // Parse additional data fields - use optional chaining to safely access properties
+      const parsedComponentRoles = data.component_roles ? JSON.parse(String(data.component_roles) || '[]') : [];
+      const parsedDisksByRole = data.selected_disks_by_role ? JSON.parse(String(data.selected_disks_by_role) || '{}') : {};
+      const parsedGPUsByRole = data.selected_gpus_by_role ? JSON.parse(String(data.selected_gpus_by_role) || '{}') : {};
+      
+      // Create a complete design object with all properties
+      return {
+        id: data.id,
+        name: data.name,
+        description: data.description || '',
+        components: parsedComponents,
+        requirements: parsedRequirements,
+        // Add additional properties
+        componentRoles: parsedComponentRoles,
+        selectedDisksByRole: parsedDisksByRole,
+        selectedGPUsByRole: parsedGPUsByRole,
+        // Convert dates
+        createdAt: new Date(data.createdat),
+        updatedAt: data.updatedat ? new Date(data.updatedat) : new Date(data.createdat),
+        // Add user and sharing data
+        user_id: data.user_id || null,
+        is_public: data.is_public || false,
+        sharing_id: data.sharing_id || null
+      };
+    } catch (parseErr) {
+      console.error('Error parsing shared design data:', parseErr, data);
+      return null;
+    }
+  } catch (err) {
+    console.error('Error loading shared design:', err);
+    toast.error('Failed to load shared design from the database');
+    return null;
+  }
+};
+
 // Save a design to Supabase
-export const saveDesign = async (design: InfrastructureDesign): Promise<boolean> => {
+export const saveDesign = async (design: InfrastructureDesign, userId?: string): Promise<boolean> => {
   try {
     // Format data for Supabase - convert complex objects to JSON strings
     // We need to ensure these are serializable for the database
@@ -79,7 +149,10 @@ export const saveDesign = async (design: InfrastructureDesign): Promise<boolean>
       selected_gpus_by_role: JSON.stringify(design.selectedGPUsByRole || {}),
       // Dates
       createdat: design.createdAt.toISOString(),
-      updatedat: new Date().toISOString()
+      updatedat: new Date().toISOString(),
+      // User and sharing data
+      user_id: userId || design.user_id,
+      is_public: design.is_public || false
     };
     
     const { error } = await supabase
@@ -94,6 +167,26 @@ export const saveDesign = async (design: InfrastructureDesign): Promise<boolean>
   } catch (err) {
     console.error('Error saving design:', err);
     toast.error('Failed to save design to the database');
+    return false;
+  }
+};
+
+// Toggle public access for a design
+export const togglePublicAccess = async (designId: string, isPublic: boolean): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from(TABLES.DESIGNS)
+      .update({ is_public: isPublic })
+      .eq('id', designId);
+    
+    if (handleSupabaseError(error, 'updating design visibility')) {
+      return false;
+    }
+    
+    return true;
+  } catch (err) {
+    console.error('Error updating design visibility:', err);
+    toast.error('Failed to update design visibility');
     return false;
   }
 };

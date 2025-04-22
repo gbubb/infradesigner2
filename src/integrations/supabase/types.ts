@@ -64,11 +64,14 @@ export type Database = {
           createdat: string | null
           description: string | null
           id: string
+          is_public: boolean | null
           name: string
           requirements: Json | null
           selected_disks_by_role: Json | null
           selected_gpus_by_role: Json | null
+          sharing_id: string | null
           updatedat: string | null
+          user_id: string | null
         }
         Insert: {
           component_roles?: Json | null
@@ -76,11 +79,14 @@ export type Database = {
           createdat?: string | null
           description?: string | null
           id?: string
+          is_public?: boolean | null
           name: string
           requirements?: Json | null
           selected_disks_by_role?: Json | null
           selected_gpus_by_role?: Json | null
+          sharing_id?: string | null
           updatedat?: string | null
+          user_id?: string | null
         }
         Update: {
           component_roles?: Json | null
@@ -88,11 +94,41 @@ export type Database = {
           createdat?: string | null
           description?: string | null
           id?: string
+          is_public?: boolean | null
           name?: string
           requirements?: Json | null
           selected_disks_by_role?: Json | null
           selected_gpus_by_role?: Json | null
+          sharing_id?: string | null
           updatedat?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

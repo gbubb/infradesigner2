@@ -14,6 +14,7 @@ export interface DesignSlice {
   exportDesign: () => void;
   importDesign: (file: File) => Promise<void>;
   loadDesignsFromDB: () => Promise<void>;
+  loadSharedDesign: (sharingId: string) => Promise<boolean>;
+  togglePublicAccess: (id: string) => Promise<void>;
   purgeAllDesigns: () => Promise<void>;
 }
-

@@ -9,13 +9,16 @@ import {
   loadDesignsFromDB,
   exportDesignToFile,
   importDesignFromFile,
-  purgeAllDesignsFromDB
+  purgeAllDesignsFromDB,
+  togglePublicAccessInDB,
+  loadSharedDesignFromDB
 } from './databaseOperations';
 import {
   createNewDesignOperation,
   updateDesignOperation,
   updateActiveDesignOperation
 } from './designOperations';
+import { supabase } from '@/integrations/supabase/client';
 
 export const createDesignSlice: StateCreator<
   StoreState,
@@ -35,10 +38,16 @@ export const createDesignSlice: StateCreator<
       
       const updatedDesigns = [...state.savedDesigns, newDesign];
       
-      saveDesignToDB(newDesign).then(success => {
-        if (success) {
-          toast.success(`Created new design: ${name}`);
-        }
+      // Get the current user's ID
+      const user = supabase.auth.getUser().then(({ data }) => {
+        const userId = data?.user?.id;
+        
+        // Save with user ID if available
+        saveDesignToDB(newDesign, userId).then(success => {
+          if (success) {
+            toast.success(`Created new design: ${name}`);
+          }
+        });
       });
       
       return {
@@ -63,10 +72,16 @@ export const createDesignSlice: StateCreator<
         design.id === updatedDesign.id ? updatedDesign : design
       );
       
-      saveDesignToDB(updatedDesign).then(success => {
-        if (success) {
-          toast.success(`Updated design: ${updatedDesign.name}`);
-        }
+      // Get the current user's ID
+      supabase.auth.getUser().then(({ data }) => {
+        const userId = data?.user?.id;
+        
+        // Save with user ID if available
+        saveDesignToDB(updatedDesign, userId).then(success => {
+          if (success) {
+            toast.success(`Updated design: ${updatedDesign.name}`);
+          }
+        });
       });
       
       return {
@@ -96,10 +111,16 @@ export const createDesignSlice: StateCreator<
           ? updatedDesign 
           : state.activeDesign;
       
-      saveDesignToDB(updatedDesign).then(success => {
-        if (success) {
-          toast.success(`Updated design: ${updatedDesign.name}`);
-        }
+      // Get the current user's ID
+      supabase.auth.getUser().then(({ data }) => {
+        const userId = data?.user?.id;
+        
+        // Save with user ID if available
+        saveDesignToDB(updatedDesign, userId).then(success => {
+          if (success) {
+            toast.success(`Updated design: ${updatedDesign.name}`);
+          }
+        });
       });
       
       return {
@@ -186,10 +207,16 @@ export const createDesignSlice: StateCreator<
       };
     });
     
-    saveDesignToDB(updatedDesign).then(success => {
-      if (success) {
-        toast.success(`Saved design: ${updatedDesign.name}`);
-      }
+    // Get the current user's ID
+    supabase.auth.getUser().then(({ data }) => {
+      const userId = data?.user?.id;
+      
+      // Save with user ID if available
+      saveDesignToDB(updatedDesign, userId).then(success => {
+        if (success) {
+          toast.success(`Saved design: ${updatedDesign.name}`);
+        }
+      });
     });
   },
   
@@ -217,7 +244,11 @@ export const createDesignSlice: StateCreator<
         const updatedDesigns = [...state.savedDesigns];
         updatedDesigns[existingDesignIndex] = importedDesign;
         
-        saveDesignToDB(importedDesign);
+        // Get the current user's ID for saving
+        supabase.auth.getUser().then(({ data }) => {
+          const userId = data?.user?.id;
+          saveDesignToDB(importedDesign, userId);
+        });
         
         return {
           savedDesigns: updatedDesigns,
@@ -226,7 +257,11 @@ export const createDesignSlice: StateCreator<
       } else {
         const updatedDesigns = [...state.savedDesigns, importedDesign];
         
-        saveDesignToDB(importedDesign);
+        // Get the current user's ID for saving
+        supabase.auth.getUser().then(({ data }) => {
+          const userId = data?.user?.id;
+          saveDesignToDB(importedDesign, userId);
+        });
         
         return {
           savedDesigns: updatedDesigns,
@@ -238,7 +273,12 @@ export const createDesignSlice: StateCreator<
   
   loadDesignsFromDB: async () => {
     try {
-      const designs = await loadDesignsFromDB();
+      // Get the current user ID
+      const { data } = await supabase.auth.getUser();
+      const userId = data?.user?.id;
+      
+      // Load designs for this user
+      const designs = userId ? await loadDesignsFromDB(userId) : [];
       
       if (designs && designs.length > 0) {
         set({ savedDesigns: designs });
@@ -250,6 +290,87 @@ export const createDesignSlice: StateCreator<
       console.error("Error loading designs from database:", error);
       toast.error("Failed to load designs");
     }
+  },
+  
+  loadSharedDesign: async (sharingId: string) => {
+    try {
+      const design = await loadSharedDesignFromDB(sharingId);
+      
+      if (design) {
+        // Set the shared design as active but read-only
+        set((state) => {
+          // Add to designs list if not already present
+          const existingDesignIndex = state.savedDesigns.findIndex(d => d.id === design.id);
+          
+          if (existingDesignIndex === -1) {
+            return {
+              activeDesign: design,
+              componentRoles: design.componentRoles || [],
+              requirements: design.requirements || state.requirements,
+              selectedDisksByRole: design.selectedDisksByRole || {},
+              selectedGPUsByRole: design.selectedGPUsByRole || {}
+            };
+          } else {
+            return {
+              activeDesign: design,
+              componentRoles: design.componentRoles || [],
+              requirements: design.requirements || state.requirements,
+              selectedDisksByRole: design.selectedDisksByRole || {},
+              selectedGPUsByRole: design.selectedGPUsByRole || {}
+            };
+          }
+        });
+        
+        toast.success(`Loaded shared design: ${design.name}`);
+        return true;
+      } else {
+        toast.error("Shared design not found or not public");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error loading shared design:", error);
+      toast.error("Failed to load shared design");
+      return false;
+    }
+  },
+  
+  togglePublicAccess: async (id: string) => {
+    set((state) => {
+      const designIndex = state.savedDesigns.findIndex(d => d.id === id);
+      
+      if (designIndex === -1) {
+        toast.error("Design not found");
+        return state;
+      }
+      
+      const design = state.savedDesigns[designIndex];
+      const isPublic = !design.is_public;
+      
+      const updatedDesign = {
+        ...design,
+        is_public: isPublic
+      };
+      
+      const updatedDesigns = [...state.savedDesigns];
+      updatedDesigns[designIndex] = updatedDesign;
+      
+      const newActiveDesign = 
+        state.activeDesign && state.activeDesign.id === id 
+          ? updatedDesign 
+          : state.activeDesign;
+      
+      // Update public access in DB
+      togglePublicAccessInDB(id, isPublic).then(success => {
+        if (success) {
+          toast.success(`Design is now ${isPublic ? 'public' : 'private'}`);
+        }
+      });
+      
+      return {
+        savedDesigns: updatedDesigns,
+        activeDesign: newActiveDesign
+      };
+    });
   },
   
   purgeAllDesigns: async () => {
@@ -267,4 +388,3 @@ export const createDesignSlice: StateCreator<
     }
   }
 });
-

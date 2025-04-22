@@ -1,19 +1,42 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Download, Trash2, Save, Import, Upload } from 'lucide-react';
+import { 
+  PlusCircle, 
+  Download, 
+  Trash2, 
+  Save, 
+  Import, 
+  Upload, 
+  LogOut, 
+  Share2, 
+  Globe 
+} from 'lucide-react';
 import { NewDesignDialog } from './dialogs/NewDesignDialog';
 import { LoadDesignDialog } from './dialogs/LoadDesignDialog';
 import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
+import { ShareDesignDialog } from './dialogs/ShareDesignDialog';
 import { useDesignStore } from '@/store/designStore';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export const HeaderActions = () => {
-  const { activeDesign, deleteDesign, saveDesign, exportDesign, importDesign } = useDesignStore();
-  const [newDialogOpen, setNewDialogOpen] = React.useState(false);
-  const [loadDialogOpen, setLoadDialogOpen] = React.useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const { activeDesign, deleteDesign, saveDesign, exportDesign, importDesign, togglePublicAccess } = useDesignStore();
+  const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const [loadDialogOpen, setLoadDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  
+  const { user, signOut } = useAuth();
   
   const handleImport = () => {
     // Create a file input element
@@ -34,6 +57,31 @@ export const HeaderActions = () => {
     document.body.appendChild(fileInput);
     fileInput.click();
     document.body.removeChild(fileInput);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Error during logout:", error);
+      toast.error("Logout failed");
+    }
+  };
+
+  const getUserInitials = () => {
+    if (!user) return "?";
+    const email = user.email || "";
+    return email.substring(0, 2).toUpperCase();
+  };
+
+  const handleShareDesign = () => {
+    setShareDialogOpen(true);
+  };
+
+  const handleTogglePublicAccess = () => {
+    if (activeDesign) {
+      togglePublicAccess(activeDesign.id);
+    }
   };
 
   return (
@@ -90,6 +138,24 @@ export const HeaderActions = () => {
           <Button
             variant="outline"
             size="sm"
+            onClick={handleShareDesign}
+          >
+            <Share2 className="mr-2 h-4 w-4" />
+            Share
+          </Button>
+          
+          <Button
+            variant={activeDesign.is_public ? "default" : "outline"}
+            size="sm"
+            onClick={handleTogglePublicAccess}
+          >
+            <Globe className="mr-2 h-4 w-4" />
+            {activeDesign.is_public ? "Public" : "Private"}
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setDeleteDialogOpen(true)}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -97,6 +163,24 @@ export const HeaderActions = () => {
           </Button>
         </>
       )}
+      
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="rounded-full">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback>{getUserInitials()}</AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem disabled>{user?.email}</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       
       <NewDesignDialog isOpen={newDialogOpen} onOpenChange={setNewDialogOpen} />
       <LoadDesignDialog isOpen={loadDialogOpen} onOpenChange={setLoadDialogOpen} />
@@ -109,6 +193,10 @@ export const HeaderActions = () => {
           }
           setDeleteDialogOpen(false);
         }}
+      />
+      <ShareDesignDialog 
+        isOpen={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
       />
     </div>
   );

@@ -16,6 +16,10 @@ export interface InfrastructureDesign {
   selectedDisksByRole?: Record<string, { diskId: string, quantity: number }[]>;
   selectedGPUsByRole?: Record<string, { gpuId: string, quantity: number }[]>;
   selectedCassettesByRole?: Record<string, { cassetteId: string, quantity: number }[]>;
+  // User and sharing properties
+  user_id?: string | null;
+  is_public?: boolean;
+  sharing_id?: string | null;
 }
 
 // Workspace types for component positioning
