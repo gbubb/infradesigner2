@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { ComponentRole, IPMINetworkType, NetworkTopology } from '@/types/infrastructure';
 
@@ -38,13 +37,21 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   const networkCoreRackQuantity = getValue(requirements, 'physicalConstraints.networkCoreRackQuantity', 2) || 
     (dedicatedNetworkCoreRacks ? 2 : 0);
   
-  const mgmtSwitchesPerAZ = managementNetwork === 'Dual Home' ? 2 : 1;
-  const ipmiNetwork = getValue(requirements, 'networkRequirements.ipmiNetwork', "Management converged") as IPMINetworkType;
+  // Important: Don't add any management switches if we have converged management plane
+  const isConvergedManagement = managementNetwork === 'Converged Management Plane';
+  const mgmtSwitchesPerAZ = isConvergedManagement ? 0 : (managementNetwork === 'Dual Home' ? 2 : 1);
   
+  const ipmiNetwork = getValue(requirements, 'networkRequirements.ipmiNetwork', "Management converged") as IPMINetworkType;
+  const needsDedicatedIpmiSwitches = ipmiNetwork === "Dedicated IPMI switch";
+  
+  // Calculate management switches based on configuration
   let managementSwitchCount = totalAvailabilityZones * mgmtSwitchesPerAZ;
   
-  if (ipmiNetwork === "Dedicated IPMI switch") {
-    managementSwitchCount += totalAvailabilityZones;
+  // Add IPMI switches if dedicated IPMI network is required
+  // Only add these if we're not in converged management mode
+  let ipmiSwitchCount = 0;
+  if (needsDedicatedIpmiSwitches && !isConvergedManagement) {
+    ipmiSwitchCount = totalAvailabilityZones; // 1 IPMI switch per AZ
   }
   
   const leafSwitchCount = totalAvailabilityZones * leafSwitchesPerAZ;
@@ -124,13 +131,25 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
     });
   }
   
-  // Add network components
-  newRoles.push({
-    id: uuidv4(),
-    role: 'managementSwitch',
-    description: 'Provides network connectivity for management interfaces',
-    requiredCount: managementSwitchCount
-  });
+  // Add management switches only if we need them
+  if (managementSwitchCount > 0) {
+    newRoles.push({
+      id: uuidv4(),
+      role: 'managementSwitch',
+      description: 'Provides network connectivity for management interfaces',
+      requiredCount: managementSwitchCount
+    });
+  }
+  
+  // Add dedicated IPMI switches if needed
+  if (ipmiSwitchCount > 0) {
+    newRoles.push({
+      id: uuidv4(),
+      role: 'ipmiSwitch',
+      description: 'Provides dedicated network connectivity for IPMI interfaces',
+      requiredCount: ipmiSwitchCount
+    });
+  }
   
   if (networkTopology === 'Spine-Leaf') {
     newRoles.push({

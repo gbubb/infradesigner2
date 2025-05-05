@@ -60,6 +60,7 @@ export enum DeviceRoleType {
   Storage = 'storageNode',
   GPU = 'gpuNode',
   ManagementSwitch = 'managementSwitch',
+  IPMISwitch = 'ipmiSwitch',
   LeafSwitch = 'leafSwitch',
   BorderLeafSwitch = 'borderLeafSwitch',
   SpineSwitch = 'spineSwitch',

@@ -12,12 +12,14 @@ export const useNetworkPortsMetrics = () => {
         totalLeafSwitches: 0,
         totalStorageSwitches: 0,
         totalMgmtSwitches: 0,
+        totalIPMISwitches: 0,
         leafPortsUsed: 0,
         leafPortsAvailable: 0,
         storagePortsUsed: 0,
         storagePortsAvailable: 0,
         mgmtPortsUsed: 0,
         mgmtPortsAvailable: 0,
+        isConvergedManagement: false,
       };
     }
     
@@ -30,6 +32,7 @@ export const useNetworkPortsMetrics = () => {
     let totalLeafSwitches = 0;
     let totalStorageSwitches = 0;
     let totalMgmtSwitches = 0;
+    let totalIPMISwitches = 0;
     let leafPortsUsed = 0;
     let leafPortsAvailable = 0;
     let storagePortsUsed = 0;
@@ -78,6 +81,12 @@ export const useNetworkPortsMetrics = () => {
           if (ipmiNetwork === 'Management converged') {
             mgmtPortsUsed += quantity;
           }
+        } else {
+          // If using converged management, add management ports to leaf network
+          leafPortsUsed += (managementNetwork === 'Dual Home' ? 2 : 1) * quantity;
+          
+          // Add IPMI ports to leaf network too
+          leafPortsUsed += quantity; // Always 1 IPMI port per server
         }
       } else if (component.type === ComponentType.Switch) {
         // Calculate switch ports
@@ -94,6 +103,10 @@ export const useNetworkPortsMetrics = () => {
         if (component.role === 'managementSwitch') {
           totalMgmtSwitches += quantity;
           mgmtPortsAvailable += portCount * quantity;
+        } else if (component.role === 'ipmiSwitch') {
+          totalIPMISwitches += quantity;
+          // IPMI switches are accounted separately but we'll include their ports in management
+          mgmtPortsAvailable += portCount * quantity;
         } else if (component.role === 'storageSwitch') {
           totalStorageSwitches += quantity;
           storagePortsAvailable += portCount * quantity;
@@ -108,13 +121,15 @@ export const useNetworkPortsMetrics = () => {
       totalLeafSwitches,
       totalStorageSwitches,
       totalMgmtSwitches,
+      totalIPMISwitches,
       leafPortsUsed,
       leafPortsAvailable,
       storagePortsUsed,
       storagePortsAvailable,
       mgmtPortsUsed,
       mgmtPortsAvailable,
-      hasDedicatedStorageNetwork
+      hasDedicatedStorageNetwork,
+      isConvergedManagement
     };
   }, [activeDesign]);
 };
