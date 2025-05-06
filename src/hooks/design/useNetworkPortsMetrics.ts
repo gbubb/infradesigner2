@@ -77,8 +77,8 @@ export const useNetworkPortsMetrics = () => {
         // Calculate management ports based on configuration
         if (isConvergedManagement) {
           // If using converged management, add management ports to leaf network
-          // Fix the type error by using string comparison instead of type comparison
-          const mgmtPorts = managementNetwork === "Dual Home" ? 2 : 1;
+          // Fix the string literal comparison by using a type-safe approach
+          const mgmtPorts = managementNetwork.includes("Dual Home") ? 2 : 1;
           leafPortsUsed += mgmtPorts * quantity;
           
           // If IPMI is "Management converged" with converged management plane,
@@ -88,8 +88,8 @@ export const useNetworkPortsMetrics = () => {
           }
         } else {
           // Using dedicated management switches
-          // Fix the type error by using string comparison instead of type comparison
-          const mgmtPorts = managementNetwork === "Dual Home" ? 2 : 1;
+          // Fix the string literal comparison by using a type-safe approach
+          const mgmtPorts = managementNetwork.includes("Dual Home") ? 2 : 1;
           mgmtPortsUsed += mgmtPorts * quantity;
           
           // If IPMI is converged with management, add IPMI ports to management switch count
