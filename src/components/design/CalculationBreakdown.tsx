@@ -226,6 +226,25 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
         steps.push(`Storage node calculation depends on cluster settings and component details.`);
         steps.push(`Detailed breakdown for storage is complex and may require manual review.`);
       }
+    } else if (roleType === 'managementSwitch') {
+      // Special handling for management switches
+      const totalAvailabilityZones = store.requirements.physicalConstraints.totalAvailabilityZones || 1;
+      const managementNetwork = store.requirements.networkRequirements.managementNetwork || 'Dual Home';
+      
+      steps.push(`Management Network: ${managementNetwork}`);
+      const managementPerAZ = managementNetwork.includes("Dual") ? 2 : 1;
+      steps.push(`Management Switches Per AZ: ${managementPerAZ}`);
+      const totalManagementSwitches = managementPerAZ * totalAvailabilityZones;
+      steps.push(`Total Management Switches: ${managementPerAZ} switches/AZ × ${totalAvailabilityZones} AZs = ${totalManagementSwitches} switches`);
+      
+      generatedQty = totalManagementSwitches;
+    } else if (roleType === 'ipmiSwitch') {
+      // Special handling for IPMI switches
+      const totalAvailabilityZones = store.requirements.physicalConstraints.totalAvailabilityZones || 1;
+      steps.push(`IPMI Network: Dedicated IPMI switch`);
+      steps.push(`IPMI Switches: 1 switch/AZ × ${totalAvailabilityZones} AZs = ${totalAvailabilityZones} switches`);
+      
+      generatedQty = totalAvailabilityZones;
     } else if (roleType.includes('Switch')) {
       steps.push(`Network switches are calculated based on the network topology, switch role, and availability zones.`);
       steps.push(`Switch quantity depends on topology, role (Leaf, Spine, Core), ports needed, and redundancy.`);

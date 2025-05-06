@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Button } from '@/components/ui/button';
@@ -28,6 +27,7 @@ export const CalculationBreakdownDialog: React.FC<CalculationBreakdownDialogProp
   
   const role = store.componentRoles.find(r => r.id === roleId);
   const clusterName = role?.clusterInfo?.clusterName;
+  const roleType = role?.role || '';
   
   const handleOpenDialog = () => {
     setIsLoading(true);
@@ -36,27 +36,53 @@ export const CalculationBreakdownDialog: React.FC<CalculationBreakdownDialogProp
     setBreakdownSteps([]);
     
     try {
-      // Get calculation breakdown from store
+      // Get calculation breakdown from store or role
       if (role?.assignedComponentId) {
-        const breakdownData = store.getCalculationBreakdown(roleId);
-        const quantity = store.calculateRequiredQuantity(roleId, role.assignedComponentId);
+        let displayedSteps: string[] = [];
         
-        if (breakdownData && breakdownData.length > 0) {
-          setBreakdownSteps(breakdownData);
-          setCalculatedQuantity(quantity);
-        } else if (role.calculationSteps && role.calculationSteps.length > 0) {
-          // Use the calculation steps stored in the role if available
-          setBreakdownSteps(role.calculationSteps);
-          setCalculatedQuantity(quantity);
-        } else {
-          // Fallback if no breakdown is available
-          setBreakdownSteps([
-            `Role: ${roleName}`,
-            `Component: ${role.assignedComponentId ? 'Assigned' : 'None'}`,
-            `Calculated quantity: ${quantity || 'N/A'}`
-          ]);
-          setCalculatedQuantity(quantity);
+        // If we have calculation steps stored in the role, use those first
+        if (role.calculationSteps && role.calculationSteps.length > 0) {
+          displayedSteps = [...role.calculationSteps];
         }
+        // Otherwise try to get them from the store calculation breakdown
+        else {
+          const storeBreakdown = store.getCalculationBreakdown(roleId);
+          if (storeBreakdown && storeBreakdown.length > 0) {
+            displayedSteps = [...storeBreakdown];
+          }
+        }
+        
+        // If we still don't have steps, create a basic breakdown
+        if (displayedSteps.length === 0) {
+          // Create basic breakdown based on role type
+          if (roleType === 'managementSwitch') {
+            const totalAvailabilityZones = store.requirements.physicalConstraints.totalAvailabilityZones || 1;
+            const managementNetwork = store.requirements.networkRequirements.managementNetwork || 'Dual Home';
+            
+            displayedSteps = [
+              `Management Network: ${managementNetwork}`,
+              `Management Switches Per AZ: ${managementNetwork.includes("Dual") ? 2 : 1}`,
+              `Total Management Switches: ${managementNetwork.includes("Dual") ? 2 : 1} switches/AZ × ${totalAvailabilityZones} AZs = ${(managementNetwork.includes("Dual") ? 2 : 1) * totalAvailabilityZones} switches`
+            ];
+          } else if (roleType === 'ipmiSwitch') {
+            const totalAvailabilityZones = store.requirements.physicalConstraints.totalAvailabilityZones || 1;
+            
+            displayedSteps = [
+              `IPMI Network: Dedicated IPMI switch`,
+              `IPMI Switches: 1 switch/AZ × ${totalAvailabilityZones} AZs = ${totalAvailabilityZones} switches`
+            ];
+          } else {
+            displayedSteps = [
+              `Role: ${roleName} ${roleType ? `(${roleType})` : ''}`,
+              `Component: ${role.assignedComponentId ? 'Assigned' : 'None'}`,
+              `Calculated quantity: ${role.adjustedRequiredCount || role.requiredCount || 'N/A'}`
+            ];
+          }
+        }
+        
+        const quantity = store.calculateRequiredQuantity(roleId, role.assignedComponentId);
+        setBreakdownSteps(displayedSteps);
+        setCalculatedQuantity(quantity);
       } else {
         setBreakdownSteps(['No component assigned to this role.']);
       }
