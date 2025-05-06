@@ -90,6 +90,8 @@ export const DesignPanel: React.FC = () => {
         return componentTemplates.filter(c => c.type === ComponentType.Server && (c as any).serverRole === 'controller');
       case 'managementSwitch':
         return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'management');
+      case 'ipmiSwitch': // Updated from 'ipmiSwitch' to filter to show only management switches
+        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'management');
       case 'leafSwitch':
         return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'leaf');
       case 'borderLeafSwitch':
@@ -178,7 +180,9 @@ export const DesignPanel: React.FC = () => {
                 <Card key={role.id} className="h-full flex flex-col">
                   <CardHeader className="py-4 px-4">
                     <CardTitle className="text-lg">
-                      {role.role.charAt(0).toUpperCase() + role.role.slice(1).replace(/([A-Z])/g, ' $1')}
+                      {role.role === 'ipmiSwitch' 
+                        ? 'IPMI Switch'  // Updated capitalization here
+                        : role.role.charAt(0).toUpperCase() + role.role.slice(1).replace(/([A-Z])/g, ' $1')}
                       <div className="text-xs text-muted-foreground mt-1">
                         {role.description}
                       </div>

@@ -90,7 +90,8 @@ export const useNetworkPortsMetrics = () => {
           // If using converged management, add management ports to leaf network
           // Use type assertion to compare strings directly
           const mgmtNetworkValue = managementNetwork as string;
-          leafPortsUsed += (mgmtNetworkValue === "Dual Home" ? 2 : 1) * quantity;
+          const mgmtPorts = mgmtNetworkValue === "Dual Home" ? 2 : 1;
+          leafPortsUsed += mgmtPorts * quantity;
           
           // If converged management is used but IPMI is on dedicated switches,
           // we don't need to add IPMI ports to leaf network
