@@ -1,3 +1,4 @@
+
 import { 
   calculateComputeNodeQuantity,
   calculateStorageNodeQuantity,
@@ -160,26 +161,47 @@ export const calculateRequiredQuantity = (
       requiredQuantity = leafSwitchesPerAZ * totalAZs;
     } 
     else if (role.role === 'managementSwitch') {
-      const mgmtSwitchesPerAZ = networkReqs.managementNetwork === 'Dual Home' ? 2 : 1;
+      // FIX: Completely rewrite management switch calculation to avoid any IPMI influence
+      const managementNetwork = networkReqs.managementNetwork || 'Dual Home';
       const totalAZs = physicalConstraints.totalAvailabilityZones || 1;
       
-      calculationSteps.push(`Management Network: ${networkReqs.managementNetwork || 'Dual Home'}`);
+      // Determine switches per AZ based solely on management network type
+      const mgmtSwitchesPerAZ = managementNetwork === 'Dual Home' ? 2 : 1;
+      
+      // Calculate management switches independently from IPMI
+      const totalMgmtSwitches = mgmtSwitchesPerAZ * totalAZs;
+      
+      calculationSteps.push(`Management Network: ${managementNetwork}`);
       calculationSteps.push(`Total Availability Zones: ${totalAZs}`);
       calculationSteps.push(`Management Switches Per AZ: ${mgmtSwitchesPerAZ}`);
+      calculationSteps.push(`Total Management Switches: ${mgmtSwitchesPerAZ} switches/AZ × ${totalAZs} AZs = ${totalMgmtSwitches} switches`);
       
-      let totalMgmtSwitches = mgmtSwitchesPerAZ * totalAZs;
-      
-      calculationSteps.push(`Base Calculation: ${mgmtSwitchesPerAZ} switches per AZ × ${totalAZs} AZs = ${totalMgmtSwitches} switches`);
-      
-      // Add IPMI switches if needed
-      if (networkReqs.ipmiNetwork === 'Dedicated IPMI switch') {
-        calculationSteps.push(`IPMI Network: Dedicated IPMI switches (requires 1 additional switch per AZ)`);
-        calculationSteps.push(`IPMI Switches: 1 per AZ × ${totalAZs} AZs = ${totalAZs} additional switches`);
-        totalMgmtSwitches += totalAZs;
-      }
-      
-      calculationSteps.push(`Total Management Switches: ${totalMgmtSwitches}`);
       requiredQuantity = totalMgmtSwitches;
+      
+      // No IPMI-related calculation here at all
+    }
+    else if (role.role === 'ipmiSwitch') {
+      // Separate IPMI switch calculation
+      const totalAZs = physicalConstraints.totalAvailabilityZones || 1;
+      const ipmiNetwork = networkReqs.ipmiNetwork || 'Dedicated IPMI switch';
+      
+      // Only calculate IPMI switches if using dedicated IPMI switches
+      if (ipmiNetwork === 'Dedicated IPMI switch') {
+        // Always 1 switch per AZ
+        const ipmiSwitchCount = totalAZs;
+        
+        calculationSteps.push(`IPMI Network: ${ipmiNetwork}`);
+        calculationSteps.push(`Total Availability Zones: ${totalAZs}`);
+        calculationSteps.push(`IPMI Switches Per AZ: 1`);
+        calculationSteps.push(`Total IPMI Switches: 1 switch/AZ × ${totalAZs} AZs = ${ipmiSwitchCount} switches`);
+        
+        requiredQuantity = ipmiSwitchCount;
+      } else {
+        calculationSteps.push(`IPMI Network: ${ipmiNetwork}`);
+        calculationSteps.push(`IPMI traffic is converged with management network`);
+        calculationSteps.push(`No dedicated IPMI switches required`);
+        requiredQuantity = 0;
+      }
     }
     else if (role.role === 'spineSwitch') {
       calculationSteps.push(`Network Topology: ${networkReqs.networkTopology || 'Spine-Leaf'}`);
