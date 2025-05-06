@@ -71,8 +71,10 @@ export const useNetworkPortsMetrics = () => {
         // Only add management ports if not using converged management
         if (!isConvergedManagement) {
           let serverMgmtPortsUsed = 1; // Default if not specified
-          // Compare with string literals directly to avoid TypeScript errors
-          if (managementNetwork === "Dual Home") {
+          
+          // Use a type assertion to compare strings directly
+          const mgmtNetworkValue = managementNetwork as string;
+          if (mgmtNetworkValue === "Dual Home") {
             serverMgmtPortsUsed = 2;
           }
           
@@ -84,8 +86,9 @@ export const useNetworkPortsMetrics = () => {
           }
         } else {
           // If using converged management, add management ports to leaf network
-          // Compare with string literals directly
-          leafPortsUsed += (managementNetwork === "Dual Home" ? 2 : 1) * quantity;
+          // Use type assertion to compare strings directly
+          const mgmtNetworkValue = managementNetwork as string;
+          leafPortsUsed += (mgmtNetworkValue === "Dual Home" ? 2 : 1) * quantity;
           
           // Add IPMI ports to leaf network too
           leafPortsUsed += quantity; // Always 1 IPMI port per server
