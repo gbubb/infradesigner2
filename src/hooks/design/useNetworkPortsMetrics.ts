@@ -1,7 +1,7 @@
 
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType } from '@/types/infrastructure';
+import { ComponentType, ManagementNetworkType, IPMINetworkType } from '@/types/infrastructure';
 
 export const useNetworkPortsMetrics = () => {
   const { activeDesign } = useDesignStore();
@@ -25,8 +25,8 @@ export const useNetworkPortsMetrics = () => {
     
     // Check if dedicated storage network is enabled
     const hasDedicatedStorageNetwork = activeDesign.requirements?.networkRequirements?.dedicatedStorageNetwork || false;
-    const ipmiNetwork = activeDesign.requirements?.networkRequirements?.ipmiNetwork || 'Management converged';
-    const managementNetwork = activeDesign.requirements?.networkRequirements?.managementNetwork || 'Dual Home';
+    const ipmiNetwork = activeDesign.requirements?.networkRequirements?.ipmiNetwork || 'Management converged' as IPMINetworkType;
+    const managementNetwork = activeDesign.requirements?.networkRequirements?.managementNetwork || 'Dual Home' as ManagementNetworkType;
     const isConvergedManagement = managementNetwork === 'Converged Management Plane';
     
     let totalLeafSwitches = 0;

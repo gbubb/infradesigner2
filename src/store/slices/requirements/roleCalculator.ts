@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { ComponentRole, IPMINetworkType, NetworkTopology } from '@/types/infrastructure';
+import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType } from '@/types/infrastructure';
 
 /**
  * Calculates component roles based on requirements
@@ -25,7 +25,7 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false) || false;
   const leafSwitchesPerAZ = getValue(requirements, 'networkRequirements.leafSwitchesPerAZ', 2) || 2;
   const dedicatedStorageNetwork = getValue(requirements, 'networkRequirements.dedicatedStorageNetwork', false) || false;
-  const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', "Dual Home") || "Dual Home";
+  const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', "Dual Home") as ManagementNetworkType || "Dual Home";
   
   // Structured cabling requirements
   const copperPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.copperPatchPanelsPerAZ', 2) || 0;

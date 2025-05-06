@@ -1,5 +1,5 @@
 
-import { NetworkTopology } from './network-types';
+import { NetworkTopology, ManagementNetworkType, IPMINetworkType } from './network-types';
 import { StorageClusterRequirement } from './storage-types';
 
 // Compute cluster requirements
@@ -28,8 +28,8 @@ export interface DesignRequirements {
   };
   networkRequirements: {
     networkTopology?: NetworkTopology;
-    managementNetwork?: "Single connection" | "Dual Home" | "Converged Management Plane";
-    ipmiNetwork?: "Management converged" | "Dedicated IPMI switch";
+    managementNetwork?: ManagementNetworkType;
+    ipmiNetwork?: IPMINetworkType;
     physicalFirewalls?: boolean;
     leafSwitchesPerAZ?: number;
     dedicatedStorageNetwork?: boolean;

@@ -1,4 +1,3 @@
-
 import { InfrastructureComponent, ComponentType } from './component-types';
 
 export enum SwitchRole {
@@ -29,6 +28,12 @@ export enum PortSpeed {
   HundredG = '100G',
   Speed400G = '400G'
 }
+
+// Management network types
+export type ManagementNetworkType = "Single connection" | "Dual Home" | "Converged Management Plane";
+
+// IPMI network types as string literal type
+export type IPMINetworkType = "Management converged" | "Dedicated IPMI switch";
 
 // Switch interface
 export interface Switch extends InfrastructureComponent {
@@ -67,9 +72,11 @@ export interface Firewall extends InfrastructureComponent {
   features?: string[];
 }
 
-export enum IPMINetworkType {
+// Keep the enum for backward compatibility
+export enum IPMINetworkEnum {
   Shared = 'shared',
   Dedicated = 'dedicated',
   None = 'none',
-  DedicatedIPMISwitch = 'Dedicated IPMI switch'
+  DedicatedIPMISwitch = 'Dedicated IPMI switch',
+  ManagementConverged = 'Management converged'
 }
