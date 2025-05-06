@@ -37,20 +37,20 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   const networkCoreRackQuantity = getValue(requirements, 'physicalConstraints.networkCoreRackQuantity', 2) || 
     (dedicatedNetworkCoreRacks ? 2 : 0);
   
-  // Important: Don't add any management switches if we have converged management plane
+  // Only add management switches when not using converged management plane
   const isConvergedManagement = managementNetwork === 'Converged Management Plane';
   const mgmtSwitchesPerAZ = isConvergedManagement ? 0 : (managementNetwork === 'Dual Home' ? 2 : 1);
   
-  const ipmiNetwork = getValue(requirements, 'networkRequirements.ipmiNetwork', "Management converged") as IPMINetworkType;
+  const ipmiNetwork = getValue(requirements, 'networkRequirements.ipmiNetwork', "Dedicated IPMI switch") as IPMINetworkType;
   const needsDedicatedIpmiSwitches = ipmiNetwork === "Dedicated IPMI switch";
   
   // Calculate management switches based on configuration
   let managementSwitchCount = totalAvailabilityZones * mgmtSwitchesPerAZ;
   
   // Add IPMI switches if dedicated IPMI network is required
-  // Only add these if we're not in converged management mode
+  // Now we always consider IPMI switches when dedicated IPMI is selected, regardless of management plane type
   let ipmiSwitchCount = 0;
-  if (needsDedicatedIpmiSwitches && !isConvergedManagement) {
+  if (needsDedicatedIpmiSwitches) {
     ipmiSwitchCount = totalAvailabilityZones; // 1 IPMI switch per AZ
   }
   
@@ -141,7 +141,7 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
     });
   }
   
-  // Add dedicated IPMI switches if needed
+  // Add dedicated IPMI switches if needed - now always adds when configured
   if (ipmiSwitchCount > 0) {
     newRoles.push({
       id: uuidv4(),

@@ -11,17 +11,16 @@ import { toast } from 'sonner';
 export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
   const isConvergedManagement = requirements.managementNetwork === 'Converged Management Plane';
   
-  // Handle IPMI settings when converged management is selected
+  // Updated to not enforce IPMI network to be "Management converged" when using converged management
   useEffect(() => {
-    if (isConvergedManagement && requirements.ipmiNetwork === 'Dedicated IPMI switch') {
-      // Reset IPMI network to "Management converged" when selecting converged management
+    // Check if IPMI network is not set at all, and set a default value
+    if (!requirements.ipmiNetwork) {
       onUpdate({
         ...requirements,
-        ipmiNetwork: 'Management converged'
+        ipmiNetwork: 'Dedicated IPMI switch'
       });
-      toast.info("IPMI network reset to 'Management converged' as 'Converged Management Plane' was selected");
     }
-  }, [isConvergedManagement, requirements.ipmiNetwork]);
+  }, [isConvergedManagement]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -129,15 +128,12 @@ export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ipmiNetwork" className={isConvergedManagement ? "text-muted-foreground" : ""}>
-              IPMI Network {isConvergedManagement && "(Disabled for Converged Management)"}
-            </Label>
+            <Label htmlFor="ipmiNetwork">IPMI Network</Label>
             <Select
               value={requirements.ipmiNetwork}
               onValueChange={(value) => handleSelectChange('ipmiNetwork', value)}
-              disabled={isConvergedManagement}
             >
-              <SelectTrigger id="ipmiNetwork" className={isConvergedManagement ? "opacity-50" : ""}>
+              <SelectTrigger id="ipmiNetwork">
                 <SelectValue placeholder="Select configuration" />
               </SelectTrigger>
               <SelectContent>
@@ -147,7 +143,7 @@ export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
             </Select>
             {isConvergedManagement && (
               <p className="text-xs text-muted-foreground mt-1">
-                When using converged management, IPMI traffic uses the same switches as regular traffic
+                When using converged management, IPMI traffic still requires its own network path for security
               </p>
             )}
           </div>
