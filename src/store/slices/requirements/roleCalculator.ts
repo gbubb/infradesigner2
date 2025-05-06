@@ -48,11 +48,12 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   
   // Only add management switches when NOT using converged management plane
   if (!isConvergedManagement) {
-    // IMPORTANT FIX: Only include management switches, never add IPMI switches here
-    managementSwitchCount = totalAvailabilityZones * (managementNetwork.includes("Dual") ? 2 : 1);
+    // IMPORTANT: Pure management switch calculation with no IPMI influence
+    const managementSwitchesPerAZ = managementNetwork.includes("Dual") ? 2 : 1;
+    managementSwitchCount = totalAvailabilityZones * managementSwitchesPerAZ;
   }
   
-  // Add IPMI switches if dedicated IPMI network is required, separately from management switches
+  // IPMI switches are calculated completely independently
   let ipmiSwitchCount = 0;
   if (needsDedicatedIpmiSwitches) {
     ipmiSwitchCount = totalAvailabilityZones; // 1 IPMI switch per AZ
@@ -138,13 +139,13 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   // Add management switches only if we need them (not using converged management)
   if (managementSwitchCount > 0) {
     // Add calculation steps for management switches
-    const managementPerAZ = managementNetwork.includes("Dual") ? 2 : 1;
+    const managementSwitchesPerAZ = managementNetwork.includes("Dual") ? 2 : 1;
     const calculationSteps = [
       `Role type: managementSwitch`,
       `Management Network: ${managementNetwork}`,
       `Total Availability Zones: ${totalAvailabilityZones}`,
-      `Management Switches Per AZ: ${managementPerAZ}`,
-      `Total Management Switches: ${managementPerAZ} switches/AZ × ${totalAvailabilityZones} AZs = ${managementSwitchCount} switches`
+      `Management Switches Per AZ: ${managementSwitchesPerAZ}`,
+      `Total Management Switches: ${managementSwitchesPerAZ} switches/AZ × ${totalAvailabilityZones} AZs = ${managementSwitchCount} switches`
     ];
     
     newRoles.push({
@@ -156,7 +157,7 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
     });
   }
   
-  // Add dedicated IPMI switches if needed - now separate from management switches
+  // Add dedicated IPMI switches if needed - completely separate from management switches
   if (ipmiSwitchCount > 0) {
     // Add calculation steps for IPMI switches
     const calculationSteps = [

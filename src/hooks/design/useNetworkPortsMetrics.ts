@@ -108,7 +108,7 @@ export const useNetworkPortsMetrics = () => {
           portCount = (component as any).portCount;
         }
         
-        // Add ports based on switch role
+        // Add ports based on switch role - ensure IPMI switches are counted separately
         if (component.role === 'managementSwitch') {
           totalMgmtSwitches += quantity;
           mgmtPortsAvailable += portCount * quantity;
