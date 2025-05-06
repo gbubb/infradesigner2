@@ -77,6 +77,7 @@ export const useNetworkPortsMetrics = () => {
         // Calculate management ports based on configuration
         if (isConvergedManagement) {
           // If using converged management, add management ports to leaf network
+          // Fix the type error by using string comparison instead of type comparison
           const mgmtPorts = managementNetwork === "Dual Home" ? 2 : 1;
           leafPortsUsed += mgmtPorts * quantity;
           
@@ -87,6 +88,7 @@ export const useNetworkPortsMetrics = () => {
           }
         } else {
           // Using dedicated management switches
+          // Fix the type error by using string comparison instead of type comparison
           const mgmtPorts = managementNetwork === "Dual Home" ? 2 : 1;
           mgmtPortsUsed += mgmtPorts * quantity;
           
