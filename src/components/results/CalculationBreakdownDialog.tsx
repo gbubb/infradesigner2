@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Button } from '@/components/ui/button';
@@ -58,18 +59,24 @@ export const CalculationBreakdownDialog: React.FC<CalculationBreakdownDialogProp
           if (roleType === 'managementSwitch') {
             const totalAvailabilityZones = store.requirements.physicalConstraints.totalAvailabilityZones || 1;
             const managementNetwork = store.requirements.networkRequirements.managementNetwork || 'Dual Home';
+            const managementSwitchesPerAZ = managementNetwork.includes("Dual") ? 2 : 1;
+            const totalManagementSwitches = managementSwitchesPerAZ * totalAvailabilityZones;
             
             displayedSteps = [
+              `Role type: managementSwitch`,
               `Management Network: ${managementNetwork}`,
-              `Management Switches Per AZ: ${managementNetwork.includes("Dual") ? 2 : 1}`,
-              `Total Management Switches: ${managementNetwork.includes("Dual") ? 2 : 1} switches/AZ × ${totalAvailabilityZones} AZs = ${(managementNetwork.includes("Dual") ? 2 : 1) * totalAvailabilityZones} switches`
+              `Total Availability Zones: ${totalAvailabilityZones}`,
+              `Management Switches Per AZ: ${managementSwitchesPerAZ}`,
+              `Total Management Switches: ${managementSwitchesPerAZ} switches/AZ × ${totalAvailabilityZones} AZs = ${totalManagementSwitches} switches`
             ];
           } else if (roleType === 'ipmiSwitch') {
             const totalAvailabilityZones = store.requirements.physicalConstraints.totalAvailabilityZones || 1;
+            const ipmiSwitches = totalAvailabilityZones; // 1 per AZ
             
             displayedSteps = [
+              `Role type: ipmiSwitch`,
               `IPMI Network: Dedicated IPMI switch`,
-              `IPMI Switches: 1 switch/AZ × ${totalAvailabilityZones} AZs = ${totalAvailabilityZones} switches`
+              `IPMI Switches: 1 switch/AZ × ${totalAvailabilityZones} AZs = ${ipmiSwitches} switches`
             ];
           } else {
             displayedSteps = [

@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType } from '@/types/infrastructure';
 
@@ -47,6 +48,7 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   
   // Only add management switches when NOT using converged management plane
   if (!isConvergedManagement) {
+    // IMPORTANT FIX: Only include management switches, never add IPMI switches here
     managementSwitchCount = totalAvailabilityZones * (managementNetwork.includes("Dual") ? 2 : 1);
   }
   
@@ -138,7 +140,9 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
     // Add calculation steps for management switches
     const managementPerAZ = managementNetwork.includes("Dual") ? 2 : 1;
     const calculationSteps = [
+      `Role type: managementSwitch`,
       `Management Network: ${managementNetwork}`,
+      `Total Availability Zones: ${totalAvailabilityZones}`,
       `Management Switches Per AZ: ${managementPerAZ}`,
       `Total Management Switches: ${managementPerAZ} switches/AZ × ${totalAvailabilityZones} AZs = ${managementSwitchCount} switches`
     ];
@@ -156,6 +160,7 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   if (ipmiSwitchCount > 0) {
     // Add calculation steps for IPMI switches
     const calculationSteps = [
+      `Role type: ipmiSwitch`,
       `IPMI Network: ${ipmiNetwork}`,
       `IPMI Switches: 1 switch/AZ × ${totalAvailabilityZones} AZs = ${ipmiSwitchCount} switches`
     ];
