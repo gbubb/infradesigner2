@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType } from '@/types/infrastructure';
 
@@ -49,7 +48,7 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   
   // Only add management switches when NOT using converged management plane
   if (!isConvergedManagement) {
-    managementSwitchCount = totalAvailabilityZones * (managementNetwork === 'Dual Home' ? 2 : 1);
+    managementSwitchCount = totalAvailabilityZones * (managementNetwork.includes("Dual") ? 2 : 1);
   }
   
   // Add IPMI switches if dedicated IPMI network is required, regardless of management plane type
@@ -138,7 +137,7 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   // Add management switches only if we need them (not using converged management)
   if (managementSwitchCount > 0) {
     // Add calculation steps for management switches
-    const managementPerAZ = managementNetwork === 'Dual Home' ? 2 : 1;
+    const managementPerAZ = managementNetwork.includes("Dual") ? 2 : 1;
     const calculationSteps = [
       `Management Network: ${managementNetwork}`,
       `Management Switches Per AZ: ${managementPerAZ}`,

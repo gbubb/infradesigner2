@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { ComponentType, ManagementNetworkType, IPMINetworkType } from '@/types/infrastructure';
@@ -71,14 +70,14 @@ export const useNetworkPortsMetrics = () => {
         if (ipmiNetwork === 'Dedicated IPMI switch') {
           // If using dedicated IPMI switches, count these separately
           // Always 1 IPMI port per server
-          totalIPMISwitches += 1;
+          // Note: we don't increment totalIPMISwitches here, that's done when counting actual switch components
         }
         
         // Calculate management ports based on configuration
         if (isConvergedManagement) {
           // If using converged management, add management ports to leaf network
-          // Fix the string literal comparison by using a type-safe approach
-          const mgmtPorts = managementNetwork.includes("Dual Home") ? 2 : 1;
+          // Use string comparison for safest approach
+          const mgmtPorts = managementNetwork.includes("Dual") ? 2 : 1;
           leafPortsUsed += mgmtPorts * quantity;
           
           // If IPMI is "Management converged" with converged management plane,
@@ -88,8 +87,8 @@ export const useNetworkPortsMetrics = () => {
           }
         } else {
           // Using dedicated management switches
-          // Fix the string literal comparison by using a type-safe approach
-          const mgmtPorts = managementNetwork.includes("Dual Home") ? 2 : 1;
+          // Use string comparison for safest approach
+          const mgmtPorts = managementNetwork.includes("Dual") ? 2 : 1;
           mgmtPortsUsed += mgmtPorts * quantity;
           
           // If IPMI is converged with management, add IPMI ports to management switch count
