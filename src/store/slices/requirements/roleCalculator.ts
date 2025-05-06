@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType } from '@/types/infrastructure';
 
@@ -37,18 +38,21 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   const networkCoreRackQuantity = getValue(requirements, 'physicalConstraints.networkCoreRackQuantity', 2) || 
     (dedicatedNetworkCoreRacks ? 2 : 0);
   
-  // Only add management switches when not using converged management plane
+  // Check for converged management and IPMI network configuration
   const isConvergedManagement = managementNetwork === 'Converged Management Plane';
-  const mgmtSwitchesPerAZ = isConvergedManagement ? 0 : (managementNetwork === 'Dual Home' ? 2 : 1);
-  
   const ipmiNetwork = getValue(requirements, 'networkRequirements.ipmiNetwork', "Dedicated IPMI switch") as IPMINetworkType;
   const needsDedicatedIpmiSwitches = ipmiNetwork === "Dedicated IPMI switch";
   
   // Calculate management switches based on configuration
-  let managementSwitchCount = totalAvailabilityZones * mgmtSwitchesPerAZ;
+  // With converged management plane, no dedicated management switches are required
+  let managementSwitchCount = 0;
   
-  // Add IPMI switches if dedicated IPMI network is required
-  // Now we always consider IPMI switches when dedicated IPMI is selected, regardless of management plane type
+  // Only add management switches when NOT using converged management plane
+  if (!isConvergedManagement) {
+    managementSwitchCount = totalAvailabilityZones * (managementNetwork === 'Dual Home' ? 2 : 1);
+  }
+  
+  // Add IPMI switches if dedicated IPMI network is required, regardless of management plane type
   let ipmiSwitchCount = 0;
   if (needsDedicatedIpmiSwitches) {
     ipmiSwitchCount = totalAvailabilityZones; // 1 IPMI switch per AZ
@@ -131,23 +135,39 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
     });
   }
   
-  // Add management switches only if we need them
+  // Add management switches only if we need them (not using converged management)
   if (managementSwitchCount > 0) {
+    // Add calculation steps for management switches
+    const managementPerAZ = managementNetwork === 'Dual Home' ? 2 : 1;
+    const calculationSteps = [
+      `Management Network: ${managementNetwork}`,
+      `Management Switches Per AZ: ${managementPerAZ}`,
+      `Total Management Switches: ${managementPerAZ} switches/AZ × ${totalAvailabilityZones} AZs = ${managementSwitchCount} switches`
+    ];
+    
     newRoles.push({
       id: uuidv4(),
       role: 'managementSwitch',
       description: 'Provides network connectivity for management interfaces',
-      requiredCount: managementSwitchCount
+      requiredCount: managementSwitchCount,
+      calculationSteps: calculationSteps
     });
   }
   
-  // Add dedicated IPMI switches if needed - now always adds when configured
+  // Add dedicated IPMI switches if needed
   if (ipmiSwitchCount > 0) {
+    // Add calculation steps for IPMI switches
+    const calculationSteps = [
+      `IPMI Network: ${ipmiNetwork}`,
+      `IPMI Switches: 1 switch/AZ × ${totalAvailabilityZones} AZs = ${ipmiSwitchCount} switches`
+    ];
+    
     newRoles.push({
       id: uuidv4(),
       role: 'ipmiSwitch',
       description: 'Provides dedicated network connectivity for IPMI interfaces',
-      requiredCount: ipmiSwitchCount
+      requiredCount: ipmiSwitchCount,
+      calculationSteps: calculationSteps
     });
   }
   

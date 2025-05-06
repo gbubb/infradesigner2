@@ -67,38 +67,32 @@ export const useNetworkPortsMetrics = () => {
           leafPortsUsed += serverLeafPortsUsed * quantity;
         }
         
-        // Calculate ports used by servers for management connections
-        // Only add to management switches if not using converged management
-        if (!isConvergedManagement) {
-          let serverMgmtPortsUsed = 1; // Default if not specified
-          
-          // Use a type assertion to compare strings directly
-          const mgmtNetworkValue = managementNetwork as string;
-          if (mgmtNetworkValue === "Dual Home") {
-            serverMgmtPortsUsed = 2;
-          }
-          
-          mgmtPortsUsed += serverMgmtPortsUsed * quantity;
-          
-          // Add IPMI ports based on configuration
-          if (ipmiNetwork === 'Management converged') {
-            // If IPMI is converged with management, add IPMI ports to management switch count
-            mgmtPortsUsed += quantity;
-          }
-          // If IPMI uses dedicated switches, we count those separately
-        } else {
+        // Calculate IPMI ports based on configuration
+        if (ipmiNetwork === 'Dedicated IPMI switch') {
+          // If using dedicated IPMI switches, count these separately
+          // Always 1 IPMI port per server
+          totalIPMISwitches += 1;
+        }
+        
+        // Calculate management ports based on configuration
+        if (isConvergedManagement) {
           // If using converged management, add management ports to leaf network
-          // Use type assertion to compare strings directly
-          const mgmtNetworkValue = managementNetwork as string;
-          const mgmtPorts = mgmtNetworkValue === "Dual Home" ? 2 : 1;
+          const mgmtPorts = managementNetwork === "Dual Home" ? 2 : 1;
           leafPortsUsed += mgmtPorts * quantity;
           
-          // If converged management is used but IPMI is on dedicated switches,
-          // we don't need to add IPMI ports to leaf network
+          // If IPMI is "Management converged" with converged management plane,
+          // IPMI ports go to the leaf switches too
           if (ipmiNetwork === 'Management converged') {
-            // If IPMI is "Management converged" with converged management plane,
-            // IPMI ports go to the leaf switches too
             leafPortsUsed += quantity; // Always 1 IPMI port per server
+          }
+        } else {
+          // Using dedicated management switches
+          const mgmtPorts = managementNetwork === "Dual Home" ? 2 : 1;
+          mgmtPortsUsed += mgmtPorts * quantity;
+          
+          // If IPMI is converged with management, add IPMI ports to management switch count
+          if (ipmiNetwork === 'Management converged') {
+            mgmtPortsUsed += quantity;
           }
         }
       } else if (component.type === ComponentType.Switch) {
@@ -118,8 +112,8 @@ export const useNetworkPortsMetrics = () => {
           mgmtPortsAvailable += portCount * quantity;
         } else if (component.role === 'ipmiSwitch') {
           totalIPMISwitches += quantity;
-          // IPMI switches are accounted separately but we'll include their ports in management
-          mgmtPortsAvailable += portCount * quantity;
+          // IPMI switches handle IPMI ports only
+          // We don't add these to management ports available
         } else if (component.role === 'storageSwitch') {
           totalStorageSwitches += quantity;
           storagePortsAvailable += portCount * quantity;
