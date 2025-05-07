@@ -25,7 +25,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({ selectedCategory
     ComponentCategory.Storage,
     ComponentCategory.Security,
     ComponentCategory.Acceleration,
-    ComponentCategory.StructuredCabling,
+    ComponentCategory.Cabling,
     ComponentCategory.Cables
   ];
 
