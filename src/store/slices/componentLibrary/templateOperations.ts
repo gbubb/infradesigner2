@@ -10,6 +10,42 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
     // Log the component being added for debugging
     console.log('Adding component template:', component);
     
+    // Generate default naming prefix if not provided
+    if (!component.namingPrefix) {
+      switch(component.type) {
+        case ComponentType.Server: component.namingPrefix = 'SRV'; break;
+        case ComponentType.Switch: component.namingPrefix = 'SW'; break;
+        case ComponentType.Router: component.namingPrefix = 'RTR'; break;
+        case ComponentType.Firewall: component.namingPrefix = 'FW'; break;
+        case ComponentType.Disk: component.namingPrefix = 'DSK'; break;
+        case ComponentType.GPU: component.namingPrefix = 'GPU'; break;
+        case ComponentType.FiberPatchPanel: component.namingPrefix = 'FPP'; break;
+        case ComponentType.CopperPatchPanel: component.namingPrefix = 'CPP'; break;
+        case ComponentType.Cassette: component.namingPrefix = 'CAS'; break;
+        case ComponentType.Cable: component.namingPrefix = 'CBL'; break;
+        default: component.namingPrefix = component.type.substring(0,3).toUpperCase();
+      }
+    }
+    
+    // Ensure placement is properly set
+    if (!component.placement && ['Server', 'Switch', 'Router', 'Firewall', 'FiberPatchPanel', 'CopperPatchPanel'].includes(component.type)) {
+      const physicalConstraints = get().activeDesign?.requirements?.physicalConstraints;
+      const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
+      
+      component.placement = {
+        validRUStart: component.validRUStart || 1,
+        validRUEnd: component.validRUEnd || maxRackUnits,
+        preferredRU: component.preferredRU || 1,
+        preferredRack: component.preferredRack || 1
+      };
+      
+      // Remove temporary form fields
+      delete component.validRUStart;
+      delete component.validRUEnd;
+      delete component.preferredRU;
+      delete component.preferredRack;
+    }
+    
     set((state: StoreState) => {
       const newComponent = {
         ...component,
@@ -38,6 +74,25 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
       
       // Get the existing component
       const existingComponent = state.componentTemplates[index];
+      
+      // Process placement fields if they exist in the form data
+      if ('validRUStart' in updates || 'validRUEnd' in updates || 'preferredRU' in updates || 'preferredRack' in updates) {
+        const physicalConstraints = get().activeDesign?.requirements?.physicalConstraints;
+        const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
+        
+        updates.placement = {
+          validRUStart: updates.validRUStart || existingComponent.placement?.validRUStart || 1,
+          validRUEnd: updates.validRUEnd || existingComponent.placement?.validRUEnd || maxRackUnits,
+          preferredRU: updates.preferredRU || existingComponent.placement?.preferredRU,
+          preferredRack: updates.preferredRack || existingComponent.placement?.preferredRack
+        };
+        
+        // Remove temporary form fields
+        delete updates.validRUStart;
+        delete updates.validRUEnd;
+        delete updates.preferredRU;
+        delete updates.preferredRack;
+      }
       
       // Create the updated component with all properties preserved
       const updatedComponent = {

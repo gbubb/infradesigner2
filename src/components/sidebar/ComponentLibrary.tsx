@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useComponents } from '@/context/ComponentContext';
 import { useComponentForm } from '@/hooks/components/useComponentForm';
@@ -39,7 +40,8 @@ export const ComponentLibrary: React.FC = () => {
     handleInputChange,
     handleSelectChange,
     handleTypeChange,
-    validateForm
+    validateForm,
+    processFormForSubmission
   } = useComponentForm();
 
   const filteredComponents = componentTemplates.filter(component => {
@@ -66,17 +68,26 @@ export const ComponentLibrary: React.FC = () => {
 
   const openEditDialog = (component: InfrastructureComponent) => {
     setEditingComponentId(component.id);
-    setComponentForm({
+    
+    // Extract placement values for form fields
+    const formValues = {
       ...component,
-      isDefault: component.isDefault || false
-    });
+      isDefault: component.isDefault || false,
+      validRUStart: component.placement?.validRUStart || 1,
+      validRUEnd: component.placement?.validRUEnd || 42,
+      preferredRU: component.placement?.preferredRU || 1,
+      preferredRack: component.placement?.preferredRack || 1
+    };
+    
+    setComponentForm(formValues);
     setIsEditDialogOpen(true);
   };
 
   const handleAddComponent = () => {
     if (!validateForm()) return;
 
-    const componentToSave: InfrastructureComponent = { ...componentForm } as InfrastructureComponent;
+    // Process the form for submission - consolidating placement fields
+    const componentToSave = processFormForSubmission(componentForm);
 
     if (editingComponentId) {
       updateComponentTemplate(editingComponentId, componentToSave);

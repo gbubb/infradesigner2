@@ -48,7 +48,18 @@ export interface InfrastructureComponent {
   isDefault?: boolean;
   role?: string;
   quantity?: number;
+  // Added naming and placement properties
+  namingPrefix?: string;
+  placement?: ComponentPlacement;
   [key: string]: any; // To allow for any additional properties
+}
+
+// New interface for component placement constraints
+export interface ComponentPlacement {
+  validRUStart: number;
+  validRUEnd: number;
+  preferredRU?: number;
+  preferredRack?: number;
 }
 
 export enum ConnectorType {

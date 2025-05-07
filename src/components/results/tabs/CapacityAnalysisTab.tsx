@@ -21,14 +21,21 @@ export const CapacityAnalysisTab: React.FC = () => {
     const powerPerRackWatts = physicalConstraints?.powerPerRackWatts || 5000;
     const totalRackQuantity = resourceMetrics.totalRackQuantity || 1;
     
-    // Calculate remaining power capacity
-    const totalAvailablePower = powerPerRackWatts * totalRackQuantity;
-    const remainingPower = Math.max(0, totalAvailablePower - (resourceMetrics.totalPower || 0));
+    // Calculate remaining power capacity for compute only (exclude network racks)
+    const networkRackQuantity = hasDedicatedNetworkRacks ? Math.ceil(resourceMetrics.networkRackUnits / (physicalConstraints?.rackUnitsPerRack || 42)) : 0;
+    const computeRackQuantity = totalRackQuantity - networkRackQuantity;
     
-    // Calculate remaining rack space
+    // Only use compute rack power for calculations
+    const computeRackPower = powerPerRackWatts * computeRackQuantity;
+    const networkPower = resourceMetrics.networkPower || 0;
+    const computeAndStoragePower = (resourceMetrics.totalPower || 0) - networkPower;
+    const remainingPower = Math.max(0, computeRackPower - computeAndStoragePower);
+    
+    // Calculate remaining rack space (only in compute racks)
     const rackUnitsPerRack = physicalConstraints?.rackUnitsPerRack || 42;
-    const totalAvailableRU = rackUnitsPerRack * totalRackQuantity;
-    const remainingRU = Math.max(0, totalAvailableRU - (resourceMetrics.totalRackUnits || 0));
+    const totalComputeRackRU = rackUnitsPerRack * computeRackQuantity;
+    const computeAndStorageRU = (resourceMetrics.totalRackUnits || 0) - (resourceMetrics.networkRackUnits || 0);
+    const remainingRU = Math.max(0, totalComputeRackRU - computeAndStorageRU);
     
     // Find average compute node specs to use for calculations
     const computeNodes = (activeDesign.components || []).filter(c => c.role === 'computeNode');
@@ -49,7 +56,7 @@ export const CapacityAnalysisTab: React.FC = () => {
     });
     
     const avgComputeNodePower = totalPower / computeNodes.length;
-    const avgComputeNodeRU = totalRU / computeNodes.length;
+    const avgComputeNodeRU = Math.ceil(totalRU / computeNodes.length); // Use whole number for RU
     const avgComputeNodeCores = totalCores / computeNodes.length;
     const avgComputeNodeMemoryGb = totalMemoryGb / computeNodes.length;
     
@@ -61,7 +68,6 @@ export const CapacityAnalysisTab: React.FC = () => {
     const possibleAdditionalNodes = Math.min(nodesByPower, nodesBySpace);
     
     // Calculate resulting additional capacity
-    const additionalCores = possibleAdditionalNodes * avgComputeNodeCores;
     const additionalMemoryTB = (possibleAdditionalNodes * avgComputeNodeMemoryGb) / 1024;
     
     // Overcommit ratio from requirements
@@ -69,22 +75,22 @@ export const CapacityAnalysisTab: React.FC = () => {
     const overcommitRatio = computeRequirements?.computeClusters[0]?.overcommitRatio || 8;
     
     // Calculate additional vCPUs with overcommit ratio
-    const additionalVCpus = additionalCores * overcommitRatio;
+    const additionalVCpus = Math.floor(avgComputeNodeCores * possibleAdditionalNodes * overcommitRatio);
     
     return {
       limitingFactor: nodesByPower < nodesBySpace ? 'Power' : 'Space',
       possibleAdditionalNodes,
       nodesByPower,
       nodesBySpace,
-      additionalCores,
       additionalVCpus,
       additionalMemoryTB: parseFloat(additionalMemoryTB.toFixed(2)),
       avgComputeNodePower,
       avgComputeNodeRU,
       remainingPower,
-      remainingRU
+      remainingRU,
+      computeRackQuantity
     };
-  }, [activeDesign, resourceMetrics]);
+  }, [activeDesign, resourceMetrics, hasDedicatedNetworkRacks]);
 
   return (
     <div className="space-y-8">
@@ -131,22 +137,17 @@ export const CapacityAnalysisTab: React.FC = () => {
                 </div>
                 
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground">Remaining Power Capacity</div>
+                  <div className="text-sm font-medium text-muted-foreground">Remaining Power Capacity (Compute Racks Only)</div>
                   <div className="text-lg">{additionalCapacity.remainingPower.toLocaleString()} W</div>
                 </div>
                 
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground">Remaining Rack Units</div>
+                  <div className="text-sm font-medium text-muted-foreground">Remaining Rack Units (Compute Racks Only)</div>
                   <div className="text-lg">{additionalCapacity.remainingRU} RU</div>
                 </div>
               </div>
               
               <div className="space-y-4">
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground">Potential Additional Cores</div>
-                  <div className="text-lg">{additionalCapacity.additionalCores}</div>
-                </div>
-                
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">Potential Additional vCPUs</div>
                   <div className="text-lg">{additionalCapacity.additionalVCpus.toLocaleString()}</div>
@@ -159,7 +160,12 @@ export const CapacityAnalysisTab: React.FC = () => {
                 
                 <div>
                   <div className="text-sm text-muted-foreground">Based on average node specs:</div>
-                  <div className="text-sm">{additionalCapacity.avgComputeNodePower.toFixed(1)} W, {additionalCapacity.avgComputeNodeRU.toFixed(1)} RU per node</div>
+                  <div className="text-sm">{additionalCapacity.avgComputeNodePower.toFixed(1)} W, {additionalCapacity.avgComputeNodeRU} RU per node</div>
+                </div>
+                
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Number of Compute/Storage Racks</div>
+                  <div className="text-lg">{additionalCapacity.computeRackQuantity}</div>
                 </div>
               </div>
             </div>

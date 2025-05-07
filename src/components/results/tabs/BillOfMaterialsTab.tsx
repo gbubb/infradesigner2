@@ -4,7 +4,7 @@ import { useDesignStore } from '@/store/designStore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Download, FileSpreadsheet, Server, Network, Cable } from 'lucide-react';
-import { ComponentCategory, ComponentType, InfrastructureComponent } from '@/types/infrastructure/component-types';
+import { ComponentCategory, ComponentType, InfrastructureComponent, componentTypeToCategory } from '@/types/infrastructure/component-types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -18,7 +18,7 @@ export const BillOfMaterialsTab: React.FC = () => {
     
     components.forEach(component => {
       const categoryName = component.type ? 
-        componentTypeToCategory(component.type as ComponentType) : 
+        componentTypeToCategory[component.type as ComponentType] : 
         'Other';
         
       if (!result[categoryName]) {
@@ -30,24 +30,6 @@ export const BillOfMaterialsTab: React.FC = () => {
     
     return result;
   }, [components]);
-  
-  // Helper to identify component category
-  function componentTypeToCategory(type: ComponentType): ComponentCategory {
-    const categories: Record<ComponentType, ComponentCategory> = {
-      [ComponentType.Server]: ComponentCategory.Compute,
-      [ComponentType.Switch]: ComponentCategory.Network,
-      [ComponentType.Router]: ComponentCategory.Network,
-      [ComponentType.Firewall]: ComponentCategory.Network,
-      [ComponentType.Disk]: ComponentCategory.Storage,
-      [ComponentType.GPU]: ComponentCategory.Acceleration,
-      [ComponentType.FiberPatchPanel]: ComponentCategory.Cabling,
-      [ComponentType.CopperPatchPanel]: ComponentCategory.Cabling,
-      [ComponentType.Cassette]: ComponentCategory.Cabling,
-      [ComponentType.Cable]: ComponentCategory.Cabling
-    };
-    
-    return categories[type] || ComponentCategory.Compute;
-  }
   
   // Calculate grand totals
   const grandTotalCost = components.reduce((sum, comp) => sum + (comp.cost * (comp.quantity || 1)), 0);
@@ -82,7 +64,6 @@ export const BillOfMaterialsTab: React.FC = () => {
 
   // Format a category name for display
   const formatCategoryName = (category: string) => {
-    if (category === 'StructuredCabling') return 'Cabling';
     return category;
   };
 
@@ -298,7 +279,8 @@ export const BillOfMaterialsTab: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {componentsByCategory['StructuredCabling']?.map((component) => {
+                  {/* Display both Cabling and Cables categories */}
+                  {[...(componentsByCategory['Cabling'] || []), ...(componentsByCategory['Cables'] || [])].map((component) => {
                     const quantity = component.quantity || 1;
                     const totalCost = component.cost * quantity;
                     

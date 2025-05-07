@@ -44,6 +44,13 @@ const formSchema = z.object({
   cost: z.number(),
   powerRequired: z.number(),
   isDefault: z.boolean(),
+  // Naming fields
+  namingPrefix: z.string().optional(),
+  // Placement fields
+  validRUStart: z.number().optional(),
+  validRUEnd: z.number().optional(),
+  preferredRU: z.number().optional(),
+  preferredRack: z.number().optional(),
   // Server specific fields
   serverRole: z.nativeEnum(ServerRole).optional(),
   cpuModel: z.string().optional(),
@@ -110,6 +117,11 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   onSubmit,
   isEditing
 }) => {
+  // Get rack units from the design store to validate RU range
+  const physicalConstraints = useDesignStore((state) => 
+    state.activeDesign?.requirements?.physicalConstraints);
+  const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -120,6 +132,11 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       cost: formValues.cost || 0,
       powerRequired: formValues.powerRequired || 0,
       isDefault: formValues.isDefault || false,
+      namingPrefix: formValues.namingPrefix || '',
+      validRUStart: formValues.placement?.validRUStart || 1,
+      validRUEnd: formValues.placement?.validRUEnd || maxRackUnits,
+      preferredRU: formValues.placement?.preferredRU || 1,
+      preferredRack: formValues.placement?.preferredRack || 1,
       serverRole: formValues.serverRole || ServerRole.Compute,
       cpuModel: formValues.cpuModel || '',
       cpuCount: formValues.cpuCount || 1,
@@ -160,6 +177,23 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
 
   const { register, control } = form;
 
+  // Generate a default naming prefix based on component type
+  const getDefaultPrefix = (type: string) => {
+    switch(type) {
+      case ComponentType.Server: return 'SRV';
+      case ComponentType.Switch: return 'SW';
+      case ComponentType.Router: return 'RTR';
+      case ComponentType.Firewall: return 'FW';
+      case ComponentType.Disk: return 'DSK';
+      case ComponentType.GPU: return 'GPU';
+      case ComponentType.FiberPatchPanel: return 'FPP';
+      case ComponentType.CopperPatchPanel: return 'CPP';
+      case ComponentType.Cassette: return 'CAS';
+      case ComponentType.Cable: return 'CBL';
+      default: return type.substring(0, 3).toUpperCase();
+    }
+  };
+
   const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
     onSubmit();
   };
@@ -177,7 +211,9 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
         <ScrollArea className="max-h-[calc(90vh-8rem)] px-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
+              {/* Basic Component Information Section */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Component Type Selector */}
                 <FormField
                   control={control}
                   name="type"
@@ -236,6 +272,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                   )}
                 />
 
+                {/* Set as Default */}
                 <FormField
                   control={control}
                   name="isDefault"
@@ -261,73 +298,164 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={control}
-                  name="manufacturer"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Manufacturer</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Manufacturer" 
-                          {...field} 
-                          onChange={(e) => {
-                            field.onChange(e);
-                            onInputChange(e);
-                          }} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={control}
-                  name="model"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Model</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Model" 
-                          {...field} 
-                          onChange={(e) => {
-                            field.onChange(e);
-                            onInputChange(e);
-                          }} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={control}
-                  name="cost"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cost</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="Cost" 
-                          {...field} 
-                          onChange={(e) => {
-                            field.onChange(Number(e.target.value));
-                            onInputChange(e);
-                          }} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Naming Section */}
+              <div className="mt-6 pt-6 border-t">
+                <h3 className="text-lg font-medium">Naming</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Configure how this component will be named in designs
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={control}
+                    name="namingPrefix"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Default Name Prefix</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Name Prefix" 
+                            {...field} 
+                            value={field.value || getDefaultPrefix(formValues.type)}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              onInputChange(e);
+                            }} 
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Used as a prefix when generating component names
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
-              {/* Conditionally render Power Required */} 
+              {/* Placement Section */}
+              {formValues.type !== ComponentType.Cable && formValues.type !== ComponentType.Disk && formValues.type !== ComponentType.GPU && (
+                <div className="mt-6 pt-6 border-t">
+                  <h3 className="text-lg font-medium">Placement</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Define valid rack positions for this component
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={control}
+                      name="validRUStart"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valid RU Range Start</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="1"
+                              max={maxRackUnits}
+                              {...field} 
+                              onChange={(e) => {
+                                const value = Number(e.target.value);
+                                if (value >= 1 && value <= maxRackUnits) {
+                                  field.onChange(value);
+                                  onInputChange(e);
+                                }
+                              }} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Lowest RU position allowed (1 - {maxRackUnits})
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={control}
+                      name="validRUEnd"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valid RU Range End</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              min="1"
+                              max={maxRackUnits}
+                              {...field} 
+                              onChange={(e) => {
+                                const value = Number(e.target.value);
+                                if (value >= 1 && value <= maxRackUnits) {
+                                  field.onChange(value);
+                                  onInputChange(e);
+                                }
+                              }} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Highest RU position allowed (1 - {maxRackUnits})
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={control}
+                      name="preferredRU"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preferred RU Position</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              min="1"
+                              max={maxRackUnits}
+                              {...field} 
+                              onChange={(e) => {
+                                const value = Number(e.target.value);
+                                if (value >= 1 && value <= maxRackUnits) {
+                                  field.onChange(value);
+                                  onInputChange(e);
+                                }
+                              }} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Recommended position in rack
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={control}
+                      name="preferredRack"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preferred Rack</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              min="1"
+                              {...field} 
+                              onChange={(e) => {
+                                const value = Number(e.target.value);
+                                if (value >= 1) {
+                                  field.onChange(value);
+                                  onInputChange(e);
+                                }
+                              }} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Recommended rack number
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* Conditionally render Power Required */}
               {!['FiberPatchPanel', 'CopperPatchPanel', 'Cassette'].includes(formValues.type) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField

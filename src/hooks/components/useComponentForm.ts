@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { useDesignStore } from '@/store/designStore';
 
 export interface ComponentFormValues {
   id?: string;
@@ -12,6 +13,19 @@ export interface ComponentFormValues {
   cost: number;
   powerRequired: number;
   isDefault: boolean;
+  // Add naming and placement fields
+  namingPrefix?: string;
+  placement?: {
+    validRUStart: number;
+    validRUEnd: number;
+    preferredRU?: number;
+    preferredRack?: number;
+  };
+  // For form fields
+  validRUStart?: number;
+  validRUEnd?: number;
+  preferredRU?: number;
+  preferredRack?: number;
   [key: string]: any;
 }
 
@@ -19,6 +33,10 @@ export const useComponentForm = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingComponentId, setEditingComponentId] = useState<string | null>(null);
+  const physicalConstraints = useDesignStore((state) => 
+    state.activeDesign?.requirements?.physicalConstraints);
+  const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
+  
   const [componentForm, setComponentForm] = useState<ComponentFormValues>({
     type: ComponentType.Server,
     name: '',
@@ -27,6 +45,11 @@ export const useComponentForm = () => {
     cost: 0,
     powerRequired: 0,
     isDefault: false,
+    namingPrefix: '',
+    validRUStart: 1,
+    validRUEnd: maxRackUnits,
+    preferredRU: 1,
+    preferredRack: 1,
   });
 
   const resetForm = () => {
@@ -38,6 +61,11 @@ export const useComponentForm = () => {
       cost: 0,
       powerRequired: 0,
       isDefault: false,
+      namingPrefix: '',
+      validRUStart: 1,
+      validRUEnd: maxRackUnits,
+      preferredRU: 1,
+      preferredRack: 1,
     });
     setEditingComponentId(null);
   };
@@ -49,7 +77,7 @@ export const useComponentForm = () => {
     if (['cost', 'powerRequired', 'cpuSockets', 'cpuCoresPerSocket', 'memoryCapacity', 
          'diskSlotQuantity', 'ruSize', 'portsConsumedQuantity', 'portCount', 'portSpeed', 
          'portsProvidedQuantity', 'throughput', 'capacityTB', 'cassetteCapacity', 
-         'portQuantity', 'length'].includes(name)) {
+         'portQuantity', 'length', 'validRUStart', 'validRUEnd', 'preferredRU', 'preferredRack'].includes(name)) {
       parsedValue = value === '' ? 0 : parseFloat(value);
     }
     
@@ -78,7 +106,46 @@ export const useComponentForm = () => {
       toast.error("Please fill in all required fields");
       return false;
     }
+    
+    // Validate RU range
+    if (componentForm.validRUStart && componentForm.validRUEnd) {
+      if (componentForm.validRUStart > componentForm.validRUEnd) {
+        toast.error("RU range start must be less than or equal to RU range end");
+        return false;
+      }
+      
+      if (componentForm.validRUStart < 1 || componentForm.validRUEnd > maxRackUnits) {
+        toast.error(`Valid RU range must be between 1 and ${maxRackUnits}`);
+        return false;
+      }
+    }
+    
     return true;
+  };
+
+  // Process form values before submission
+  const processFormForSubmission = (form: ComponentFormValues) => {
+    // Create placement object from form fields
+    const placement = {
+      validRUStart: form.validRUStart || 1,
+      validRUEnd: form.validRUEnd || maxRackUnits,
+      preferredRU: form.preferredRU,
+      preferredRack: form.preferredRack
+    };
+    
+    // Create cleaned component object
+    const component = {
+      ...form,
+      placement
+    };
+    
+    // Remove form-specific fields
+    delete component.validRUStart;
+    delete component.validRUEnd;
+    delete component.preferredRU;
+    delete component.preferredRack;
+    
+    return component;
   };
 
   return {
@@ -94,6 +161,7 @@ export const useComponentForm = () => {
     handleInputChange,
     handleSelectChange,
     handleTypeChange,
-    validateForm
+    validateForm,
+    processFormForSubmission
   };
 };
