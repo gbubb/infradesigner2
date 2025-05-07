@@ -36,6 +36,17 @@ export const componentTypeToCategory: Record<ComponentType, ComponentCategory> =
   [ComponentType.Cable]: ComponentCategory.Cables
 };
 
+// Import required types from port-types.ts
+import { Port, CableMediaType } from './port-types';
+
+export enum ConnectorType {
+  RJ45 = 'RJ45',
+  MPO12 = 'MPO-12',
+  LC = 'LC',
+  SFP = 'SFP',
+  QSFP = 'QSFP'
+}
+
 // Core component interfaces
 export interface InfrastructureComponent {
   id: string;
@@ -51,6 +62,10 @@ export interface InfrastructureComponent {
   // Added naming and placement properties
   namingPrefix?: string;
   placement?: ComponentPlacement;
+  // Add ruHeight for rack space consumption
+  ruHeight?: number;
+  // Add ports for network connectivity
+  ports?: Port[];
   [key: string]: any; // To allow for any additional properties
 }
 
@@ -60,14 +75,6 @@ export interface ComponentPlacement {
   validRUEnd: number;
   preferredRU?: number;
   preferredRack?: number;
-}
-
-export enum ConnectorType {
-  RJ45 = 'RJ45',
-  MPO12 = 'MPO-12',
-  LC = 'LC',
-  SFP = 'SFP',
-  QSFP = 'QSFP'
 }
 
 // Structured cabling components
@@ -89,8 +96,11 @@ export interface Cassette extends InfrastructureComponent {
   portQuantity: number;
 }
 
+// Updated Cable interface with separate connector types for each end
 export interface Cable extends InfrastructureComponent {
   type: ComponentType.Cable;
   length: number; // in meters
-  connectorType: ConnectorType;
+  connectorA_Type: ConnectorType;
+  connectorB_Type: ConnectorType;
+  mediaType: CableMediaType;
 }

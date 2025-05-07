@@ -9,3 +9,5 @@ export * from './requirements-types';
 export * from './roles-types';
 export * from './metrics-types';
 export * from './design-types';
+export * from './port-types';
+export * from './rack-types';
