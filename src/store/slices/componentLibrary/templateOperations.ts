@@ -23,9 +23,11 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
         case ComponentType.CopperPatchPanel: component.namingPrefix = 'CPP'; break;
         case ComponentType.Cassette: component.namingPrefix = 'CAS'; break;
         case ComponentType.Cable: component.namingPrefix = 'CBL'; break;
-        default: component.namingPrefix = typeof component.type === 'string' ? 
-                 component.type.substring(0,3).toUpperCase() : 
-                 'DEF';
+        default: {
+          // Fix: Create a safe string version of the type
+          const typeStr = String(component.type);
+          component.namingPrefix = typeStr.substring(0, 3).toUpperCase();
+        }
       }
     }
     
