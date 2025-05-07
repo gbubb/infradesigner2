@@ -4,8 +4,6 @@ import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { RackView } from '@/components/visualization/RackView';
 import { DevicePalette } from '@/components/palette/DevicePalette';
 import { ConnectionPanel } from '@/components/visualization/ConnectionPanel';
@@ -45,14 +43,14 @@ export const RackLayoutsTab: React.FC = () => {
   
   // Update rack stats when selected rack changes
   useEffect(() => {
-    if (selectedRackId) {
-      try {
-        const stats = analyzeRackLayout(selectedRackId);
-        setRackStats(stats);
-      } catch (error) {
-        console.error("Error analyzing rack layout:", error);
-        setRackStats(null);
-      }
+    if (!selectedRackId) return;
+
+    try {
+      const stats = analyzeRackLayout(selectedRackId);
+      setRackStats(stats);
+    } catch (error) {
+      console.error("Error analyzing rack layout:", error);
+      setRackStats(null);
     }
   }, [selectedRackId]);
   
@@ -78,7 +76,10 @@ export const RackLayoutsTab: React.FC = () => {
       </div>
       
       <div className="flex flex-wrap items-center gap-4">
-        <Select value={selectedRackId || ''} onValueChange={(value) => setSelectedRackId(value)}>
+        <Select 
+          value={selectedRackId || ''} 
+          onValueChange={(value) => setSelectedRackId(value)}
+        >
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Select a rack" />
           </SelectTrigger>

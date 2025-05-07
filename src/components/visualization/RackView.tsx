@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useRackLayout } from '@/hooks/design/useRackLayout';
 import { ComponentType } from '@/types/infrastructure/component-types';
@@ -137,8 +136,11 @@ export const RackView: React.FC<RackViewProps> = ({
                   bottom: `${(unit - 1) * unitHeight}px`, 
                   height: `${unitHeight}px`
                 }}
-                onDragOver={(e) => handleDragOver(e, unit)}
-                onDragLeave={handleDragLeave}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverRU(unit);
+                }}
+                onDragLeave={() => setDragOverRU(null)}
                 onDrop={(e) => handleDrop(e, unit)}
               >
                 {showLabels && unit % labelInterval === 0 && (
@@ -167,7 +169,11 @@ export const RackView: React.FC<RackViewProps> = ({
                     zIndex: 10
                   }}
                   draggable
-                  onDragStart={(e) => handleDeviceDragStart(e, placedDevice.deviceId)}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('deviceId', placedDevice.deviceId);
+                    e.dataTransfer.setData('existingDeviceId', 'true');
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
                   onClick={() => handleDeviceClick(placedDevice.deviceId)}
                 >
                   <div className="text-xs font-medium truncate w-full text-center">
