@@ -19,7 +19,7 @@ export enum ComponentCategory {
   Storage = 'Storage',
   Security = 'Security',
   Acceleration = 'Acceleration',
-  StructuredCabling = 'StructuredCabling',
+  Cabling = 'Cabling',
   Cables = 'Cables'
 }
 
@@ -30,9 +30,9 @@ export const componentTypeToCategory: Record<ComponentType, ComponentCategory> =
   [ComponentType.Firewall]: ComponentCategory.Security,
   [ComponentType.Disk]: ComponentCategory.Storage,
   [ComponentType.GPU]: ComponentCategory.Acceleration,
-  [ComponentType.FiberPatchPanel]: ComponentCategory.StructuredCabling,
-  [ComponentType.CopperPatchPanel]: ComponentCategory.StructuredCabling,
-  [ComponentType.Cassette]: ComponentCategory.StructuredCabling,
+  [ComponentType.FiberPatchPanel]: ComponentCategory.Cabling,
+  [ComponentType.CopperPatchPanel]: ComponentCategory.Cabling,
+  [ComponentType.Cassette]: ComponentCategory.Cabling,
   [ComponentType.Cable]: ComponentCategory.Cables
 };
 
