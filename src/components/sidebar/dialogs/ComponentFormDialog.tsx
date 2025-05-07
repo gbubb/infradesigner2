@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -152,7 +153,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       switchRole: formValues.switchRole || SwitchRole.Access,
       portCount: formValues.portCount || 24,
       portSpeed: formValues.portSpeed || '10',
-      portSpeedType: formValues.portSpeedType || PortSpeed.TenG,
+      portSpeedType: formValues.portSpeedType || PortSpeed.Speed10G,
       portsProvidedQuantity: formValues.portsProvidedQuantity || 24,
       layer: formValues.layer || 3,
       capacityTB: formValues.capacityTB || 1,
