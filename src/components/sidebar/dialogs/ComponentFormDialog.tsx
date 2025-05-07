@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -837,11 +836,11 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value={PortSpeed.OneG}>{PortSpeed.OneG}</SelectItem>
-                              <SelectItem value={PortSpeed.TenG}>{PortSpeed.TenG}</SelectItem>
-                              <SelectItem value={PortSpeed.TwentyFiveG}>{PortSpeed.TwentyFiveG}</SelectItem>
-                              <SelectItem value={PortSpeed.FortyG}>{PortSpeed.FortyG}</SelectItem>
-                              <SelectItem value={PortSpeed.HundredG}>{PortSpeed.HundredG}</SelectItem>
+                              <SelectItem value={PortSpeed.Speed1G}>{PortSpeed.Speed1G}</SelectItem>
+                              <SelectItem value={PortSpeed.Speed10G}>{PortSpeed.Speed10G}</SelectItem>
+                              <SelectItem value={PortSpeed.Speed25G}>{PortSpeed.Speed25G}</SelectItem>
+                              <SelectItem value={PortSpeed.Speed40G}>{PortSpeed.Speed40G}</SelectItem>
+                              <SelectItem value={PortSpeed.Speed100G}>{PortSpeed.Speed100G}</SelectItem>
                               <SelectItem value={PortSpeed.Speed400G}>{PortSpeed.Speed400G}</SelectItem>
                             </SelectContent>
                           </Select>

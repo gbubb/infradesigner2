@@ -3,7 +3,8 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SwitchRole, PortSpeed } from '@/types/infrastructure';
+import { SwitchRole } from '@/types/infrastructure';
+import { PortSpeed } from '@/types/infrastructure/port-types';
 
 interface SwitchFormFieldsProps {
   formValues: any;
