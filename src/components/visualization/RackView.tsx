@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRackLayout } from '@/hooks/design/useRackLayout';
 import { ComponentType } from '@/types/infrastructure/component-types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { useDesignStore } from '@/store/designStore';
+import { toast } from 'sonner';
 
 interface RackViewProps {
   rackProfileId: string;
@@ -12,6 +13,7 @@ interface RackViewProps {
   width?: number;
   showLabels?: boolean;
   labelInterval?: number;
+  onDeviceSelect?: (deviceId: string) => void;
 }
 
 // Component type color mapping
@@ -38,10 +40,12 @@ export const RackView: React.FC<RackViewProps> = ({
   height = 700,
   width = 300,
   showLabels = true,
-  labelInterval = 5
+  labelInterval = 5,
+  onDeviceSelect
 }) => {
-  const { rackProfile, placedDevices } = useRackLayout(rackProfileId);
+  const { rackProfile, placedDevices, placeDevice, moveDevice } = useRackLayout(rackProfileId);
   const activeDesign = useDesignStore(state => state.activeDesign);
+  const [dragOverRU, setDragOverRU] = useState<number | null>(null);
   
   if (!rackProfile) {
     return (
@@ -54,6 +58,61 @@ export const RackView: React.FC<RackViewProps> = ({
   // Generate array of rack units for the rack
   const rackUnits = Array.from({ length: rackProfile.uHeight }, (_, i) => i + 1);
   const unitHeight = height / rackProfile.uHeight;
+  
+  // Handle drop of a device onto the rack
+  const handleDrop = (e: React.DragEvent, ruPosition: number) => {
+    e.preventDefault();
+    
+    const deviceId = e.dataTransfer.getData('deviceId');
+    if (!deviceId) return;
+    
+    const movingExistingDevice = e.dataTransfer.getData('existingDeviceId');
+    
+    if (movingExistingDevice) {
+      // Moving an existing device
+      const result = moveDevice(deviceId, ruPosition);
+      if (result.success) {
+        toast.success(`Device moved to position ${ruPosition}U`);
+      } else {
+        toast.error(`Failed to move device: ${result.error}`);
+      }
+    } else {
+      // Placing a new device
+      const result = placeDevice(deviceId, ruPosition);
+      if (result.success) {
+        toast.success(`Device placed at position ${result.placedPosition}U`);
+      } else {
+        toast.error(`Failed to place device: ${result.error}`);
+      }
+    }
+    
+    setDragOverRU(null);
+  };
+  
+  // Handle drag over to highlight the RU position
+  const handleDragOver = (e: React.DragEvent, ruPosition: number) => {
+    e.preventDefault();
+    setDragOverRU(ruPosition);
+  };
+  
+  // Handle drag leave to remove highlight
+  const handleDragLeave = () => {
+    setDragOverRU(null);
+  };
+  
+  // Handle drag start for existing device
+  const handleDeviceDragStart = (e: React.DragEvent, deviceId: string) => {
+    e.dataTransfer.setData('deviceId', deviceId);
+    e.dataTransfer.setData('existingDeviceId', 'true'); // Flag to indicate this is an existing device
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  // Handle device selection
+  const handleDeviceClick = (deviceId: string) => {
+    if (onDeviceSelect) {
+      onDeviceSelect(deviceId);
+    }
+  };
   
   return (
     <Card className="p-4">
@@ -70,11 +129,17 @@ export const RackView: React.FC<RackViewProps> = ({
             {rackUnits.map(unit => (
               <div 
                 key={`ru-${unit}`}
-                className="absolute w-full border-t border-gray-200" 
+                className={cn(
+                  "absolute w-full border-t border-gray-200",
+                  dragOverRU === unit ? "bg-blue-100" : ""
+                )}
                 style={{ 
                   bottom: `${(unit - 1) * unitHeight}px`, 
                   height: `${unitHeight}px`
                 }}
+                onDragOver={(e) => handleDragOver(e, unit)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, unit)}
               >
                 {showLabels && unit % labelInterval === 0 && (
                   <div className="absolute -left-8 text-xs font-medium" style={{ bottom: `${unitHeight / 2 - 6}px` }}>
@@ -93,7 +158,7 @@ export const RackView: React.FC<RackViewProps> = ({
                 <div
                   key={placedDevice.deviceId}
                   className={cn(
-                    "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-2 py-1 overflow-hidden",
+                    "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-2 py-1 overflow-hidden cursor-pointer",
                     getDeviceColor(component.type)
                   )}
                   style={{
@@ -101,6 +166,9 @@ export const RackView: React.FC<RackViewProps> = ({
                     height: `${deviceHeight}px`,
                     zIndex: 10
                   }}
+                  draggable
+                  onDragStart={(e) => handleDeviceDragStart(e, placedDevice.deviceId)}
+                  onClick={() => handleDeviceClick(placedDevice.deviceId)}
                 >
                   <div className="text-xs font-medium truncate w-full text-center">
                     {component.name}

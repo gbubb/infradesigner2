@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RackView } from '@/components/visualization/RackView';
+import { DevicePalette } from '@/components/palette/DevicePalette';
+import { ConnectionPanel } from '@/components/visualization/ConnectionPanel';
 import { RackService } from '@/services/rackService';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
 import { HardDrive } from 'lucide-react';
@@ -15,6 +17,7 @@ export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const [rackProfiles, setRackProfiles] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedRackId, setSelectedRackId] = useState<string | null>(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [rackStats, setRackStats] = useState<{
     totalRU: number;
     usedRU: number;
@@ -60,6 +63,11 @@ export const RackLayoutsTab: React.FC = () => {
     setSelectedRackId(newRackId);
   };
 
+  // Handle device selection from rack view
+  const handleDeviceSelect = (deviceId: string) => {
+    setSelectedDeviceId(deviceId);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -85,8 +93,14 @@ export const RackLayoutsTab: React.FC = () => {
       </div>
       
       {selectedRackId && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Device Palette */}
+          <div className="lg:col-span-1">
+            <DevicePalette />
+          </div>
+          
+          {/* Rack View */}
+          <div className="lg:col-span-2">
             <div className="flex justify-center">
               <RackView 
                 rackProfileId={selectedRackId}
@@ -94,68 +108,56 @@ export const RackLayoutsTab: React.FC = () => {
                 width={300}
                 showLabels={true}
                 labelInterval={5}
+                onDeviceSelect={handleDeviceSelect}
               />
             </div>
           </div>
           
-          <div>
-            <div className="space-y-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="font-medium text-lg mb-4 flex items-center gap-2">
-                    <HardDrive className="h-5 w-5" />
-                    Rack Utilization
-                  </h3>
-                  
-                  {rackStats ? (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="text-muted-foreground">Total RU:</div>
-                        <div className="font-medium">{rackStats.totalRU}U</div>
-                        
-                        <div className="text-muted-foreground">Used RU:</div>
-                        <div className="font-medium">{rackStats.usedRU}U</div>
-                        
-                        <div className="text-muted-foreground">Available RU:</div>
-                        <div className="font-medium">{rackStats.availableRU}U</div>
-                        
-                        <div className="text-muted-foreground">Device Count:</div>
-                        <div className="font-medium">{rackStats.deviceCount}</div>
-                        
-                        <div className="text-muted-foreground">Utilization:</div>
-                        <div className="font-medium">{rackStats.utilizationPercentage.toFixed(1)}%</div>
-                      </div>
-                      
-                      {/* Progress bar for utilization */}
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div 
-                          className="bg-blue-600 h-2.5 rounded-full" 
-                          style={{ width: `${rackStats.utilizationPercentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">No utilization data available</p>
-                  )}
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="font-medium text-lg mb-4">Rack Properties</h3>
+          {/* Side Panel - Rack Stats and Connection Manager */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Rack Stats Card */}
+            <Card>
+              <CardContent className="pt-6">
+                <h3 className="font-medium text-lg mb-4 flex items-center gap-2">
+                  <HardDrive className="h-5 w-5" />
+                  Rack Utilization
+                </h3>
+                
+                {rackStats ? (
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="rackName">Rack Name</Label>
-                      <Input 
-                        id="rackName" 
-                        value={rackProfiles.find(r => r.id === selectedRackId)?.name || ''}
-                        disabled
-                      />
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="text-muted-foreground">Total RU:</div>
+                      <div className="font-medium">{rackStats.totalRU}U</div>
+                      
+                      <div className="text-muted-foreground">Used RU:</div>
+                      <div className="font-medium">{rackStats.usedRU}U</div>
+                      
+                      <div className="text-muted-foreground">Available RU:</div>
+                      <div className="font-medium">{rackStats.availableRU}U</div>
+                      
+                      <div className="text-muted-foreground">Device Count:</div>
+                      <div className="font-medium">{rackStats.deviceCount}</div>
+                      
+                      <div className="text-muted-foreground">Utilization:</div>
+                      <div className="font-medium">{rackStats.utilizationPercentage.toFixed(1)}%</div>
+                    </div>
+                    
+                    {/* Progress bar for utilization */}
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div 
+                        className="bg-blue-600 h-2.5 rounded-full" 
+                        style={{ width: `${rackStats.utilizationPercentage}%` }}
+                      ></div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                ) : (
+                  <p className="text-muted-foreground">No utilization data available</p>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Connection Panel */}
+            <ConnectionPanel selectedDeviceId={selectedDeviceId} />
           </div>
         </div>
       )}
