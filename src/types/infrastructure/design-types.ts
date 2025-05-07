@@ -2,6 +2,7 @@
 import { InfrastructureComponent } from './component-types';
 import { DesignRequirements } from './requirements-types';
 import { ComponentRole } from './roles-types';
+import { RackProfile } from './rack-types';
 
 // Infrastructure Design interface
 export interface InfrastructureDesign {
@@ -20,6 +21,8 @@ export interface InfrastructureDesign {
   user_id?: string | null;
   is_public?: boolean;
   sharing_id?: string | null;
+  // Rack layout information
+  rackProfiles?: RackProfile[];
 }
 
 // Workspace types for component positioning
