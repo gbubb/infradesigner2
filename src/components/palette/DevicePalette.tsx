@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { ComponentType } from '@/types/infrastructure/component-types';
@@ -27,12 +27,14 @@ const getDeviceColor = (type: string): string => {
 export const DevicePalette: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   
-  // Get rackable devices (with ruHeight > 0)
-  const rackableDevices = activeDesign?.components.filter(comp => 
-    comp.ruHeight && 
-    comp.ruHeight > 0 && 
-    comp.type !== ComponentType.Cable
-  ) || [];
+  // Memoize rackable devices to avoid recalculations on each render
+  const rackableDevices = useMemo(() => {
+    return activeDesign?.components.filter(comp => 
+      comp.ruHeight && 
+      comp.ruHeight > 0 && 
+      comp.type !== ComponentType.Cable
+    ) || [];
+  }, [activeDesign?.components]);
   
   // Handle drag start event
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, deviceId: string) => {

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useCallback } from 'react';
 import { useRackLayout } from '@/hooks/design/useRackLayout';
 import { ComponentType } from '@/types/infrastructure/component-types';
 import { cn } from '@/lib/utils';
@@ -43,7 +44,6 @@ export const RackView: React.FC<RackViewProps> = ({
   onDeviceSelect
 }) => {
   const { rackProfile, placedDevices, placeDevice, moveDevice } = useRackLayout(rackProfileId);
-  const activeDesign = useDesignStore(state => state.activeDesign);
   const [dragOverRU, setDragOverRU] = useState<number | null>(null);
   
   if (!rackProfile) {
@@ -58,16 +58,16 @@ export const RackView: React.FC<RackViewProps> = ({
   const rackUnits = Array.from({ length: rackProfile.uHeight }, (_, i) => i + 1);
   const unitHeight = height / rackProfile.uHeight;
   
-  // Handle drop of a device onto the rack
-  const handleDrop = (e: React.DragEvent, ruPosition: number) => {
+  // Handle drop of a device onto the rack - memoized to prevent recreation on each render
+  const handleDrop = useCallback((e: React.DragEvent, ruPosition: number) => {
     e.preventDefault();
     
     const deviceId = e.dataTransfer.getData('deviceId');
     if (!deviceId) return;
     
-    const movingExistingDevice = e.dataTransfer.getData('existingDeviceId');
+    const isExistingDevice = e.dataTransfer.getData('existingDeviceId');
     
-    if (movingExistingDevice) {
+    if (isExistingDevice) {
       // Moving an existing device
       const result = moveDevice(deviceId, ruPosition);
       if (result.success) {
@@ -86,32 +86,25 @@ export const RackView: React.FC<RackViewProps> = ({
     }
     
     setDragOverRU(null);
-  };
+  }, [moveDevice, placeDevice]);
   
   // Handle drag over to highlight the RU position
-  const handleDragOver = (e: React.DragEvent, ruPosition: number) => {
+  const handleDragOver = useCallback((e: React.DragEvent, ruPosition: number) => {
     e.preventDefault();
     setDragOverRU(ruPosition);
-  };
+  }, []);
   
   // Handle drag leave to remove highlight
-  const handleDragLeave = () => {
+  const handleDragLeave = useCallback(() => {
     setDragOverRU(null);
-  };
+  }, []);
   
-  // Handle drag start for existing device
-  const handleDeviceDragStart = (e: React.DragEvent, deviceId: string) => {
-    e.dataTransfer.setData('deviceId', deviceId);
-    e.dataTransfer.setData('existingDeviceId', 'true'); // Flag to indicate this is an existing device
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
   // Handle device selection
-  const handleDeviceClick = (deviceId: string) => {
+  const handleDeviceClick = useCallback((deviceId: string) => {
     if (onDeviceSelect) {
       onDeviceSelect(deviceId);
     }
-  };
+  }, [onDeviceSelect]);
   
   return (
     <Card className="p-4">
@@ -136,11 +129,8 @@ export const RackView: React.FC<RackViewProps> = ({
                   bottom: `${(unit - 1) * unitHeight}px`, 
                   height: `${unitHeight}px`
                 }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragOverRU(unit);
-                }}
-                onDragLeave={() => setDragOverRU(null)}
+                onDragOver={(e) => handleDragOver(e, unit)}
+                onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, unit)}
               >
                 {showLabels && unit % labelInterval === 0 && (

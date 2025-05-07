@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService, PlacementResult } from '@/services/rackService';
 import { RackProfile, PlacedDevice, InfrastructureComponent } from '@/types/infrastructure';
@@ -22,7 +23,7 @@ export const useRackLayout = (rackProfileId?: string) => {
   // Using store selector to avoid excessive re-renders
   const activeDesign = useDesignStore(state => state.activeDesign);
   
-  // Update rackProfile when the rackProfileId changes or the design is updated
+  // Update rackProfile when the rackProfileId changes or when components in the design update
   useEffect(() => {
     if (!rackProfileId || !activeDesign) return;
     
@@ -32,30 +33,34 @@ export const useRackLayout = (rackProfileId?: string) => {
     setRackProfile(profile);
       
     // Get component details for each placed device
-    const devicesWithComponents = profile.devices.map(device => {
-      const component = activeDesign.components.find(c => c.id === device.deviceId);
-      return component ? {
-        placedDevice: device,
-        component: component
-      } : null;
-    }).filter(Boolean) as Array<{
-      placedDevice: PlacedDevice;
-      component: InfrastructureComponent;
-    }>;
-    
-    setPlacedDevices(devicesWithComponents);
-    
-    // Get available devices (devices that have ruHeight and aren't placed in this rack)
-    const placedDeviceIds = profile.devices.map(device => device.deviceId);
-    const available = activeDesign.components
-      .filter(comp => 
-        comp.ruHeight && 
-        comp.ruHeight > 0 &&
-        !placedDeviceIds.includes(comp.id)
-      );
-    
-    setAvailableDevices(available);
-  }, [rackProfileId, activeDesign]);
+    if (profile.devices && activeDesign.components) {
+      const devicesWithComponents = profile.devices
+        .map(device => {
+          const component = activeDesign.components.find(c => c.id === device.deviceId);
+          return component ? {
+            placedDevice: device,
+            component: component
+          } : null;
+        })
+        .filter(Boolean) as Array<{
+          placedDevice: PlacedDevice;
+          component: InfrastructureComponent;
+        }>;
+      
+      setPlacedDevices(devicesWithComponents);
+      
+      // Get available devices (devices that have ruHeight and aren't placed in this rack)
+      const placedDeviceIds = profile.devices.map(device => device.deviceId);
+      const available = activeDesign.components
+        .filter(comp => 
+          comp.ruHeight && 
+          comp.ruHeight > 0 &&
+          !placedDeviceIds.includes(comp.id)
+        );
+      
+      setAvailableDevices(available);
+    }
+  }, [rackProfileId, activeDesign?.id]);
   
   /**
    * Place a device in the current rack
@@ -63,7 +68,7 @@ export const useRackLayout = (rackProfileId?: string) => {
    * @param targetRuPosition Optional target RU position
    * @returns PlacementResult with success/error details
    */
-  const placeDevice = (deviceId: string, targetRuPosition?: number): PlacementResult => {
+  const placeDevice = useCallback((deviceId: string, targetRuPosition?: number): PlacementResult => {
     if (!rackProfile) {
       return { success: false, error: "No rack selected" };
     }
@@ -100,14 +105,14 @@ export const useRackLayout = (rackProfileId?: string) => {
     }
     
     return result;
-  };
+  }, [rackProfile, activeDesign]);
   
   /**
    * Remove a device from the current rack
    * @param deviceId The ID of the device to remove
    * @returns PlacementResult with success/error details
    */
-  const removeDevice = (deviceId: string): PlacementResult => {
+  const removeDevice = useCallback((deviceId: string): PlacementResult => {
     if (!rackProfile) {
       return { success: false, error: "No rack selected" };
     }
@@ -133,7 +138,7 @@ export const useRackLayout = (rackProfileId?: string) => {
     }
     
     return result;
-  };
+  }, [rackProfile, activeDesign]);
   
   /**
    * Move a device to a new position in the current rack
@@ -141,7 +146,7 @@ export const useRackLayout = (rackProfileId?: string) => {
    * @param newRuPosition The new RU position
    * @returns PlacementResult with success/error details
    */
-  const moveDevice = (deviceId: string, newRuPosition: number): PlacementResult => {
+  const moveDevice = useCallback((deviceId: string, newRuPosition: number): PlacementResult => {
     if (!rackProfile) {
       return { success: false, error: "No rack selected" };
     }
@@ -176,15 +181,15 @@ export const useRackLayout = (rackProfileId?: string) => {
     }
     
     return result;
-  };
+  }, [rackProfile]);
   
   /**
    * Get all available rack profiles in the current design
    * @returns Array of rack profiles
    */
-  const getAllRackProfiles = (): RackProfile[] => {
+  const getAllRackProfiles = useCallback((): RackProfile[] => {
     return RackService.getAllRackProfiles();
-  };
+  }, []);
   
   /**
    * Create a new empty rack profile
@@ -192,16 +197,16 @@ export const useRackLayout = (rackProfileId?: string) => {
    * @param uHeight The height of the rack in RU
    * @returns The ID of the newly created rack
    */
-  const createRackProfile = (name: string, uHeight: number = 42): string => {
+  const createRackProfile = useCallback((name: string, uHeight: number = 42): string => {
     const rackId = RackService.createRackProfile(name, uHeight);
     return rackId;
-  };
+  }, []);
   
   /**
    * Switch to a different rack profile
    * @param rackId The ID of the rack profile to switch to
    */
-  const switchRackProfile = (rackId: string) => {
+  const switchRackProfile = useCallback((rackId: string) => {
     if (!activeDesign) return;
     
     const profile = RackService.getRackProfile(rackId);
@@ -234,7 +239,7 @@ export const useRackLayout = (rackProfileId?: string) => {
       
       setAvailableDevices(available);
     }
-  };
+  }, [activeDesign]);
   
   return {
     rackProfile,

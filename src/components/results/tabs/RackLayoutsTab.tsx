@@ -24,7 +24,7 @@ export const RackLayoutsTab: React.FC = () => {
     deviceCount: number;
   } | null>(null);
   
-  // Initialize racks and select the first one
+  // Initialize racks and select the first one - only when activeDesign changes
   useEffect(() => {
     if (!activeDesign) return;
     
@@ -39,7 +39,7 @@ export const RackLayoutsTab: React.FC = () => {
       setRackProfiles(allRacks.map(rack => ({ id: rack.id, name: rack.name })));
       setSelectedRackId(allRacks[0].id);
     }
-  }, [activeDesign]);
+  }, [activeDesign?.id]); // Only depend on the ID, not the entire object
   
   // Update rack stats when selected rack changes
   useEffect(() => {
