@@ -10,6 +10,8 @@ import {
   ConnectorType
 } from '../types/infrastructure';
 
+import { CableMediaType } from '../types/infrastructure';
+
 // Define empty templates for the missing arrays
 const serverTemplates: InfrastructureComponent[] = [];
 const switchTemplates: InfrastructureComponent[] = [];
@@ -85,7 +87,7 @@ export const cassetteTemplates: Cassette[] = [
   }
 ];
 
-// Add sample cables
+// Updated cable templates with the new required properties
 export const cableTemplates: Cable[] = [
   {
     id: 'cbl-1',
@@ -96,7 +98,9 @@ export const cableTemplates: Cable[] = [
     cost: 8,
     powerRequired: 0,
     length: 3,
-    connectorType: ConnectorType.RJ45
+    connectorA_Type: ConnectorType.RJ45,
+    connectorB_Type: ConnectorType.RJ45,
+    mediaType: CableMediaType.CopperCat6a
   },
   {
     id: 'cbl-2',
@@ -107,7 +111,9 @@ export const cableTemplates: Cable[] = [
     cost: 65,
     powerRequired: 0,
     length: 5,
-    connectorType: ConnectorType.MPO12
+    connectorA_Type: ConnectorType.MPO12,
+    connectorB_Type: ConnectorType.MPO12,
+    mediaType: CableMediaType.FiberSMDuplex
   },
   {
     id: 'cbl-3',
@@ -118,7 +124,9 @@ export const cableTemplates: Cable[] = [
     cost: 45,
     powerRequired: 0,
     length: 3,
-    connectorType: ConnectorType.SFP
+    connectorA_Type: ConnectorType.SFP,
+    connectorB_Type: ConnectorType.SFP,
+    mediaType: CableMediaType.DACSFP
   },
   {
     id: 'cbl-4',
@@ -129,7 +137,9 @@ export const cableTemplates: Cable[] = [
     cost: 85,
     powerRequired: 0,
     length: 3,
-    connectorType: ConnectorType.QSFP
+    connectorA_Type: ConnectorType.QSFP,
+    connectorB_Type: ConnectorType.QSFP,
+    mediaType: CableMediaType.DACQSFP
   }
 ];
 

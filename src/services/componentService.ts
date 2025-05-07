@@ -1,5 +1,7 @@
+
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureComponent, ComponentType, Server, Switch, Disk, FiberPatchPanel, CopperPatchPanel, Cassette, Cable, ConnectorType } from '@/types/infrastructure';
+import { CableMediaType } from '@/types/infrastructure';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -155,10 +157,22 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
             } as Cassette;
             
           case ComponentType.Cable:
+            // Handle old cable format conversion
+            if (details.connectorType && !details.connectorA_Type) {
+              return {
+                ...baseComponent,
+                length: details.length || 0,
+                connectorA_Type: details.connectorType || ConnectorType.RJ45,
+                connectorB_Type: details.connectorType || ConnectorType.RJ45,
+                mediaType: details.mediaType || CableMediaType.CopperCat6a
+              } as Cable;
+            }
             return {
               ...baseComponent,
               length: details.length || 0,
-              connectorType: details.connectorType || ConnectorType.RJ45,
+              connectorA_Type: details.connectorA_Type || ConnectorType.RJ45,
+              connectorB_Type: details.connectorB_Type || ConnectorType.RJ45,
+              mediaType: details.mediaType || CableMediaType.CopperCat6a
             } as Cable;
 
           default:
@@ -242,8 +256,11 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
         specializedFields.portQuantity = (componentWithValidID as Cassette).portQuantity || 0;
         break;
       case ComponentType.Cable:
-        specializedFields.length = (componentWithValidID as Cable).length || 0;
-        specializedFields.connectorType = (componentWithValidID as Cable).connectorType || ConnectorType.RJ45;
+        const cable = componentWithValidID as Cable;
+        specializedFields.length = cable.length || 0;
+        specializedFields.connectorA_Type = cable.connectorA_Type || ConnectorType.RJ45;
+        specializedFields.connectorB_Type = cable.connectorB_Type || ConnectorType.RJ45;
+        specializedFields.mediaType = cable.mediaType || CableMediaType.CopperCat6a;
         break;
     }
     

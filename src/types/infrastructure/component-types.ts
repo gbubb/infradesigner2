@@ -36,9 +36,7 @@ export const componentTypeToCategory: Record<ComponentType, ComponentCategory> =
   [ComponentType.Cable]: ComponentCategory.Cables
 };
 
-// Import required types from port-types.ts
-import { Port, CableMediaType } from './port-types';
-
+// Define ConnectorType here to avoid circular imports
 export enum ConnectorType {
   RJ45 = 'RJ45',
   MPO12 = 'MPO-12',
@@ -46,6 +44,10 @@ export enum ConnectorType {
   SFP = 'SFP',
   QSFP = 'QSFP'
 }
+
+// Forward import types to avoid circular references
+// We need to import these types after defining ConnectorType
+import { Port, CableMediaType } from './port-types';
 
 // Core component interfaces
 export interface InfrastructureComponent {

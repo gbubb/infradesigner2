@@ -1,4 +1,6 @@
 
+import { ConnectorType } from './component-types';
+
 // Port and connection type definitions
 
 export enum PortSpeed {

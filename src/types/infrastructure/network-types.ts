@@ -1,4 +1,5 @@
 import { InfrastructureComponent, ComponentType } from './component-types';
+import { PortSpeed } from './port-types';
 
 export enum SwitchRole {
   Management = 'management',
@@ -17,16 +18,6 @@ export enum NetworkTopologyEnum {
   SpineLeaf = "Spine-Leaf",
   ThreeTier = "Three-Tier",
   CoreDistributionAccess = "Core-Distribution-Access"
-}
-
-// Update PortSpeed enum for consistency
-export enum PortSpeed {
-  OneG = '1G',
-  TenG = '10G',
-  TwentyFiveG = '25G',
-  FortyG = '40G',
-  HundredG = '100G',
-  Speed400G = '400G'
 }
 
 // Management network types

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -22,11 +23,11 @@ import {
   ServerRole, 
   DiskSlotType, 
   NetworkPortType, 
-  SwitchRole, 
-  PortSpeed,
+  SwitchRole,
   DiskType,
   ConnectorType
 } from '@/types/infrastructure';
+import { PortSpeed } from '@/types/infrastructure/port-types';
 import { RouterFirewallFormFields } from '../forms/RouterFirewallFormFields';
 import { CablingFormFields } from '../forms/CablingFormFields';
 import { useDesignStore } from '@/store/designStore';
