@@ -292,7 +292,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                     } else if (component.type === ComponentType.Cassette) {
                       details = `${component.portType}, ${component.portQuantity} ports`;
                     } else if (component.type === ComponentType.Cable) {
-                      details = `${component.length}m, ${component.connectorType}`;
+                      details = `${component.length}m, ${component.connectorA_Type} to ${component.connectorB_Type}, ${component.mediaType}`;
                     }
                     
                     return (

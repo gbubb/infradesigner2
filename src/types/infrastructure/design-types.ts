@@ -23,6 +23,8 @@ export interface InfrastructureDesign {
   sharing_id?: string | null;
   // Rack layout information
   rackProfiles?: RackProfile[];
+  // Connection information
+  connections?: Connection[];
 }
 
 // Workspace types for component positioning
@@ -38,4 +40,7 @@ export interface Connection {
   sourceId: string;
   targetId: string;
   label?: string;
+  sourcePortId?: string;
+  targetPortId?: string;
+  cableId?: string;
 }
