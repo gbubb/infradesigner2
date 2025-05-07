@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService, PlacementResult } from '@/services/rackService';
 import { RackProfile, PlacedDevice, InfrastructureComponent } from '@/types/infrastructure';
@@ -9,9 +8,7 @@ import { RackProfile, PlacedDevice, InfrastructureComponent } from '@/types/infr
  * @param rackProfileId ID of the rack profile to manage (optional)
  */
 export const useRackLayout = (rackProfileId?: string) => {
-  const [rackProfile, setRackProfile] = useState<RackProfile | undefined>(
-    rackProfileId ? RackService.getRackProfile(rackProfileId) : undefined
-  );
+  const [rackProfile, setRackProfile] = useState<RackProfile | undefined>(undefined);
   
   const [placedDevices, setPlacedDevices] = useState<Array<{
     placedDevice: PlacedDevice;
@@ -20,20 +17,37 @@ export const useRackLayout = (rackProfileId?: string) => {
   
   const [availableDevices, setAvailableDevices] = useState<InfrastructureComponent[]>([]);
   
+  // Track the previous rackProfileId to avoid unnecessary updates
+  const prevRackIdRef = useRef<string | undefined>(undefined);
+  
   // Using store selector to avoid excessive re-renders
   const activeDesign = useDesignStore(state => state.activeDesign);
   
   // Update rackProfile when the rackProfileId changes or when components in the design update
   useEffect(() => {
-    if (!rackProfileId || !activeDesign) return;
+    // Skip the effect if rackProfileId is the same as before and not the first run
+    if (!rackProfileId || !activeDesign || (prevRackIdRef.current === rackProfileId && placedDevices.length > 0)) {
+      return;
+    }
     
+    // Update the ref
+    prevRackIdRef.current = rackProfileId;
+    
+    // Get the rack profile
     const profile = RackService.getRackProfile(rackProfileId);
-    if (!profile) return;
+    if (!profile) {
+      console.error(`Rack profile not found: ${rackProfileId}`);
+      setRackProfile(undefined);
+      setPlacedDevices([]);
+      setAvailableDevices([]);
+      return;
+    }
     
     setRackProfile(profile);
       
     // Get component details for each placed device
     if (profile.devices && activeDesign.components) {
+      // Map placed devices to corresponding components
       const devicesWithComponents = profile.devices
         .map(device => {
           const component = activeDesign.components.find(c => c.id === device.deviceId);
@@ -60,7 +74,7 @@ export const useRackLayout = (rackProfileId?: string) => {
       
       setAvailableDevices(available);
     }
-  }, [rackProfileId, activeDesign?.id]);
+  }, [rackProfileId, activeDesign?.id, activeDesign?.components]);
   
   /**
    * Place a device in the current rack
@@ -187,9 +201,7 @@ export const useRackLayout = (rackProfileId?: string) => {
    * Get all available rack profiles in the current design
    * @returns Array of rack profiles
    */
-  const getAllRackProfiles = useCallback((): RackProfile[] => {
-    return RackService.getAllRackProfiles();
-  }, []);
+  const getAllRackProfiles = useCallback(() => RackService.getAllRackProfiles(), []);
   
   /**
    * Create a new empty rack profile
@@ -197,10 +209,7 @@ export const useRackLayout = (rackProfileId?: string) => {
    * @param uHeight The height of the rack in RU
    * @returns The ID of the newly created rack
    */
-  const createRackProfile = useCallback((name: string, uHeight: number = 42): string => {
-    const rackId = RackService.createRackProfile(name, uHeight);
-    return rackId;
-  }, []);
+  const createRackProfile = useCallback((name: string, uHeight: number = 42) => RackService.createRackProfile(name, uHeight), []);
   
   /**
    * Switch to a different rack profile
@@ -210,25 +219,24 @@ export const useRackLayout = (rackProfileId?: string) => {
     if (!activeDesign) return;
     
     const profile = RackService.getRackProfile(rackId);
+    if (!profile) return;
     
-    if (profile) {
-      setRackProfile(profile);
-      
-      // Get component details for each placed device
-      const devicesWithComponents = profile.devices.map(device => {
-        const component = activeDesign.components.find(c => c.id === device.deviceId);
-        return component ? {
-          placedDevice: device,
-          component: component
-        } : null;
-      }).filter(Boolean) as Array<{
-        placedDevice: PlacedDevice;
-        component: InfrastructureComponent;
-      }>;
+    setRackProfile(profile);
+    
+    // Update device lists
+    if (activeDesign.components) {
+      const devicesWithComponents = profile.devices
+        .map(device => {
+          const component = activeDesign.components.find(c => c.id === device.deviceId);
+          return component ? { placedDevice: device, component } : null;
+        })
+        .filter(Boolean) as Array<{
+          placedDevice: PlacedDevice;
+          component: InfrastructureComponent;
+        }>;
       
       setPlacedDevices(devicesWithComponents);
       
-      // Update available devices
       const placedDeviceIds = profile.devices.map(device => device.deviceId);
       const available = activeDesign.components
         .filter(comp => 

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { ConnectionPanel } from '@/components/visualization/ConnectionPanel';
 import { RackService } from '@/services/rackService';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
 import { HardDrive } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
@@ -28,21 +29,29 @@ export const RackLayoutsTab: React.FC = () => {
   useEffect(() => {
     if (!activeDesign) return;
     
-    const allRacks = RackService.getAllRackProfiles();
-    
-    if (allRacks.length === 0) {
-      // Create a default rack if none exists
-      const newRackId = RackService.createRackProfile("Default Rack");
-      setRackProfiles([{ id: newRackId, name: "Default Rack" }]);
-      setSelectedRackId(newRackId);
-    } else {
-      setRackProfiles(allRacks.map(rack => ({ id: rack.id, name: rack.name })));
-      setSelectedRackId(allRacks[0].id);
+    try {
+      const allRacks = RackService.getAllRackProfiles();
+      
+      if (allRacks.length === 0) {
+        // Create a default rack if none exists
+        const newRackId = RackService.createRackProfile("Default Rack");
+        setRackProfiles([{ id: newRackId, name: "Default Rack" }]);
+        setSelectedRackId(newRackId);
+      } else {
+        setRackProfiles(allRacks.map(rack => ({ id: rack.id, name: rack.name })));
+        // Only set the selected rack ID if it's not already set
+        if (!selectedRackId) {
+          setSelectedRackId(allRacks[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Error initializing racks:", error);
+      toast.error("Failed to initialize racks");
     }
-  }, [activeDesign?.id]); // Only depend on the ID, not the entire object
+  }, [activeDesign?.id, selectedRackId]); // Depend on activeDesign.id and selectedRackId
   
-  // Update rack stats when selected rack changes
-  useEffect(() => {
+  // Update rack stats when selected rack changes - memoize the function to prevent unnecessary re-renders
+  const updateRackStats = useCallback(() => {
     if (!selectedRackId) return;
 
     try {
@@ -54,17 +63,30 @@ export const RackLayoutsTab: React.FC = () => {
     }
   }, [selectedRackId]);
   
-  const createNewRack = () => {
+  // Call the memoized function in useEffect
+  useEffect(() => {
+    updateRackStats();
+  }, [updateRackStats]);
+  
+  // Memoize the createNewRack function
+  const createNewRack = useCallback(() => {
     const rackCount = rackProfiles.length + 1;
     const newRackId = RackService.createRackProfile(`Rack ${rackCount}`);
     setRackProfiles(prev => [...prev, { id: newRackId, name: `Rack ${rackCount}` }]);
     setSelectedRackId(newRackId);
-  };
+  }, [rackProfiles.length]);
 
-  // Handle device selection from rack view
-  const handleDeviceSelect = (deviceId: string) => {
-    setSelectedDeviceId(deviceId);
-  };
+  // Memoize the device selection handler
+  const handleDeviceSelect = useCallback((deviceId: string) => {
+    setSelectedDeviceId(prevId => prevId === deviceId ? null : deviceId);
+  }, []);
+
+  // Memoize the rack selection handler
+  const handleRackChange = useCallback((value: string) => {
+    setSelectedRackId(value);
+    // Clear selected device when changing racks
+    setSelectedDeviceId(null);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -78,7 +100,7 @@ export const RackLayoutsTab: React.FC = () => {
       <div className="flex flex-wrap items-center gap-4">
         <Select 
           value={selectedRackId || ''} 
-          onValueChange={(value) => setSelectedRackId(value)}
+          onValueChange={handleRackChange}
         >
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Select a rack" />
@@ -158,7 +180,9 @@ export const RackLayoutsTab: React.FC = () => {
             </Card>
             
             {/* Connection Panel */}
-            <ConnectionPanel selectedDeviceId={selectedDeviceId} />
+            {selectedDeviceId && (
+              <ConnectionPanel selectedDeviceId={selectedDeviceId} />
+            )}
           </div>
         </div>
       )}

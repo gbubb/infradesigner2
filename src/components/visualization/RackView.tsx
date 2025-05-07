@@ -1,10 +1,9 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { useRackLayout } from '@/hooks/design/useRackLayout';
 import { ComponentType } from '@/types/infrastructure/component-types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
-import { useDesignStore } from '@/store/designStore';
 import { toast } from 'sonner';
 
 interface RackViewProps {
@@ -35,13 +34,19 @@ const getDeviceColor = (type: string): string => {
   }
 };
 
-export const RackView: React.FC<RackViewProps> = ({
-  rackProfileId,
-  height = 700,
-  width = 300,
-  showLabels = true,
-  labelInterval = 5,
-  onDeviceSelect
+// Create the rack units array outside the component to prevent recreation on each render
+const generateRackUnits = (uHeight: number) => {
+  return Array.from({ length: uHeight }, (_, i) => i + 1);
+};
+
+// Use React.memo to prevent re-renders when props haven't changed
+const RackView: React.FC<RackViewProps> = ({ 
+  rackProfileId, 
+  height = 700, 
+  width = 300, 
+  showLabels = true, 
+  labelInterval = 5, 
+  onDeviceSelect 
 }) => {
   const { rackProfile, placedDevices, placeDevice, moveDevice } = useRackLayout(rackProfileId);
   const [dragOverRU, setDragOverRU] = useState<number | null>(null);
@@ -54,8 +59,8 @@ export const RackView: React.FC<RackViewProps> = ({
     );
   }
   
-  // Generate array of rack units for the rack
-  const rackUnits = Array.from({ length: rackProfile.uHeight }, (_, i) => i + 1);
+  // Generate array of rack units for the rack - memoized via outside function
+  const rackUnits = generateRackUnits(rackProfile.uHeight);
   const unitHeight = height / rackProfile.uHeight;
   
   // Handle drop of a device onto the rack - memoized to prevent recreation on each render
@@ -183,3 +188,6 @@ export const RackView: React.FC<RackViewProps> = ({
     </Card>
   );
 };
+
+// Export memoized component to prevent unnecessary re-renders
+export { RackView };

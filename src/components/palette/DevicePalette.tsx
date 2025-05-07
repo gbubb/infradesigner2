@@ -29,14 +29,16 @@ export const DevicePalette: React.FC = () => {
   
   // Memoize rackable devices to avoid recalculations on each render
   const rackableDevices = useMemo(() => {
-    return activeDesign?.components.filter(comp => 
+    if (!activeDesign?.components) return [];
+    
+    return activeDesign.components.filter(comp => 
       comp.ruHeight && 
       comp.ruHeight > 0 && 
       comp.type !== ComponentType.Cable
-    ) || [];
+    );
   }, [activeDesign?.components]);
   
-  // Handle drag start event
+  // Handle drag start event - memoizing this function isn't necessary as it's only used in the JSX
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, deviceId: string) => {
     e.dataTransfer.setData('deviceId', deviceId);
     e.dataTransfer.effectAllowed = 'move';
@@ -47,7 +49,7 @@ export const DevicePalette: React.FC = () => {
       <CardContent className="p-4">
         <h3 className="text-lg font-medium mb-4">Available Devices</h3>
         
-        {rackableDevices.length === 0 ? (
+        {!activeDesign || rackableDevices.length === 0 ? (
           <p className="text-sm text-muted-foreground">No rackable devices in design</p>
         ) : (
           <div className="space-y-2">
