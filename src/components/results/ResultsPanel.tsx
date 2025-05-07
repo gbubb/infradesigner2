@@ -4,7 +4,7 @@ import { useDesignStore, manualRecalculateDesign } from '@/store/designStore';
 import { toast } from 'sonner';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ResultsHeader } from './ResultsHeader';
-import { DesignResultsContent } from './DesignResultsContent';
+import { ResultsTabs } from './tabs/ResultsTabs';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 
 export const ResultsPanel: React.FC = () => {
@@ -109,7 +109,7 @@ export const ResultsPanel: React.FC = () => {
   // Show loading state while calculating
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-6">
         <ResultsHeader 
           onRecalculate={handleRecalculate}
           onForceFullRecalculation={handleForceFullRecalculation}
@@ -120,13 +120,13 @@ export const ResultsPanel: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto p-6">
       <ResultsHeader 
         onRecalculate={handleRecalculate}
         onForceFullRecalculation={handleForceFullRecalculation}
       />
       
-      <DesignResultsContent 
+      <ResultsTabs 
         designErrors={designErrors}
         hasNoDesign={hasNoDesign}
       />
