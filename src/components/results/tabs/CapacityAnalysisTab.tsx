@@ -22,7 +22,8 @@ export const CapacityAnalysisTab: React.FC = () => {
     const totalRackQuantity = resourceMetrics.totalRackQuantity || 1;
     
     // Calculate remaining power capacity for compute only (exclude network racks)
-    const networkRackQuantity = hasDedicatedNetworkRacks ? Math.ceil(resourceMetrics.networkRackUnits / (physicalConstraints?.rackUnitsPerRack || 42)) : 0;
+    const networkRackQuantity = hasDedicatedNetworkRacks ? 
+      Math.ceil((resourceMetrics.networkRackUnits || 0) / (physicalConstraints?.rackUnitsPerRack || 42)) : 0;
     const computeRackQuantity = totalRackQuantity - networkRackQuantity;
     
     // Only use compute rack power for calculations

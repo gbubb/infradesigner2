@@ -22,6 +22,8 @@ export const useResourceMetrics = () => {
     totalRackQuantity: physicalMetrics.totalRackQuantity,
     totalAvailableRU: physicalMetrics.totalAvailableRU,
     totalAvailablePower: physicalMetrics.totalAvailablePower,
+    networkRackUnits: physicalMetrics.networkRackUnits,
+    networkPower: physicalMetrics.networkPower,
     
     // Network metrics
     totalLeafSwitches: networkMetrics.totalLeafSwitches,

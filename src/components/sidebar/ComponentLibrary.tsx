@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useComponents } from '@/context/ComponentContext';
 import { useComponentForm } from '@/hooks/components/useComponentForm';
@@ -10,6 +9,7 @@ import { SearchBar } from './components/SearchBar';
 import { ComponentLibraryHeader } from './components/ComponentLibraryHeader';
 import { ComponentCategory, ComponentType, InfrastructureComponent, componentTypeToCategory } from '@/types/infrastructure';
 import { useComponentsByType } from '@/hooks/design/useComponentsByType';
+import { v4 as uuidv4 } from 'uuid';
 
 export const ComponentLibrary: React.FC = () => {
   const { 
@@ -88,12 +88,17 @@ export const ComponentLibrary: React.FC = () => {
 
     // Process the form for submission - consolidating placement fields
     const componentToSave = processFormForSubmission(componentForm);
+    
+    // Ensure ID is always set
+    if (!componentToSave.id) {
+      componentToSave.id = uuidv4();
+    }
 
     if (editingComponentId) {
       updateComponentTemplate(editingComponentId, componentToSave);
       setIsEditDialogOpen(false);
     } else {
-      addComponentTemplate(componentToSave);
+      addComponentTemplate(componentToSave as InfrastructureComponent);
       setIsAddDialogOpen(false);
     }
     

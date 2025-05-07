@@ -29,6 +29,7 @@ import {
 } from '@/types/infrastructure';
 import { RouterFirewallFormFields } from '../forms/RouterFirewallFormFields';
 import { CablingFormFields } from '../forms/CablingFormFields';
+import { useDesignStore } from '@/store/designStore';
 
 const formSchema = z.object({
   type: z.nativeEnum(ComponentType),

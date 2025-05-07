@@ -14,7 +14,9 @@ export const usePhysicalResourceMetrics = () => {
         totalServers: 0,
         totalAvailableRU: 0,
         totalAvailablePower: 0,
-        totalRackQuantity: 0
+        totalRackQuantity: 0,
+        networkRackUnits: 0,
+        networkPower: 0
       };
     }
     
@@ -33,6 +35,10 @@ export const usePhysicalResourceMetrics = () => {
     let totalRackUnits = 0;
     let totalServers = 0;
     
+    // Calculate network specific metrics
+    let networkRackUnits = 0;
+    let networkPower = 0;
+    
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
       
@@ -48,6 +54,16 @@ export const usePhysicalResourceMetrics = () => {
       if (component.type === ComponentType.Server) {
         totalServers += quantity;
       }
+      
+      // Calculate network specific metrics
+      if (component.type === ComponentType.Switch || 
+          component.type === ComponentType.Router ||
+          component.type === ComponentType.Firewall) {
+        networkPower += component.powerRequired * quantity;
+        if ('rackUnitsConsumed' in component) {
+          networkRackUnits += (component as any).rackUnitsConsumed * quantity;
+        }
+      }
     });
     
     return {
@@ -56,7 +72,9 @@ export const usePhysicalResourceMetrics = () => {
       totalServers,
       totalAvailableRU,
       totalAvailablePower,
-      totalRackQuantity
+      totalRackQuantity,
+      networkRackUnits,
+      networkPower
     };
   }, [activeDesign]);
 };
