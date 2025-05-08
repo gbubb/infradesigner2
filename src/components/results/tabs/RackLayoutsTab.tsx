@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,8 +13,7 @@ import { HardDrive } from 'lucide-react';
 import { DevicePalette } from '@/components/palette/DevicePalette';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ConnectionPanel } from '@/components/connections/ConnectionPanel';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import { DndProvider } from '@/components/providers/DndProvider';
 
 export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
@@ -77,7 +77,7 @@ export const RackLayoutsTab: React.FC = () => {
   }, []);
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <DndProvider>
       <div className="space-y-6">
         <div>
           <h2 className="text-xl font-semibold">Rack Layouts</h2>
