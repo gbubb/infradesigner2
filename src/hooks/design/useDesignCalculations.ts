@@ -1,5 +1,5 @@
 
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useStorageClustersWrapper } from './useStorageClustersWrapper';
 import { useHardwareTotalsWrapper } from './useHardwareTotalsWrapper';
@@ -15,8 +15,10 @@ import { InfrastructureDesign } from '@/types/infrastructure';
  * "Cannot read properties of undefined (reading 'length')" error.
  */
 export const useDesignCalculations = () => {
-  // Get store with a stable reference
-  const activeDesign = useDesignStore(state => state.activeDesign);
+  // Get store 
+  const store = useDesignStore();
+  const activeDesign: InfrastructureDesign | undefined = store.activeDesign;
+  const requirements = store.requirements;
   
   // Use our safer wrapper versions instead of the original hooks
   const { storageClustersMetrics } = useStorageClustersWrapper();
@@ -61,8 +63,6 @@ export const useDesignCalculations = () => {
   
   // Get cost analysis with proper typing
   const costAnalysisResult = useCostAnalysis();
-  
-  // Extract cost values with default values to avoid undefined errors
   const totalCost = useMemo(() => 
     typeof costAnalysisResult?.capitalCost === 'number' ? costAnalysisResult.capitalCost : 0
   , [costAnalysisResult?.capitalCost]);

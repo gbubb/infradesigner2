@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useHardwareTotals } from './useHardwareTotals';
@@ -35,27 +34,21 @@ export const useCostAnalysis = () => {
     }, 0);
   }, [activeDesign?.components]);
 
-  // Calculate compute-only capital costs (for cost per vCPU)
-  const computeCapitalCost = useMemo(() => {
-    if (!activeDesign?.components || activeDesign.components.length === 0) return 0;
-    
-    return activeDesign.components.reduce((total, component) => {
-      // Skip storage nodes and disks for compute capital cost calculation
-      if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
-        return total;
-      }
-      const quantity = component.quantity || 1;
-      return total + (component.cost * quantity);
-    }, 0);
-  }, [activeDesign?.components]);
-
   // Recalculate cost per vCPU using only compute nodes
   const costPerVCPU = useMemo(() => {
     if (!actualHardwareTotals.totalVCPUs || actualHardwareTotals.totalVCPUs === 0) return 0;
     
-    // Use the compute-only capital cost for this calculation
+    // Calculate compute-related capital costs from compute nodes only
+    const computeCapitalCost = activeDesign?.components?.reduce((total, component) => {
+      if (component.role === 'computeNode') {
+        const quantity = component.quantity || 1;
+        return total + (component.cost * quantity);
+      }
+      return total;
+    }, 0) || 0;
+    
     return computeCapitalCost / actualHardwareTotals.totalVCPUs;
-  }, [actualHardwareTotals.totalVCPUs, computeCapitalCost]);
+  }, [actualHardwareTotals.totalVCPUs, activeDesign?.components]);
   
   // Calculate amortized monthly costs by component type
   const amortizedCostsByType = useMemo(() => {
@@ -101,6 +94,12 @@ export const useCostAnalysis = () => {
       }
     });
     
+    console.log('Amortization calculation with lifespan values:', {
+      compute: { cost: computeTotal, lifespan: computeLifespan },
+      storage: { cost: storageTotal, lifespan: storageLifespan },
+      network: { cost: networkTotal, lifespan: networkLifespan }
+    });
+    
     // Calculate monthly amortized cost for each category
     const monthsInYear = 12;
     const computeAmortized = computeTotal / (computeLifespan * monthsInYear);
@@ -144,31 +143,24 @@ export const useCostAnalysis = () => {
     return operationalCosts.totalMonthly * 12;
   }, [operationalCosts.totalMonthly]);
   
-  // Calculate storage-only capital costs (for cost per TB)
-  const storageCapitalCost = useMemo(() => {
-    if (!activeDesign?.components || activeDesign.components.length === 0) return 0;
+  // Calculate cost per TB - use storage-related costs divided by usable TB
+  const costPerTB = useMemo(() => {
+    if (!actualHardwareTotals.totalStorageTB || actualHardwareTotals.totalStorageTB === 0) return 0;
     
-    return activeDesign.components.reduce((total, component) => {
+    // Calculate storage-related capital costs
+    const storageCapitalCost = activeDesign?.components?.reduce((total, component) => {
       if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
         const quantity = component.quantity || 1;
         return total + (component.cost * quantity);
       }
       return total;
-    }, 0);
-  }, [activeDesign?.components]);
-  
-  // Calculate cost per TB - use storage-related costs divided by usable TB
-  const costPerTB = useMemo(() => {
-    if (!actualHardwareTotals.totalStorageTB || actualHardwareTotals.totalStorageTB === 0) return 0;
+    }, 0) || 0;
     
-    // Use the storage-only capital cost for this calculation
     return storageCapitalCost / actualHardwareTotals.totalStorageTB;
-  }, [actualHardwareTotals.totalStorageTB, storageCapitalCost]);
+  }, [actualHardwareTotals.totalStorageTB, activeDesign?.components]);
 
   return {
     capitalCost,
-    computeCapitalCost,
-    storageCapitalCost,
     operationalCosts,
     totalCostOfOwnership,
     costPerVCPU,

@@ -41,7 +41,7 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Hardware Cost</span>
-                <span className="font-medium">${capitalCost.toLocaleString()}</span>
+                <span className="font-medium">€{capitalCost.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -54,38 +54,38 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
               {operationalCosts.racksMonthly > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Rack Colocation</span>
-                  <span className="font-medium">${operationalCosts.racksMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="font-medium">€{operationalCosts.racksMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 </div>
               )}
               
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Energy Consumption</span>
-                <span className="font-medium">${operationalCosts.energyMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span className="font-medium">€{operationalCosts.energyMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
               </div>
               
               <div className="space-y-1 ml-4">
                 <h4 className="text-sm font-medium">Hardware Amortization</h4>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Compute Hardware</span>
-                  <span className="font-medium">${amortizedCostsByType.compute.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="font-medium">€{amortizedCostsByType.compute.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Storage Hardware</span>
-                  <span className="font-medium">${amortizedCostsByType.storage.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="font-medium">€{amortizedCostsByType.storage.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Network Hardware</span>
-                  <span className="font-medium">${amortizedCostsByType.network.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="font-medium">€{amortizedCostsByType.network.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between font-medium">
                   <span>Total Amortized</span>
-                  <span>${amortizedCostsByType.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span>€{amortizedCostsByType.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
               
               <div className="flex justify-between pt-2 border-t font-medium">
                 <span>Total Monthly Operational Cost</span>
-                <span>${operationalCosts.totalMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span>€{operationalCosts.totalMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>
@@ -96,7 +96,7 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
             <h3 className="text-lg font-medium mb-2">3. Total Cost of Ownership (First Year)</h3>
             <div className="flex justify-between font-bold text-lg">
               <span>First Year Operational Costs</span>
-              <span>${firstYearOperationalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+              <span>€{firstYearOperationalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Includes 12 months of operational costs (amortization, energy, and rack colocation)

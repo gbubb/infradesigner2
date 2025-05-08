@@ -30,7 +30,7 @@ export const CompareCostMetrics: React.FC<CompareCostMetricsProps> = ({
     
     let formattedValue;
     if (format === 'currency') {
-      formattedValue = `$${valueB.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+      formattedValue = `€${valueB.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
     } else if (format === 'decimal') {
       formattedValue = valueB.toLocaleString(undefined, { maximumFractionDigits: 2 });
     } else {
@@ -63,7 +63,7 @@ export const CompareCostMetrics: React.FC<CompareCostMetricsProps> = ({
           )}
         </div>
         <div className="text-center">
-          ${metricsA.totalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          €{metricsA.totalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </div>
         <div className="text-center">
           {formatWithChange(metricsA.totalCost, metricsB.totalCost, 'currency', 'lower')}
@@ -78,7 +78,7 @@ export const CompareCostMetrics: React.FC<CompareCostMetricsProps> = ({
           )}
         </div>
         <div className="text-center">
-          ${metricsA.monthlyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          €{metricsA.monthlyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </div>
         <div className="text-center">
           {formatWithChange(metricsA.monthlyCost, metricsB.monthlyCost, 'currency', 'lower')}
@@ -93,7 +93,7 @@ export const CompareCostMetrics: React.FC<CompareCostMetricsProps> = ({
           )}
         </div>
         <div className="text-center">
-          ${metricsA.costPerVCPU.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          €{metricsA.costPerVCPU.toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </div>
         <div className="text-center">
           {formatWithChange(metricsA.costPerVCPU, metricsB.costPerVCPU, 'currency', 'lower')}
@@ -108,7 +108,7 @@ export const CompareCostMetrics: React.FC<CompareCostMetricsProps> = ({
           )}
         </div>
         <div className="text-center">
-          ${metricsA.costPerTB.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          €{metricsA.costPerTB.toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </div>
         <div className="text-center">
           {formatWithChange(metricsA.costPerTB, metricsB.costPerTB, 'currency', 'lower')}
