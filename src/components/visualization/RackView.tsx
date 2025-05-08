@@ -281,12 +281,14 @@ export const RackView: React.FC<RackViewProps> = ({
       let cableColor = "#8E9196"; // Default gray
       
       if (cable && cable.mediaType) {
-        if (cable.mediaType.startsWith('Fiber')) {
-          cableColor = "#0EA5E9"; // Blue for fiber
-        } else if (cable.mediaType.startsWith('Copper')) {
-          cableColor = "#F97316"; // Orange for copper
-        } else if (cable.mediaType.startsWith('DAC')) {
-          cableColor = "#8B5CF6"; // Purple for DAC
+        if (typeof cable.mediaType === 'string') {
+          if (cable.mediaType.startsWith('Fiber')) {
+            cableColor = "#0EA5E9"; // Blue for fiber
+          } else if (cable.mediaType.startsWith('Copper')) {
+            cableColor = "#F97316"; // Orange for copper
+          } else if (cable.mediaType.startsWith('DAC')) {
+            cableColor = "#8B5CF6"; // Purple for DAC
+          }
         }
       }
       
@@ -383,6 +385,11 @@ export const RackView: React.FC<RackViewProps> = ({
                 {connectionLines.map(line => {
                   if (!line) return null;
                   
+                  // Fixed line for cable type visual representation
+                  const isDashedLine = line.cable && 
+                                        typeof line.cable.mediaType === 'string' && 
+                                        line.cable.mediaType.startsWith('Fiber');
+                  
                   return (
                     <g key={line.id}>
                       <line 
@@ -392,7 +399,7 @@ export const RackView: React.FC<RackViewProps> = ({
                         y2={line.y2}
                         stroke={line.color}
                         strokeWidth={2}
-                        strokeDasharray={line.cable.mediaType?.startsWith('Fiber') ? "4 2" : ""}
+                        strokeDasharray={isDashedLine ? "4 2" : ""}
                       />
                     </g>
                   );
