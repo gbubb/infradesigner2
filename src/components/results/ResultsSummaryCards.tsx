@@ -97,7 +97,7 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
             <span className="font-medium">${costPerVCPU.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Cost TB/Memory:</span>
+            <span className="text-muted-foreground">Cost per TB Storage:</span>
             <span className="font-medium">${costTBMemory.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
           </div>
         </div>
