@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,43 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ConnectionPanel } from '@/components/connections/ConnectionPanel';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useConnectionManager } from '@/hooks/design/useConnectionManager';
+import { InfrastructureComponent, PlacedDevice, Port } from '@/types/infrastructure';
+
+// Helper function to calculate port visual coordinates
+const calculatePortVisualXY = (
+  placedDevice: PlacedDevice,
+  portId: string,
+  deviceDetails: InfrastructureComponent,
+  unitHeight: number,
+  rackViewWidth: number
+): { x: number; y: number } | null => {
+  // If device has no ports or no height defined, we can't calculate position
+  if (!deviceDetails.ports || !deviceDetails.ruHeight) {
+    return null;
+  }
+  
+  // Find the port in device's ports array
+  const portIndex = deviceDetails.ports.findIndex(port => port.id === portId);
+  if (portIndex === -1) {
+    return null;
+  }
+  
+  // Calculate device's visual position
+  // Note: In our rack view, Y=0 is at the bottom of the rack and increases upwards
+  const deviceBottomVisualY = (placedDevice.ruPosition - 1) * unitHeight;
+  const deviceVisualHeight = deviceDetails.ruHeight * unitHeight;
+  
+  // For simplicity, place all ports on the right edge with a small margin
+  const x = rackViewWidth - 10;
+  
+  // Distribute ports evenly along the device height
+  // Adding 1 to denominator and numerator to avoid edges
+  const portOffsetY = (portIndex + 1) * (deviceVisualHeight / (deviceDetails.ports.length + 1));
+  const y = deviceBottomVisualY + portOffsetY;
+  
+  return { x, y };
+};
 
 export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
@@ -28,6 +66,9 @@ export const RackLayoutsTab: React.FC = () => {
   } | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
+  
+  // Get the connection data
+  const { connections } = useConnectionManager();
   
   // Initialize racks and select the first one
   useEffect(() => {
@@ -58,6 +99,93 @@ export const RackLayoutsTab: React.FC = () => {
       }
     }
   }, [selectedRackId]);
+  
+  // Define rack view dimensions - could be made dynamic or responsive if needed
+  const rackViewHeight = 700;
+  const rackViewWidth = 300;
+  
+  // Calculate lines to draw for each rack based on connections
+  const linesToDrawPerRack = useMemo(() => {
+    // Initialize empty result object
+    const result: Record<string, Array<{
+      id: string;
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      strokeColor: string;
+      strokeWidth: number;
+    }>> = {};
+    
+    // If no active design or no connections, return empty result
+    if (!activeDesign || !connections || connections.length === 0) {
+      return result;
+    }
+    
+    // Iterate through each rack profile
+    activeDesign.rackProfiles?.forEach(rackProfile => {
+      const currentRackLines = [];
+      const unitHeight = rackViewHeight / rackProfile.uHeight;
+      
+      // Iterate through each connection
+      for (const connection of connections) {
+        // Get device and cable details
+        const sourceDeviceDetails = activeDesign.components.find(c => c.id === connection.sourceDeviceId);
+        const targetDeviceDetails = activeDesign.components.find(c => c.id === connection.destinationDeviceId);
+        const cableDetails = activeDesign.components.find(c => c.id === connection.cableId);
+        
+        if (!sourceDeviceDetails || !targetDeviceDetails || !cableDetails) {
+          continue;
+        }
+        
+        // Find placements in current rack
+        const sourcePlacement = rackProfile.devices.find(d => d.deviceId === connection.sourceDeviceId);
+        const targetPlacement = rackProfile.devices.find(d => d.deviceId === connection.destinationDeviceId);
+        
+        // Only process if both devices are in this rack (intra-rack connections)
+        if (sourcePlacement && targetPlacement) {
+          // Calculate visual coordinates for source and target ports
+          const sourceCoords = calculatePortVisualXY(
+            sourcePlacement,
+            connection.sourcePortId,
+            sourceDeviceDetails,
+            unitHeight,
+            rackViewWidth
+          );
+          
+          const targetCoords = calculatePortVisualXY(
+            targetPlacement,
+            connection.destinationPortId,
+            targetDeviceDetails,
+            unitHeight,
+            rackViewWidth
+          );
+          
+          // Only add line if both coordinates are valid
+          if (sourceCoords && targetCoords) {
+            // Determine cable color based on type or model
+            const strokeColor = cableDetails.model === 'CAT6A' ? '#0FA0CE' : '#8E9196';
+            
+            // Create the line definition
+            currentRackLines.push({
+              id: `${connection.cableId}-${connection.sourceDeviceId}-${connection.sourcePortId}`,
+              x1: sourceCoords.x,
+              y1: sourceCoords.y,
+              x2: targetCoords.x,
+              y2: targetCoords.y,
+              strokeColor,
+              strokeWidth: 2
+            });
+          }
+        }
+      }
+      
+      // Add lines for this rack to the result
+      result[rackProfile.id] = currentRackLines;
+    });
+    
+    return result;
+  }, [activeDesign, connections, rackViewHeight, rackViewWidth]);
   
   const createNewRack = useCallback(() => {
     const rackCount = rackProfiles.length + 1;
@@ -111,11 +239,12 @@ export const RackLayoutsTab: React.FC = () => {
               <div className="flex justify-center">
                 <RackView 
                   rackProfileId={selectedRackId}
-                  height={700}
-                  width={300}
+                  height={rackViewHeight}
+                  width={rackViewWidth}
                   showLabels={true}
                   labelInterval={5}
                   onDeviceClick={handleDeviceClick}
+                  linesToDraw={linesToDrawPerRack[selectedRackId] || []}
                 />
               </div>
             </div>

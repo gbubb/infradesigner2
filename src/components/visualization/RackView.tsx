@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import { useRackLayout } from '@/hooks/design/useRackLayout';
 import { ComponentType } from '@/types/infrastructure/component-types';
@@ -15,6 +14,15 @@ interface RackViewProps {
   showLabels?: boolean;
   labelInterval?: number;
   onDeviceClick?: (deviceId: string) => void;
+  linesToDraw?: Array<{ 
+    id: string; 
+    x1: number; 
+    y1: number; 
+    x2: number; 
+    y2: number; 
+    strokeColor: string; 
+    strokeWidth: number;
+  }>;
 }
 
 // Component type color mapping
@@ -108,7 +116,8 @@ export const RackView: React.FC<RackViewProps> = ({
   width = 300,
   showLabels = true,
   labelInterval = 5,
-  onDeviceClick
+  onDeviceClick,
+  linesToDraw = []
 }) => {
   const { rackProfile, placedDevices, placeDevice, moveDevice } = useRackLayout(rackProfileId);
   const activeDesign = useDesignStore(state => state.activeDesign);
@@ -242,6 +251,27 @@ export const RackView: React.FC<RackViewProps> = ({
                 />
               );
             })}
+            
+            {/* SVG overlay for connection lines */}
+            <svg 
+              className="absolute inset-0 pointer-events-none" 
+              width={width} 
+              height={height}
+              style={{ overflow: 'visible' }}
+            >
+              {linesToDraw.map(line => (
+                <line
+                  key={line.id}
+                  x1={line.x1}
+                  y1={line.y1}
+                  x2={line.x2}
+                  y2={line.y2}
+                  stroke={line.strokeColor}
+                  strokeWidth={line.strokeWidth}
+                  strokeDasharray={line.strokeColor === 'gray' ? '5,5' : undefined}
+                />
+              ))}
+            </svg>
           </div>
         </div>
       </div>
