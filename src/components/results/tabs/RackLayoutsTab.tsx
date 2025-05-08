@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,11 +35,13 @@ export const RackLayoutsTab: React.FC = () => {
   const [availabilityZones, setAvailabilityZones] = useState<string[]>([]);
   const [selectedAZ, setSelectedAZ] = useState<string | 'all'>('all');
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [initialized, setInitialized] = useState(false);
   const scrollStep = 300;
   
-  // Initialize racks based on requirements
+  // Initialize racks based on requirements - only run once when component mounts
   useEffect(() => {
-    if (!activeDesign) return;
+    // Skip if already initialized or no active design
+    if (initialized || !activeDesign) return;
     
     // Clear existing racks
     RackService.clearAllRackProfiles();
@@ -89,7 +90,10 @@ export const RackLayoutsTab: React.FC = () => {
     // Distribute components across racks
     distributeComponentsAcrossRacks(newRacks);
     
-  }, [activeDesign]);
+    // Mark as initialized to prevent re-running
+    setInitialized(true);
+    
+  }, [activeDesign, initialized]);
   
   // Update rack stats when selected rack changes
   useEffect(() => {
@@ -103,6 +107,14 @@ export const RackLayoutsTab: React.FC = () => {
       }
     }
   }, [selectedRackId]);
+
+  // Separate effect for resetting initialization if design changes
+  useEffect(() => {
+    // If activeDesign ID changes, allow re-initialization
+    return () => {
+      setInitialized(false);
+    };
+  }, [activeDesign?.id]);
   
   // Distribute components across racks based on role and AZ
   const distributeComponentsAcrossRacks = (racks: Array<{ id: string; name: string; azName: string }>) => {
