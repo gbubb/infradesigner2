@@ -54,8 +54,7 @@ export class RackService {
     
     // Update in design if possible
     if (state.activeDesign) {
-      state.updateActiveDesign({
-        ...state.activeDesign,
+      state.updateDesign(state.activeDesign.id, {
         rackProfiles: profiles
       });
     }
@@ -72,8 +71,7 @@ export class RackService {
     
     // Update in design if possible
     if (state.activeDesign) {
-      state.updateActiveDesign({
-        ...state.activeDesign,
+      state.updateDesign(state.activeDesign.id, {
         rackProfiles: []
       });
     }
@@ -99,8 +97,7 @@ export class RackService {
     
     // Update in design if possible
     if (state.activeDesign) {
-      state.updateActiveDesign({
-        ...state.activeDesign,
+      state.updateDesign(state.activeDesign.id, {
         rackProfiles: profiles
       });
     }
@@ -124,8 +121,7 @@ export class RackService {
     
     // Update in design if possible
     if (state.activeDesign) {
-      state.updateActiveDesign({
-        ...state.activeDesign,
+      state.updateDesign(state.activeDesign.id, {
         rackProfiles: newProfiles
       });
     }
