@@ -54,7 +54,6 @@ const calculatePortVisualXY = (
 
 export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
-  const [rackProfiles, setRackProfiles] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedRackId, setSelectedRackId] = useState<string | null>(null);
   const [rackStats, setRackStats] = useState<{
     totalRU: number;
@@ -69,39 +68,29 @@ export const RackLayoutsTab: React.FC = () => {
   // Get the connection data
   const { connections } = useConnectionManager();
   
+  // Derive rackProfilesForDisplay directly or memoize it
+  const rackProfilesForDisplay = useMemo(() => {
+    return activeDesign?.rackProfiles?.map(rack => ({ id: rack.id, name: rack.name })) || [];
+  }, [activeDesign]);
+  
   // Initialize racks and select the first one
   useEffect(() => {
     if (!activeDesign) {
-      setRackProfiles([]); // Clear local racks if no active design
       setSelectedRackId(null);
       return;
     }
 
-    // Use rackProfiles directly from the activeDesign object that triggered this effect.
     const currentDesignRacks = activeDesign.rackProfiles || [];
 
     if (currentDesignRacks.length === 0) {
-      // If the current activeDesign object shows no racks, create one.
-      // This will update activeDesign in the store (new reference).
-      // The effect will run again due to this new activeDesign reference.
       RackService.createRackProfile("Default Rack");
-      // No need to set local state (setRackProfiles/setSelectedRackId) here,
-      // as the next run of the effect with the updated activeDesign will handle it.
     } else {
-      // Racks exist in the current activeDesign.
-      // Update local state based on these racks.
-      setRackProfiles(currentDesignRacks.map(rack => ({ id: rack.id, name: rack.name })));
-
-      // If no rack is selected, or if the currently selected rack ID
-      // is not found in the currentDesignRacks, select the first available rack.
-      const isSelectedRackValid = selectedRackId && currentDesignRacks.some(r => r.id === selectedRackId);
-      if (!isSelectedRackValid && currentDesignRacks.length > 0) {
-        setSelectedRackId(currentDesignRacks[0].id);
-      } else if (currentDesignRacks.length === 0) { 
-        setSelectedRackId(null);
+      const isSelectedRackStillValid = selectedRackId && currentDesignRacks.some(r => r.id === selectedRackId);
+      if (!isSelectedRackStillValid) {
+        setSelectedRackId(currentDesignRacks[0]?.id || null);
       }
     }
-  }, [activeDesign]);
+  }, [activeDesign, selectedRackId]);
   
   // Update rack stats when selected rack changes
   useEffect(() => {
@@ -204,11 +193,11 @@ export const RackLayoutsTab: React.FC = () => {
   }, [activeDesign, connections, rackViewHeight, rackViewWidth]);
   
   const createNewRack = useCallback(() => {
-    const rackCount = rackProfiles.length + 1;
-    const newRackId = RackService.createRackProfile(`Rack ${rackCount}`);
-    setRackProfiles(prev => [...prev, { id: newRackId, name: `Rack ${rackCount}` }]);
+    const rackCount = activeDesign?.rackProfiles?.length || 0;
+    const newRackName = `Rack ${rackCount + 1}`;
+    const newRackId = RackService.createRackProfile(newRackName);
     setSelectedRackId(newRackId);
-  }, [rackProfiles.length]);
+  }, [activeDesign]);
 
   const handleDeviceClick = useCallback((deviceId: string) => {
     setSelectedDeviceId(deviceId);
@@ -239,7 +228,7 @@ export const RackLayoutsTab: React.FC = () => {
               <SelectValue placeholder="Select a rack" />
             </SelectTrigger>
             <SelectContent>
-              {rackProfiles.map(rack => (
+              {rackProfilesForDisplay.map(rack => (
                 <SelectItem key={rack.id} value={rack.id}>{rack.name}</SelectItem>
               ))}
             </SelectContent>
@@ -321,7 +310,7 @@ export const RackLayoutsTab: React.FC = () => {
                         <Label htmlFor="rackName">Rack Name</Label>
                         <Input 
                           id="rackName" 
-                          value={rackProfiles.find(r => r.id === selectedRackId)?.name || ''}
+                          value={rackProfilesForDisplay.find(r => r.id === selectedRackId)?.name || ''}
                           disabled
                         />
                       </div>
