@@ -1,14 +1,12 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import { useRackLayout } from '@/hooks/design/useRackLayout';
-import { ComponentType, Cable } from '@/types/infrastructure/component-types';
+import { ComponentType } from '@/types/infrastructure/component-types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { useDesignStore } from '@/store/designStore';
 import { useDrop, useDrag } from 'react-dnd';
 import { toast } from 'sonner';
-import { useConnectionManager } from '@/hooks/design/useConnectionManager';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 
 interface RackViewProps {
   rackProfileId: string;
@@ -104,24 +102,6 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
 
 PlacedDeviceItem.displayName = 'PlacedDeviceItem';
 
-// Helper to calculate port position on device
-const calculatePortPosition = (
-  deviceBottom: number,
-  deviceHeight: number,
-  side: 'left' | 'right',
-  index: number,
-  totalPorts: number
-): { x: number, y: number } => {
-  // Distribute ports evenly along the height of the device
-  const portSpacing = deviceHeight / (totalPorts + 1);
-  const portY = deviceBottom + deviceHeight - ((index + 1) * portSpacing);
-  
-  // Position on left or right side
-  const portX = side === 'left' ? 0 : 100; // Percentages
-  
-  return { x: portX, y: portY };
-};
-
 export const RackView: React.FC<RackViewProps> = ({
   rackProfileId,
   height = 700,
@@ -132,9 +112,6 @@ export const RackView: React.FC<RackViewProps> = ({
 }) => {
   const { rackProfile, placedDevices, placeDevice, moveDevice } = useRackLayout(rackProfileId);
   const activeDesign = useDesignStore(state => state.activeDesign);
-  const { connections } = useConnectionManager();
-  // Changed to React.useState to be explicit about the import source
-  const [showConnections, setShowConnections] = React.useState<boolean>(true);
   
   // Calculate RU height once outside the component to prevent re-calculations on every render
   const unitHeight = useMemo(() => {
@@ -202,111 +179,6 @@ export const RackView: React.FC<RackViewProps> = ({
     }),
   }), [rackProfileId, placeDevice, moveDevice, calculateDropRUPosition]);
   
-  // Filter connections relevant to this rack
-  const relevantConnections = useMemo(() => {
-    if (!connections || !placedDevices || !rackProfile) return [];
-    
-    const deviceIds = placedDevices.map(item => item.placedDevice.deviceId);
-    
-    return connections.filter(conn => 
-      deviceIds.includes(conn.sourceDeviceId) || 
-      deviceIds.includes(conn.destinationDeviceId)
-    );
-  }, [connections, placedDevices, rackProfile]);
-  
-  // Generate connection lines - Fixed dependency array to avoid infinite updates
-  const connectionLines = useMemo(() => {
-    if (!showConnections || !relevantConnections.length || !placedDevices.length || !activeDesign) return [];
-    
-    const deviceMap = new Map(
-      placedDevices.map(item => [item.placedDevice.deviceId, item])
-    );
-    
-    return relevantConnections.map(conn => {
-      // Check if both devices are in this rack
-      const sourceDevice = deviceMap.get(conn.sourceDeviceId);
-      const destDevice = deviceMap.get(conn.destinationDeviceId);
-      
-      // Skip if either device is not in this rack
-      if (!sourceDevice || !destDevice) {
-        // Inter-rack connection (not fully visualized in this view)
-        return null;
-      }
-      
-      // Find the components to get port information
-      const sourceComponent = sourceDevice.component;
-      const destComponent = destDevice.component;
-      
-      // Find the specific ports
-      const sourcePort = sourceComponent.ports?.find(p => p.id === conn.sourcePortId);
-      const destPort = destComponent.ports?.find(p => p.id === conn.destinationPortId);
-      
-      if (!sourcePort || !destPort) return null;
-      
-      // Get the cable for styling information
-      const cable = activeDesign.components.find(c => c.id === conn.cableId);
-      
-      // Calculate positions
-      const sourceHeight = (sourceComponent.ruHeight || 1) * unitHeight;
-      const destHeight = (destComponent.ruHeight || 1) * unitHeight;
-      
-      const sourceBottom = (sourceDevice.placedDevice.ruPosition - 1) * unitHeight;
-      const destBottom = (destDevice.placedDevice.ruPosition - 1) * unitHeight;
-      
-      // Use port index or default to middle if can't determine
-      const sourcePortIndex = sourceComponent.ports?.indexOf(sourcePort) ?? 0;
-      const destPortIndex = destComponent.ports?.indexOf(destPort) ?? 0;
-      
-      const sourceTotalPorts = sourceComponent.ports?.length || 1;
-      const destTotalPorts = destComponent.ports?.length || 1;
-      
-      // Calculate actual positions
-      const sourcePos = calculatePortPosition(
-        sourceBottom,
-        sourceHeight,
-        'right', // Source ports on right side
-        sourcePortIndex,
-        sourceTotalPorts
-      );
-      
-      const destPos = calculatePortPosition(
-        destBottom,
-        destHeight,
-        'left', // Destination ports on left side
-        destPortIndex,
-        destTotalPorts
-      );
-      
-      // Determine cable color based on media type
-      let cableColor = "#8E9196"; // Default gray
-      
-      if (cable && 'mediaType' in cable) {
-        const mediaType = cable.mediaType;
-        if (typeof mediaType === 'string') {
-          if (mediaType.startsWith('Fiber')) {
-            cableColor = "#0EA5E9"; // Blue for fiber
-          } else if (mediaType.startsWith('Copper')) {
-            cableColor = "#F97316"; // Orange for copper
-          } else if (mediaType.startsWith('DAC')) {
-            cableColor = "#8B5CF6"; // Purple for DAC
-          }
-        }
-      }
-      
-      return {
-        id: `${conn.sourceDeviceId}-${conn.sourcePortId}-${conn.cableId}`,
-        x1: sourcePos.x,
-        y1: sourcePos.y,
-        x2: destPos.x,
-        y2: destPos.y,
-        color: cableColor,
-        cable: cable || {},  // Ensuring cable is not undefined
-        sourcePort,
-        destPort
-      };
-    }).filter(Boolean); // Remove null items
-  }, [showConnections, relevantConnections, placedDevices, activeDesign, unitHeight]);
-  
   if (!rackProfile) {
     return (
       <Card className="p-4 flex items-center justify-center h-[200px]">
@@ -319,17 +191,8 @@ export const RackView: React.FC<RackViewProps> = ({
     <Card className="p-4">
       <div className="flex flex-col">
         <div className="text-lg font-medium mb-2">{rackProfile.name}</div>
-        <div className="text-sm text-muted-foreground mb-2">
+        <div className="text-sm text-muted-foreground mb-4">
           {rackProfile.uHeight}U - {placedDevices.length} devices
-        </div>
-        
-        <div className="flex items-center space-x-2 mb-4">
-          <Switch 
-            id={`show-connections-${rackProfileId}`} // Fixed: Add unique ID based on rackProfileId
-            checked={showConnections}
-            onCheckedChange={setShowConnections}
-          />
-          <Label htmlFor={`show-connections-${rackProfileId}`}>Show Connections</Label>
         </div>
         
         <div 
@@ -379,36 +242,6 @@ export const RackView: React.FC<RackViewProps> = ({
                 />
               );
             })}
-            
-            {/* Connection lines overlay */}
-            {showConnections && connectionLines.length > 0 && (
-              <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
-                {connectionLines.map(line => {
-                  if (!line) return null;
-                  
-                  // Fixed line for cable type visual representation - fix TypeScript error
-                  // Check if cable exists and has a mediaType property that's a string
-                  const isDashedLine = line.cable && 
-                    'mediaType' in line.cable && 
-                    typeof line.cable.mediaType === 'string' && 
-                    line.cable.mediaType.startsWith('Fiber');
-                  
-                  return (
-                    <g key={line.id}>
-                      <line 
-                        x1={`${line.x1}%`}
-                        y1={line.y1}
-                        x2={`${line.x2}%`}
-                        y2={line.y2}
-                        stroke={line.color}
-                        strokeWidth={2}
-                        strokeDasharray={isDashedLine ? "4 2" : ""}
-                      />
-                    </g>
-                  );
-                })}
-              </svg>
-            )}
           </div>
         </div>
       </div>
