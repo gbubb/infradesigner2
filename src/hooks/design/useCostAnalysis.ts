@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useHardwareTotals } from './useHardwareTotals';
@@ -39,8 +40,9 @@ export const useCostAnalysis = () => {
     if (!actualHardwareTotals.totalVCPUs || actualHardwareTotals.totalVCPUs === 0) return 0;
     
     // Calculate compute-related capital costs from compute nodes only
+    // Exclude storage nodes and disks for this calculation
     const computeCapitalCost = activeDesign?.components?.reduce((total, component) => {
-      if (component.role === 'computeNode') {
+      if (component.role !== 'storageNode' && component.type !== ComponentType.Disk) {
         const quantity = component.quantity || 1;
         return total + (component.cost * quantity);
       }
