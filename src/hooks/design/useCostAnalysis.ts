@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useHardwareTotals } from './useHardwareTotals';
@@ -34,13 +35,14 @@ export const useCostAnalysis = () => {
     }, 0);
   }, [activeDesign?.components]);
 
-  // Recalculate cost per vCPU using only compute nodes
+  // Recalculate cost per vCPU using only compute and non-storage components
   const costPerVCPU = useMemo(() => {
     if (!actualHardwareTotals.totalVCPUs || actualHardwareTotals.totalVCPUs === 0) return 0;
     
-    // Calculate compute-related capital costs from compute nodes only
+    // Calculate compute-related capital costs from all components except storage nodes and disks
     const computeCapitalCost = activeDesign?.components?.reduce((total, component) => {
-      if (component.role === 'computeNode') {
+      // Exclude storage-related components
+      if (component.role !== 'storageNode' && component.type !== ComponentType.Disk) {
         const quantity = component.quantity || 1;
         return total + (component.cost * quantity);
       }
@@ -92,12 +94,6 @@ export const useCostAnalysis = () => {
         // Network equipment
         networkTotal += componentCost;
       }
-    });
-    
-    console.log('Amortization calculation with lifespan values:', {
-      compute: { cost: computeTotal, lifespan: computeLifespan },
-      storage: { cost: storageTotal, lifespan: storageLifespan },
-      network: { cost: networkTotal, lifespan: networkLifespan }
     });
     
     // Calculate monthly amortized cost for each category
