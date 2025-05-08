@@ -63,7 +63,7 @@ const RackView: React.FC<RackViewProps> = ({
   const rackUnits = generateRackUnits(rackProfile.uHeight);
   const unitHeight = height / rackProfile.uHeight;
   
-  // Handle drop of a device onto the rack - memoized to prevent recreation on each render
+  // Handle drop of a device onto the rack
   const handleDrop = useCallback((e: React.DragEvent, ruPosition: number) => {
     e.preventDefault();
     
@@ -190,4 +190,5 @@ const RackView: React.FC<RackViewProps> = ({
 };
 
 // Export memoized component to prevent unnecessary re-renders
+export default memo(RackView);
 export { RackView };

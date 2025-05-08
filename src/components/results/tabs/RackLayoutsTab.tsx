@@ -48,10 +48,10 @@ export const RackLayoutsTab: React.FC = () => {
       console.error("Error initializing racks:", error);
       toast.error("Failed to initialize racks");
     }
-  }, [activeDesign?.id, selectedRackId]); // Depend on activeDesign.id and selectedRackId
+  }, [activeDesign?.id, selectedRackId]);
   
-  // Update rack stats when selected rack changes - memoize the function to prevent unnecessary re-renders
-  const updateRackStats = useCallback(() => {
+  // Update rack stats when selected rack changes
+  useEffect(() => {
     if (!selectedRackId) return;
 
     try {
@@ -63,12 +63,7 @@ export const RackLayoutsTab: React.FC = () => {
     }
   }, [selectedRackId]);
   
-  // Call the memoized function in useEffect
-  useEffect(() => {
-    updateRackStats();
-  }, [updateRackStats]);
-  
-  // Memoize the createNewRack function
+  // Create a new rack
   const createNewRack = useCallback(() => {
     const rackCount = rackProfiles.length + 1;
     const newRackId = RackService.createRackProfile(`Rack ${rackCount}`);
@@ -76,12 +71,12 @@ export const RackLayoutsTab: React.FC = () => {
     setSelectedRackId(newRackId);
   }, [rackProfiles.length]);
 
-  // Memoize the device selection handler
+  // Handle device selection
   const handleDeviceSelect = useCallback((deviceId: string) => {
     setSelectedDeviceId(prevId => prevId === deviceId ? null : deviceId);
   }, []);
 
-  // Memoize the rack selection handler
+  // Handle rack selection
   const handleRackChange = useCallback((value: string) => {
     setSelectedRackId(value);
     // Clear selected device when changing racks

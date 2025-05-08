@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService, PlacementResult } from '@/services/rackService';
@@ -26,7 +27,7 @@ export const useRackLayout = (rackProfileId?: string) => {
   // Update rackProfile when the rackProfileId changes or when components in the design update
   useEffect(() => {
     // Skip the effect if rackProfileId is the same as before and not the first run
-    if (!rackProfileId || !activeDesign || (prevRackIdRef.current === rackProfileId && placedDevices.length > 0)) {
+    if (!rackProfileId || !activeDesign) {
       return;
     }
     
@@ -74,7 +75,7 @@ export const useRackLayout = (rackProfileId?: string) => {
       
       setAvailableDevices(available);
     }
-  }, [rackProfileId, activeDesign?.id, activeDesign?.components]);
+  }, [rackProfileId, activeDesign]);
   
   /**
    * Place a device in the current rack
@@ -195,7 +196,7 @@ export const useRackLayout = (rackProfileId?: string) => {
     }
     
     return result;
-  }, [rackProfile]);
+  }, [rackProfile, activeDesign]);
   
   /**
    * Get all available rack profiles in the current design

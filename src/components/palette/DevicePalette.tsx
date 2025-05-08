@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { ComponentType } from '@/types/infrastructure/component-types';
@@ -38,11 +38,11 @@ export const DevicePalette: React.FC = () => {
     );
   }, [activeDesign?.components]);
   
-  // Handle drag start event - memoizing this function isn't necessary as it's only used in the JSX
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, deviceId: string) => {
+  // Handle drag start event
+  const handleDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, deviceId: string) => {
     e.dataTransfer.setData('deviceId', deviceId);
     e.dataTransfer.effectAllowed = 'move';
-  };
+  }, []);
   
   return (
     <Card className="h-full overflow-auto">
