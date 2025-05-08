@@ -1,7 +1,6 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import { useRackLayout } from '@/hooks/design/useRackLayout';
-import { ComponentType } from '@/types/infrastructure/component-types';
+import { ComponentType, Cable } from '@/types/infrastructure/component-types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { useDesignStore } from '@/store/designStore';
@@ -299,7 +298,7 @@ export const RackView: React.FC<RackViewProps> = ({
         x2: destPos.x,
         y2: destPos.y,
         color: cableColor,
-        cable: cable || {},
+        cable: cable || {},  // Ensuring cable is not undefined
         sourcePort,
         destPort
       };
@@ -385,10 +384,12 @@ export const RackView: React.FC<RackViewProps> = ({
                 {connectionLines.map(line => {
                   if (!line) return null;
                   
-                  // Fixed line for cable type visual representation
+                  // Fixed line for cable type visual representation - fix TypeScript error
+                  // Check if cable exists and has a mediaType property that's a string
                   const isDashedLine = line.cable && 
-                                        typeof line.cable.mediaType === 'string' && 
-                                        line.cable.mediaType.startsWith('Fiber');
+                    'mediaType' in line.cable && 
+                    typeof line.cable.mediaType === 'string' && 
+                    line.cable.mediaType.startsWith('Fiber');
                   
                   return (
                     <g key={line.id}>
