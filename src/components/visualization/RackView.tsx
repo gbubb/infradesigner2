@@ -1,10 +1,10 @@
 
-import React, { useState, useCallback, memo } from 'react';
+import React from 'react';
 import { useRackLayout } from '@/hooks/design/useRackLayout';
 import { ComponentType } from '@/types/infrastructure/component-types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
-import { toast } from 'sonner';
+import { useDesignStore } from '@/store/designStore';
 
 interface RackViewProps {
   rackProfileId: string;
@@ -12,7 +12,6 @@ interface RackViewProps {
   width?: number;
   showLabels?: boolean;
   labelInterval?: number;
-  onDeviceSelect?: (deviceId: string) => void;
 }
 
 // Component type color mapping
@@ -34,22 +33,15 @@ const getDeviceColor = (type: string): string => {
   }
 };
 
-// Create the rack units array outside the component to prevent recreation on each render
-const generateRackUnits = (uHeight: number) => {
-  return Array.from({ length: uHeight }, (_, i) => i + 1);
-};
-
-// Use React.memo to prevent re-renders when props haven't changed
-const RackView: React.FC<RackViewProps> = ({ 
-  rackProfileId, 
-  height = 700, 
-  width = 300, 
-  showLabels = true, 
-  labelInterval = 5, 
-  onDeviceSelect 
+export const RackView: React.FC<RackViewProps> = ({
+  rackProfileId,
+  height = 700,
+  width = 300,
+  showLabels = true,
+  labelInterval = 5
 }) => {
-  const { rackProfile, placedDevices, placeDevice, moveDevice } = useRackLayout(rackProfileId);
-  const [dragOverRU, setDragOverRU] = useState<number | null>(null);
+  const { rackProfile, placedDevices } = useRackLayout(rackProfileId);
+  const activeDesign = useDesignStore(state => state.activeDesign);
   
   if (!rackProfile) {
     return (
@@ -59,57 +51,9 @@ const RackView: React.FC<RackViewProps> = ({
     );
   }
   
-  // Generate array of rack units for the rack - memoized via outside function
-  const rackUnits = generateRackUnits(rackProfile.uHeight);
+  // Generate array of rack units for the rack
+  const rackUnits = Array.from({ length: rackProfile.uHeight }, (_, i) => i + 1);
   const unitHeight = height / rackProfile.uHeight;
-  
-  // Handle drop of a device onto the rack
-  const handleDrop = useCallback((e: React.DragEvent, ruPosition: number) => {
-    e.preventDefault();
-    
-    const deviceId = e.dataTransfer.getData('deviceId');
-    if (!deviceId) return;
-    
-    const isExistingDevice = e.dataTransfer.getData('existingDeviceId');
-    
-    if (isExistingDevice) {
-      // Moving an existing device
-      const result = moveDevice(deviceId, ruPosition);
-      if (result.success) {
-        toast.success(`Device moved to position ${ruPosition}U`);
-      } else {
-        toast.error(`Failed to move device: ${result.error}`);
-      }
-    } else {
-      // Placing a new device
-      const result = placeDevice(deviceId, ruPosition);
-      if (result.success) {
-        toast.success(`Device placed at position ${result.placedPosition}U`);
-      } else {
-        toast.error(`Failed to place device: ${result.error}`);
-      }
-    }
-    
-    setDragOverRU(null);
-  }, [moveDevice, placeDevice]);
-  
-  // Handle drag over to highlight the RU position
-  const handleDragOver = useCallback((e: React.DragEvent, ruPosition: number) => {
-    e.preventDefault();
-    setDragOverRU(ruPosition);
-  }, []);
-  
-  // Handle drag leave to remove highlight
-  const handleDragLeave = useCallback(() => {
-    setDragOverRU(null);
-  }, []);
-  
-  // Handle device selection
-  const handleDeviceClick = useCallback((deviceId: string) => {
-    if (onDeviceSelect) {
-      onDeviceSelect(deviceId);
-    }
-  }, [onDeviceSelect]);
   
   return (
     <Card className="p-4">
@@ -126,17 +70,11 @@ const RackView: React.FC<RackViewProps> = ({
             {rackUnits.map(unit => (
               <div 
                 key={`ru-${unit}`}
-                className={cn(
-                  "absolute w-full border-t border-gray-200",
-                  dragOverRU === unit ? "bg-blue-100" : ""
-                )}
+                className="absolute w-full border-t border-gray-200" 
                 style={{ 
                   bottom: `${(unit - 1) * unitHeight}px`, 
                   height: `${unitHeight}px`
                 }}
-                onDragOver={(e) => handleDragOver(e, unit)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, unit)}
               >
                 {showLabels && unit % labelInterval === 0 && (
                   <div className="absolute -left-8 text-xs font-medium" style={{ bottom: `${unitHeight / 2 - 6}px` }}>
@@ -155,7 +93,7 @@ const RackView: React.FC<RackViewProps> = ({
                 <div
                   key={placedDevice.deviceId}
                   className={cn(
-                    "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-2 py-1 overflow-hidden cursor-pointer",
+                    "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-2 py-1 overflow-hidden",
                     getDeviceColor(component.type)
                   )}
                   style={{
@@ -163,13 +101,6 @@ const RackView: React.FC<RackViewProps> = ({
                     height: `${deviceHeight}px`,
                     zIndex: 10
                   }}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('deviceId', placedDevice.deviceId);
-                    e.dataTransfer.setData('existingDeviceId', 'true');
-                    e.dataTransfer.effectAllowed = 'move';
-                  }}
-                  onClick={() => handleDeviceClick(placedDevice.deviceId)}
                 >
                   <div className="text-xs font-medium truncate w-full text-center">
                     {component.name}
@@ -188,7 +119,3 @@ const RackView: React.FC<RackViewProps> = ({
     </Card>
   );
 };
-
-// Export memoized component to prevent unnecessary re-renders
-export default memo(RackView);
-export { RackView };
