@@ -1,11 +1,6 @@
-
+import { v4 as uuidv4 } from 'uuid';
 import { useDesignStore } from '@/store/designStore';
-import { 
-  InfrastructureComponent, 
-  PlacedDevice, 
-  RackProfile, 
-  DeviceOrientation 
-} from '@/types/infrastructure';
+import { RackProfile, PlacedDevice, DeviceOrientation } from '@/types/infrastructure/rack-types';
 
 export interface PlacementResult {
   success: boolean;
@@ -13,342 +8,383 @@ export interface PlacementResult {
   placedPosition?: number;
 }
 
-/**
- * Service for managing rack layouts and device placements
- */
 export class RackService {
-  /**
-   * Place a device in a rack at a specific RU position
-   * @param rackId The ID of the rack to place the device in
-   * @param deviceId The ID of the device to place
-   * @param targetRuPosition Optional target RU position for placement
-   * @returns PlacementResult object indicating success/failure with details
-   */
-  static placeDevice(
-    rackId: string,
-    deviceId: string,
-    targetRuPosition?: number
-  ): PlacementResult {
+  private static getStorageKey(): string {
     const state = useDesignStore.getState();
-    const activeDesign = state.activeDesign;
-    
-    if (!activeDesign) {
-      return { success: false, error: "No active design found" };
-    }
-    
-    // Find the rack profile
-    const rackProfiles = activeDesign.rackProfiles || [];
-    const rack = rackProfiles.find(rack => rack.id === rackId);
-    if (!rack) {
-      return { success: false, error: `Rack with ID ${rackId} not found` };
-    }
-    
-    // Find the device in the components
-    const device = activeDesign.components.find(comp => comp.id === deviceId);
-    if (!device) {
-      return { success: false, error: `Device with ID ${deviceId} not found` };
-    }
-    
-    // Get device height
-    const ruHeight = device.ruHeight || 1;
-    
-    // Check if device already exists in this rack
-    const existingPlacement = rack.devices.find(d => d.deviceId === deviceId);
-    if (existingPlacement) {
-      return { success: false, error: `Device already placed in rack at RU ${existingPlacement.ruPosition}` };
-    }
-    
-    // Get placement constraints from the device
-    const placement = device.placement || {
-      validRUStart: 1,
-      validRUEnd: rack.uHeight
-    };
-    
-    // Determine the target position for placement
-    let ruPosition: number | undefined = targetRuPosition;
-    
-    // If no target position specified, try preferred position or find an available slot
-    if (ruPosition === undefined) {
-      if (placement.preferredRU !== undefined && 
-          this.isPositionValid(rack, placement.preferredRU, ruHeight, placement.validRUStart, placement.validRUEnd, deviceId)) {
-        ruPosition = placement.preferredRU;
-      } else {
-        // Find an available position
-        ruPosition = this.findAvailablePosition(rack, ruHeight, placement.validRUStart, placement.validRUEnd);
-      }
-    }
-    
-    // If no position found, return failure
-    if (ruPosition === undefined) {
-      return { success: false, error: "No valid position found for device placement" };
-    }
-    
-    // Check if the target position is valid
-    if (!this.isPositionValid(rack, ruPosition, ruHeight, placement.validRUStart, placement.validRUEnd, deviceId)) {
-      return { 
-        success: false, 
-        error: `Invalid position (RU ${ruPosition}): out of bounds or conflicts with existing devices` 
-      };
-    }
-    
-    // Create a new PlacedDevice object
-    const placedDevice: PlacedDevice = {
-      deviceId,
-      ruPosition,
-      orientation: DeviceOrientation.Front // Default to front orientation
-    };
-    
-    // Update the store with the new placement
-    const updatedRackProfiles = rackProfiles.map(r => {
-      if (r.id === rackId) {
-        return {
-          ...r,
-          devices: [...r.devices, placedDevice]
-        };
-      }
-      return r;
-    });
-    
-    // If this is the first rack profile, initialize the array
-    let designUpdate;
-    if (updatedRackProfiles.length === rackProfiles.length) {
-      designUpdate = { 
-        ...activeDesign, 
-        rackProfiles: updatedRackProfiles
-      };
-    } else {
-      designUpdate = { 
-        ...activeDesign, 
-        rackProfiles: [...rackProfiles, { 
-          id: rackId, 
-          name: `Rack ${rackId}`, 
-          uHeight: rack.uHeight, 
-          devices: [placedDevice] 
-        }]
-      };
-    }
-    
-    state.updateDesign(activeDesign.id, designUpdate);
-    
-    return { success: true, placedPosition: ruPosition };
+    const activeDesignId = state.activeDesign?.id;
+    return `rack_profiles_${activeDesignId}`;
   }
-  
-  /**
-   * Remove a device from a rack
-   * @param rackId The ID of the rack
-   * @param deviceId The ID of the device to remove
-   * @returns Success/failure result with details
-   */
-  static removeDevice(rackId: string, deviceId: string): PlacementResult {
-    const state = useDesignStore.getState();
-    const activeDesign = state.activeDesign;
-    
-    if (!activeDesign) {
-      return { success: false, error: "No active design found" };
-    }
-    
-    // Find the rack profile
-    const rackProfiles = activeDesign.rackProfiles || [];
-    const rack = rackProfiles.find(rack => rack.id === rackId);
-    if (!rack) {
-      return { success: false, error: `Rack with ID ${rackId} not found` };
-    }
-    
-    // Check if device exists in this rack
-    const deviceIndex = rack.devices.findIndex(d => d.deviceId === deviceId);
-    if (deviceIndex === -1) {
-      return { success: false, error: `Device not found in rack` };
-    }
-    
-    // Update the store removing the device
-    const updatedRackProfiles = rackProfiles.map(r => {
-      if (r.id === rackId) {
-        return {
-          ...r,
-          devices: r.devices.filter(d => d.deviceId !== deviceId)
-        };
-      }
-      return r;
-    });
-    
-    state.updateDesign(activeDesign.id, {
-      ...activeDesign,
-      rackProfiles: updatedRackProfiles
-    });
-    
-    return { success: true };
-  }
-  
-  /**
-   * Update a device's position in a rack
-   * @param rackId The ID of the rack
-   * @param deviceId The ID of the device
-   * @param newRuPosition The new RU position
-   * @returns Success/failure result with details
-   */
-  static updateDevicePosition(
-    rackId: string, 
-    deviceId: string, 
-    newRuPosition: number
-  ): PlacementResult {
-    // First, remove the device from its current position
-    const removeResult = this.removeDevice(rackId, deviceId);
-    if (!removeResult.success) {
-      return removeResult;
-    }
-    
-    // Then place it at the new position
-    return this.placeDevice(rackId, deviceId, newRuPosition);
-  }
-  
-  /**
-   * Check if a position is valid for device placement
-   * @param rack The rack profile
-   * @param position The target RU position
-   * @param ruHeight The device height in RU
-   * @param validRUStart The minimum valid RU position
-   * @param validRUEnd The maximum valid RU position
-   * @param deviceId Optional device ID to exclude from collision detection
-   * @returns True if the position is valid
-   */
-  private static isPositionValid(
-    rack: RackProfile,
-    position: number,
-    ruHeight: number,
-    validRUStart: number,
-    validRUEnd: number,
-    excludeDeviceId?: string
-  ): boolean {
-    // Check if position is within rack bounds
-    if (position < 1 || position + ruHeight - 1 > rack.uHeight) {
-      return false;
-    }
-    
-    // Check if position is within device's valid range
-    if (position < validRUStart || position + ruHeight - 1 > validRUEnd) {
-      return false;
-    }
-    
-    // Check for collisions with other devices
-    for (const device of rack.devices) {
-      // Skip the device being moved
-      if (excludeDeviceId && device.deviceId === excludeDeviceId) {
-        continue;
-      }
-      
-      const state = useDesignStore.getState();
-      const activeDesign = state.activeDesign;
-      if (!activeDesign) continue;
-      
-      // Find the component for this placed device
-      const component = activeDesign.components.find(c => c.id === device.deviceId);
-      if (!component) continue;
-      
-      const deviceHeight = component.ruHeight || 1;
-      
-      // Check for overlap
-      const deviceStart = device.ruPosition;
-      const deviceEnd = device.ruPosition + deviceHeight - 1;
-      const newDeviceStart = position;
-      const newDeviceEnd = position + ruHeight - 1;
-      
-      if (
-        (newDeviceStart >= deviceStart && newDeviceStart <= deviceEnd) || 
-        (newDeviceEnd >= deviceStart && newDeviceEnd <= deviceEnd) ||
-        (newDeviceStart <= deviceStart && newDeviceEnd >= deviceEnd)
-      ) {
-        return false; // Overlap detected
-      }
-    }
-    
-    return true;
-  }
-  
-  /**
-   * Find available position for device placement
-   * @param rack The rack profile
-   * @param ruHeight The device height in RU
-   * @param validRUStart The minimum valid RU position
-   * @param validRUEnd The maximum valid RU position
-   * @returns A valid RU position or undefined if none found
-   */
-  private static findAvailablePosition(
-    rack: RackProfile,
-    ruHeight: number,
-    validRUStart: number,
-    validRUEnd: number
-  ): number | undefined {
-    // Bottom-up search (starting from the lowest valid RU)
-    for (let position = validRUStart; position <= validRUEnd - ruHeight + 1; position++) {
-      if (this.isPositionValid(rack, position, ruHeight, validRUStart, validRUEnd)) {
-        return position;
-      }
-    }
-    
-    return undefined; // No valid position found
-  }
-  
-  /**
-   * Get a list of all rack profiles in the active design
-   * @returns Array of rack profiles or empty array if none found
-   */
+
   static getAllRackProfiles(): RackProfile[] {
     const state = useDesignStore.getState();
-    const activeDesign = state.activeDesign;
     
-    if (!activeDesign) {
-      return [];
+    // Return from design if available
+    if (state.activeDesign?.rackProfiles) {
+      return state.activeDesign.rackProfiles;
     }
     
-    return activeDesign.rackProfiles || [];
+    // Otherwise load from local storage
+    const storageKey = this.getStorageKey();
+    const storedProfiles = localStorage.getItem(storageKey);
+    
+    if (storedProfiles) {
+      return JSON.parse(storedProfiles);
+    }
+    
+    return [];
   }
-  
-  /**
-   * Get a specific rack profile by ID
-   * @param rackId The ID of the rack to retrieve
-   * @returns The rack profile or undefined if not found
-   */
+
   static getRackProfile(rackId: string): RackProfile | undefined {
-    const state = useDesignStore.getState();
-    const activeDesign = state.activeDesign;
-    
-    if (!activeDesign) {
-      return undefined;
-    }
-    
-    const rackProfiles = activeDesign.rackProfiles || [];
-    return rackProfiles.find(rack => rack.id === rackId);
+    const profiles = this.getAllRackProfiles();
+    return profiles.find(profile => profile.id === rackId);
   }
-  
-  /**
-   * Create a new empty rack profile
-   * @param name The name of the rack
-   * @param uHeight The height of the rack in RU
-   * @returns The ID of the newly created rack
-   */
+
   static createRackProfile(name: string, uHeight: number = 42): string {
     const state = useDesignStore.getState();
-    const activeDesign = state.activeDesign;
+    const profiles = this.getAllRackProfiles();
     
-    if (!activeDesign) {
-      throw new Error("No active design found");
-    }
-    
-    const rackId = `rack-${Date.now()}`;
-    const newRack: RackProfile = {
-      id: rackId,
+    const newProfile: RackProfile = {
+      id: uuidv4(),
       name,
       uHeight,
       devices: []
     };
     
-    const rackProfiles = activeDesign.rackProfiles || [];
+    profiles.push(newProfile);
     
-    state.updateDesign(activeDesign.id, {
-      ...activeDesign,
-      rackProfiles: [...rackProfiles, newRack]
-    });
+    // Update in design if possible
+    if (state.activeDesign) {
+      state.updateActiveDesign({
+        ...state.activeDesign,
+        rackProfiles: profiles
+      });
+    }
     
-    return rackId;
+    // Also update in local storage as backup
+    const storageKey = this.getStorageKey();
+    localStorage.setItem(storageKey, JSON.stringify(profiles));
+    
+    return newProfile.id;
+  }
+  
+  static clearAllRackProfiles(): void {
+    const state = useDesignStore.getState();
+    
+    // Update in design if possible
+    if (state.activeDesign) {
+      state.updateActiveDesign({
+        ...state.activeDesign,
+        rackProfiles: []
+      });
+    }
+    
+    // Also clear local storage backup
+    const storageKey = this.getStorageKey();
+    localStorage.removeItem(storageKey);
+  }
+
+  static updateRackProfile(rackId: string, updates: Partial<RackProfile>): boolean {
+    const state = useDesignStore.getState();
+    const profiles = this.getAllRackProfiles();
+    
+    const index = profiles.findIndex(profile => profile.id === rackId);
+    if (index === -1) {
+      return false;
+    }
+    
+    profiles[index] = {
+      ...profiles[index],
+      ...updates
+    };
+    
+    // Update in design if possible
+    if (state.activeDesign) {
+      state.updateActiveDesign({
+        ...state.activeDesign,
+        rackProfiles: profiles
+      });
+    }
+    
+    // Also update in local storage as backup
+    const storageKey = this.getStorageKey();
+    localStorage.setItem(storageKey, JSON.stringify(profiles));
+    
+    return true;
+  }
+
+  static deleteRackProfile(rackId: string): boolean {
+    const state = useDesignStore.getState();
+    const profiles = this.getAllRackProfiles();
+    
+    const newProfiles = profiles.filter(profile => profile.id !== rackId);
+    
+    if (newProfiles.length === profiles.length) {
+      return false; // No profile was deleted
+    }
+    
+    // Update in design if possible
+    if (state.activeDesign) {
+      state.updateActiveDesign({
+        ...state.activeDesign,
+        rackProfiles: newProfiles
+      });
+    }
+    
+    // Also update in local storage as backup
+    const storageKey = this.getStorageKey();
+    localStorage.setItem(storageKey, JSON.stringify(newProfiles));
+    
+    return true;
+  }
+
+  static placeDevice(rackId: string, deviceId: string, targetRuPosition?: number): PlacementResult {
+    const state = useDesignStore.getState();
+    const rack = this.getRackProfile(rackId);
+    
+    if (!rack) {
+      return { success: false, error: "Rack not found" };
+    }
+    
+    if (!state.activeDesign) {
+      return { success: false, error: "No active design" };
+    }
+    
+    // Check if device is already in this or another rack
+    const allRacks = this.getAllRackProfiles();
+    for (const r of allRacks) {
+      if (r.devices.some(d => d.deviceId === deviceId)) {
+        return { 
+          success: false, 
+          error: `Device is already placed in rack ${r.name}` 
+        };
+      }
+    }
+    
+    // Find the device in the design
+    const device = state.activeDesign.components.find(comp => comp.id === deviceId);
+    
+    if (!device) {
+      return { success: false, error: "Device not found in design" };
+    }
+    
+    // Check if device has a valid RU height
+    const ruHeight = device.ruHeight || 1;
+    if (ruHeight <= 0) {
+      return { success: false, error: "Device has invalid RU height" };
+    }
+    
+    // If a target position is provided, check if it's valid
+    if (targetRuPosition !== undefined) {
+      // Check if the target position is within rack bounds
+      if (targetRuPosition < 1 || targetRuPosition + ruHeight - 1 > rack.uHeight) {
+        return { 
+          success: false, 
+          error: `Target position out of bounds (valid range: 1 to ${rack.uHeight - ruHeight + 1})` 
+        };
+      }
+      
+      // Check for overlapping devices
+      for (const placedDevice of rack.devices) {
+        const placedDeviceData = state.activeDesign.components.find(c => c.id === placedDevice.deviceId);
+        if (!placedDeviceData) continue;
+        
+        const placedDeviceHeight = placedDeviceData.ruHeight || 1;
+        const placedDeviceTop = placedDevice.ruPosition + placedDeviceHeight - 1;
+        const newDeviceTop = targetRuPosition + ruHeight - 1;
+        
+        if (
+          (targetRuPosition <= placedDeviceTop && newDeviceTop >= placedDevice.ruPosition) ||
+          (placedDevice.ruPosition <= newDeviceTop && placedDeviceTop >= targetRuPosition)
+        ) {
+          return { 
+            success: false, 
+            error: `Position overlaps with device ${placedDeviceData.name}` 
+          };
+        }
+      }
+    } else {
+      // Auto-placement: find best available position
+      const availablePositions = this.findAvailablePositions(rack, ruHeight, state.activeDesign.components);
+      
+      if (availablePositions.length === 0) {
+        return { success: false, error: "No available space in rack" };
+      }
+      
+      // Use first available position (lowest in the rack)
+      targetRuPosition = availablePositions[0];
+    }
+    
+    // Place the device
+    const placedDevice: PlacedDevice = {
+      deviceId,
+      ruPosition: targetRuPosition!,
+      orientation: DeviceOrientation.Front
+    };
+    
+    rack.devices.push(placedDevice);
+    
+    // Save the updated rack
+    const updated = this.updateRackProfile(rackId, { devices: rack.devices });
+    
+    if (!updated) {
+      return { success: false, error: "Failed to update rack profile" };
+    }
+    
+    return { success: true, placedPosition: targetRuPosition };
+  }
+  
+  static findAvailablePositions(
+    rack: RackProfile, 
+    deviceHeight: number, 
+    components: any[]
+  ): number[] {
+    const positions: number[] = [];
+    
+    if (!rack || deviceHeight <= 0 || deviceHeight > rack.uHeight) {
+      return positions;
+    }
+    
+    // Create an array representing every RU in the rack
+    const rackUnits: boolean[] = new Array(rack.uHeight + 1).fill(false);
+    rackUnits[0] = true; // Index 0 is not used since rack units start at 1
+    
+    // Mark occupied units
+    for (const placedDevice of rack.devices) {
+      const device = components.find(c => c.id === placedDevice.deviceId);
+      if (!device) continue;
+      
+      const ruHeight = device.ruHeight || 1;
+      for (let i = 0; i < ruHeight; i++) {
+        const position = placedDevice.ruPosition + i;
+        if (position <= rack.uHeight) {
+          rackUnits[position] = true;
+        }
+      }
+    }
+    
+    // Find all possible positions
+    for (let i = 1; i <= rack.uHeight - deviceHeight + 1; i++) {
+      let canPlace = true;
+      for (let j = 0; j < deviceHeight; j++) {
+        if (rackUnits[i + j]) {
+          canPlace = false;
+          break;
+        }
+      }
+      if (canPlace) {
+        positions.push(i);
+      }
+    }
+    
+    return positions;
+  }
+
+  static updateDevicePosition(rackId: string, deviceId: string, newPosition: number): PlacementResult {
+    const state = useDesignStore.getState();
+    const rack = this.getRackProfile(rackId);
+    
+    if (!rack) {
+      return { success: false, error: "Rack not found" };
+    }
+    
+    const deviceIndex = rack.devices.findIndex(d => d.deviceId === deviceId);
+    if (deviceIndex === -1) {
+      return { success: false, error: "Device not found in rack" };
+    }
+    
+    // First, remove the device from the rack
+    const placedDevice = rack.devices[deviceIndex];
+    const tempRack = { ...rack, devices: rack.devices.filter(d => d.deviceId !== deviceId) };
+    
+    // Then try to place it at the new position
+    const component = state.activeDesign?.components.find(c => c.id === deviceId);
+    if (!component) {
+      return { success: false, error: "Device not found in design" };
+    }
+    
+    const ruHeight = component.ruHeight || 1;
+    
+    // Check if new position is valid
+    if (newPosition < 1 || newPosition + ruHeight - 1 > rack.uHeight) {
+      return { 
+        success: false, 
+        error: `Position out of bounds (valid range: 1 to ${rack.uHeight - ruHeight + 1})` 
+      };
+    }
+    
+    // Check for overlaps with other devices
+    for (const otherDevice of tempRack.devices) {
+      const otherComponent = state.activeDesign?.components.find(c => c.id === otherDevice.deviceId);
+      if (!otherComponent) continue;
+      
+      const otherHeight = otherComponent.ruHeight || 1;
+      const otherTop = otherDevice.ruPosition + otherHeight - 1;
+      const newDeviceTop = newPosition + ruHeight - 1;
+      
+      if (
+        (newPosition <= otherTop && newDeviceTop >= otherDevice.ruPosition) ||
+        (otherDevice.ruPosition <= newDeviceTop && otherTop >= newPosition)
+      ) {
+        return { 
+          success: false, 
+          error: `Position overlaps with device ${otherComponent.name}` 
+        };
+      }
+    }
+    
+    // Update the position
+    placedDevice.ruPosition = newPosition;
+    rack.devices[deviceIndex] = placedDevice;
+    
+    // Save the updated rack
+    const updated = this.updateRackProfile(rackId, { devices: rack.devices });
+    
+    if (!updated) {
+      return { success: false, error: "Failed to update rack profile" };
+    }
+    
+    return { success: true, placedPosition: newPosition };
+  }
+
+  static removeDevice(rackId: string, deviceId: string): PlacementResult {
+    const rack = this.getRackProfile(rackId);
+    
+    if (!rack) {
+      return { success: false, error: "Rack not found" };
+    }
+    
+    const deviceIndex = rack.devices.findIndex(d => d.deviceId === deviceId);
+    if (deviceIndex === -1) {
+      return { success: false, error: "Device not found in rack" };
+    }
+    
+    // Remove the device
+    rack.devices = rack.devices.filter(d => d.deviceId !== deviceId);
+    
+    // Save the updated rack
+    const updated = this.updateRackProfile(rackId, { devices: rack.devices });
+    
+    if (!updated) {
+      return { success: false, error: "Failed to update rack profile" };
+    }
+    
+    return { success: true };
+  }
+
+  static updateDeviceOrientation(
+    rackId: string,
+    deviceId: string,
+    orientation: DeviceOrientation
+  ): boolean {
+    const rack = this.getRackProfile(rackId);
+    
+    if (!rack) return false;
+    
+    const deviceIndex = rack.devices.findIndex(d => d.deviceId === deviceId);
+    if (deviceIndex === -1) return false;
+    
+    rack.devices[deviceIndex].orientation = orientation;
+    
+    return this.updateRackProfile(rackId, { devices: rack.devices });
   }
 }
