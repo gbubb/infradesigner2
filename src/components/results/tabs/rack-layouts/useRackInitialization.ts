@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
 import { DeviceRoleType } from '@/types/infrastructure/requirements-types';
@@ -16,12 +15,30 @@ export const useRackInitialization = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const [rackProfiles, setRackProfiles] = useState<RackProfile[]>([]);
   const [availabilityZones, setAvailabilityZones] = useState<string[]>([]);
-  const [initialized, setInitialized] = useState(false);
+  
+  // Use a ref instead of state to track initialization to avoid re-renders
+  const initializedRef = useRef(false);
+  // Store the previous design ID to detect design changes
+  const prevDesignIdRef = useRef<string | null>(null);
 
   // Initialize racks based on requirements
   useEffect(() => {
-    // Skip if already initialized or no active design
-    if (initialized || !activeDesign) return;
+    // Skip if already initialized for this design or no active design
+    if (!activeDesign || 
+        (initializedRef.current && prevDesignIdRef.current === activeDesign.id)) {
+      return;
+    }
+    
+    // If design changed, allow re-initialization
+    if (prevDesignIdRef.current !== activeDesign.id) {
+      initializedRef.current = false;
+      prevDesignIdRef.current = activeDesign.id;
+    }
+    
+    // Prevent multiple initializations for the same design
+    if (initializedRef.current) return;
+    
+    console.log("Initializing racks for design:", activeDesign.id);
     
     // Clear existing racks
     RackService.clearAllRackProfiles();
@@ -67,16 +84,10 @@ export const useRackInitialization = () => {
     distributeComponentsAcrossRacks(newRacks);
     
     // Mark as initialized to prevent re-running
-    setInitialized(true);
-  }, [activeDesign, initialized]);
-
-  // Reset initialization when design changes
-  useEffect(() => {
-    // If activeDesign ID changes, allow re-initialization
-    return () => {
-      setInitialized(false);
-    };
-  }, [activeDesign?.id]);
+    initializedRef.current = true;
+    
+    console.log("Rack initialization complete");
+  }, [activeDesign]);
 
   // Distribute components across racks based on role and AZ
   const distributeComponentsAcrossRacks = (racks: RackProfile[]) => {
