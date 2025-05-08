@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +12,7 @@ import { AuthProvider, useAuth } from "./hooks/useAuth";
 // Import the purge script (makes it available in the console)
 import "@/utils/purgeDesigns";
 import { ThemeProvider } from "./components/theme/theme-provider";
+import { DndProvider } from './components/providers/DndProvider';
 
 const queryClient = new QueryClient();
 
@@ -48,22 +48,24 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => {
+function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <BrowserRouter>
-            <AuthProvider>
-              <Toaster />
-              <Sonner />
-              <AppRoutes />
-            </AuthProvider>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <DndProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <BrowserRouter>
+              <AuthProvider>
+                <Toaster />
+                <Sonner />
+                <AppRoutes />
+              </AuthProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </DndProvider>
   );
-};
+}
 
 export default App;
