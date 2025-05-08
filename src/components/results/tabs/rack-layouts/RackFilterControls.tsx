@@ -29,9 +29,9 @@ export const RackFilterControls: React.FC<RackFilterControlsProps> = ({
           <SelectValue placeholder="Filter by AZ" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Availability Zones</SelectItem>
+          <SelectItem key="all-az" value="all">All Availability Zones</SelectItem>
           {availabilityZones.map(az => (
-            <SelectItem key={az} value={az}>{az}</SelectItem>
+            <SelectItem key={`az-${az}`} value={az}>{az}</SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -45,7 +45,7 @@ export const RackFilterControls: React.FC<RackFilterControlsProps> = ({
         </SelectTrigger>
         <SelectContent>
           {filteredRacks.map(rack => (
-            <SelectItem key={rack.id} value={rack.id}>{rack.name}</SelectItem>
+            <SelectItem key={`rack-${rack.id}`} value={rack.id}>{rack.name}</SelectItem>
           ))}
         </SelectContent>
       </Select>

@@ -48,7 +48,7 @@ export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
           style={{ transform: `translateX(-${scrollPosition}px)`, transition: 'transform 0.3s' }}
         >
           {racks.map(rack => (
-            <div key={rack.id} className="flex-shrink-0">
+            <div key={`rack-card-${rack.id}`} className="flex-shrink-0">
               <Card 
                 className={`w-[130px] h-[280px] cursor-pointer ${selectedRackId === rack.id ? 'ring-2 ring-primary' : ''}`}
                 onClick={() => setSelectedRackId(rack.id)}

@@ -206,7 +206,7 @@ export const RackView: React.FC<RackViewProps> = ({
             {/* Rack unit markers */}
             {rackUnits.map(unit => (
               <div 
-                key={`ru-${unit}`}
+                key={`ru-marker-${unit}`}
                 className="absolute w-full border-t border-gray-200" 
                 style={{ 
                   bottom: `${(unit - 1) * unitHeight}px`, 
@@ -229,7 +229,7 @@ export const RackView: React.FC<RackViewProps> = ({
               
               return (
                 <PlacedDeviceItem
-                  key={placedDevice.deviceId}
+                  key={`placed-device-${placedDevice.deviceId}`}
                   deviceId={placedDevice.deviceId}
                   name={component.name}
                   model={component.model}
