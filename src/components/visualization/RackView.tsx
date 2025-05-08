@@ -133,7 +133,8 @@ export const RackView: React.FC<RackViewProps> = ({
   const { rackProfile, placedDevices, placeDevice, moveDevice } = useRackLayout(rackProfileId);
   const activeDesign = useDesignStore(state => state.activeDesign);
   const { connections } = useConnectionManager();
-  const [showConnections, setShowConnections] = useState<boolean>(true);
+  // Changed to React.useState to be explicit about the import source
+  const [showConnections, setShowConnections] = React.useState<boolean>(true);
   
   // Calculate RU height once outside the component to prevent re-calculations on every render
   const unitHeight = useMemo(() => {
@@ -213,7 +214,7 @@ export const RackView: React.FC<RackViewProps> = ({
     );
   }, [connections, placedDevices, rackProfile]);
   
-  // Generate connection lines
+  // Generate connection lines - Fixed dependency array to avoid infinite updates
   const connectionLines = useMemo(() => {
     if (!showConnections || !relevantConnections.length || !placedDevices.length || !activeDesign) return [];
     
@@ -279,13 +280,14 @@ export const RackView: React.FC<RackViewProps> = ({
       // Determine cable color based on media type
       let cableColor = "#8E9196"; // Default gray
       
-      if (cable && cable.mediaType) {
-        if (typeof cable.mediaType === 'string') {
-          if (cable.mediaType.startsWith('Fiber')) {
+      if (cable && 'mediaType' in cable) {
+        const mediaType = cable.mediaType;
+        if (typeof mediaType === 'string') {
+          if (mediaType.startsWith('Fiber')) {
             cableColor = "#0EA5E9"; // Blue for fiber
-          } else if (cable.mediaType.startsWith('Copper')) {
+          } else if (mediaType.startsWith('Copper')) {
             cableColor = "#F97316"; // Orange for copper
-          } else if (cable.mediaType.startsWith('DAC')) {
+          } else if (mediaType.startsWith('DAC')) {
             cableColor = "#8B5CF6"; // Purple for DAC
           }
         }
@@ -303,7 +305,7 @@ export const RackView: React.FC<RackViewProps> = ({
         destPort
       };
     }).filter(Boolean); // Remove null items
-  }, [relevantConnections, placedDevices, activeDesign, unitHeight, showConnections]);
+  }, [showConnections, relevantConnections, placedDevices, activeDesign, unitHeight]);
   
   if (!rackProfile) {
     return (
@@ -323,11 +325,11 @@ export const RackView: React.FC<RackViewProps> = ({
         
         <div className="flex items-center space-x-2 mb-4">
           <Switch 
-            id="show-connections"
+            id={`show-connections-${rackProfileId}`} // Fixed: Add unique ID based on rackProfileId
             checked={showConnections}
             onCheckedChange={setShowConnections}
           />
-          <Label htmlFor="show-connections">Show Connections</Label>
+          <Label htmlFor={`show-connections-${rackProfileId}`}>Show Connections</Label>
         </div>
         
         <div 
