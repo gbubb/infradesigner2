@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent } from '@/components/ui/card';
@@ -72,18 +71,35 @@ export const RackLayoutsTab: React.FC = () => {
   
   // Initialize racks and select the first one
   useEffect(() => {
-    if (!activeDesign) return;
-    
-    const allRacks = RackService.getAllRackProfiles();
-    
-    if (allRacks.length === 0) {
-      // Create a default rack if none exists
-      const newRackId = RackService.createRackProfile("Default Rack");
-      setRackProfiles([{ id: newRackId, name: "Default Rack" }]);
-      setSelectedRackId(newRackId);
+    if (!activeDesign) {
+      setRackProfiles([]); // Clear local racks if no active design
+      setSelectedRackId(null);
+      return;
+    }
+
+    // Use rackProfiles directly from the activeDesign object that triggered this effect.
+    const currentDesignRacks = activeDesign.rackProfiles || [];
+
+    if (currentDesignRacks.length === 0) {
+      // If the current activeDesign object shows no racks, create one.
+      // This will update activeDesign in the store (new reference).
+      // The effect will run again due to this new activeDesign reference.
+      RackService.createRackProfile("Default Rack");
+      // No need to set local state (setRackProfiles/setSelectedRackId) here,
+      // as the next run of the effect with the updated activeDesign will handle it.
     } else {
-      setRackProfiles(allRacks.map(rack => ({ id: rack.id, name: rack.name })));
-      setSelectedRackId(allRacks[0].id);
+      // Racks exist in the current activeDesign.
+      // Update local state based on these racks.
+      setRackProfiles(currentDesignRacks.map(rack => ({ id: rack.id, name: rack.name })));
+
+      // If no rack is selected, or if the currently selected rack ID
+      // is not found in the currentDesignRacks, select the first available rack.
+      const isSelectedRackValid = selectedRackId && currentDesignRacks.some(r => r.id === selectedRackId);
+      if (!isSelectedRackValid && currentDesignRacks.length > 0) {
+        setSelectedRackId(currentDesignRacks[0].id);
+      } else if (currentDesignRacks.length === 0) { 
+        setSelectedRackId(null);
+      }
     }
   }, [activeDesign]);
   
