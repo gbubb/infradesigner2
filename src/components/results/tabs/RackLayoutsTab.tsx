@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,11 +9,11 @@ import { RackView } from '@/components/visualization/RackView';
 import { RackService } from '@/services/rackService';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
 import { HardDrive } from 'lucide-react';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DevicePalette } from '@/components/palette/DevicePalette';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ConnectionPanel } from '@/components/connections/ConnectionPanel';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 
 export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
