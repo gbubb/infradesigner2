@@ -37,16 +37,20 @@ export const RackFilterControls: React.FC<RackFilterControlsProps> = ({
       </Select>
       
       <Select 
-        value={selectedRackId || ''}
-        onValueChange={(value) => setSelectedRackId(value)}
+        value={selectedRackId || 'no-rack-selected'}
+        onValueChange={(value) => setSelectedRackId(value !== 'no-rack-selected' ? value : null)}
       >
         <SelectTrigger className="w-[250px]">
           <SelectValue placeholder="Select a rack" />
         </SelectTrigger>
         <SelectContent>
-          {filteredRacks.map(rack => (
-            <SelectItem key={`rack-${rack.id}`} value={rack.id}>{rack.name}</SelectItem>
-          ))}
+          {filteredRacks.length > 0 ? (
+            filteredRacks.map(rack => (
+              <SelectItem key={`rack-${rack.id}`} value={rack.id}>{rack.name}</SelectItem>
+            ))
+          ) : (
+            <SelectItem key="no-racks" value="no-racks-available" disabled>No racks available</SelectItem>
+          )}
         </SelectContent>
       </Select>
     </div>
