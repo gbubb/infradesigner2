@@ -5,6 +5,7 @@ import { DesignStatisticsTab } from './DesignStatisticsTab';
 import { BillOfMaterialsTab } from './BillOfMaterialsTab';
 import { RackLayoutsTab } from './RackLayoutsTab';
 import { CapacityAnalysisTab } from './CapacityAnalysisTab';
+import { ConnectionRulesTab } from './ConnectionRulesTab';
 import { DesignAlerts } from '../DesignAlerts';
 
 interface ResultsTabsProps {
@@ -19,10 +20,11 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({ designErrors, hasNoDes
       
       {!hasNoDesign && (
         <Tabs defaultValue="statistics" className="w-full">
-          <TabsList className="grid grid-cols-4 mb-6">
+          <TabsList className="grid grid-cols-5 mb-6">
             <TabsTrigger value="statistics">Design Statistics</TabsTrigger>
             <TabsTrigger value="materials">Bill of Materials</TabsTrigger>
             <TabsTrigger value="racks">Rack Layouts</TabsTrigger>
+            <TabsTrigger value="connections">Connection Rules</TabsTrigger>
             <TabsTrigger value="capacity">Capacity Analysis</TabsTrigger>
           </TabsList>
           
@@ -36,6 +38,10 @@ export const ResultsTabs: React.FC<ResultsTabsProps> = ({ designErrors, hasNoDes
           
           <TabsContent value="racks" className="mt-4">
             <RackLayoutsTab />
+          </TabsContent>
+          
+          <TabsContent value="connections" className="mt-4">
+            <ConnectionRulesTab />
           </TabsContent>
           
           <TabsContent value="capacity" className="mt-4">

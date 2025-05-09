@@ -11,3 +11,4 @@ export * from './metrics-types';
 export * from './design-types';
 export * from './port-types';
 export * from './rack-types';
+export * from './connection-rule-types';

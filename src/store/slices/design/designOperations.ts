@@ -22,7 +22,9 @@ export const createNewDesignOperation = (
     components: existingDesign?.components || [],
     componentRoles: existingDesign?.componentRoles || [],
     selectedDisksByRole: existingDesign?.selectedDisksByRole || {},
-    selectedGPUsByRole: existingDesign?.selectedGPUsByRole || {}
+    selectedGPUsByRole: existingDesign?.selectedGPUsByRole || {},
+    connectionRules: existingDesign?.connectionRules || [],
+    rackProfiles: existingDesign?.rackProfiles || []
   };
 };
 
@@ -47,4 +49,3 @@ export const updateActiveDesignOperation = (
     updatedAt: new Date()
   };
 };
-

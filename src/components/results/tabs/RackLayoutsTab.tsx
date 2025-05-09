@@ -10,6 +10,18 @@ import { RackHorizontalScroller } from './rack-layouts/RackHorizontalScroller';
 import { RackDetailView } from './rack-layouts/RackDetailView';
 import { useRackInitialization } from './rack-layouts/useRackInitialization';
 import { DevicePalette } from '@/components/palette/DevicePalette';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { AutomatedPlacementService, PlacementReport } from '@/services/automatedPlacementService';
+import { 
+  AlertDialog, 
+  AlertDialogContent, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogCancel 
+} from '@/components/ui/alert-dialog';
 
 export const RackLayoutsTab: React.FC = () => {
   const { rackProfiles, availabilityZones } = useRackInitialization();
@@ -25,6 +37,9 @@ export const RackLayoutsTab: React.FC = () => {
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
   const [selectedAZ, setSelectedAZ] = useState<string | 'all'>('all');
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [isPlacementDialogOpen, setIsPlacementDialogOpen] = useState(false);
+  const [placementReport, setPlacementReport] = useState<PlacementReport | null>(null);
+  const [isPlacing, setIsPlacing] = useState(false);
   const scrollStep = 300;
   
   // Set initial selected rack when rack profiles are loaded
@@ -58,10 +73,31 @@ export const RackLayoutsTab: React.FC = () => {
   }, []);
   
   const filteredRacks = rackProfiles.filter(
-    rack => selectedAZ === 'all' || rack.azName === selectedAZ
+    rack => selectedAZ === 'all' || rack.availabilityZoneId === selectedAZ
   );
   
   const selectedRack = rackProfiles.find(r => r.id === selectedRackId);
+
+  const handleAutoPlaceDevices = () => {
+    setIsPlacing(true);
+    
+    try {
+      const report = AutomatedPlacementService.placeAllDesignDevices();
+      setPlacementReport(report);
+      setIsPlacementDialogOpen(true);
+      
+      if (report.success) {
+        toast.success(`Successfully placed ${report.placedDevices} devices`);
+      } else {
+        toast.warning(`Placed ${report.placedDevices} devices, but ${report.failedDevices} failed`);
+      }
+    } catch (error) {
+      console.error("Error during auto-placement:", error);
+      toast.error("An error occurred during auto-placement");
+    } finally {
+      setIsPlacing(false);
+    }
+  };
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -71,6 +107,17 @@ export const RackLayoutsTab: React.FC = () => {
           <p className="text-sm text-muted-foreground">
             Visualize and organize components within racks grouped by availability zones
           </p>
+        </div>
+        
+        {/* Actions Row */}
+        <div className="flex justify-between items-center">
+          <Button 
+            variant="default"
+            onClick={handleAutoPlaceDevices}
+            disabled={isPlacing}
+          >
+            {isPlacing ? "Placing Devices..." : "Auto-Place Devices"}
+          </Button>
         </div>
         
         {/* Filter controls */}
@@ -125,6 +172,76 @@ export const RackLayoutsTab: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Placement Report Dialog */}
+      <AlertDialog open={isPlacementDialogOpen} onOpenChange={setIsPlacementDialogOpen}>
+        <AlertDialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
+            <AlertDialogDescription>
+              Results of automated device placement
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {placementReport && (
+            <div className="py-4">
+              <div className="flex justify-between mb-4">
+                <span>Total devices: {placementReport.totalDevices}</span>
+                <span className="text-green-600">Placed: {placementReport.placedDevices}</span>
+                <span className="text-red-600">Failed: {placementReport.failedDevices}</span>
+              </div>
+              
+              <div className="border rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rack</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AZ</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {placementReport.items.map((item, index) => (
+                      <tr key={index} className={item.status === 'failed' ? 'bg-red-50' : ''}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.deviceName}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold 
+                            ${item.status === 'placed' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {item.rackId ? rackProfiles.find(r => r.id === item.rackId)?.name : '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {item.ruPosition || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {item.azId ? (item.azId === 'default' ? 'Default' : availabilityZones.find(az => az.id === item.azId)?.name) : '-'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                          {item.reason || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DndProvider>
   );
 };
