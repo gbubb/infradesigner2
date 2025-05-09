@@ -7,7 +7,7 @@ interface RackFilterControlsProps {
   setSelectedAZ: (value: string) => void;
   availabilityZones: string[];
   selectedRackId: string | null;
-  setSelectedRackId: (value: string) => void;
+  setSelectedRackId: (value: string | null) => void;
   filteredRacks: Array<{ id: string; name: string; availabilityZoneId?: string }>;
 }
 
@@ -31,7 +31,7 @@ export const RackFilterControls: React.FC<RackFilterControlsProps> = ({
         <SelectContent>
           <SelectItem key="all-az" value="all">All Availability Zones</SelectItem>
           {availabilityZones.map(az => (
-            <SelectItem key={`az-${az}`} value={az}>{az}</SelectItem>
+            <SelectItem key={`az-${az}`} value={az || "default-az"}>{az || "Default"}</SelectItem>
           ))}
         </SelectContent>
       </Select>
