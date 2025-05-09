@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useComponents } from '@/context/ComponentContext';
 import { useComponentForm } from '@/hooks/components/useComponentForm';
@@ -30,8 +31,10 @@ export const ComponentLibrary: React.FC = () => {
   const {
     isAddDialogOpen,
     setIsAddDialogOpen,
+    handleCloseAddDialog,
     isEditDialogOpen,
     setIsEditDialogOpen,
+    handleCloseEditDialog,
     editingComponentId,
     setEditingComponentId,
     componentForm,
@@ -96,13 +99,11 @@ export const ComponentLibrary: React.FC = () => {
 
     if (editingComponentId) {
       updateComponentTemplate(editingComponentId, componentToSave);
-      setIsEditDialogOpen(false);
+      handleCloseEditDialog();
     } else {
       addComponentTemplate(componentToSave as InfrastructureComponent);
-      setIsAddDialogOpen(false);
+      handleCloseAddDialog();
     }
-    
-    resetForm();
   };
 
   const openDeleteConfirmation = (id: string) => {
@@ -141,7 +142,10 @@ export const ComponentLibrary: React.FC = () => {
 
       <ComponentFormDialog 
         isOpen={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCloseAddDialog();
+          else setIsAddDialogOpen(true);
+        }}
         formValues={componentForm}
         onInputChange={handleInputChange}
         onSelectChange={handleSelectChange}
@@ -153,8 +157,7 @@ export const ComponentLibrary: React.FC = () => {
           });
         }}
         onCancel={() => {
-          resetForm();
-          setIsAddDialogOpen(false);
+          handleCloseAddDialog();
         }}
         onSubmit={handleAddComponent}
         isEditing={false}
@@ -162,7 +165,10 @@ export const ComponentLibrary: React.FC = () => {
       
       <ComponentFormDialog 
         isOpen={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCloseEditDialog();
+          else setIsEditDialogOpen(true);
+        }}
         formValues={componentForm}
         onInputChange={handleInputChange}
         onSelectChange={handleSelectChange}
@@ -174,8 +180,7 @@ export const ComponentLibrary: React.FC = () => {
           });
         }}
         onCancel={() => {
-          resetForm();
-          setIsEditDialogOpen(false);
+          handleCloseEditDialog();
         }}
         onSubmit={handleAddComponent}
         isEditing={true}

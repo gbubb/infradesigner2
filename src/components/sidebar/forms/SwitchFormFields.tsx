@@ -17,13 +17,19 @@ export const SwitchFormFields: React.FC<SwitchFormFieldsProps> = ({
   onChange, 
   onInputChange 
 }) => {
+  // Log the current form values for debugging
+  console.log("SwitchFormFields - Current values:", formValues);
+  
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="switchRole">Switch Role</Label>
         <Select
-          value={formValues.switchRole?.toString() || ''}
-          onValueChange={(value) => onChange('switchRole', value)}
+          value={formValues.switchRole || ''}
+          onValueChange={(value) => {
+            console.log("Switch role selected:", value);
+            onChange('switchRole', value);
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select role" />
@@ -54,8 +60,11 @@ export const SwitchFormFields: React.FC<SwitchFormFieldsProps> = ({
         <div className="space-y-2">
           <Label htmlFor="portSpeedType">Port Speed</Label>
           <Select
-            value={formValues.portSpeedType?.toString() || ''}
-            onValueChange={(value) => onChange('portSpeedType', value)}
+            value={formValues.portSpeedType || ''}
+            onValueChange={(value) => {
+              console.log("Port speed selected:", value);
+              onChange('portSpeedType', value);
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select speed" />
@@ -87,8 +96,8 @@ export const SwitchFormFields: React.FC<SwitchFormFieldsProps> = ({
         <div className="space-y-2">
           <Label htmlFor="layer">Switch Layer</Label>
           <Select
-            value={formValues.layer?.toString() || ''}
-            onValueChange={(value) => onChange('layer', value)}
+            value={formValues.layer?.toString() || '2'}
+            onValueChange={(value) => onChange('layer', parseInt(value))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select layer" />

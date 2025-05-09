@@ -37,7 +37,7 @@ export const useComponentForm = () => {
     state.activeDesign?.requirements?.physicalConstraints);
   const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
   
-  const [componentForm, setComponentForm] = useState<ComponentFormValues>({
+  const defaultFormState = {
     type: ComponentType.Server,
     name: '',
     manufacturer: '',
@@ -50,23 +50,12 @@ export const useComponentForm = () => {
     validRUEnd: maxRackUnits,
     preferredRU: 1,
     preferredRack: 1,
-  });
+  };
+  
+  const [componentForm, setComponentForm] = useState<ComponentFormValues>(defaultFormState);
 
   const resetForm = () => {
-    setComponentForm({
-      type: ComponentType.Server,
-      name: '',
-      manufacturer: '',
-      model: '',
-      cost: 0,
-      powerRequired: 0,
-      isDefault: false,
-      namingPrefix: '',
-      validRUStart: 1,
-      validRUEnd: maxRackUnits,
-      preferredRU: 1,
-      preferredRack: 1,
-    });
+    setComponentForm({...defaultFormState});
     setEditingComponentId(null);
   };
 
@@ -88,6 +77,7 @@ export const useComponentForm = () => {
   };
 
   const handleSelectChange = (name: string, value: string) => {
+    console.log(`Setting ${name} to ${value}`);
     setComponentForm(prev => ({
       ...prev,
       [name]: value
@@ -107,6 +97,7 @@ export const useComponentForm = () => {
     if (!componentForm.name) missingFields.push('Name');
     if (!componentForm.manufacturer) missingFields.push('Manufacturer');
     if (!componentForm.model) missingFields.push('Model');
+    if (componentForm.cost === undefined || componentForm.cost === null) missingFields.push('Cost');
     
     if (missingFields.length > 0) {
       toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`);
@@ -154,11 +145,24 @@ export const useComponentForm = () => {
     return component;
   };
 
+  // Close dialogs and reset form properly
+  const handleCloseAddDialog = () => {
+    resetForm();
+    setIsAddDialogOpen(false);
+  };
+  
+  const handleCloseEditDialog = () => {
+    resetForm();
+    setIsEditDialogOpen(false);
+  };
+
   return {
     isAddDialogOpen,
     setIsAddDialogOpen,
+    handleCloseAddDialog,
     isEditDialogOpen,
     setIsEditDialogOpen,
+    handleCloseEditDialog,
     editingComponentId,
     setEditingComponentId,
     componentForm,

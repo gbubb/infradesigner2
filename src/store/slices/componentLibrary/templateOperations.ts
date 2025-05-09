@@ -62,17 +62,18 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
       component.ruHeight = component.ruSize;
     }
     
+    // Ensure we have a component ID
+    const componentToAdd = {
+      ...component,
+      id: component.id || uuidv4()
+    } as InfrastructureComponent;
+    
     set((state: StoreState) => {
-      const newComponent = {
-        ...component,
-        id: component.id || uuidv4()
-      } as InfrastructureComponent;
-      
-      return { componentTemplates: [...state.componentTemplates, newComponent] };
+      return { componentTemplates: [...state.componentTemplates, componentToAdd] };
     });
     
     // Make sure we're saving the complete component
-    saveComponent(component).then(success => {
+    saveComponent(componentToAdd).then(success => {
       if (success) {
         toast.success(`Added component: ${component.name}`);
       }
@@ -112,11 +113,6 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
         delete updates.preferredRack;
       }
 
-      // Handle special properties like switchRole or serverRole directly
-      if ('switchRole' in updates) {
-        console.log('Updating switch role to:', updates.switchRole);
-      }
-      
       // Create the updated component with all properties preserved
       const updatedComponent = {
         ...existingComponent,

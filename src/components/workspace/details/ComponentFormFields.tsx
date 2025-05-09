@@ -55,8 +55,9 @@ export const ComponentFormFields: React.FC<ComponentFormFieldsProps> = ({
             id="cost"
             name="cost"
             type="number"
-            value={editForm.cost || 0}
+            value={editForm.cost !== undefined ? editForm.cost : 0}
             onChange={handleInputChange}
+            required
           />
         </div>
         
@@ -66,7 +67,7 @@ export const ComponentFormFields: React.FC<ComponentFormFieldsProps> = ({
             id="powerRequired"
             name="powerRequired"
             type="number"
-            value={editForm.powerRequired || 0}
+            value={editForm.powerRequired !== undefined ? editForm.powerRequired : 0}
             onChange={handleInputChange}
           />
         </div>
