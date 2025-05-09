@@ -68,6 +68,10 @@ export interface InfrastructureComponent {
   ruHeight?: number;
   // Add ports for network connectivity
   ports?: Port[];
+  // For Switch components
+  switchRole?: string;
+  // For Server components
+  serverRole?: string;
   [key: string]: any; // To allow for any additional properties
 }
 

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -214,7 +213,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
               {/* Basic Component Information Section */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Component Type Selector */}
                 <FormField
                   control={control}
@@ -273,32 +272,76 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                     </FormItem>
                   )}
                 />
+              </div>
 
-                {/* Set as Default */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={control}
-                  name="isDefault"
+                  name="manufacturer"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-sm">Set as Default</FormLabel>
-                        <FormDescription>
-                          Default for its type
-                        </FormDescription>
-                      </div>
+                    <FormItem>
+                      <FormLabel>Manufacturer</FormLabel>
                       <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={(checked) => {
-                            field.onChange(checked);
-                            onSwitchChange(checked);
-                          }}
+                        <Input 
+                          placeholder="Manufacturer" 
+                          {...field} 
+                          onChange={(e) => {
+                            field.onChange(e);
+                            onInputChange(e);
+                          }} 
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name="model"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Model</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Model" 
+                          {...field} 
+                          onChange={(e) => {
+                            field.onChange(e);
+                            onInputChange(e);
+                          }} 
+                        />
+                      </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              {/* Set as Default */}
+              <FormField
+                control={control}
+                name="isDefault"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-sm">Set as Default</FormLabel>
+                      <FormDescription>
+                        Default for its type
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked);
+                          onSwitchChange(checked);
+                        }}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
               {/* Naming Section */}
               <div className="mt-6 pt-6 border-t">

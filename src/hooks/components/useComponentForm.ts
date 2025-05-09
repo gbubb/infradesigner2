@@ -102,8 +102,14 @@ export const useComponentForm = () => {
   };
 
   const validateForm = () => {
-    if (!componentForm.name || !componentForm.manufacturer || !componentForm.model) {
-      toast.error("Please fill in all required fields");
+    const missingFields = [];
+    
+    if (!componentForm.name) missingFields.push('Name');
+    if (!componentForm.manufacturer) missingFields.push('Manufacturer');
+    if (!componentForm.model) missingFields.push('Model');
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`);
       return false;
     }
     

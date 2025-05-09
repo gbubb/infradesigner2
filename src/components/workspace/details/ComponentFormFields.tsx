@@ -22,6 +22,7 @@ export const ComponentFormFields: React.FC<ComponentFormFieldsProps> = ({
           name="name"
           value={editForm.name || ''}
           onChange={handleInputChange}
+          required
         />
       </div>
       
@@ -32,6 +33,7 @@ export const ComponentFormFields: React.FC<ComponentFormFieldsProps> = ({
           name="manufacturer"
           value={editForm.manufacturer || ''}
           onChange={handleInputChange}
+          required
         />
       </div>
       
@@ -42,6 +44,7 @@ export const ComponentFormFields: React.FC<ComponentFormFieldsProps> = ({
           name="model"
           value={editForm.model || ''}
           onChange={handleInputChange}
+          required
         />
       </div>
       

@@ -90,6 +90,8 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
       
       // Get the existing component
       const existingComponent = state.componentTemplates[index];
+      console.log('Existing component before update:', existingComponent);
+      console.log('Updates to apply:', updates);
       
       // Process placement fields if they exist in the form data
       if ('validRUStart' in updates || 'validRUEnd' in updates || 'preferredRU' in updates || 'preferredRack' in updates) {
@@ -108,6 +110,11 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
         delete updates.validRUEnd;
         delete updates.preferredRU;
         delete updates.preferredRack;
+      }
+
+      // Handle special properties like switchRole or serverRole directly
+      if ('switchRole' in updates) {
+        console.log('Updating switch role to:', updates.switchRole);
       }
       
       // Create the updated component with all properties preserved
