@@ -81,6 +81,9 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
   },
   
   updateComponentTemplate: (id: string, updates: Partial<InfrastructureComponent>) => {
+    // Log the update operation
+    console.log('Starting update of component template:', { id, updates });
+    
     set((state: StoreState) => {
       const index = state.componentTemplates.findIndex(c => c.id === id);
       
@@ -118,6 +121,12 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
         ...existingComponent,
         ...updates
       } as InfrastructureComponent;
+      
+      // Ensure switchRole is updated properly if it's included in the updates
+      if (updates.switchRole) {
+        console.log('Explicitly setting switchRole to:', updates.switchRole);
+        updatedComponent.switchRole = updates.switchRole;
+      }
       
       // Log for debugging
       console.log('Updating component template:', { id, existing: existingComponent, updates, result: updatedComponent });

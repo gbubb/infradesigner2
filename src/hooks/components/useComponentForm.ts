@@ -13,6 +13,11 @@ export interface ComponentFormValues {
   cost: number;
   powerRequired: number;
   isDefault: boolean;
+  // Add special fields for switch components
+  switchRole?: string;
+  portSpeedType?: string;
+  portsProvidedQuantity?: number;
+  layer?: number;
   // Add naming and placement fields
   namingPrefix?: string;
   placement?: {
@@ -37,7 +42,7 @@ export const useComponentForm = () => {
     state.activeDesign?.requirements?.physicalConstraints);
   const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
   
-  const defaultFormState = {
+  const defaultFormState: ComponentFormValues = {
     type: ComponentType.Server,
     name: '',
     manufacturer: '',
@@ -50,11 +55,17 @@ export const useComponentForm = () => {
     validRUEnd: maxRackUnits,
     preferredRU: 1,
     preferredRack: 1,
+    // Default values for switches
+    switchRole: undefined,
+    portSpeedType: undefined,
+    portsProvidedQuantity: undefined,
+    layer: 2,
   };
   
-  const [componentForm, setComponentForm] = useState<ComponentFormValues>(defaultFormState);
+  const [componentForm, setComponentForm] = useState<ComponentFormValues>({...defaultFormState});
 
   const resetForm = () => {
+    console.log('Resetting form to default state');
     setComponentForm({...defaultFormState});
     setEditingComponentId(null);
   };
@@ -69,6 +80,8 @@ export const useComponentForm = () => {
          'portQuantity', 'length', 'validRUStart', 'validRUEnd', 'preferredRU', 'preferredRack'].includes(name)) {
       parsedValue = value === '' ? 0 : parseFloat(value);
     }
+    
+    console.log(`Setting ${name} to ${parsedValue}`);
     
     setComponentForm(prev => ({
       ...prev,
@@ -85,6 +98,7 @@ export const useComponentForm = () => {
   };
 
   const handleTypeChange = (value: string) => {
+    console.log(`Changing type to ${value}`);
     setComponentForm(prev => ({
       ...prev,
       type: value as ComponentType
@@ -98,6 +112,11 @@ export const useComponentForm = () => {
     if (!componentForm.manufacturer) missingFields.push('Manufacturer');
     if (!componentForm.model) missingFields.push('Model');
     if (componentForm.cost === undefined || componentForm.cost === null) missingFields.push('Cost');
+    
+    // For switch components, also require switchRole
+    if (componentForm.type === ComponentType.Switch && !componentForm.switchRole) {
+      missingFields.push('Switch Role');
+    }
     
     if (missingFields.length > 0) {
       toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`);
@@ -122,6 +141,8 @@ export const useComponentForm = () => {
 
   // Process form values before submission
   const processFormForSubmission = (form: ComponentFormValues) => {
+    console.log('Processing form for submission:', form);
+    
     // Create placement object from form fields
     const placement = {
       validRUStart: form.validRUStart || 1,
@@ -130,7 +151,7 @@ export const useComponentForm = () => {
       preferredRack: form.preferredRack
     };
     
-    // Create cleaned component object
+    // Create cleaned component object with all fields preserved
     const component = {
       ...form,
       placement
@@ -142,6 +163,7 @@ export const useComponentForm = () => {
     delete component.preferredRU;
     delete component.preferredRack;
     
+    console.log('Processed component:', component);
     return component;
   };
 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useComponents } from '@/context/ComponentContext';
 import { useComponentForm } from '@/hooks/components/useComponentForm';
@@ -70,6 +69,10 @@ export const ComponentLibrary: React.FC = () => {
   };
 
   const openEditDialog = (component: InfrastructureComponent) => {
+    // First reset the form to clear any previous data
+    resetForm();
+    
+    // Then set the editing ID
     setEditingComponentId(component.id);
     
     // Extract placement values for form fields
@@ -82,20 +85,28 @@ export const ComponentLibrary: React.FC = () => {
       preferredRack: component.placement?.preferredRack || 1
     };
     
+    // Log form values being set
+    console.log('Setting form values for editing:', formValues);
+    
+    // Set the component form with the extracted values
     setComponentForm(formValues);
     setIsEditDialogOpen(true);
   };
 
   const handleAddComponent = () => {
     if (!validateForm()) return;
+    
+    console.log('Form before processing:', componentForm);
 
     // Process the form for submission - consolidating placement fields
     const componentToSave = processFormForSubmission(componentForm);
     
-    // Ensure ID is always set
-    if (!componentToSave.id) {
+    // Ensure ID is always set for new components but not for edits
+    if (!editingComponentId) {
       componentToSave.id = uuidv4();
     }
+    
+    console.log('Component to save:', componentToSave, 'Editing ID:', editingComponentId);
 
     if (editingComponentId) {
       updateComponentTemplate(editingComponentId, componentToSave);
@@ -104,6 +115,15 @@ export const ComponentLibrary: React.FC = () => {
       addComponentTemplate(componentToSave as InfrastructureComponent);
       handleCloseAddDialog();
     }
+    
+    // Always reset form after saving
+    resetForm();
+  };
+
+  const openAddDialog = () => {
+    // Reset form before opening add dialog
+    resetForm();
+    setIsAddDialogOpen(true);
   };
 
   const openDeleteConfirmation = (id: string) => {
@@ -121,7 +141,7 @@ export const ComponentLibrary: React.FC = () => {
 
   return (
     <div className="container mx-auto py-4">
-      <ComponentLibraryHeader onOpenAddDialog={() => setIsAddDialogOpen(true)} />
+      <ComponentLibraryHeader onOpenAddDialog={openAddDialog} />
       
       <div className="flex items-center space-x-4 mb-6">
         <SearchBar value={searchTerm} onChange={setSearchTerm} />
@@ -157,6 +177,7 @@ export const ComponentLibrary: React.FC = () => {
           });
         }}
         onCancel={() => {
+          resetForm();
           handleCloseAddDialog();
         }}
         onSubmit={handleAddComponent}
@@ -166,7 +187,10 @@ export const ComponentLibrary: React.FC = () => {
       <ComponentFormDialog 
         isOpen={isEditDialogOpen}
         onOpenChange={(open) => {
-          if (!open) handleCloseEditDialog();
+          if (!open) {
+            resetForm();
+            handleCloseEditDialog();
+          }
           else setIsEditDialogOpen(true);
         }}
         formValues={componentForm}
@@ -180,6 +204,7 @@ export const ComponentLibrary: React.FC = () => {
           });
         }}
         onCancel={() => {
+          resetForm();
           handleCloseEditDialog();
         }}
         onSubmit={handleAddComponent}

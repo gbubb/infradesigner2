@@ -44,6 +44,29 @@ export const SwitchFormFields: React.FC<SwitchFormFieldsProps> = ({
         </Select>
       </div>
       
+      <div className="space-y-2">
+        <Label htmlFor="cost">Cost ($)</Label>
+        <Input
+          id="cost"
+          name="cost"
+          type="number"
+          value={formValues.cost !== undefined ? formValues.cost : 0}
+          onChange={onInputChange}
+          required
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="powerRequired">Power (W)</Label>
+        <Input
+          id="powerRequired"
+          name="powerRequired"
+          type="number"
+          value={formValues.powerRequired !== undefined ? formValues.powerRequired : 0}
+          onChange={onInputChange}
+        />
+      </div>
+      
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="ruSize">RU Size</Label>
