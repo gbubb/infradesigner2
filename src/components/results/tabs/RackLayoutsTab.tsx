@@ -224,7 +224,7 @@ export const RackLayoutsTab: React.FC = () => {
                           {item.ruPosition || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {item.azId ? (item.azId === 'default' ? 'Default' : availabilityZones.find(az => az.id === item.azId)?.name) : '-'}
+                          {item.azId ? (item.azId === 'default' ? 'Default' : item.azId) : '-'}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                           {item.reason || '-'}
