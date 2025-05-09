@@ -13,6 +13,12 @@ export interface ComputeClusterRequirement {
   gpuEnabled: boolean;
 }
 
+// Availability Zone definition
+export interface AvailabilityZone {
+  id: string;
+  name: string;
+}
+
 // Infrastructure Design Requirements
 export interface DesignRequirements {
   computeRequirements: {
@@ -42,7 +48,8 @@ export interface DesignRequirements {
   };
   physicalConstraints: {
     computeStorageRackQuantity?: number;
-    totalAvailabilityZones?: number;
+    availabilityZones?: AvailabilityZone[];
+    totalAvailabilityZones?: number; // Keeping for backward compatibility
     rackUnitsPerRack?: number;
     powerPerRackWatts?: number;
     useColoRacks?: boolean;

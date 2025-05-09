@@ -9,6 +9,7 @@ import { RackFilterControls } from './rack-layouts/RackFilterControls';
 import { RackHorizontalScroller } from './rack-layouts/RackHorizontalScroller';
 import { RackDetailView } from './rack-layouts/RackDetailView';
 import { useRackInitialization } from './rack-layouts/useRackInitialization';
+import { DevicePalette } from '@/components/palette/DevicePalette';
 
 export const RackLayoutsTab: React.FC = () => {
   const { rackProfiles, availabilityZones } = useRackInitialization();
@@ -92,15 +93,25 @@ export const RackLayoutsTab: React.FC = () => {
           scrollStep={scrollStep}
         />
         
-        {/* Selected rack detail view */}
-        {selectedRackId && (
-          <RackDetailView
-            rackProfileId={selectedRackId}
-            onDeviceClick={handleDeviceClick}
-            rackStats={rackStats}
-            selectedRack={selectedRack}
-          />
-        )}
+        {/* Main content area with rack view and device palette */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Rack detail view - takes 3/4 of the space */}
+          <div className="md:col-span-3">
+            {selectedRackId && (
+              <RackDetailView
+                rackProfileId={selectedRackId}
+                onDeviceClick={handleDeviceClick}
+                rackStats={rackStats}
+                selectedRack={selectedRack}
+              />
+            )}
+          </div>
+          
+          {/* Device palette - takes 1/4 of the space */}
+          <div>
+            <DevicePalette rackId={selectedRackId || undefined} />
+          </div>
+        </div>
       </div>
 
       {/* Connection Management Dialog */}

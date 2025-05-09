@@ -64,7 +64,7 @@ export interface InfrastructureComponent {
   // Added naming and placement properties
   namingPrefix?: string;
   placement?: ComponentPlacement;
-  // Add ruHeight for rack space consumption
+  // Standardized ruHeight for rack space consumption
   ruHeight?: number;
   // Add ports for network connectivity
   ports?: Port[];
@@ -82,13 +82,11 @@ export interface ComponentPlacement {
 // Structured cabling components
 export interface FiberPatchPanel extends InfrastructureComponent {
   type: ComponentType.FiberPatchPanel;
-  ruSize: number;
   cassetteCapacity: number;
 }
 
 export interface CopperPatchPanel extends InfrastructureComponent {
   type: ComponentType.CopperPatchPanel;
-  ruSize: number;
   portQuantity: number;
 }
 

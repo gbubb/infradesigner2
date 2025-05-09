@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
@@ -9,6 +10,7 @@ export interface RackProfile {
   id: string;
   name: string;
   azName: string;
+  availabilityZoneId?: string;
 }
 
 export const useRackInitialization = () => {
@@ -43,8 +45,13 @@ export const useRackInitialization = () => {
     // Clear existing racks
     RackService.clearAllRackProfiles();
     
+    // Determine availability zones
+    const definedAZs = activeDesign.requirements.physicalConstraints.availabilityZones || [];
+    const azCount = definedAZs.length > 0 
+      ? definedAZs.length 
+      : (activeDesign.requirements.physicalConstraints.totalAvailabilityZones || 3);
+    
     // Calculate number of racks needed based on requirements
-    const azCount = activeDesign.requirements.physicalConstraints.totalAvailabilityZones || 3;
     const computeRacksPerAZ = Math.ceil((activeDesign.requirements.physicalConstraints.computeStorageRackQuantity || 6) / azCount);
     const networkCoreRackQuantity = activeDesign.requirements.physicalConstraints.networkCoreRackQuantity || 
       (activeDesign.requirements.networkRequirements.dedicatedNetworkCoreRacks ? 2 : 0);
@@ -53,15 +60,30 @@ export const useRackInitialization = () => {
     const newAvailabilityZones: string[] = [];
     
     // Create availability zones
-    for (let az = 1; az <= azCount; az++) {
-      const azName = `AZ${az}`;
-      newAvailabilityZones.push(azName);
-      
-      // Create compute/storage racks for this AZ
-      for (let rack = 1; rack <= computeRacksPerAZ; rack++) {
-        const rackName = `${azName}-Rack${rack}`;
-        const rackId = RackService.createRackProfile(rackName);
-        newRacks.push({ id: rackId, name: rackName, azName });
+    if (definedAZs.length > 0) {
+      // Use predefined AZs
+      definedAZs.forEach(az => {
+        newAvailabilityZones.push(az.name);
+        
+        // Create compute/storage racks for this AZ
+        for (let rack = 1; rack <= computeRacksPerAZ; rack++) {
+          const rackName = `${az.name}-Rack${rack}`;
+          const rackId = RackService.createRackProfile(rackName, 42, az.id);
+          newRacks.push({ id: rackId, name: rackName, azName: az.name, availabilityZoneId: az.id });
+        }
+      });
+    } else {
+      // Create traditional AZs
+      for (let az = 1; az <= azCount; az++) {
+        const azName = `AZ${az}`;
+        newAvailabilityZones.push(azName);
+        
+        // Create compute/storage racks for this AZ
+        for (let rack = 1; rack <= computeRacksPerAZ; rack++) {
+          const rackName = `${azName}-Rack${rack}`;
+          const rackId = RackService.createRackProfile(rackName);
+          newRacks.push({ id: rackId, name: rackName, azName });
+        }
       }
     }
     

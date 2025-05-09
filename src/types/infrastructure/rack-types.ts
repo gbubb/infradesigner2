@@ -17,6 +17,7 @@ export interface RackProfile {
   name: string;
   uHeight: number;
   devices: PlacedDevice[];
+  availabilityZoneId?: string;
 }
 
 // Additional rack-related types could be added here in the future

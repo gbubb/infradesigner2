@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { useDesignStore } from '@/store/designStore';
 import { RackProfile, PlacedDevice, DeviceOrientation } from '@/types/infrastructure/rack-types';
@@ -39,7 +40,11 @@ export class RackService {
     return profiles.find(profile => profile.id === rackId);
   }
 
-  static createRackProfile(name: string, uHeight: number = 42): string {
+  static createRackProfile(
+    name: string, 
+    uHeight: number = 42, 
+    availabilityZoneId?: string
+  ): string {
     const state = useDesignStore.getState();
     const profiles = this.getAllRackProfiles();
     
@@ -47,7 +52,8 @@ export class RackService {
       id: uuidv4(),
       name,
       uHeight,
-      devices: []
+      devices: [],
+      availabilityZoneId
     };
     
     profiles.push(newProfile);
@@ -133,6 +139,16 @@ export class RackService {
     return true;
   }
 
+  static isDevicePlacedInAnyRack(deviceId: string): boolean {
+    const allRacks = this.getAllRackProfiles();
+    return allRacks.some(rack => rack.devices.some(device => device.deviceId === deviceId));
+  }
+
+  static getRackForDevice(deviceId: string): RackProfile | undefined {
+    const allRacks = this.getAllRackProfiles();
+    return allRacks.find(rack => rack.devices.some(device => device.deviceId === deviceId));
+  }
+
   static placeDevice(rackId: string, deviceId: string, targetRuPosition?: number): PlacementResult {
     const state = useDesignStore.getState();
     const rack = this.getRackProfile(rackId);
@@ -146,14 +162,12 @@ export class RackService {
     }
     
     // Check if device is already in this or another rack
-    const allRacks = this.getAllRackProfiles();
-    for (const r of allRacks) {
-      if (r.devices.some(d => d.deviceId === deviceId)) {
-        return { 
-          success: false, 
-          error: `Device is already placed in rack ${r.name}` 
-        };
-      }
+    if (this.isDevicePlacedInAnyRack(deviceId)) {
+      const existingRack = this.getRackForDevice(deviceId);
+      return { 
+        success: false, 
+        error: `Device is already placed in rack ${existingRack?.name || 'unknown'}` 
+      };
     }
     
     // Find the device in the design
@@ -382,5 +396,20 @@ export class RackService {
     rack.devices[deviceIndex].orientation = orientation;
     
     return this.updateRackProfile(rackId, { devices: rack.devices });
+  }
+
+  // Get all unplaced devices that can be placed in racks
+  static getAvailableDevices() {
+    const state = useDesignStore.getState();
+    if (!state.activeDesign) return [];
+    
+    // Get all devices that have ruHeight and are not already placed in any rack
+    return state.activeDesign.components.filter(component => {
+      // Must have positive ruHeight to be rackable
+      if (!component.ruHeight || component.ruHeight <= 0) return false;
+      
+      // Check if device is already placed in any rack
+      return !this.isDevicePlacedInAnyRack(component.id);
+    });
   }
 }

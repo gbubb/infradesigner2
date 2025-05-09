@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ComponentType } from '@/types/infrastructure/component-types';
 import { useDrag } from 'react-dnd';
 import { HardDrive } from 'lucide-react';
+import { RackService } from '@/services/rackService';
 
 interface DeviceItemProps {
   id: string;
@@ -74,23 +75,16 @@ interface DevicePaletteProps {
 }
 
 export const DevicePalette: React.FC<DevicePaletteProps> = ({ rackId }) => {
-  const activeDesign = useDesignStore(state => state.activeDesign);
+  // Get available devices using the new RackService method
+  const availableDevices = useMemo(() => {
+    return RackService.getAvailableDevices();
+  }, [rackId]);
   
-  // Memoize the filtered list of rackable devices
-  const rackableDevices = useMemo(() => {
-    if (!activeDesign) return [];
-    
-    // Filter components that can be placed in a rack (have ruHeight)
-    return activeDesign.components.filter(component => 
-      component.ruHeight && component.ruHeight > 0
-    );
-  }, [activeDesign]);
-
-  if (!activeDesign) {
+  if (availableDevices.length === 0) {
     return (
       <Card>
         <CardContent className="p-4">
-          <p className="text-muted-foreground">No active design available</p>
+          <p className="text-muted-foreground">No available devices to place in racks</p>
         </CardContent>
       </Card>
     );
@@ -101,20 +95,16 @@ export const DevicePalette: React.FC<DevicePaletteProps> = ({ rackId }) => {
       <CardContent className="p-4">
         <h3 className="text-lg font-medium mb-4">Available Devices</h3>
         <div className="space-y-2">
-          {rackableDevices.length === 0 ? (
-            <p className="text-muted-foreground">No rackable devices available</p>
-          ) : (
-            rackableDevices.map(device => (
-              <DeviceItem
-                key={device.id}
-                id={device.id}
-                name={device.name}
-                model={device.model}
-                type={device.type}
-                ruHeight={device.ruHeight || 1}
-              />
-            ))
-          )}
+          {availableDevices.map(device => (
+            <DeviceItem
+              key={device.id}
+              id={device.id}
+              name={device.name}
+              model={device.model}
+              type={device.type}
+              ruHeight={device.ruHeight || 1}
+            />
+          ))}
         </div>
       </CardContent>
     </Card>
