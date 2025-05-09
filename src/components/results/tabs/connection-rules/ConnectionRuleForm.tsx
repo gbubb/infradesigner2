@@ -199,7 +199,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Any</SelectItem>
+                    <SelectItem key="any-component-type-source" value="_any">Any</SelectItem>
                     {componentTypes.map(type => (
                       <SelectItem key={type} value={type}>
                         {type}
@@ -229,7 +229,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Any</SelectItem>
+                    <SelectItem key="any-role-source" value="_any">Any</SelectItem>
                     {deviceRoles.map(role => (
                       <SelectItem key={role} value={role}>
                         {role}
@@ -269,7 +269,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Any</SelectItem>
+                    <SelectItem key="any-component-type-target" value="_any">Any</SelectItem>
                     {componentTypes.map(type => (
                       <SelectItem key={type} value={type}>
                         {type}
@@ -299,7 +299,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Any</SelectItem>
+                    <SelectItem key="any-role-target" value="_any">Any</SelectItem>
                     {deviceRoles.map(role => (
                       <SelectItem key={role} value={role}>
                         {role}
@@ -364,7 +364,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}
-                    value={field.value || ''}
+                    value={field.value || '_no_az_selected'}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -372,11 +372,15 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {availableAZs.map(az => (
-                        <SelectItem key={az.id} value={az.id}>
-                          {az.name}
-                        </SelectItem>
-                      ))}
+                      {availableAZs.length === 0 ? (
+                        <SelectItem key="no-az-available" value="_no_az_available">No AZs available</SelectItem>
+                      ) : (
+                        availableAZs.map(az => (
+                          <SelectItem key={`az-${az.id}`} value={az.id}>
+                            {az.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -450,7 +454,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
-                  value={field.value || ''}
+                  value={field.value || '_no_cable'}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -458,7 +462,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem key="no-cable" value="_no_cable">None</SelectItem>
                     {availableCables.map(cable => (
                       <SelectItem key={cable.id} value={cable.id}>
                         {cable.name}
@@ -492,3 +496,4 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
     </Form>
   );
 };
+
