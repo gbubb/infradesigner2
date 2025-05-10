@@ -47,12 +47,12 @@ export const BillOfMaterialsTab: React.FC = () => {
     });
     return result;
   }, [components]);
-
+  
   // Grand total cost should now sum costs of individual instances
   const grandTotalCost = useMemo(() => {
     return components.reduce((sum, comp) => sum + comp.cost, 0); // Each comp is an instance, quantity is 1
   }, [components]);
-
+  
   // Format a category name for display
   const formatCategoryName = (name: string) => name.replace(/([A-Z])/g, ' $1').trim();
 
@@ -71,9 +71,9 @@ export const BillOfMaterialsTab: React.FC = () => {
       else if (component.type === ComponentType.Cassette) details = `${component.portType}, ${component.portQuantity} ports`;
       else if (component.type === ComponentType.Cable) details = `${component.length}m, ${component.connectorA_Type} to ${component.connectorB_Type}, ${component.mediaType}`;
       else if (component.type === ComponentType.Server) details = `${component.cpuModel || '-'}, ${component.memoryCapacity || component.memoryGB || '-'}GB`;
-      
+        
       csvContent += `${categoryName},${component.type},${component.role || 'N/A'},${component.manufacturer},${component.model},"${details}",${quantity},${component.cost},${totalCost}\r\n`;
-    });
+      });
     return encodeURI(csvContent);
   };
 
@@ -102,7 +102,7 @@ export const BillOfMaterialsTab: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Bill of Materials</h2>
+          <h2 className="text-xl font-semibold">Bill of Materials</h2>
         <Button onClick={() => handleExport()} variant="outline">
           <Download className="mr-2 h-4 w-4" /> Export Full BOM (CSV)
         </Button>
@@ -267,7 +267,7 @@ export const BillOfMaterialsTab: React.FC = () => {
         </TabsContent>
         
         <TabsContent value="cabling">
-           <Card>
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Cabling Components</CardTitle>
               <Button onClick={() => handleExport('Cabling')} variant="ghost" size="sm">
@@ -313,7 +313,7 @@ export const BillOfMaterialsTab: React.FC = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
+        
         <TabsContent value="all">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -388,8 +388,8 @@ export const BillOfMaterialsTab: React.FC = () => {
                 <CardContent>
                     <p>Detailed cost summary and TCO analysis would go here, leveraging data from <code>useCostAnalysis</code>.</p>
                     <p className="font-bold mt-4">Grand Total (from BOM): €{grandTotalCost.toLocaleString()}</p>
-                </CardContent>
-            </Card>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

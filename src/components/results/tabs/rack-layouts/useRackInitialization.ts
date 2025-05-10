@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
@@ -6,16 +5,17 @@ import { DeviceRoleType } from '@/types/infrastructure/requirements-types';
 import { ComponentType } from '@/types/infrastructure/component-types';
 import { toast } from 'sonner';
 
-export interface RackProfile {
+export interface RackProfileInitializationData {
   id: string;
   name: string;
   azName: string;
   availabilityZoneId?: string;
+  rackType?: 'Core' | 'ComputeStorage';
 }
 
 export const useRackInitialization = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
-  const [rackProfiles, setRackProfiles] = useState<RackProfile[]>([]);
+  const [rackProfiles, setRackProfiles] = useState<RackProfileInitializationData[]>([]);
   const [availabilityZones, setAvailabilityZones] = useState<string[]>([]);
   
   // Use a ref instead of state to track initialization to avoid re-renders
@@ -49,70 +49,70 @@ export const useRackInitialization = () => {
     const definedAZs = activeDesign.requirements.physicalConstraints.availabilityZones || [];
     const azCount = definedAZs.length > 0 
       ? definedAZs.length 
-      : (activeDesign.requirements.physicalConstraints.totalAvailabilityZones || 3);
+      : (activeDesign.requirements.physicalConstraints.totalAvailabilityZones || 1);
     
     // Calculate number of racks needed based on requirements
-    const computeRacksPerAZ = Math.ceil((activeDesign.requirements.physicalConstraints.computeStorageRackQuantity || 6) / azCount);
+    const computeStorageRackTotalQuantity = activeDesign.requirements.physicalConstraints.computeStorageRackQuantity || (azCount * 2);
+    const computeRacksPerAZ = Math.ceil(computeStorageRackTotalQuantity / azCount);
     const networkCoreRackQuantity = activeDesign.requirements.physicalConstraints.networkCoreRackQuantity || 
       (activeDesign.requirements.networkRequirements.dedicatedNetworkCoreRacks ? 2 : 0);
     
-    const newRacks: RackProfile[] = [];
+    const newRacks: RackProfileInitializationData[] = [];
     const newAvailabilityZones: string[] = [];
-    
-    // Create availability zones
+    let globalRackCounter = 1;
+
     if (definedAZs.length > 0) {
-      // Use predefined AZs
       definedAZs.forEach(az => {
         newAvailabilityZones.push(az.name);
-        
-        // Create compute/storage racks for this AZ
-        for (let rack = 1; rack <= computeRacksPerAZ; rack++) {
-          const rackName = `${az.name}-Rack${rack}`;
-          const rackId = RackService.createRackProfile(rackName, 42, az.id);
-          newRacks.push({ id: rackId, name: rackName, azName: az.name, availabilityZoneId: az.id });
+        for (let rackNumInAZ = 1; rackNumInAZ <= computeRacksPerAZ; rackNumInAZ++) {
+          if (newRacks.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
+          const simpleRackName = `Rack ${globalRackCounter}`;
+          const rackId = RackService.createRackProfile(simpleRackName, 42, az.id, 'ComputeStorage');
+          newRacks.push({ id: rackId, name: simpleRackName, azName: az.name, availabilityZoneId: az.id, rackType: 'ComputeStorage' });
+          globalRackCounter++;
         }
       });
     } else {
-      // Create traditional AZs
-      for (let az = 1; az <= azCount; az++) {
-        const azName = `AZ${az}`;
+      for (let azNum = 1; azNum <= azCount; azNum++) {
+        const azName = `AZ${azNum}`;
+        const azId = `auto-az-${azNum}`;
         newAvailabilityZones.push(azName);
-        
-        // Create compute/storage racks for this AZ
-        for (let rack = 1; rack <= computeRacksPerAZ; rack++) {
-          const rackName = `${azName}-Rack${rack}`;
-          const rackId = RackService.createRackProfile(rackName);
-          newRacks.push({ id: rackId, name: rackName, azName });
+        for (let rackNumInAZ = 1; rackNumInAZ <= computeRacksPerAZ; rackNumInAZ++) {
+          if (newRacks.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
+          const simpleRackName = `Rack ${globalRackCounter}`;
+          const rackId = RackService.createRackProfile(simpleRackName, 42, azId, 'ComputeStorage');
+          newRacks.push({ id: rackId, name: simpleRackName, azName: azName, availabilityZoneId: azId, rackType: 'ComputeStorage' });
+          globalRackCounter++;
         }
       }
     }
     
-    // Create network core racks if needed
+    let coreRackCounter = 1;
     if (networkCoreRackQuantity > 0) {
-      for (let i = 1; i <= networkCoreRackQuantity; i++) {
-        const rackName = `Core-Rack${i}`;
-        const rackId = RackService.createRackProfile(rackName);
-        newRacks.push({ id: rackId, name: rackName, azName: 'Core' });
+      const coreAzName = 'Core';
+      const coreAzId = 'core-az-id';
+      if (!newAvailabilityZones.includes(coreAzName)) {
+        newAvailabilityZones.push(coreAzName);
       }
-      
-      // Add Core as a separate "AZ" for filtering
-      newAvailabilityZones.push('Core');
+      for (let i = 1; i <= networkCoreRackQuantity; i++) {
+        const simpleCoreRackName = `Core Rack ${coreRackCounter}`;
+        const rackId = RackService.createRackProfile(simpleCoreRackName, 42, coreAzId, 'Core');
+        newRacks.push({ id: rackId, name: simpleCoreRackName, azName: coreAzName, availabilityZoneId: coreAzId, rackType: 'Core' });
+        coreRackCounter++;
+      }
     }
     
     setRackProfiles(newRacks);
     setAvailabilityZones(newAvailabilityZones);
     
-    // Distribute components across racks
-    distributeComponentsAcrossRacks(newRacks);
+    // distributeComponentsAcrossRacks(newRacks);
     
-    // Mark as initialized to prevent re-running
     initializedRef.current = true;
-    
-    console.log("Rack initialization complete");
+    console.log("Rack initialization complete with sequential names.");
   }, [activeDesign]);
 
   // Distribute components across racks based on role and AZ
-  const distributeComponentsAcrossRacks = (racks: RackProfile[]) => {
+  const distributeComponentsAcrossRacks = (racks: RackProfileInitializationData[]) => {
     if (!activeDesign || !activeDesign.components || !activeDesign.componentRoles) return;
     
     const azNames = [...new Set(racks.map(rack => rack.azName))].filter(az => az !== 'Core');
