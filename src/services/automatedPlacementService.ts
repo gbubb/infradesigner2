@@ -1,4 +1,3 @@
-
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from './rackService';
 import { InfrastructureComponent, RackProfile, ComponentType } from '@/types/infrastructure';
@@ -127,7 +126,7 @@ export class AutomatedPlacementService {
     }
     
     // Track rack indexes for round-robin placement within each AZ and rack type
-    const azRackCounters: Record<string, Record<'Core' | 'ComputeStorage', number>> = {};
+    const azRackCounters: Record<string, Record<string, number>> = {};
     
     // Initialize counters for each AZ and rack type
     for (const azId of azIds) {
@@ -367,4 +366,3 @@ export class AutomatedPlacementService {
     return { success: false, error: "No valid position found in rack" };
   }
 }
-

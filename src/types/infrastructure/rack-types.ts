@@ -6,6 +6,8 @@ export enum DeviceOrientation {
   Rear = 'Rear'
 }
 
+export type RackType = 'Core' | 'ComputeStorage';
+
 export interface PlacedDevice {
   deviceId: string;
   ruPosition: number;
@@ -25,7 +27,7 @@ export interface RackProfile {
   uHeight: number;
   devices: PlacedDevice[];
   availabilityZoneId?: string;
-  rackType?: 'Core' | 'ComputeStorage';
+  rackType?: RackType;
 }
 
 // Additional rack-related types could be added here in the future
