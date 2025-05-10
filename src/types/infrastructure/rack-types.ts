@@ -6,7 +6,11 @@ export enum DeviceOrientation {
   Rear = 'Rear'
 }
 
-export type RackType = 'Core' | 'ComputeStorage';
+// Change from type to enum to enable proper type checking with string comparisons
+export enum RackType {
+  Core = 'Core',
+  ComputeStorage = 'ComputeStorage'
+}
 
 export interface PlacedDevice {
   deviceId: string;

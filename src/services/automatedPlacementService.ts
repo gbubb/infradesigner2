@@ -1,8 +1,7 @@
-
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from './rackService';
-import { InfrastructureComponent, RackProfile, ComponentType } from '@/types/infrastructure';
-import { RackType } from '@/types/infrastructure/rack-types';
+import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
+import { RackProfile, RackType } from '@/types/infrastructure/rack-types';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface PlacementReportItem {
@@ -95,14 +94,14 @@ export class AutomatedPlacementService {
     // Group racks by their AZ and type
     for (const rack of rackProfiles) {
       const azId = rack.availabilityZoneId || 'default';
-      const rackType = rack.rackType || 'ComputeStorage';
+      const rackType = rack.rackType || RackType.ComputeStorage;
       
       // Ensure arrays exist for this AZ
       if (!coreRacksByAZ[azId]) coreRacksByAZ[azId] = [];
       if (!computeStorageRacksByAZ[azId]) computeStorageRacksByAZ[azId] = [];
       
       // Add rack to the appropriate collection
-      if (rackType === 'Core') {
+      if (rackType === RackType.Core) {
         coreRacksByAZ[azId].push(rack);
       } else {
         computeStorageRacksByAZ[azId].push(rack);
@@ -133,8 +132,8 @@ export class AutomatedPlacementService {
     // Initialize counters for each AZ and rack type
     for (const azId of azIds) {
       azRackCounters[azId] = {
-        'Core': 0,
-        'ComputeStorage': 0
+        [RackType.Core]: 0,
+        [RackType.ComputeStorage]: 0
       };
     }
     
@@ -160,10 +159,10 @@ export class AutomatedPlacementService {
       const prefersCoreRack = isNetworkDevice && 
         design.requirements.networkRequirements?.dedicatedNetworkCoreRacks;
       
-      const targetRackType: RackType = prefersCoreRack ? 'Core' : 'ComputeStorage';
+      const targetRackType = prefersCoreRack ? RackType.Core : RackType.ComputeStorage;
       
       // Network devices can go to ComputeStorage racks if no Core racks are available
-      const allowedRackTypeIfPreferredUnavailable: RackType | null = isNetworkDevice ? 'ComputeStorage' : null;
+      const allowedRackTypeIfPreferredUnavailable = isNetworkDevice ? RackType.ComputeStorage : null;
       
       // Determine target AZs for this device
       let targetAZs: string[] = [];
@@ -171,7 +170,7 @@ export class AutomatedPlacementService {
         targetAZs = [device.assignedAZ];
       } else {
         // If no assigned AZ, try all AZs that have racks of the target type
-        if (targetRackType === 'Core') {
+        if (targetRackType === RackType.Core) {
           targetAZs = Object.keys(coreRacksByAZ).filter(az => coreRacksByAZ[az]?.length > 0);
         } else {
           targetAZs = Object.keys(computeStorageRacksByAZ).filter(az => computeStorageRacksByAZ[az]?.length > 0);
@@ -182,7 +181,7 @@ export class AutomatedPlacementService {
       for (const azId of targetAZs) {
         if (placed) break;
         
-        const racksToTry = targetRackType === 'Core' 
+        const racksToTry = targetRackType === RackType.Core 
           ? (coreRacksByAZ[azId] || []) 
           : (computeStorageRacksByAZ[azId] || []);
         
@@ -224,11 +223,11 @@ export class AutomatedPlacementService {
         } else {
           // If no assigned AZ, try all AZs that have racks of the fallback type
           fallbackAZs = Object.keys(
-            allowedRackTypeIfPreferredUnavailable === 'Core' 
+            allowedRackTypeIfPreferredUnavailable === RackType.Core 
               ? coreRacksByAZ 
               : computeStorageRacksByAZ
           ).filter(az => (
-            allowedRackTypeIfPreferredUnavailable === 'Core' 
+            allowedRackTypeIfPreferredUnavailable === RackType.Core 
               ? coreRacksByAZ[az]?.length > 0 
               : computeStorageRacksByAZ[az]?.length > 0
           ));
@@ -237,7 +236,7 @@ export class AutomatedPlacementService {
         for (const azId of fallbackAZs) {
           if (placed) break;
           
-          const racksToTry = allowedRackTypeIfPreferredUnavailable === 'Core' 
+          const racksToTry = allowedRackTypeIfPreferredUnavailable === RackType.Core 
             ? (coreRacksByAZ[azId] || []) 
             : (computeStorageRacksByAZ[azId] || []);
           
