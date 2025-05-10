@@ -6,12 +6,6 @@ export enum DeviceOrientation {
   Rear = 'Rear'
 }
 
-// Change from type to enum to enable proper type checking with string comparisons
-export enum RackType {
-  Core = 'Core',
-  ComputeStorage = 'ComputeStorage'
-}
-
 export interface PlacedDevice {
   deviceId: string;
   ruPosition: number;
@@ -31,7 +25,7 @@ export interface RackProfile {
   uHeight: number;
   devices: PlacedDevice[];
   availabilityZoneId?: string;
-  rackType?: RackType;
+  rackType?: 'Core' | 'ComputeStorage';
 }
 
 // Additional rack-related types could be added here in the future

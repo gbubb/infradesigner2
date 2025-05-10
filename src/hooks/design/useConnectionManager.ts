@@ -13,7 +13,8 @@ export const useConnectionManager = () => {
     (state: StoreState) => ({
       components: state.activeDesign?.components || [],
       updateActiveDesign: state.updateActiveDesign,
-    })
+    }),
+    shallow
   );
   
   const [connections, setConnections] = useState<Array<{
