@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { useDesignStore } from '@/store/designStore';
 import { RackProfile, PlacedDevice, DeviceOrientation } from '@/types/infrastructure/rack-types';
@@ -177,19 +176,19 @@ export class RackService {
       return { success: false, error: "Device not found in design" };
     }
     
-    // Check if device has a valid RU height
-    const ruHeight = device.ruHeight || 1;
-    if (ruHeight <= 0) {
-      return { success: false, error: "Device has invalid RU height" };
+    // Check if device has a valid RU size
+    const ruSize = device.ruSize || 1;
+    if (ruSize <= 0) {
+      return { success: false, error: "Device has invalid RU size" };
     }
     
     // If a target position is provided, check if it's valid
     if (targetRuPosition !== undefined) {
       // Check if the target position is within rack bounds
-      if (targetRuPosition < 1 || targetRuPosition + ruHeight - 1 > rack.uHeight) {
+      if (targetRuPosition < 1 || targetRuPosition + ruSize - 1 > rack.uHeight) {
         return { 
           success: false, 
-          error: `Target position out of bounds (valid range: 1 to ${rack.uHeight - ruHeight + 1})` 
+          error: `Target position out of bounds (valid range: 1 to ${rack.uHeight - ruSize + 1})` 
         };
       }
       
@@ -198,9 +197,9 @@ export class RackService {
         const placedDeviceData = state.activeDesign.components.find(c => c.id === placedDevice.deviceId);
         if (!placedDeviceData) continue;
         
-        const placedDeviceHeight = placedDeviceData.ruHeight || 1;
-        const placedDeviceTop = placedDevice.ruPosition + placedDeviceHeight - 1;
-        const newDeviceTop = targetRuPosition + ruHeight - 1;
+        const placedDeviceSize = placedDeviceData.ruSize || 1;
+        const placedDeviceTop = placedDevice.ruPosition + placedDeviceSize - 1;
+        const newDeviceTop = targetRuPosition + ruSize - 1;
         
         if (
           (targetRuPosition <= placedDeviceTop && newDeviceTop >= placedDevice.ruPosition) ||
@@ -214,7 +213,7 @@ export class RackService {
       }
     } else {
       // Auto-placement: find best available position
-      const availablePositions = this.findAvailablePositions(rack, ruHeight, state.activeDesign.components);
+      const availablePositions = this.findAvailablePositions(rack, ruSize, state.activeDesign.components);
       
       if (availablePositions.length === 0) {
         return { success: false, error: "No available space in rack" };
@@ -245,12 +244,12 @@ export class RackService {
   
   static findAvailablePositions(
     rack: RackProfile, 
-    deviceHeight: number, 
+    deviceSize: number, 
     components: any[]
   ): number[] {
     const positions: number[] = [];
     
-    if (!rack || deviceHeight <= 0 || deviceHeight > rack.uHeight) {
+    if (!rack || deviceSize <= 0 || deviceSize > rack.uHeight) {
       return positions;
     }
     
@@ -263,8 +262,8 @@ export class RackService {
       const device = components.find(c => c.id === placedDevice.deviceId);
       if (!device) continue;
       
-      const ruHeight = device.ruHeight || 1;
-      for (let i = 0; i < ruHeight; i++) {
+      const ruSize = device.ruSize || 1;
+      for (let i = 0; i < ruSize; i++) {
         const position = placedDevice.ruPosition + i;
         if (position <= rack.uHeight) {
           rackUnits[position] = true;
@@ -273,9 +272,9 @@ export class RackService {
     }
     
     // Find all possible positions
-    for (let i = 1; i <= rack.uHeight - deviceHeight + 1; i++) {
+    for (let i = 1; i <= rack.uHeight - deviceSize + 1; i++) {
       let canPlace = true;
-      for (let j = 0; j < deviceHeight; j++) {
+      for (let j = 0; j < deviceSize; j++) {
         if (rackUnits[i + j]) {
           canPlace = false;
           break;
@@ -312,13 +311,13 @@ export class RackService {
       return { success: false, error: "Device not found in design" };
     }
     
-    const ruHeight = component.ruHeight || 1;
+    const ruSize = component.ruSize || 1;
     
     // Check if new position is valid
-    if (newPosition < 1 || newPosition + ruHeight - 1 > rack.uHeight) {
+    if (newPosition < 1 || newPosition + ruSize - 1 > rack.uHeight) {
       return { 
         success: false, 
-        error: `Position out of bounds (valid range: 1 to ${rack.uHeight - ruHeight + 1})` 
+        error: `Position out of bounds (valid range: 1 to ${rack.uHeight - ruSize + 1})` 
       };
     }
     
@@ -327,9 +326,9 @@ export class RackService {
       const otherComponent = state.activeDesign?.components.find(c => c.id === otherDevice.deviceId);
       if (!otherComponent) continue;
       
-      const otherHeight = otherComponent.ruHeight || 1;
-      const otherTop = otherDevice.ruPosition + otherHeight - 1;
-      const newDeviceTop = newPosition + ruHeight - 1;
+      const otherSize = otherComponent.ruSize || 1;
+      const otherTop = otherDevice.ruPosition + otherSize - 1;
+      const newDeviceTop = newPosition + ruSize - 1;
       
       if (
         (newPosition <= otherTop && newDeviceTop >= otherDevice.ruPosition) ||
@@ -403,10 +402,10 @@ export class RackService {
     const state = useDesignStore.getState();
     if (!state.activeDesign) return [];
     
-    // Get all devices that have ruHeight and are not already placed in any rack
+    // Get all devices that have ruSize and are not already placed in any rack
     return state.activeDesign.components.filter(component => {
-      // Must have positive ruHeight to be rackable
-      if (!component.ruHeight || component.ruHeight <= 0) return false;
+      // Must have positive ruSize to be rackable
+      if (!component.ruSize || component.ruSize <= 0) return false;
       
       // Check if device is already placed in any rack
       return !this.isDevicePlacedInAnyRack(component.id);

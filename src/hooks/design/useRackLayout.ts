@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService, PlacementResult } from '@/services/rackService';
@@ -40,12 +39,12 @@ export const useRackLayout = (rackProfileId?: string) => {
         
         setPlacedDevices(devicesWithComponents);
         
-        // Get available devices (devices that have ruHeight and aren't placed in this rack)
+        // Get available devices (devices that have ruSize and aren't placed in this rack)
         const placedDeviceIds = profile.devices.map(device => device.deviceId);
         const available = activeDesign.components
           .filter(comp => 
-            comp.ruHeight && 
-            comp.ruHeight > 0 &&
+            comp.ruSize && 
+            comp.ruSize > 0 &&
             !placedDeviceIds.includes(comp.id)
           );
         
@@ -221,8 +220,8 @@ export const useRackLayout = (rackProfileId?: string) => {
       const placedDeviceIds = profile.devices.map(device => device.deviceId);
       const available = activeDesign.components
         .filter(comp => 
-          comp.ruHeight && 
-          comp.ruHeight > 0 &&
+          comp.ruSize && 
+          comp.ruSize > 0 &&
           !placedDeviceIds.includes(comp.id)
         );
       

@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,17 +12,17 @@ interface DeviceItemProps {
   name: string;
   model: string;
   type: ComponentType;
-  ruHeight: number;
+  ruSize: number;
 }
 
-const DeviceItem: React.FC<DeviceItemProps> = React.memo(({ id, name, model, type, ruHeight }) => {
+const DeviceItem: React.FC<DeviceItemProps> = React.memo(({ id, name, model, type, ruSize }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'RACK_DEVICE',
-    item: { id, ruHeight },
+    item: { id, ruSize },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
-  }), [id, ruHeight]);
+  }), [id, ruSize]);
 
   const getDeviceTypeColor = (type: ComponentType) => {
     switch (type) {
@@ -58,7 +57,7 @@ const DeviceItem: React.FC<DeviceItemProps> = React.memo(({ id, name, model, typ
       <div className="text-xs mt-1 truncate">{model}</div>
       <div className="flex justify-between items-center mt-1">
         <Badge variant="outline" className="text-xs">
-          {ruHeight}U
+          {ruSize}U
         </Badge>
         <Badge variant="outline" className="text-xs">
           {type}
@@ -75,10 +74,33 @@ interface DevicePaletteProps {
 }
 
 export const DevicePalette: React.FC<DevicePaletteProps> = ({ rackId }) => {
-  // Get available devices using the new RackService method
+  const { activeDesign } = useDesignStore(); // Added to get activeDesign for comprehensive filtering
+
   const availableDevices = useMemo(() => {
-    return RackService.getAvailableDevices();
-  }, [rackId]);
+    // const originalAvailable = RackService.getAvailableDevices(); // Original line
+    // New logic to ensure it checks ruSize and filters from activeDesign.components comprehensively
+    if (!activeDesign?.components) return [];
+
+    const allPlacedDeviceIds = new Set(
+      activeDesign.rackProfiles?.flatMap(rack => rack.devices.map(d => d.deviceId)) || []
+    );
+
+    const filtered = activeDesign.components.filter(component => 
+      component.ruSize && 
+      component.ruSize > 0 && 
+      !allPlacedDeviceIds.has(component.id)
+    );
+
+    // Temporary debug logging - REMOVE AFTER DEBUGGING
+    console.log("DevicePalette [ruSize]: All design components count:", activeDesign.components.length);
+    activeDesign.components.forEach(comp => {
+      console.log(`DevicePalette Candidate [ruSize]: ${comp.name} (ID: ${comp.id}), Type: ${comp.type}, ruSize: ${comp.ruSize}, Placed: ${allPlacedDeviceIds.has(comp.id)}`);
+    });
+    console.log("DevicePalette [ruSize]: Devices available for palette:", filtered.map(d => ({ name: d.name, id: d.id, ruSize: d.ruSize })));
+    // End temporary debug logging
+
+    return filtered; 
+  }, [activeDesign]); // Dependency updated to activeDesign
   
   if (availableDevices.length === 0) {
     return (
@@ -102,7 +124,7 @@ export const DevicePalette: React.FC<DevicePaletteProps> = ({ rackId }) => {
               name={device.name}
               model={device.model}
               type={device.type}
-              ruHeight={device.ruHeight || 1}
+              ruSize={device.ruSize || 1}
             />
           ))}
         </div>

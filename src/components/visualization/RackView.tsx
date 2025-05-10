@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import { useRackLayout } from '@/hooks/design/useRackLayout';
 import { ComponentType } from '@/types/infrastructure/component-types';
@@ -41,7 +40,7 @@ interface PlacedDeviceItemProps {
   name: string;
   model: string;
   type: ComponentType;
-  ruHeight: number;
+  ruSize: number;
   ruPosition: number;
   bottom: number;
   height: number;
@@ -53,7 +52,7 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
   name,
   model,
   type,
-  ruHeight,
+  ruSize,
   ruPosition,
   bottom,
   height,
@@ -61,11 +60,11 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
 }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'RACK_PLACED_DEVICE',
-    item: { id: deviceId, ruHeight, currentPosition: ruPosition },
+    item: { id: deviceId, ruSize, currentPosition: ruPosition },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
-  }), [deviceId, ruHeight, ruPosition]);
+  }), [deviceId, ruSize, ruPosition]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -93,7 +92,7 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
       </div>
       {height > 30 && (
         <div className="text-xs opacity-75 truncate w-full text-center">
-          {model} - {ruHeight}U
+          {model} - {ruSize}U
         </div>
       )}
     </div>
@@ -146,7 +145,7 @@ export const RackView: React.FC<RackViewProps> = ({
 
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: ['RACK_DEVICE', 'RACK_PLACED_DEVICE'],
-    drop: (item: { id: string; ruHeight: number; currentPosition?: number }, monitor) => {
+    drop: (item: { id: string; ruSize: number; currentPosition?: number }, monitor) => {
       // Get drop position from client offset
       const clientOffset = monitor.getClientOffset();
       
@@ -224,7 +223,7 @@ export const RackView: React.FC<RackViewProps> = ({
             
             {/* Placed devices */}
             {placedDevices.map(({ placedDevice, component }) => {
-              const deviceHeight = (component.ruHeight || 1) * unitHeight;
+              const deviceHeight = (component.ruSize || 1) * unitHeight;
               const bottomPosition = (placedDevice.ruPosition - 1) * unitHeight;
               
               return (
@@ -234,7 +233,7 @@ export const RackView: React.FC<RackViewProps> = ({
                   name={component.name}
                   model={component.model}
                   type={component.type}
-                  ruHeight={component.ruHeight || 1}
+                  ruSize={component.ruSize || 1}
                   ruPosition={placedDevice.ruPosition}
                   bottom={bottomPosition}
                   height={deviceHeight}

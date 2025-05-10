@@ -1,4 +1,3 @@
-
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from './rackService';
 import { InfrastructureComponent, RackProfile } from '@/types/infrastructure';
@@ -49,18 +48,29 @@ export class AutomatedPlacementService {
       };
     }
 
-    // Get all devices that need placement (have ruHeight but aren't placed)
+    // Get all devices that need placement (have ruSize but aren't placed)
     const rackProfiles = design.rackProfiles || [];
     const placedDeviceIds = new Set(
       rackProfiles.flatMap(rack => rack.devices.map(device => device.deviceId))
     );
     
+    // Temporary debug logging - REMOVE AFTER DEBUGGING
+    console.log("AutomatedPlacementService [ruSize]: All design components count:", design.components.length);
+    design.components.forEach(comp => {
+      console.log(`Component [ruSize]: ${comp.name} (ID: ${comp.id}), Type: ${comp.type}, ruSize: ${comp.ruSize}, Placed: ${placedDeviceIds.has(comp.id)}`);
+    });
+    // End temporary debug logging
+
     const devicesToPlace = design.components.filter(component => 
-      component.ruHeight && 
-      component.ruHeight > 0 && 
+      component.ruSize && 
+      component.ruSize > 0 && 
       !placedDeviceIds.has(component.id)
     );
     
+    // Temporary debug logging - REMOVE AFTER DEBUGGING
+    console.log("AutomatedPlacementService [ruSize]: Devices initially considered for placement (devicesToPlace):", devicesToPlace.map(d => ({ name: d.name, id: d.id, ruSize: d.ruSize })));
+    // End temporary debug logging
+
     if (devicesToPlace.length === 0) {
       return {
         success: true,
@@ -89,9 +99,9 @@ export class AutomatedPlacementService {
       racksByAZ[azId].push(rack);
     }
     
-    // Sort devices by RU height (largest first) for better placement
+    // Sort devices by RU size (largest first) for better placement
     const sortedDevices = [...devicesToPlace].sort((a, b) => 
-      (b.ruHeight || 1) - (a.ruHeight || 1)
+      (b.ruSize || 1) - (a.ruSize || 1)
     );
 
     const report: PlacementReport = {
@@ -186,7 +196,7 @@ export class AutomatedPlacementService {
    * Try to place a device in a specific rack
    * @param device Device to place
    * @param rack Target rack
-   * @param allComponents All components from design (needed for checking heights)
+   * @param allComponents All components from design (needed for checking sizes)
    * @returns Placement result
    */
   private static tryPlaceDeviceInRack(
@@ -202,9 +212,9 @@ export class AutomatedPlacementService {
       // If device has a preferred position, try that first
       if (placementConstraints.preferredRU !== undefined) {
         // Check if preferred position is valid
-        const ruHeight = device.ruHeight || 1;
+        const ruSize = device.ruSize || 1;
         if (placementConstraints.preferredRU >= 1 && 
-            placementConstraints.preferredRU + ruHeight - 1 <= rack.uHeight) {
+            placementConstraints.preferredRU + ruSize - 1 <= rack.uHeight) {
           targetPosition = placementConstraints.preferredRU;
         }
       }
@@ -212,14 +222,14 @@ export class AutomatedPlacementService {
       // If no valid preferred position, find best position within constraints
       if (targetPosition === undefined) {
         // Find available positions
-        const availablePositions = RackService.findAvailablePositions(rack, device.ruHeight || 1, allComponents);
+        const availablePositions = RackService.findAvailablePositions(rack, device.ruSize || 1, allComponents);
         
         // Filter positions within constraints
         const validStart = placementConstraints.validRUStart || 1;
         const validEnd = placementConstraints.validRUEnd || rack.uHeight;
         
         const constrainedPositions = availablePositions.filter(pos => 
-          pos >= validStart && (pos + (device.ruHeight || 1) - 1) <= validEnd
+          pos >= validStart && (pos + (device.ruSize || 1) - 1) <= validEnd
         );
         
         if (constrainedPositions.length > 0) {
@@ -228,15 +238,34 @@ export class AutomatedPlacementService {
       }
     } else {
       // No constraints, find any available position
-      const availablePositions = RackService.findAvailablePositions(rack, device.ruHeight || 1, allComponents);
+      const availablePositions = RackService.findAvailablePositions(rack, device.ruSize || 1, allComponents);
       if (availablePositions.length > 0) {
         targetPosition = availablePositions[0];
       }
     }
     
+    // Ensure targetPosition is defined before logging/placing
+    if (targetPosition === undefined && placementConstraints) { // Added this block for robust targetPosition finding with constraints
+        const constrainedAvailablePositions = RackService.findAvailablePositions(rack, device.ruSize || 1, allComponents)
+            .filter(pos => 
+                pos >= (placementConstraints.validRUStart || 1) && 
+                (pos + (device.ruSize || 1) - 1) <= (placementConstraints.validRUEnd || rack.uHeight)
+            );
+        if (constrainedAvailablePositions.length > 0) {
+            targetPosition = placementConstraints.preferredRU && constrainedAvailablePositions.includes(placementConstraints.preferredRU) ? 
+                            placementConstraints.preferredRU : 
+                            constrainedAvailablePositions[0];
+        }
+    }
+    
     // If we found a valid position, place the device
     if (targetPosition !== undefined) {
-      return RackService.placeDevice(rack.id, device.id, targetPosition);
+      // Temporary debug logging - REMOVE AFTER DEBUGGING
+      console.log(`AutomatedPlacement [ruSize]: Attempting RackService.placeDevice for ${device.name} (${device.id}) in ${rack.name} (${rack.id}) at RU ${targetPosition} (size ${device.ruSize})`);
+      const placementAttemptResult = RackService.placeDevice(rack.id, device.id, targetPosition);
+      console.log(`AutomatedPlacement [ruSize]: RackService.placeDevice result for ${device.name}:`, placementAttemptResult);
+      return placementAttemptResult;
+      // End temporary debug logging
     }
     
     return { 

@@ -1,4 +1,3 @@
-
 // Core Infrastructure Types
 export enum ComponentType {
   Server = 'Server',
@@ -64,8 +63,8 @@ export interface InfrastructureComponent {
   // Added naming and placement properties
   namingPrefix?: string;
   placement?: ComponentPlacement;
-  // Standardized ruHeight for rack space consumption
-  ruHeight?: number;
+  // Standardized to ruSize for rack space consumption
+  ruSize?: number;
   // Add ports for network connectivity
   ports?: Port[];
   // For Switch components
