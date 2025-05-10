@@ -505,6 +505,27 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={control}
+                    name="cost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cost ($)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="Cost"
+                            {...field} 
+                            onChange={(e) => {
+                              field.onChange(Number(e.target.value));
+                              onInputChange(e);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
                     name="powerRequired"
                     render={({ field }) => (
                       <FormItem>
@@ -589,7 +610,10 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                         <FormItem>
                           <FormLabel>CPU Model</FormLabel>
                           <FormControl>
-                            <Input placeholder="CPU Model" {...field} onChange={onInputChange} />
+                            <Input placeholder="CPU Model" {...field} onChange={(e) => {
+                              field.onChange(e);
+                              onInputChange(e);
+                            }} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -695,7 +719,10 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                         <FormItem>
                           <FormLabel>Disk Slot Type</FormLabel>
                           <Select 
-                            onValueChange={field.onChange}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              onSelectChange('diskSlotType', value);
+                            }}
                             defaultValue={field.value}
                           >
                             <FormControl>
@@ -744,7 +771,10 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                         <FormItem>
                           <FormLabel>Network Port Type</FormLabel>
                           <Select 
-                            onValueChange={field.onChange}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              onSelectChange('networkPortType', value);
+                            }}
                             defaultValue={field.value}
                           >
                             <FormControl>
@@ -789,7 +819,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
               
               {formValues.type === ComponentType.Switch && (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <FormField
                       control={control}
                       name="switchRole"
@@ -797,8 +827,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                         <FormItem>
                           <FormLabel>Switch Role</FormLabel>
                           <Select 
-                            onValueChange={field.onChange}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              onSelectChange('switchRole', value);
+                            }}
                             defaultValue={field.value}
+                            value={field.value ?? SwitchRole.Access}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -806,14 +840,36 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value={SwitchRole.Management}>{SwitchRole.Management}</SelectItem>
-                              <SelectItem value={SwitchRole.Leaf}>{SwitchRole.Leaf}</SelectItem>
-                              <SelectItem value={SwitchRole.Spine}>{SwitchRole.Spine}</SelectItem>
-                              <SelectItem value={SwitchRole.Border}>{SwitchRole.Border}</SelectItem>
-                              <SelectItem value={SwitchRole.Access}>{SwitchRole.Access}</SelectItem>
-                              <SelectItem value={SwitchRole.Edge}>{SwitchRole.Edge}</SelectItem>
+                              {Object.values(SwitchRole).map((role) => (
+                                <SelectItem key={role} value={role}>{role}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={control}
+                      name="layer"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Layer</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              placeholder="2 or 3"
+                              {...field}
+                              value={field.value ?? ''}
+                              onChange={e => {
+                                const val = e.target.value;
+                                field.onChange(val === '' ? null : Number(val));
+                                onInputChange(e);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -828,14 +884,15 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              name="ruSize"
+                              value={field.value ?? ''} 
                               onChange={e => {
-                                const value = Number(e.target.value) || 0;
-                                field.onChange(value);
+                                const val = e.target.value;
+                                field.onChange(val === '' ? 0 : Number(val)); 
                                 onInputChange(e);
                               }}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -850,14 +907,15 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              name="portCount"
+                              value={field.value ?? ''} 
                               onChange={e => {
-                                const value = Number(e.target.value) || 0;
-                                field.onChange(value);
+                                const val = e.target.value;
+                                field.onChange(val === '' ? 0 : Number(val));
                                 onInputChange(e);
                               }}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -871,8 +929,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                         <FormItem>
                           <FormLabel>Port Speed</FormLabel>
                           <Select 
-                            onValueChange={field.onChange}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              onSelectChange('portSpeedType', value);
+                            }}
                             defaultValue={field.value}
+                            value={field.value ?? PortSpeed.Speed10G}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -880,14 +942,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value={PortSpeed.Speed1G}>{PortSpeed.Speed1G}</SelectItem>
-                              <SelectItem value={PortSpeed.Speed10G}>{PortSpeed.Speed10G}</SelectItem>
-                              <SelectItem value={PortSpeed.Speed25G}>{PortSpeed.Speed25G}</SelectItem>
-                              <SelectItem value={PortSpeed.Speed40G}>{PortSpeed.Speed40G}</SelectItem>
-                              <SelectItem value={PortSpeed.Speed100G}>{PortSpeed.Speed100G}</SelectItem>
-                              <SelectItem value={PortSpeed.Speed400G}>{PortSpeed.Speed400G}</SelectItem>
+                              {Object.values(PortSpeed).map((speed) => (
+                                <SelectItem key={speed} value={speed}>{speed}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -902,14 +962,15 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             <Input 
                               type="number" 
                               {...field} 
-                              name="portsProvidedQuantity"
+                              value={field.value ?? ''} 
                               onChange={e => {
-                                const value = Number(e.target.value) || 0;
-                                field.onChange(value);
+                                const val = e.target.value;
+                                field.onChange(val === '' ? 0 : Number(val));
                                 onInputChange(e);
                               }}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
