@@ -1,4 +1,3 @@
-
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from './rackService';
 import { InfrastructureComponent, RackProfile, ComponentType } from '@/types/infrastructure';
@@ -216,38 +215,40 @@ export class AutomatedPlacementService {
       }
       
       // Second attempt: Try fallback rack type if available and device not yet placed
-      if (!placed && allowedRackTypeIfPreferredUnavailable) {
+      if (!placed && allowedRackTypeIfPreferredUnavailable === 'ComputeStorage') {
         let fallbackAZs: string[] = [];
         if (device.assignedAZ) {
           fallbackAZs = [device.assignedAZ];
         } else {
-          // If no assigned AZ, try all AZs that have racks of the fallback type
-          fallbackAZs = Object.keys(
-            allowedRackTypeIfPreferredUnavailable === 'Core' 
-              ? coreRacksByAZ 
-              : computeStorageRacksByAZ
-          ).filter(az => (
-            allowedRackTypeIfPreferredUnavailable === 'Core' 
-              ? coreRacksByAZ[az]?.length > 0 
-              : computeStorageRacksByAZ[az]?.length > 0
-          ));
+          // If no assigned AZ, try all AZs that have ComputeStorage racks
+          fallbackAZs = Object.keys(computeStorageRacksByAZ)
+            .filter(az => computeStorageRacksByAZ[az]?.length > 0);
         }
         
         for (const azId of fallbackAZs) {
           if (placed) break;
           
-          const racksToTry = allowedRackTypeIfPreferredUnavailable === 'Core' 
-            ? (coreRacksByAZ[azId] || []) 
-            : (computeStorageRacksByAZ[azId] || []);
+          // Racks to try will always be ComputeStorage type here
+          const racksToTry = computeStorageRacksByAZ[azId] || [];
           
           if (racksToTry.length === 0) continue;
           
           // Try all racks in this AZ of the fallback type (starting with the round-robin index)
-          const startIndex = azRackCounters[azId][allowedRackTypeIfPreferredUnavailable] || 0;
+          // Ensure azRackCounters is initialized for 'ComputeStorage' if not already
+          if (!azRackCounters[azId]) azRackCounters[azId] = { 'Core': 0, 'ComputeStorage': 0 }; 
+          else if (azRackCounters[azId]['ComputeStorage'] === undefined) azRackCounters[azId]['ComputeStorage'] = 0;
+
+          const startIndex = azRackCounters[azId][allowedRackTypeIfPreferredUnavailable] || 0; // allowedRackTypeIfPreferredUnavailable is 'ComputeStorage'
           for (let i = 0; i < racksToTry.length; i++) {
             const rackIndex = (startIndex + i) % racksToTry.length;
             const rack = racksToTry[rackIndex];
             
+            // Ensure device CANNOT go into a Core rack if it's not supposed to (e.g. compute/storage servers)
+            if (rack.rackType === 'Core' && !(isNetworkDevice && design.requirements.networkRequirements?.dedicatedNetworkCoreRacks)) {
+               attemptedDetails.push(`${rack.name} (Core, fallback): Skipped, not suitable for non-network device or core not dedicated.`);
+               continue;
+            }
+
             const result = this.tryPlaceDeviceInRack(device, rack, design.components);
             
             if (result.success) {
@@ -261,7 +262,6 @@ export class AutomatedPlacementService {
                 azId: rack.availabilityZoneId || 'default'
               });
               
-              // Update counter for round-robin
               azRackCounters[azId][allowedRackTypeIfPreferredUnavailable] = (rackIndex + 1) % racksToTry.length;
               break;
             }
