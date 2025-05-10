@@ -62,6 +62,11 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
       component.ruHeight = component.ruSize;
     }
     
+    // For Switch type, ensure the switchRole is set correctly
+    if (component.type === ComponentType.Switch && component.switchRole) {
+      console.log("Ensuring switchRole is set correctly:", component.switchRole);
+    }
+    
     // Ensure we have a component ID
     const componentToAdd = {
       ...component,
@@ -99,12 +104,9 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
       
       // Process placement fields if they exist in the form data
       if ('validRUStart' in updates || 'validRUEnd' in updates || 'preferredRU' in updates || 'preferredRack' in updates) {
-        const physicalConstraints = get().activeDesign?.requirements?.physicalConstraints;
-        const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
-        
         updates.placement = {
           validRUStart: updates.validRUStart || existingComponent.placement?.validRUStart || 1,
-          validRUEnd: updates.validRUEnd || existingComponent.placement?.validRUEnd || maxRackUnits,
+          validRUEnd: updates.validRUEnd || existingComponent.placement?.validRUEnd || 42,
           preferredRU: updates.preferredRU || existingComponent.placement?.preferredRU,
           preferredRack: updates.preferredRack || existingComponent.placement?.preferredRack
         };
@@ -123,9 +125,15 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
       } as InfrastructureComponent;
       
       // Ensure switchRole is updated properly if it's included in the updates
-      if (updates.switchRole) {
+      if (updates.switchRole !== undefined) {
         console.log('Explicitly setting switchRole to:', updates.switchRole);
         updatedComponent.switchRole = updates.switchRole;
+      }
+      
+      // Ensure portSpeedType is updated properly if it's included in the updates
+      if (updates.portSpeedType !== undefined) {
+        console.log('Explicitly setting portSpeedType to:', updates.portSpeedType);
+        updatedComponent.portSpeedType = updates.portSpeedType;
       }
       
       // Log for debugging

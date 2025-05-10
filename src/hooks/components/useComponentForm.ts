@@ -56,9 +56,9 @@ export const useComponentForm = () => {
     preferredRU: 1,
     preferredRack: 1,
     // Default values for switches
-    switchRole: undefined,
-    portSpeedType: undefined,
-    portsProvidedQuantity: undefined,
+    switchRole: '',
+    portSpeedType: '',
+    portsProvidedQuantity: 0,
     layer: 2,
   };
   
@@ -119,6 +119,10 @@ export const useComponentForm = () => {
     }
     
     if (missingFields.length > 0) {
+      // Log the form state for debugging
+      console.log("Form validation failed. Current form state:", componentForm);
+      console.log("Missing fields:", missingFields);
+      
       toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`);
       return false;
     }
