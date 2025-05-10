@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,6 +27,17 @@ export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
   
   const handleScrollRight = () => {
     setScrollPosition(scrollPosition + scrollStep);
+  };
+
+  const getDisplayRackName = (fullName: string) => {
+    if (fullName.includes('-Rack')) {
+      return fullName.split('-Rack')[1] ? `Rack ${fullName.split('-Rack')[1]}` : fullName;
+    } else if (fullName.includes('Rack')) {
+      // For names like "Core-Rack1" or just "Rack1"
+      const parts = fullName.split('Rack');
+      if (parts.length > 1 && parts[1]) return `Rack ${parts[1]}`;
+    }
+    return fullName; // Fallback
   };
 
   return (
@@ -64,7 +74,7 @@ export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
                     </div>
                   </div>
                   <div className="text-center mt-2">
-                    <div className="font-medium text-xs truncate w-full">{rack.name}</div>
+                    <div className="font-medium text-xs truncate w-full">{getDisplayRackName(rack.name)}</div>
                     <div className="text-xs text-muted-foreground">{rack.azName}</div>
                   </div>
                 </CardContent>

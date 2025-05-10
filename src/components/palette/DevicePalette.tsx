@@ -1,11 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ComponentType } from '@/types/infrastructure/component-types';
+import { ComponentType, InfrastructureComponent } from '@/types/infrastructure/component-types';
 import { useDrag } from 'react-dnd';
-import { HardDrive } from 'lucide-react';
+import { HardDrive, Search } from 'lucide-react';
 import { RackService } from '@/services/rackService';
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface DeviceItemProps {
   id: string;
@@ -70,43 +72,41 @@ const DeviceItem: React.FC<DeviceItemProps> = React.memo(({ id, name, model, typ
 DeviceItem.displayName = 'DeviceItem';
 
 interface DevicePaletteProps {
-  rackId?: string; // Optional: to filter available devices for a specific rack
+  rackId?: string;
 }
 
 export const DevicePalette: React.FC<DevicePaletteProps> = ({ rackId }) => {
-  const { activeDesign } = useDesignStore(); // Added to get activeDesign for comprehensive filtering
+  const { activeDesign } = useDesignStore();
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const availableDevices = useMemo(() => {
-    // const originalAvailable = RackService.getAvailableDevices(); // Original line
-    // New logic to ensure it checks ruSize and filters from activeDesign.components comprehensively
+  const availableDevicesRaw = useMemo(() => {
     if (!activeDesign?.components) return [];
-
     const allPlacedDeviceIds = new Set(
       activeDesign.rackProfiles?.flatMap(rack => rack.devices.map(d => d.deviceId)) || []
     );
-
-    const filtered = activeDesign.components.filter(component => 
+    return activeDesign.components.filter(component => 
       component.ruSize && 
       component.ruSize > 0 && 
       !allPlacedDeviceIds.has(component.id)
     );
+  }, [activeDesign]);
 
-    // Temporary debug logging - REMOVE AFTER DEBUGGING
-    console.log("DevicePalette [ruSize]: All design components count:", activeDesign.components.length);
-    activeDesign.components.forEach(comp => {
-      console.log(`DevicePalette Candidate [ruSize]: ${comp.name} (ID: ${comp.id}), Type: ${comp.type}, ruSize: ${comp.ruSize}, Placed: ${allPlacedDeviceIds.has(comp.id)}`);
-    });
-    console.log("DevicePalette [ruSize]: Devices available for palette:", filtered.map(d => ({ name: d.name, id: d.id, ruSize: d.ruSize })));
-    // End temporary debug logging
-
-    return filtered; 
-  }, [activeDesign]); // Dependency updated to activeDesign
+  const filteredDevices = useMemo(() => {
+    if (!searchTerm) return availableDevicesRaw;
+    return availableDevicesRaw.filter(device => 
+      device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      device.model.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [availableDevicesRaw, searchTerm]);
   
-  if (availableDevices.length === 0) {
+  if (availableDevicesRaw.length === 0) {
     return (
       <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-medium">Available Devices</CardTitle>
+        </CardHeader>
         <CardContent className="p-4">
-          <p className="text-muted-foreground">No available devices to place in racks</p>
+          <p className="text-muted-foreground text-sm">No available devices to place.</p>
         </CardContent>
       </Card>
     );
@@ -114,20 +114,36 @@ export const DevicePalette: React.FC<DevicePaletteProps> = ({ rackId }) => {
 
   return (
     <Card>
-      <CardContent className="p-4">
-        <h3 className="text-lg font-medium mb-4">Available Devices</h3>
-        <div className="space-y-2">
-          {availableDevices.map(device => (
-            <DeviceItem
-              key={device.id}
-              id={device.id}
-              name={device.name}
-              model={device.model}
-              type={device.type}
-              ruSize={device.ruSize || 1}
-            />
-          ))}
+      <CardHeader>
+        <CardTitle className="text-lg font-medium">Available Devices</CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 space-y-3">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input 
+            type="search" 
+            placeholder="Filter by name or model..." 
+            className="pl-8 w-full" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
+        <ScrollArea className="h-[calc(100vh-400px)] pr-3">
+          {filteredDevices.length === 0 ? (
+            <p className="text-muted-foreground text-sm text-center py-4">No devices match your filter.</p>
+          ) : (
+            filteredDevices.map(device => (
+              <DeviceItem
+                key={device.id}
+                id={device.id}
+                name={device.name}
+                model={device.model}
+                type={device.type as ComponentType}
+                ruSize={device.ruSize || 1}
+              />
+            ))
+          )}
+        </ScrollArea>
       </CardContent>
     </Card>
   );

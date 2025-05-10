@@ -1,7 +1,5 @@
-
 import React from 'react';
 import { RackView } from '@/components/visualization/RackView';
-import { DevicePalette } from '@/components/palette/DevicePalette';
 import { RackUtilizationCard } from './RackUtilizationCard';
 import { RackPropertiesCard } from './RackPropertiesCard';
 
@@ -44,12 +42,9 @@ export const RackDetailView: React.FC<RackDetailViewProps> = ({
         </div>
       </div>
       
-      {/* Device palette and rack info - takes 5 columns */}
+      {/* Rack info - takes 5 columns - DevicePalette removed from here */}
       <div className="md:col-span-5">
         <div className="space-y-6">
-          {/* Device Palette for drag and drop */}
-          <DevicePalette />
-          
           {/* Rack Utilization Card */}
           <RackUtilizationCard rackStats={rackStats} />
           
