@@ -1,6 +1,7 @@
-
 import { useDesignStore } from '../designStore';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
+import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 
 let isRecalculating = false;
 
@@ -76,11 +77,19 @@ export const recalculateDesign = () => {
           
           if (!componentTemplate) return null;
           
-          const component = {
+          const component: InfrastructureComponent = {
             ...componentTemplate,
+            id: uuidv4(),
             quantity: role.adjustedRequiredCount || role.requiredCount,
-            role: role.role
+            templateId: componentTemplate.id,
+            ruHeight: componentTemplate.ruHeight || 
+                      (componentTemplate.type === ComponentType.FiberPatchPanel || componentTemplate.type === ComponentType.CopperPatchPanel ? (componentTemplate as any).ruSize : undefined) || 
+                      ([ComponentType.Server, ComponentType.Switch, ComponentType.Router, ComponentType.Firewall, ComponentType.FiberPatchPanel, ComponentType.CopperPatchPanel].includes(componentTemplate.type) ? 1 : undefined)
           };
+          
+          if ((component.type === ComponentType.FiberPatchPanel || component.type === ComponentType.CopperPatchPanel) && (componentTemplate as any).ruSize && component.ruHeight === (componentTemplate as any).ruSize) {
+            delete (component as any).ruSize;
+          }
           
           if (role.role === 'storageNode') {
             const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
