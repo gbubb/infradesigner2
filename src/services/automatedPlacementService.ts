@@ -112,83 +112,65 @@ export class AutomatedPlacementService {
       items: []
     };
 
-    // Track which AZ we last placed a device in for round-robin distribution
-    let azIndex = 0;
-    const azIds = Object.keys(racksByAZ);
+    const azIds = Object.keys(racksByAZ).filter(azId => racksByAZ[azId] && racksByAZ[azId].length > 0);
+    if (azIds.length === 0) {
+      report.items.push(...sortedDevices.map(device => ({ deviceId: device.id, deviceName: device.name, status: "failed", reason: "No racks available in any AZ." } as PlacementReportItem)));
+      report.failedDevices = sortedDevices.length;
+      report.success = false;
+      return report;
+    }
 
-    // Place each device
+    let currentGlobalRackIndex = 0; // To cycle through all available racks globally
+    const allAvailableRacksFlat: RackProfile[] = azIds.reduce((acc, azId) => acc.concat(racksByAZ[azId]), [] as RackProfile[]);
+
+    if (allAvailableRacksFlat.length === 0) {
+        report.items.push(...sortedDevices.map(device => ({ deviceId: device.id, deviceName: device.name, status: "failed", reason: "No racks available for placement." } as PlacementReportItem)));
+        report.failedDevices = sortedDevices.length;
+        report.success = false;
+        return report;
+    }
+
     for (const device of sortedDevices) {
       let placed = false;
-      let attemptedRacks: string[] = [];
-      
-      // Determine target AZ
-      // If device has assignedAZ property use that, otherwise use round-robin
-      const targetAzId = (device as any).assignedAZ || azIds[azIndex % azIds.length];
-      const racks = racksByAZ[targetAzId] || [];
-      
-      // No racks in target AZ? Try default
-      if (racks.length === 0 && targetAzId !== 'default') {
-        attemptedRacks.push(`No racks in AZ ${targetAzId}`);
-        const defaultRacks = racksByAZ['default'] || [];
-        if (defaultRacks.length > 0) {
-          for (const rack of defaultRacks) {
-            const result = this.tryPlaceDeviceInRack(device, rack, design.components);
-            if (result.success) {
-              placed = true;
-              report.items.push({
-                deviceId: device.id,
-                deviceName: device.name,
-                status: "placed",
-                rackId: rack.id,
-                ruPosition: result.placedPosition,
-                azId: 'default'
-              });
-              break;
-            } else {
-              attemptedRacks.push(`${rack.name}: ${result.error}`);
-            }
-          }
+      let attemptedDetails: string[] = [];
+
+      // Try to place the device by cycling through all racks
+      // This is a simple round-robin across ALL racks. For more specific AZ balancing, this loop needs to be smarter.
+      for (let i = 0; i < allAvailableRacksFlat.length; i++) {
+        const targetRackIndex = (currentGlobalRackIndex + i) % allAvailableRacksFlat.length;
+        const targetRack = allAvailableRacksFlat[targetRackIndex];
+        
+        const result = this.tryPlaceDeviceInRack(device, targetRack, design.components);
+        if (result.success) {
+          placed = true;
+          report.items.push({
+            deviceId: device.id,
+            deviceName: device.name,
+            status: "placed", 
+            rackId: targetRack.id,
+            ruPosition: result.placedPosition,
+            azId: targetRack.availabilityZoneId || 'default'
+          });
+          currentGlobalRackIndex = (targetRackIndex + 1) % allAvailableRacksFlat.length; // Move to next rack for next device
+          break; // Device placed, move to next device
         }
-      } else {
-        // Try each rack in the target AZ
-        for (const rack of racks) {
-          const result = this.tryPlaceDeviceInRack(device, rack, design.components);
-          if (result.success) {
-            placed = true;
-            report.items.push({
-              deviceId: device.id,
-              deviceName: device.name,
-              status: "placed", 
-              rackId: rack.id,
-              ruPosition: result.placedPosition,
-              azId: targetAzId
-            });
-            break;
-          } else {
-            attemptedRacks.push(`${rack.name}: ${result.error}`);
-          }
-        }
+        attemptedDetails.push(`${targetRack.name}: ${result.error}`);
       }
 
-      // If not placed, record the failure
       if (!placed) {
         report.items.push({
           deviceId: device.id,
           deviceName: device.name,
           status: "failed",
-          reason: `Could not place in any rack. Attempted: ${attemptedRacks.join(', ')}`
+          reason: `Could not place in any rack. Attempts: ${attemptedDetails.join('; ')}`
         });
         report.failedDevices++;
       } else {
         report.placedDevices++;
-        // Move to next AZ for round-robin
-        azIndex++;
       }
     }
 
-    // Update final success flag based on whether all devices were placed
     report.success = report.failedDevices === 0;
-    
     return report;
   }
 
@@ -204,73 +186,51 @@ export class AutomatedPlacementService {
     rack: RackProfile,
     allComponents: InfrastructureComponent[]
   ) {
-    // Check device placement constraints if present
     const placementConstraints = device.placement;
     let targetPosition: number | undefined;
-    
-    if (placementConstraints) {
-      // If device has a preferred position, try that first
-      if (placementConstraints.preferredRU !== undefined) {
-        // Check if preferred position is valid
-        const ruSize = device.ruSize || 1;
-        if (placementConstraints.preferredRU >= 1 && 
-            placementConstraints.preferredRU + ruSize - 1 <= rack.uHeight) {
-          targetPosition = placementConstraints.preferredRU;
+    const deviceSize = device.ruSize || 1;
+
+    // 1. Try preferredRU if specified and valid within the rack and constraints
+    if (placementConstraints?.preferredRU !== undefined) {
+        const prefRU = placementConstraints.preferredRU;
+        const isValidPreferred = prefRU >= (placementConstraints.validRUStart || 1) && 
+                               (prefRU + deviceSize - 1) <= (placementConstraints.validRUEnd || rack.uHeight) &&
+                               prefRU >= 1 && (prefRU + deviceSize - 1) <= rack.uHeight;
+        if (isValidPreferred) {
+            const tempRack = { ...rack, devices: rack.devices.filter(d => d.deviceId !== device.id) }; // Check against others
+            let overlaps = false;
+            for (const pd of tempRack.devices) {
+                const oc = allComponents.find(c => c.id === pd.deviceId);
+                if (!oc) continue;
+                const otherSize = oc.ruSize || 1;
+                if (Math.max(prefRU, pd.ruPosition) < Math.min(prefRU + deviceSize, pd.ruPosition + otherSize)) {
+                    overlaps = true; break;
+                }
+            }
+            if (!overlaps) targetPosition = prefRU;
         }
-      }
-      
-      // If no valid preferred position, find best position within constraints
-      if (targetPosition === undefined) {
-        // Find available positions
-        const availablePositions = RackService.findAvailablePositions(rack, device.ruSize || 1, allComponents);
-        
-        // Filter positions within constraints
-        const validStart = placementConstraints.validRUStart || 1;
-        const validEnd = placementConstraints.validRUEnd || rack.uHeight;
-        
+    }
+
+    // 2. If no valid preferredRU, find other available positions respecting constraints
+    if (targetPosition === undefined) {
+        const availablePositions = RackService.findAvailablePositions(rack, deviceSize, allComponents);
+        const validStart = placementConstraints?.validRUStart || 1;
+        const validEnd = placementConstraints?.validRUEnd || rack.uHeight;
+
         const constrainedPositions = availablePositions.filter(pos => 
-          pos >= validStart && (pos + (device.ruSize || 1) - 1) <= validEnd
+            pos >= validStart && (pos + deviceSize - 1) <= validEnd
         );
-        
+
         if (constrainedPositions.length > 0) {
-          targetPosition = constrainedPositions[0]; // Use first available position
-        }
-      }
-    } else {
-      // No constraints, find any available position
-      const availablePositions = RackService.findAvailablePositions(rack, device.ruSize || 1, allComponents);
-      if (availablePositions.length > 0) {
-        targetPosition = availablePositions[0];
-      }
-    }
-    
-    // Ensure targetPosition is defined before logging/placing
-    if (targetPosition === undefined && placementConstraints) { // Added this block for robust targetPosition finding with constraints
-        const constrainedAvailablePositions = RackService.findAvailablePositions(rack, device.ruSize || 1, allComponents)
-            .filter(pos => 
-                pos >= (placementConstraints.validRUStart || 1) && 
-                (pos + (device.ruSize || 1) - 1) <= (placementConstraints.validRUEnd || rack.uHeight)
-            );
-        if (constrainedAvailablePositions.length > 0) {
-            targetPosition = placementConstraints.preferredRU && constrainedAvailablePositions.includes(placementConstraints.preferredRU) ? 
-                            placementConstraints.preferredRU : 
-                            constrainedAvailablePositions[0];
+            targetPosition = constrainedPositions[0]; // Take the first valid one
         }
     }
     
-    // If we found a valid position, place the device
     if (targetPosition !== undefined) {
-      // Temporary debug logging - REMOVE AFTER DEBUGGING
-      console.log(`AutomatedPlacement [ruSize]: Attempting RackService.placeDevice for ${device.name} (${device.id}) in ${rack.name} (${rack.id}) at RU ${targetPosition} (size ${device.ruSize})`);
-      const placementAttemptResult = RackService.placeDevice(rack.id, device.id, targetPosition);
-      console.log(`AutomatedPlacement [ruSize]: RackService.placeDevice result for ${device.name}:`, placementAttemptResult);
-      return placementAttemptResult;
-      // End temporary debug logging
+      // This now internally handles overlap with existing devices in the specific rack
+      return RackService.placeDevice(rack.id, device.id, targetPosition); 
     }
     
-    return { 
-      success: false, 
-      error: "No valid position found"
-    };
+    return { success: false, error: "No valid constrained position found" };
   }
 }

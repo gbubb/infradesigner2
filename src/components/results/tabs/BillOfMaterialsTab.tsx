@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -8,106 +7,123 @@ import { ComponentCategory, ComponentType, InfrastructureComponent, componentTyp
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+// Helper to create a unique key for grouping components for the BOM
+const getBomGroupKey = (component: InfrastructureComponent): string => {
+  // Use templateId if available, otherwise fallback to a composite key
+  // Fallback is important if some components don't originate from a template with templateId
+  return component.templateId || `${component.manufacturer}-${component.model}-${component.type}-${component.role || ''}`;
+};
+
 export const BillOfMaterialsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
-  const components = activeDesign?.components || [];
-  
-  // Group components by category for table display and export
-  const componentsByCategory = React.useMemo(() => {
-    const result: Record<string, InfrastructureComponent[]> = {};
-    
-    components.forEach(component => {
-      const categoryName = component.type ? 
-        componentTypeToCategory[component.type as ComponentType] : 
+  const components = activeDesign?.components || []; // This is now a flat list of individual instances
+
+  // New: Group and summarize component instances
+  const summarizedComponentsByCategory = useMemo(() => {
+    if (!components.length) return {};
+
+    const groupedByTemplate: Record<string, InfrastructureComponent & { summarizedQuantity: number }> = {};
+
+    components.forEach(instance => {
+      const key = getBomGroupKey(instance);
+      if (!groupedByTemplate[key]) {
+        groupedByTemplate[key] = {
+          ...instance, // Use the first instance as representative (name, model, cost, type, etc.)
+          summarizedQuantity: 0,
+        };
+      }
+      groupedByTemplate[key].summarizedQuantity += (instance.quantity || 1); // instance.quantity should be 1
+    });
+
+    const result: Record<string, (InfrastructureComponent & { summarizedQuantity: number })[]> = {};
+    Object.values(groupedByTemplate).forEach(summarizedComponent => {
+      const categoryName = summarizedComponent.type ? 
+        componentTypeToCategory[summarizedComponent.type as ComponentType] :
         'Other';
-        
       if (!result[categoryName]) {
         result[categoryName] = [];
       }
-      
-      result[categoryName].push(component);
+      result[categoryName].push(summarizedComponent);
     });
-    
     return result;
   }, [components]);
+
+  // Grand total cost should now sum costs of individual instances
+  const grandTotalCost = useMemo(() => {
+    return components.reduce((sum, comp) => sum + comp.cost, 0); // Each comp is an instance, quantity is 1
+  }, [components]);
+
+  // Format a category name for display
+  const formatCategoryName = (name: string) => name.replace(/([A-Z])/g, ' $1').trim();
+
+  const [activeTab, setActiveTab] = useState('compute');
   
-  // Calculate grand totals
-  const grandTotalCost = components.reduce((sum, comp) => sum + (comp.cost * (comp.quantity || 1)), 0);
-  
-  // Export to CSV function
-  const exportToCSV = () => {
-    if (!components.length) return;
-    
-    // Create CSV content
-    let csvContent = "Category,Type,Role,Manufacturer,Model,Quantity,Unit Cost (€),Total Cost (€)\n";
-    
-    // Add rows for each component
-    Object.entries(componentsByCategory).forEach(([category, categoryComponents]) => {
-      categoryComponents.forEach(comp => {
-        const quantity = comp.quantity || 1;
-        const totalCost = comp.cost * quantity;
-        
-        csvContent += `${category},${comp.type || "Unknown"},${comp.role || "Unassigned"},"${comp.manufacturer}","${comp.model}",${quantity},${comp.cost},${totalCost}\n`;
-      });
+  const generateCSVData = (category?: string) => {
+    const dataToExport = category ? summarizedComponentsByCategory[category] || [] : Object.values(summarizedComponentsByCategory).flat();
+    let csvContent = "data:text/csv;charset=utf-8,Category,Type,Role,Manufacturer,Model,Details,Quantity,Unit Cost,Total Cost\r\n";
+    dataToExport.forEach(component => {
+      const categoryName = component.type ? componentTypeToCategory[component.type as ComponentType] : 'Other';
+      const quantity = component.summarizedQuantity;
+      const totalCost = component.cost * quantity;
+      let details = '-';
+      if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${component.cassetteCapacity} cassettes`;
+      else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${component.portQuantity} ports`;
+      else if (component.type === ComponentType.Cassette) details = `${component.portType}, ${component.portQuantity} ports`;
+      else if (component.type === ComponentType.Cable) details = `${component.length}m, ${component.connectorA_Type} to ${component.connectorB_Type}, ${component.mediaType}`;
+      else if (component.type === ComponentType.Server) details = `${component.cpuModel || '-'}, ${component.memoryCapacity || component.memoryGB || '-'}GB`;
+      
+      csvContent += `${categoryName},${component.type},${component.role || 'N/A'},${component.manufacturer},${component.model},"${details}",${quantity},${component.cost},${totalCost}\r\n`;
     });
-    
-    // Create download link
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    return encodeURI(csvContent);
+  };
+
+  const handleExport = (category?: string) => {
+    const filename = category ? `${category}_BOM.csv` : 'Full_BOM.csv';
     const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `design-bill-of-materials-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('href', generateCSVData(category));
+    link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Format a category name for display
-  const formatCategoryName = (category: string) => {
-    return category;
-  };
+  if (components.length === 0) {
+    return (
+      <div className="p-4 text-center">
+        <Server className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-2 text-sm font-medium">No components in design</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Add components to your design to see the bill of materials.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-semibold">Bill of Materials</h2>
-          <p className="text-sm text-muted-foreground">
-            Detailed breakdown of all components in the infrastructure design
-          </p>
-        </div>
-        
-        <Button 
-          onClick={exportToCSV} 
-          disabled={!components.length}
-        >
-          <FileSpreadsheet className="w-4 h-4 mr-2" />
-          Export to CSV
+        <h2 className="text-xl font-semibold">Bill of Materials</h2>
+        <Button onClick={() => handleExport()} variant="outline">
+          <Download className="mr-2 h-4 w-4" /> Export Full BOM (CSV)
         </Button>
       </div>
       
-      <Tabs defaultValue="compute" className="w-full">
-        <TabsList>
-          <TabsTrigger value="compute" className="flex items-center">
-            <Server className="w-4 h-4 mr-2" />
-            Compute
-          </TabsTrigger>
-          <TabsTrigger value="network" className="flex items-center">
-            <Network className="w-4 h-4 mr-2" />
-            Network
-          </TabsTrigger>
-          <TabsTrigger value="cabling" className="flex items-center">
-            <Cable className="w-4 h-4 mr-2" />
-            Cabling
-          </TabsTrigger>
+      <Tabs defaultValue="compute" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="compute">Compute & Storage</TabsTrigger>
+          <TabsTrigger value="network">Network</TabsTrigger>
+          <TabsTrigger value="cabling">Cabling</TabsTrigger>
           <TabsTrigger value="all">All Components</TabsTrigger>
+          <TabsTrigger value="summary">Cost Summary</TabsTrigger>
         </TabsList>
         
-        {/* Compute Table */}
         <TabsContent value="compute">
           <Card>
-            <CardHeader>
-              <CardTitle>Compute Components</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Compute & Storage Components</CardTitle>
+              <Button onClick={() => handleExport('Compute')} variant="ghost" size="sm">
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Compute
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -125,75 +141,66 @@ export const BillOfMaterialsTab: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Compute Components */}
-                  {componentsByCategory['Compute']?.map((component) => {
-                    const quantity = component.quantity || 1;
+                  {summarizedComponentsByCategory['Compute']?.map((component) => {
+                    const quantity = component.summarizedQuantity;
                     const totalCost = component.cost * quantity;
-                    
                     return (
-                      <TableRow key={`compute-${component.id}`}>
+                      <TableRow key={`compute-${getBomGroupKey(component)}`}>
                         <TableCell>{component.type}</TableCell>
                         <TableCell>{component.role || 'Unassigned'}</TableCell>
                         <TableCell>{component.manufacturer}</TableCell>
                         <TableCell>{component.model}</TableCell>
-                        <TableCell>{component.cpuModel || '-'}</TableCell>
-                        <TableCell className="text-right">{component.memoryCapacity || component.memoryGB || '-'}</TableCell>
+                        <TableCell>{(component as any).cpuModel || '-'}</TableCell>
+                        <TableCell className="text-right">{(component as any).memoryCapacity || (component as any).memoryGB || '-'}</TableCell>
                         <TableCell className="text-right">{quantity}</TableCell>
                         <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
                         <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
                       </TableRow>
                     );
                   })}
-                  
-                  {/* Storage nodes - include base server and disks */}
-                  {componentsByCategory['Storage']?.filter(c => c.type === ComponentType.Server && c.role === 'storageNode').map((server) => {
-                    const quantity = server.quantity || 1;
+                  {summarizedComponentsByCategory['Storage']?.filter(c => c.type === ComponentType.Server && c.role === 'storageNode').map((server) => {
+                    const quantity = server.summarizedQuantity;
                     const totalCost = server.cost * quantity;
-                    const associatedDisks = componentsByCategory['Storage']?.filter(c => c.type === ComponentType.Disk && c.role === 'storageDisk');
-                    
+                    // This logic for associatedDisks might need to be re-thought if disks are part of the main component list explicitly
+                    // For now, assuming disks for storage nodes are separate line items if they are separate components.
                     return (
-                      <React.Fragment key={`storage-node-${server.id}`}>
+                      <React.Fragment key={`storage-node-${getBomGroupKey(server)}`}>
                         <TableRow>
                           <TableCell className="font-medium">Storage Node</TableCell>
                           <TableCell>{server.role || 'Unassigned'}</TableCell>
                           <TableCell>{server.manufacturer}</TableCell>
                           <TableCell>{server.model}</TableCell>
-                          <TableCell>{server.cpuModel || '-'}</TableCell>
-                          <TableCell className="text-right">{server.memoryCapacity || server.memoryGB || '-'}</TableCell>
+                          <TableCell>{(server as any).cpuModel || '-'}</TableCell>
+                          <TableCell className="text-right">{(server as any).memoryCapacity || (server as any).memoryGB || '-'}</TableCell>
                           <TableCell className="text-right">{quantity}</TableCell>
                           <TableCell className="text-right">€{server.cost.toLocaleString()}</TableCell>
                           <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
                         </TableRow>
-                        
-                        {associatedDisks?.map((disk, index) => {
-                          const diskQuantity = disk.quantity || 1;
-                          const diskTotalCost = disk.cost * diskQuantity;
-                          
-                          return (
-                            <TableRow key={`storage-disk-${disk.id}-${index}`} className="bg-muted/20">
-                              <TableCell className="pl-8">Disk</TableCell>
-                              <TableCell>{disk.diskType || '-'}</TableCell>
-                              <TableCell>{disk.manufacturer}</TableCell>
-                              <TableCell>{disk.model}</TableCell>
-                              <TableCell>-</TableCell>
-                              <TableCell className="text-right">-</TableCell>
-                              <TableCell className="text-right">{diskQuantity}</TableCell>
-                              <TableCell className="text-right">€{disk.cost.toLocaleString()}</TableCell>
-                              <TableCell className="text-right">€{diskTotalCost.toLocaleString()}</TableCell>
-                            </TableRow>
-                          );
-                        })}
                       </React.Fragment>
                     );
                   })}
-                  
-                  {/* GPU Components */}
-                  {componentsByCategory['Acceleration']?.map((component) => {
-                    const quantity = component.quantity || 1;
+                  {summarizedComponentsByCategory['Storage']?.filter(c => c.type === ComponentType.Disk).map((disk) => {
+                     const quantity = disk.summarizedQuantity;
+                     const totalCost = disk.cost * quantity;
+                     return (
+                       <TableRow key={`disk-${getBomGroupKey(disk)}`}>
+                         <TableCell className="pl-4">Disk</TableCell>
+                         <TableCell>{(disk as any).diskType || '-'}</TableCell>
+                         <TableCell>{disk.manufacturer}</TableCell>
+                         <TableCell>{disk.model}</TableCell>
+                         <TableCell>-</TableCell>
+                         <TableCell className="text-right">{(disk as any).capacityTB} TB</TableCell>
+                         <TableCell className="text-right">{quantity}</TableCell>
+                         <TableCell className="text-right">€{disk.cost.toLocaleString()}</TableCell>
+                         <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+                       </TableRow>
+                     );
+                  })}
+                  {summarizedComponentsByCategory['Acceleration']?.map((component) => {
+                    const quantity = component.summarizedQuantity;
                     const totalCost = component.cost * quantity;
-                    
                     return (
-                      <TableRow key={`gpu-${component.id}`}>
+                      <TableRow key={`gpu-${getBomGroupKey(component)}`}>
                         <TableCell>{component.type}</TableCell>
                         <TableCell>{component.role || 'Unassigned'}</TableCell>
                         <TableCell>{component.manufacturer}</TableCell>
@@ -212,11 +219,13 @@ export const BillOfMaterialsTab: React.FC = () => {
           </Card>
         </TabsContent>
         
-        {/* Network Table */}
         <TabsContent value="network">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Network Components</CardTitle>
+              <Button onClick={() => handleExport('Network')} variant="ghost" size="sm">
+                 <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Network
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -234,19 +243,17 @@ export const BillOfMaterialsTab: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Network components and firewalls */}
-                  {[...componentsByCategory['Network'] || [], ...componentsByCategory['Security'] || []].map((component) => {
-                    const quantity = component.quantity || 1;
+                  {[...(summarizedComponentsByCategory['Network'] || []), ...(summarizedComponentsByCategory['Security'] || [])].map((component) => {
+                    const quantity = component.summarizedQuantity;
                     const totalCost = component.cost * quantity;
-                    
                     return (
-                      <TableRow key={`network-${component.id}`}>
+                      <TableRow key={`network-${getBomGroupKey(component)}`}>
                         <TableCell>{component.type}</TableCell>
                         <TableCell>{component.role || component.switchRole || 'Unassigned'}</TableCell>
                         <TableCell>{component.manufacturer}</TableCell>
                         <TableCell>{component.model}</TableCell>
-                        <TableCell>{component.portCount || component.portsProvidedQuantity || '-'}</TableCell>
-                        <TableCell>{component.portSpeed || component.portSpeedType || '-'}</TableCell>
+                        <TableCell>{(component as any).portCount || (component as any).portsProvidedQuantity || '-'}</TableCell>
+                        <TableCell>{(component as any).portSpeed || (component as any).portSpeedType || '-'}</TableCell>
                         <TableCell className="text-right">{quantity}</TableCell>
                         <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
                         <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
@@ -259,11 +266,13 @@ export const BillOfMaterialsTab: React.FC = () => {
           </Card>
         </TabsContent>
         
-        {/* Cabling Table */}
         <TabsContent value="cabling">
-          <Card>
-            <CardHeader>
+           <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Cabling Components</CardTitle>
+              <Button onClick={() => handleExport('Cabling')} variant="ghost" size="sm">
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Cabling
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -279,24 +288,16 @@ export const BillOfMaterialsTab: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Display both Cabling and Cables categories */}
-                  {[...(componentsByCategory['Cabling'] || []), ...(componentsByCategory['Cables'] || [])].map((component) => {
-                    const quantity = component.quantity || 1;
+                  {[...(summarizedComponentsByCategory['Cabling'] || []), ...(summarizedComponentsByCategory['Cables'] || [])].map((component) => {
+                    const quantity = component.summarizedQuantity;
                     const totalCost = component.cost * quantity;
-                    
                     let details = '-';
-                    if (component.type === ComponentType.FiberPatchPanel) {
-                      details = `${component.ruSize}RU, ${component.cassetteCapacity} cassettes`;
-                    } else if (component.type === ComponentType.CopperPatchPanel) {
-                      details = `${component.ruSize}RU, ${component.portQuantity} ports`;
-                    } else if (component.type === ComponentType.Cassette) {
-                      details = `${component.portType}, ${component.portQuantity} ports`;
-                    } else if (component.type === ComponentType.Cable) {
-                      details = `${component.length}m, ${component.connectorA_Type} to ${component.connectorB_Type}, ${component.mediaType}`;
-                    }
-                    
+                    if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${(component as any).cassetteCapacity} cassettes`;
+                    else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${(component as any).portQuantity} ports`;
+                    else if (component.type === ComponentType.Cassette) details = `${(component as any).portType}, ${(component as any).portQuantity} ports`;
+                    else if (component.type === ComponentType.Cable) details = `${(component as any).length}m, ${(component as any).connectorA_Type} to ${(component as any).connectorB_Type}, ${(component as any).mediaType}`;
                     return (
-                      <TableRow key={`cabling-${component.id}`}>
+                      <TableRow key={`cabling-${getBomGroupKey(component)}`}>
                         <TableCell>{component.type}</TableCell>
                         <TableCell>{component.manufacturer}</TableCell>
                         <TableCell>{component.model}</TableCell>
@@ -312,18 +313,20 @@ export const BillOfMaterialsTab: React.FC = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
-        {/* All Components Table */}
+
         <TabsContent value="all">
           <Card>
-            <CardHeader>
-              <CardTitle>All Components</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>All Components Summary</CardTitle>
+               <Button onClick={() => handleExport()} variant="ghost" size="sm">
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export All
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Category</TableHead>
+                    <TableHead className="w-[150px]">Category</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Manufacturer</TableHead>
@@ -334,21 +337,19 @@ export const BillOfMaterialsTab: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {Object.entries(componentsByCategory).map(([category, categoryComponents]) => (
+                  {Object.entries(summarizedComponentsByCategory).map(([category, categoryComponents]) => (
                     <React.Fragment key={category}>
                       <TableRow className="bg-muted/50">
                         <TableCell colSpan={8} className="font-medium">
                           {formatCategoryName(category)}
                         </TableCell>
                       </TableRow>
-                      
                       {categoryComponents.map(component => {
-                        const quantity = component.quantity || 1;
+                        const quantity = component.summarizedQuantity;
                         const totalCost = component.cost * quantity;
-                        
                         return (
-                          <TableRow key={`${category}-${component.id}`}>
-                            <TableCell></TableCell> {/* Empty for indentation */}
+                          <TableRow key={`all-${getBomGroupKey(component)}`}>
+                            <TableCell></TableCell> 
                             <TableCell>{component.type}</TableCell>
                             <TableCell>{component.role || 'Unassigned'}</TableCell>
                             <TableCell>{component.manufacturer}</TableCell>
@@ -359,17 +360,15 @@ export const BillOfMaterialsTab: React.FC = () => {
                           </TableRow>
                         );
                       })}
-                      
                       <TableRow className="border-t">
                         <TableCell colSpan={6} className="text-right font-medium">Category Subtotal:</TableCell>
                         <TableCell></TableCell>
                         <TableCell className="text-right font-medium">
-                          €{categoryComponents.reduce((sum, comp) => sum + (comp.cost * (comp.quantity || 1)), 0).toLocaleString()}
+                          €{categoryComponents.reduce((sum, comp) => sum + (comp.cost * comp.summarizedQuantity), 0).toLocaleString()}
                         </TableCell>
                       </TableRow>
                     </React.Fragment>
                   ))}
-                  
                   <TableRow className="bg-muted font-medium">
                     <TableCell colSpan={6} className="text-right">Grand Total:</TableCell>
                     <TableCell></TableCell>
@@ -380,7 +379,20 @@ export const BillOfMaterialsTab: React.FC = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="summary">
+            {/* Cost Summary Card - This would use useCostAnalysis or similar */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Cost Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>Detailed cost summary and TCO analysis would go here, leveraging data from <code>useCostAnalysis</code>.</p>
+                    <p className="font-bold mt-4">Grand Total (from BOM): €{grandTotalCost.toLocaleString()}</p>
+                </CardContent>
+            </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
 };
+

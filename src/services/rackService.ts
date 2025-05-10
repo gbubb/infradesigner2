@@ -40,19 +40,23 @@ export class RackService {
   }
 
   static createRackProfile(
-    name: string, 
+    name?: string,
     uHeight: number = 42, 
-    availabilityZoneId?: string
+    availabilityZoneId?: string,
+    rackType: 'Core' | 'ComputeStorage' = 'ComputeStorage'
   ): string {
     const state = useDesignStore.getState();
     const profiles = this.getAllRackProfiles();
     
+    const newName = name || `Rack ${profiles.length + 1}`;
+
     const newProfile: RackProfile = {
       id: uuidv4(),
-      name,
+      name: newName,
       uHeight,
       devices: [],
-      availabilityZoneId
+      availabilityZoneId,
+      rackType
     };
     
     profiles.push(newProfile);

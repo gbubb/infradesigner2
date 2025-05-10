@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { useDesignStore } from '@/store/designStore';
 import { useDrop, useDrag } from 'react-dnd';
 import { toast } from 'sonner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface RackViewProps {
   rackProfileId: string;
@@ -45,6 +46,9 @@ interface PlacedDeviceItemProps {
   bottom: number;
   height: number;
   onDeviceClick?: (deviceId: string) => void;
+  manufacturer?: string;
+  powerRequired?: number;
+  portsCount?: number;
 }
 
 const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
@@ -56,7 +60,10 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
   ruPosition,
   bottom,
   height,
-  onDeviceClick
+  onDeviceClick,
+  manufacturer,
+  powerRequired,
+  portsCount
 }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'RACK_PLACED_DEVICE',
@@ -71,31 +78,58 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
     if (onDeviceClick) onDeviceClick(deviceId);
   }, [deviceId, onDeviceClick]);
 
-  return (
-    <div
-      ref={drag}
-      className={cn(
-        "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-2 py-1 overflow-hidden",
-        getDeviceColor(type),
-        "cursor-move"
-      )}
-      style={{
-        bottom: `${bottom}px`,
-        height: `${height}px`,
-        zIndex: 10,
-        opacity: isDragging ? 0.5 : 1
-      }}
-      onClick={handleClick}
-    >
-      <div className="text-xs font-medium truncate w-full text-center">
-        {name}
-      </div>
-      {height > 30 && (
-        <div className="text-xs opacity-75 truncate w-full text-center">
-          {model} - {ruSize}U
-        </div>
-      )}
+  const tooltipContent = (
+    <div>
+      <p><strong>{name}</strong> ({model})</p>
+      <p>Type: {type} ({ruSize}U)</p>
+      <p>Position: RU {ruPosition}</p>
+      {manufacturer && <p>Manufacturer: {manufacturer}</p>}
+      {powerRequired !== undefined && <p>Power: {powerRequired}W</p>}
+      {portsCount !== undefined && <p>Ports: {portsCount}</p>}
     </div>
+  );
+
+  return (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            ref={drag}
+            className={cn(
+              "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-1 py-0.5 overflow-hidden",
+              getDeviceColor(type),
+              "cursor-move text-xs"
+            )}
+            style={{
+              bottom: `${bottom}px`,
+              height: `${height}px`,
+              zIndex: 10,
+              opacity: isDragging ? 0.5 : 1,
+              fontSize: height < 28 ? '0.6rem' : '0.7rem',
+              lineHeight: height < 20 ? '1' : '1.2',
+            }}
+            onClick={handleClick}
+          >
+            <div className="w-full text-center truncate" style={{ fontWeight: 500 }}>
+              {name}
+            </div>
+            {height > 25 && (
+              <div className="w-full text-center truncate opacity-80" style={{ fontSize: '0.65rem'}}>
+                {model}
+              </div>
+            )}
+            {height <=25 && ruSize && (
+              <div className="w-full text-center truncate opacity-70" style={{ fontSize: '0.6rem'}}>
+                {ruSize}U
+              </div>
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="right" align="start">
+          {tooltipContent}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 
@@ -238,6 +272,9 @@ export const RackView: React.FC<RackViewProps> = ({
                   bottom={bottomPosition}
                   height={deviceHeight}
                   onDeviceClick={onDeviceClick}
+                  manufacturer={component.manufacturer}
+                  powerRequired={component.powerRequired}
+                  portsCount={component.ports?.length}
                 />
               );
             })}

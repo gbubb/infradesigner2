@@ -55,10 +55,8 @@ export const useConnectionManager = () => {
   }, [components]);
 
   useEffect(() => {
-    if (JSON.stringify(connections) !== JSON.stringify(detectedConnections)) {
-      setConnections(detectedConnections);
-    }
-  }, [detectedConnections, connections]);
+    setConnections(detectedConnections);
+  }, [detectedConnections]);
   
   /**
    * Check if a port connector type is compatible with a cable connector type
