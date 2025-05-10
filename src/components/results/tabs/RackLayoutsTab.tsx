@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
@@ -140,9 +139,14 @@ export const RackLayoutsTab: React.FC = () => {
           scrollStep={scrollStep}
         />
         
-        {/* Main content area with rack view and device palette */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Rack detail view - takes 3/4 of the space */}
+        {/* Main content area with device palette and rack view/details */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* Device palette - takes 1/4 of the space (now on the left) */}
+          <div className="md:col-span-1">
+            <DevicePalette rackId={selectedRackId || undefined} />
+          </div>
+
+          {/* Rack detail view - takes 3/4 of the space (now on the right) */}
           <div className="md:col-span-3">
             {selectedRackId && (
               <RackDetailView
@@ -152,11 +156,11 @@ export const RackLayoutsTab: React.FC = () => {
                 selectedRack={selectedRack}
               />
             )}
-          </div>
-          
-          {/* Device palette - takes 1/4 of the space */}
-          <div>
-            <DevicePalette rackId={selectedRackId || undefined} />
+            {!selectedRackId && (
+              <div className="flex items-center justify-center h-[700px] border rounded-md bg-muted/20">
+                <p className="text-muted-foreground">Select a rack to view details.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

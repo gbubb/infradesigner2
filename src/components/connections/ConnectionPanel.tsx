@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import { useConnectionManager } from '@/hooks/design/useConnectionManager';
 import { useDesignStore } from '@/store/designStore';
@@ -8,14 +7,22 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { shallow } from 'zustand/shallow';
+import { StoreState } from '@/store/types';
 
 interface ConnectionPanelProps {
   deviceId: string;
   onClose: () => void;
 }
 
+// Selector for ConnectionPanel
+const panelSelector = (state: StoreState) => ({
+  components: state.activeDesign?.components || [],
+});
+
 export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onClose }) => {
-  const activeDesign = useDesignStore(state => state.activeDesign);
+  // Use a more stable selector for components from activeDesign
+  const { components: designComponents } = useDesignStore(panelSelector, shallow);
   const { connections, addConnection, removeConnection } = useConnectionManager();
   
   const [selectedPortId, setSelectedPortId] = useState<string>('');
@@ -24,9 +31,10 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
   const [selectedCableId, setSelectedCableId] = useState<string>('');
   
   const sourceDevice = useMemo(() => {
-    return activeDesign?.components.find(component => component.id === deviceId);
-  }, [activeDesign, deviceId]);
+    return designComponents.find(component => component.id === deviceId);
+  }, [designComponents, deviceId]);
   
+  // deviceConnections depends on the stabilized `connections` from useConnectionManager
   const deviceConnections = useMemo(() => {
     return connections.filter(conn => 
       conn.sourceDeviceId === deviceId || conn.destinationDeviceId === deviceId
@@ -34,32 +42,27 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
   }, [connections, deviceId]);
   
   const availableDevices = useMemo(() => {
-    if (!activeDesign || !sourceDevice) return [];
-    
-    // Filter out the source device itself
-    return activeDesign.components.filter(component => 
+    if (!sourceDevice) return []; // Relies on sourceDevice which uses designComponents
+    return designComponents.filter(component => 
       component.id !== deviceId && component.ports && component.ports.length > 0
     );
-  }, [activeDesign, deviceId, sourceDevice]);
+  }, [designComponents, deviceId, sourceDevice]);
   
   const availableCables = useMemo(() => {
-    if (!activeDesign) return [];
-    
-    return activeDesign.components.filter(component => 
+    return designComponents.filter(component => 
       component.type === ComponentType.Cable
     );
-  }, [activeDesign]);
+  }, [designComponents]);
   
   const targetDevice = useMemo(() => {
     if (!targetDeviceId) return null;
-    return activeDesign?.components.find(component => component.id === targetDeviceId);
-  }, [activeDesign, targetDeviceId]);
+    return designComponents.find(component => component.id === targetDeviceId);
+  }, [designComponents, targetDeviceId]);
   
   const getAvailablePorts = useCallback((device?: InfrastructureComponent | null) => {
     if (!device || !device.ports) return [];
-    
     return device.ports.filter(port => !port.connectedToPortId);
-  }, []);
+  }, []); // This callback has no external dependencies from the hook/props
   
   const sourcePorts = useMemo(() => {
     return getAvailablePorts(sourceDevice);
@@ -69,24 +72,22 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
     return getAvailablePorts(targetDevice);
   }, [targetDevice, getAvailablePorts]);
   
-  const getConnectedPort = useCallback((deviceId: string, portId: string) => {
+  const getConnectedPort = useCallback((connectedDeviceId: string, portId: string) => {
     const connection = connections.find(conn => 
-      (conn.sourceDeviceId === deviceId && conn.sourcePortId === portId) || 
-      (conn.destinationDeviceId === deviceId && conn.destinationPortId === portId)
+      (conn.sourceDeviceId === connectedDeviceId && conn.sourcePortId === portId) || 
+      (conn.destinationDeviceId === connectedDeviceId && conn.destinationPortId === portId)
     );
     
     if (!connection) return null;
     
-    // Get the device and port on the other end
-    const isSource = connection.sourceDeviceId === deviceId && connection.sourcePortId === portId;
+    const isSource = connection.sourceDeviceId === connectedDeviceId && connection.sourcePortId === portId;
     const otherDeviceId = isSource ? connection.destinationDeviceId : connection.sourceDeviceId;
     const otherPortId = isSource ? connection.destinationPortId : connection.sourcePortId;
     const cableId = connection.cableId;
     
-    // Get component details
-    const otherDevice = activeDesign?.components.find(c => c.id === otherDeviceId);
+    const otherDevice = designComponents.find(c => c.id === otherDeviceId);
     const otherPort = otherDevice?.ports?.find(p => p.id === otherPortId);
-    const cable = activeDesign?.components.find(c => c.id === cableId);
+    const cableInfo = designComponents.find(c => c.id === cableId);
     
     return {
       deviceId: otherDeviceId,
@@ -94,54 +95,36 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
       portId: otherPortId,
       portName: otherPort?.id || 'Unknown Port',
       cableId,
-      cableName: cable?.name || 'Unknown Cable'
+      cableName: cableInfo?.name || 'Unknown Cable'
     };
-  }, [connections, activeDesign]);
+  }, [connections, designComponents]); // Depends on connections and designComponents
   
   const handleCreateConnection = useCallback(() => {
     if (!selectedPortId || !targetDeviceId || !targetPortId || !selectedCableId) {
       toast.error("Please select all required fields");
       return;
     }
-    
-    const result = addConnection(
-      deviceId, 
-      selectedPortId, 
-      targetDeviceId, 
-      targetPortId, 
-      selectedCableId
-    );
-    
+    const result = addConnection(deviceId, selectedPortId, targetDeviceId, targetPortId, selectedCableId);
     if (result.success) {
       toast.success("Connection created successfully");
-      // Reset form
-      setSelectedPortId('');
-      setTargetDeviceId('');
-      setTargetPortId('');
-      setSelectedCableId('');
+      setSelectedPortId(''); setTargetDeviceId(''); setTargetPortId(''); setSelectedCableId('');
     } else {
       toast.error(`Failed to create connection: ${result.error}`);
     }
   }, [deviceId, selectedPortId, targetDeviceId, targetPortId, selectedCableId, addConnection]);
-  
-  const handleRemoveConnection = useCallback((sourceDeviceId: string, sourcePortId: string, destinationDeviceId: string, destinationPortId: string) => {
-    const result = removeConnection(sourceDeviceId, sourcePortId, destinationDeviceId, destinationPortId);
-    
+
+  const handleRemoveConnection = useCallback((sDeviceId: string, sPortId: string, dDeviceId: string, dPortId: string) => {
+    const result = removeConnection(sDeviceId, sPortId, dDeviceId, dPortId);
     if (result.success) {
       toast.success("Connection removed successfully");
     } else {
       toast.error(`Failed to remove connection: ${result.error}`);
     }
   }, [removeConnection]);
-  
+
   if (!sourceDevice) {
     return (
-      <Card>
-        <CardContent className="p-4">
-          <p className="text-muted-foreground">Device not found</p>
-          <Button variant="outline" onClick={onClose} className="mt-2">Close</Button>
-        </CardContent>
-      </Card>
+      <Card><CardContent className="p-4"><p className="text-muted-foreground">Device not found</p><Button variant="outline" onClick={onClose} className="mt-2">Close</Button></CardContent></Card>
     );
   }
   
@@ -155,7 +138,6 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Connected Ports */}
           <div>
             <h3 className="text-lg font-medium mb-2">Connected Ports</h3>
             {sourceDevice.ports && sourceDevice.ports.some(port => port.connectedToPortId) ? (
@@ -177,12 +159,7 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
                         <Button 
                           variant="destructive" 
                           size="sm"
-                          onClick={() => handleRemoveConnection(
-                            deviceId, 
-                            port.id, 
-                            connectedTo.deviceId, 
-                            connectedTo.portId
-                          )}
+                          onClick={() => handleRemoveConnection(deviceId, port.id, connectedTo.deviceId, connectedTo.portId)}
                         >
                           Disconnect
                         </Button>
@@ -196,115 +173,70 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
             )}
           </div>
           
-          {/* Create New Connection */}
           <div className="border-t pt-4">
             <h3 className="text-lg font-medium mb-3">Create New Connection</h3>
-            
             <div className="space-y-4">
-              {/* Source Port Selection */}
               <div>
                 <Label htmlFor="sourcePort">Source Port</Label>
-                <Select 
-                  value={selectedPortId} 
-                  onValueChange={setSelectedPortId}
-                >
-                  <SelectTrigger id="sourcePort" className="w-full">
-                    <SelectValue placeholder="Select a port" />
-                  </SelectTrigger>
+                <Select value={selectedPortId} onValueChange={setSelectedPortId}>
+                  <SelectTrigger id="sourcePort" className="w-full"><SelectValue placeholder="Select a port" /></SelectTrigger>
                   <SelectContent>
                     {sourcePorts.length === 0 ? (
                       <SelectItem value="none" disabled>No available ports</SelectItem>
                     ) : (
                       sourcePorts.map(port => (
-                        <SelectItem key={port.id} value={port.id}>
-                          {port.id} - {port.connectorType} ({port.speed})
-                        </SelectItem>
+                        <SelectItem key={port.id} value={port.id}>{port.id} - {port.connectorType} ({port.speed})</SelectItem>
                       ))
                     )}
                   </SelectContent>
                 </Select>
               </div>
-              
-              {/* Target Device Selection */}
               <div>
                 <Label htmlFor="targetDevice">Target Device</Label>
-                <Select 
-                  value={targetDeviceId} 
-                  onValueChange={(value) => {
-                    setTargetDeviceId(value);
-                    setTargetPortId('');
-                  }}
-                >
-                  <SelectTrigger id="targetDevice" className="w-full">
-                    <SelectValue placeholder="Select a device" />
-                  </SelectTrigger>
+                <Select value={targetDeviceId} onValueChange={(value) => { setTargetDeviceId(value); setTargetPortId(''); }}>
+                  <SelectTrigger id="targetDevice" className="w-full"><SelectValue placeholder="Select a device" /></SelectTrigger>
                   <SelectContent>
                     {availableDevices.length === 0 ? (
                       <SelectItem value="none" disabled>No available devices</SelectItem>
                     ) : (
                       availableDevices.map(device => (
-                        <SelectItem key={device.id} value={device.id}>
-                          {device.name} ({device.type})
-                        </SelectItem>
+                        <SelectItem key={device.id} value={device.id}>{device.name} ({device.type})</SelectItem>
                       ))
                     )}
                   </SelectContent>
                 </Select>
               </div>
-              
-              {/* Target Port Selection */}
               <div>
                 <Label htmlFor="targetPort">Target Port</Label>
-                <Select 
-                  value={targetPortId} 
-                  onValueChange={setTargetPortId}
-                  disabled={!targetDeviceId}
-                >
-                  <SelectTrigger id="targetPort" className="w-full">
-                    <SelectValue placeholder="Select a port" />
-                  </SelectTrigger>
+                <Select value={targetPortId} onValueChange={setTargetPortId} disabled={!targetDeviceId}>
+                  <SelectTrigger id="targetPort" className="w-full"><SelectValue placeholder="Select a port" /></SelectTrigger>
                   <SelectContent>
                     {targetPorts.length === 0 ? (
                       <SelectItem value="none" disabled>No available ports</SelectItem>
                     ) : (
                       targetPorts.map(port => (
-                        <SelectItem key={port.id} value={port.id}>
-                          {port.id} - {port.connectorType} ({port.speed})
-                        </SelectItem>
+                        <SelectItem key={port.id} value={port.id}>{port.id} - {port.connectorType} ({port.speed})</SelectItem>
                       ))
                     )}
                   </SelectContent>
                 </Select>
               </div>
-              
-              {/* Cable Selection */}
               <div>
                 <Label htmlFor="cable">Cable</Label>
-                <Select 
-                  value={selectedCableId} 
-                  onValueChange={setSelectedCableId}
-                >
-                  <SelectTrigger id="cable" className="w-full">
-                    <SelectValue placeholder="Select a cable" />
-                  </SelectTrigger>
+                <Select value={selectedCableId} onValueChange={setSelectedCableId}>
+                  <SelectTrigger id="cable" className="w-full"><SelectValue placeholder="Select a cable" /></SelectTrigger>
                   <SelectContent>
                     {availableCables.length === 0 ? (
                       <SelectItem value="none" disabled>No cables available</SelectItem>
                     ) : (
                       availableCables.map(cable => (
-                        <SelectItem key={cable.id} value={cable.id}>
-                          {cable.name} - {cable.connectorA_Type}/{cable.connectorB_Type}
-                        </SelectItem>
+                        <SelectItem key={cable.id} value={cable.id}>{cable.name} - {(cable as any).connectorA_Type}/{(cable as any).connectorB_Type}</SelectItem>
                       ))
                     )}
                   </SelectContent>
                 </Select>
               </div>
-              
-              <Button 
-                onClick={handleCreateConnection}
-                disabled={!selectedPortId || !targetDeviceId || !targetPortId || !selectedCableId}
-              >
+              <Button onClick={handleCreateConnection} disabled={!selectedPortId || !targetDeviceId || !targetPortId || !selectedCableId}>
                 Create Connection
               </Button>
             </div>

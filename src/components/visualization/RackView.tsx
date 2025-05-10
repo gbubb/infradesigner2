@@ -89,6 +89,10 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
     </div>
   );
 
+  // Determine if the visual height is too small for the model line
+  // Let's say if visual height is less than 30px, it's too small for two lines of text comfortably.
+  const showModelLine = height >= 30; // Adjusted threshold
+
   return (
     <TooltipProvider delayDuration={300}>
       <Tooltip>
@@ -105,20 +109,23 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
               height: `${height}px`,
               zIndex: 10,
               opacity: isDragging ? 0.5 : 1,
-              fontSize: height < 28 ? '0.6rem' : '0.7rem',
-              lineHeight: height < 20 ? '1' : '1.2',
+              // Adjusted font size for better fit, especially for 1RU
+              fontSize: ruSize === 1 ? '0.6rem' : '0.7rem', 
+              lineHeight: ruSize === 1 ? '1.1' : '1.2', // Tighter line height for 1RU
             }}
             onClick={handleClick}
           >
             <div className="w-full text-center truncate" style={{ fontWeight: 500 }}>
               {name}
             </div>
-            {height > 25 && (
+            {/* Conditionally render model line based on available space AND if it's not a 1U device where we prioritize showing RU size */} 
+            {showModelLine && ruSize > 1 && (
               <div className="w-full text-center truncate opacity-80" style={{ fontSize: '0.65rem'}}>
                 {model}
               </div>
             )}
-            {height <=25 && ruSize && (
+            {/* For 1U devices, or if model line is hidden due to space, show RU size if space allows and it's not already obvious */} 
+            {((ruSize === 1 && height > 15) || (!showModelLine && height > 15)) && (
               <div className="w-full text-center truncate opacity-70" style={{ fontSize: '0.6rem'}}>
                 {ruSize}U
               </div>
