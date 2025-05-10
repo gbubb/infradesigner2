@@ -1,6 +1,8 @@
+
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from './rackService';
 import { InfrastructureComponent, RackProfile, ComponentType } from '@/types/infrastructure';
+import { RackType } from '@/types/infrastructure/rack-types';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface PlacementReportItem {
@@ -158,10 +160,10 @@ export class AutomatedPlacementService {
       const prefersCoreRack = isNetworkDevice && 
         design.requirements.networkRequirements?.dedicatedNetworkCoreRacks;
       
-      const targetRackType = prefersCoreRack ? 'Core' : 'ComputeStorage';
+      const targetRackType: RackType = prefersCoreRack ? 'Core' : 'ComputeStorage';
       
       // Network devices can go to ComputeStorage racks if no Core racks are available
-      const allowedRackTypeIfPreferredUnavailable = isNetworkDevice ? 'ComputeStorage' : null;
+      const allowedRackTypeIfPreferredUnavailable: RackType | null = isNetworkDevice ? 'ComputeStorage' : null;
       
       // Determine target AZs for this device
       let targetAZs: string[] = [];
