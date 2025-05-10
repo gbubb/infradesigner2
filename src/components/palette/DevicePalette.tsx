@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent } from '@/components/ui/card';
@@ -6,8 +7,6 @@ import { ComponentType } from '@/types/infrastructure/component-types';
 import { useDrag } from 'react-dnd';
 import { HardDrive } from 'lucide-react';
 import { RackService } from '@/services/rackService';
-import { useRackLayout } from '@/hooks/design/useRackLayout';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface DeviceItemProps {
   id: string;
@@ -76,34 +75,12 @@ interface DevicePaletteProps {
 }
 
 export const DevicePalette: React.FC<DevicePaletteProps> = ({ rackId }) => {
-  const { activeDesign } = useDesignStore();
-  // const { availableDevices: devicesFromRackLayoutHook } = useRackLayout(); // Commenting out as palette should show all unplaced, not rack-specific
-
-  const availableToPlace = useMemo(() => {
-    if (!activeDesign?.components) return [];
-
-    const allPlacedDeviceIds = new Set(
-      activeDesign.rackProfiles?.flatMap(rack => rack.devices.map(d => d.deviceId)) || []
-    );
-
-    const filtered = activeDesign.components.filter(component => 
-      component.ruHeight && 
-      component.ruHeight > 0 && 
-      !allPlacedDeviceIds.has(component.id)
-    );
-
-    // Temporary debug logging - REMOVE AFTER DEBUGGING
-    console.log("DevicePalette: All design components count:", activeDesign.components.length);
-    activeDesign.components.forEach(comp => {
-      console.log(`DevicePalette Candidate: ${comp.name} (ID: ${comp.id}), Type: ${comp.type}, ruHeight: ${comp.ruHeight}, Placed: ${allPlacedDeviceIds.has(comp.id)}`);
-    });
-    console.log("DevicePalette: Devices available for palette:", filtered.map(d => ({ name: d.name, id: d.id, ruHeight: d.ruHeight })));
-    // End temporary debug logging
-
-    return filtered;
-  }, [activeDesign]);
-
-  if (availableToPlace.length === 0) {
+  // Get available devices using the new RackService method
+  const availableDevices = useMemo(() => {
+    return RackService.getAvailableDevices();
+  }, [rackId]);
+  
+  if (availableDevices.length === 0) {
     return (
       <Card>
         <CardContent className="p-4">
@@ -118,7 +95,7 @@ export const DevicePalette: React.FC<DevicePaletteProps> = ({ rackId }) => {
       <CardContent className="p-4">
         <h3 className="text-lg font-medium mb-4">Available Devices</h3>
         <div className="space-y-2">
-          {availableToPlace.map(device => (
+          {availableDevices.map(device => (
             <DeviceItem
               key={device.id}
               id={device.id}

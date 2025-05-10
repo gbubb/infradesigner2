@@ -1,3 +1,4 @@
+
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from './rackService';
 import { InfrastructureComponent, RackProfile } from '@/types/infrastructure';
@@ -54,22 +55,11 @@ export class AutomatedPlacementService {
       rackProfiles.flatMap(rack => rack.devices.map(device => device.deviceId))
     );
     
-    // Temporary debug logging - REMOVE AFTER DEBUGGING
-    console.log("AutomatedPlacementService: All design components count:", design.components.length);
-    design.components.forEach(comp => {
-      console.log(`Component: ${comp.name} (ID: ${comp.id}), Type: ${comp.type}, ruHeight: ${comp.ruHeight}, Placed: ${placedDeviceIds.has(comp.id)}`);
-    });
-    // End temporary debug logging
-
     const devicesToPlace = design.components.filter(component => 
       component.ruHeight && 
       component.ruHeight > 0 && 
       !placedDeviceIds.has(component.id)
     );
-    
-    // Temporary debug logging - REMOVE AFTER DEBUGGING
-    console.log("AutomatedPlacementService: Devices initially considered for placement (devicesToPlace):", devicesToPlace.map(d => ({ name: d.name, id: d.id, ruHeight: d.ruHeight })));
-    // End temporary debug logging
     
     if (devicesToPlace.length === 0) {
       return {
@@ -246,12 +236,7 @@ export class AutomatedPlacementService {
     
     // If we found a valid position, place the device
     if (targetPosition !== undefined) {
-      // Temporary debug logging - REMOVE AFTER DEBUGGING
-      console.log(`AutomatedPlacement: Attempting RackService.placeDevice for ${device.name} (${device.id}) in ${rack.name} (${rack.id}) at RU ${targetPosition} (height ${device.ruHeight})`);
-      const placementAttemptResult = RackService.placeDevice(rack.id, device.id, targetPosition);
-      console.log(`AutomatedPlacement: RackService.placeDevice result for ${device.name}:`, placementAttemptResult);
-      return placementAttemptResult;
-      // End temporary debug logging
+      return RackService.placeDevice(rack.id, device.id, targetPosition);
     }
     
     return { 
