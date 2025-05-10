@@ -1,6 +1,7 @@
-
 import { useDesignStore } from '../designStore';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
+import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 
 let isRecalculating = false;
 
@@ -67,92 +68,73 @@ export const recalculateDesign = () => {
         }
       });
       
-      const updatedComponents = updatedRoles
+      const updatedComponentsArray = updatedRoles
         .filter(role => role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
-        .map(role => {
+        .flatMap(role => {
           const componentTemplate = state.componentTemplates.find(
             c => c.id === role.assignedComponentId
           );
           
-          if (!componentTemplate) return null;
+          if (!componentTemplate) return [];
           
-          const component = {
-            ...componentTemplate,
-            quantity: role.adjustedRequiredCount || role.requiredCount,
-            role: role.role
-          };
-          
-          if (role.role === 'storageNode') {
-            const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
-            
-            let totalComponentCost = component.cost;
-            let totalComponentPower = component.powerRequired;
-            
-            if (roleDiskConfigs.length > 0) {
-              roleDiskConfigs.forEach(diskConfig => {
-                const disk = state.componentTemplates.find(c => c.id === diskConfig.diskId);
-                if (disk) {
-                  totalComponentCost += disk.cost * diskConfig.quantity;
-                  totalComponentPower += disk.powerRequired * diskConfig.quantity;
-                }
-              });
-              
-              component.cost = totalComponentCost;
-              component.powerRequired = totalComponentPower;
-              
-              (component as any).attachedDisks = roleDiskConfigs.map(diskConfig => {
-                const disk = state.componentTemplates.find(c => c.id === diskConfig.diskId);
-                return {
-                  ...disk,
-                  quantity: diskConfig.quantity
-                };
-              }).filter(Boolean);
+          const instances: InfrastructureComponent[] = [];
+          const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
+
+          for (let i = 0; i < requiredQuantity; i++) {
+            const instanceComponent: InfrastructureComponent = {
+              ...componentTemplate,
+              id: uuidv4(),
+              templateId: componentTemplate.id,
+              quantity: 1,
+              role: role.role,
+              ruSize: componentTemplate.ruSize,
+            };
+
+            if (role.role === 'storageNode') {
+              const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
+              let instanceCost = componentTemplate.cost;
+              let instancePower = componentTemplate.powerRequired;
+              const attachedDisks: any[] = [];
+
+              if (roleDiskConfigs.length > 0) {
+                roleDiskConfigs.forEach(diskConfig => {
+                  const diskTemplate = state.componentTemplates.find(c => c.id === diskConfig.diskId);
+                  if (diskTemplate) {
+                    attachedDisks.push({
+                      ...diskTemplate,
+                      quantity: diskConfig.quantity
+                    });
+                  }
+                });
+              }
+              if (attachedDisks.length > 0) (instanceComponent as any).attachedDisks = attachedDisks;
+              if (role.clusterInfo) (instanceComponent as any).clusterInfo = role.clusterInfo;
             }
-            
-            if (role.clusterInfo) {
-              (component as any).clusterInfo = role.clusterInfo;
+
+            if (role.role === 'gpuNode') {
+              const roleGPUConfigs = state.selectedGPUsByRole[role.id] || [];
+              const attachedGPUs: any[] = [];
+              if (roleGPUConfigs.length > 0) {
+                 roleGPUConfigs.forEach(gpuConfig => {
+                    const gpuTemplate = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
+                    if (gpuTemplate) {
+                        attachedGPUs.push({ ...gpuTemplate, quantity: gpuConfig.quantity });
+                    }
+                 });
+              }
+              if (attachedGPUs.length > 0) (instanceComponent as any).attachedGPUs = attachedGPUs;
+              if (role.clusterInfo) (instanceComponent as any).clusterInfo = role.clusterInfo;
             }
+            instances.push(instanceComponent);
           }
-          
-          if (role.role === 'gpuNode') {
-            const roleGPUConfigs = state.selectedGPUsByRole[role.id] || [];
-            
-            let totalComponentCost = component.cost;
-            let totalComponentPower = component.powerRequired;
-            
-            if (roleGPUConfigs.length > 0) {
-              roleGPUConfigs.forEach(gpuConfig => {
-                const gpu = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
-                if (gpu) {
-                  totalComponentCost += gpu.cost * gpuConfig.quantity;
-                  totalComponentPower += gpu.powerRequired * gpuConfig.quantity;
-                }
-              });
-              
-              component.cost = totalComponentCost;
-              component.powerRequired = totalComponentPower;
-              
-              (component as any).attachedGPUs = roleGPUConfigs.map(gpuConfig => {
-                const gpu = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
-                return {
-                  ...gpu,
-                  quantity: gpuConfig.quantity
-                };
-              }).filter(Boolean);
-            }
-            
-            if (role.clusterInfo) {
-              (component as any).clusterInfo = role.clusterInfo;
-            }
-          }
-          
-          return component;
-        })
-        .filter(Boolean) as any[];
+          return instances;
+        });
       
-      if (updatedComponents && updatedComponents.length > 0) {
-        console.log(`Updating active design with ${updatedComponents.length} components`);
-        state.updateActiveDesign(updatedComponents);
+      const finalComponentList = updatedComponentsArray;
+
+      if (finalComponentList && finalComponentList.length > 0) {
+        console.log(`Updating active design with ${finalComponentList.length} individual component instances`);
+        state.updateActiveDesign(finalComponentList);
       } else {
         console.warn("No components found to update design with");
         toast.warning("No components found to update design with. Please assign components to roles first.");
