@@ -37,6 +37,7 @@ export const RackLayoutsTab: React.FC = () => {
   const [placementReport, setPlacementReport] = useState<PlacementReport | null>(null);
   const [isPlacing, setIsPlacing] = useState(false);
   const scrollStep = 300;
+  const testDeviceId = "test-device-id-for-debug"; // Hardcoded ID for testing
   
   useEffect(() => {
     const currentRackProfilesSource = activeDesign?.rackProfiles || initializedRackProfiles;
@@ -62,15 +63,10 @@ export const RackLayoutsTab: React.FC = () => {
     }
   }, [selectedRackId, activeDesign]);
 
-  const handleDeviceClick = useCallback((deviceId: string) => {
-    setSelectedDeviceId(deviceId);
+  const handleDeviceClick = useCallback((originalDeviceId: string) => {
+    setSelectedDeviceId(originalDeviceId); 
+    setIsConnectionDialogOpen(true); 
   }, []);
-
-  useEffect(() => {
-    if (selectedDeviceId) {
-      setIsConnectionDialogOpen(true);
-    }
-  }, [selectedDeviceId]);
 
   const handleCloseConnectionDialog = useCallback(() => {
     setIsConnectionDialogOpen(false);
@@ -198,10 +194,10 @@ export const RackLayoutsTab: React.FC = () => {
         // onOpenChange={setIsConnectionDialogOpen} // Temporarily remove onOpenChange
       >
         <DialogContent className="sm:max-w-[600px]">
-          {selectedDeviceId && (
+          {isConnectionDialogOpen && (
             <ConnectionPanel 
-              deviceId={selectedDeviceId}
-              onClose={handleCloseConnectionDialog} // This will set isConnectionDialogOpen to false
+              deviceId={selectedDeviceId || testDeviceId}
+              onClose={handleCloseConnectionDialog}
             />
           )}
         </DialogContent>
