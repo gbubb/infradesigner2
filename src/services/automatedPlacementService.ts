@@ -1,6 +1,7 @@
+
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from './rackService';
-import { InfrastructureComponent, RackProfile, RackType } from '@/types/infrastructure';
+import { InfrastructureComponent, RackProfile, RackType, ComponentType } from '@/types/infrastructure';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface PlacementReportItem {

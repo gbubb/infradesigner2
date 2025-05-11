@@ -1,8 +1,9 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
 import { DeviceRoleType } from '@/types/infrastructure/requirements-types';
-import { ComponentType } from '@/types/infrastructure/component-types';
+import { ComponentType, RackType } from '@/types/infrastructure';
 import { toast } from 'sonner';
 
 export interface RackProfileInitializationData {
@@ -67,7 +68,7 @@ export const useRackInitialization = () => {
         for (let rackNumInAZ = 1; rackNumInAZ <= computeRacksPerAZ; rackNumInAZ++) {
           if (newRacks.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
           const simpleRackName = `Rack ${globalRackCounter}`;
-          const rackId = RackService.createRackProfile(simpleRackName, 42, az.id, 'ComputeStorage');
+          const rackId = RackService.createRackProfile(simpleRackName, 42, az.id, RackType.ComputeStorage);
           newRacks.push({ id: rackId, name: simpleRackName, azName: az.name, availabilityZoneId: az.id, rackType: 'ComputeStorage' });
           globalRackCounter++;
         }
@@ -80,7 +81,7 @@ export const useRackInitialization = () => {
         for (let rackNumInAZ = 1; rackNumInAZ <= computeRacksPerAZ; rackNumInAZ++) {
           if (newRacks.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
           const simpleRackName = `Rack ${globalRackCounter}`;
-          const rackId = RackService.createRackProfile(simpleRackName, 42, azId, 'ComputeStorage');
+          const rackId = RackService.createRackProfile(simpleRackName, 42, azId, RackType.ComputeStorage);
           newRacks.push({ id: rackId, name: simpleRackName, azName: azName, availabilityZoneId: azId, rackType: 'ComputeStorage' });
           globalRackCounter++;
         }
@@ -96,7 +97,7 @@ export const useRackInitialization = () => {
       }
       for (let i = 1; i <= networkCoreRackQuantity; i++) {
         const simpleCoreRackName = `Core Rack ${coreRackCounter}`;
-        const rackId = RackService.createRackProfile(simpleCoreRackName, 42, coreAzId, 'Core');
+        const rackId = RackService.createRackProfile(simpleCoreRackName, 42, coreAzId, RackType.Core);
         newRacks.push({ id: rackId, name: simpleCoreRackName, azName: coreAzName, availabilityZoneId: coreAzId, rackType: 'Core' });
         coreRackCounter++;
       }
