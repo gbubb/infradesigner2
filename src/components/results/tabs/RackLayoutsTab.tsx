@@ -23,20 +23,28 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useDesignStore } from '@/store/designStore';
 import { StoreState } from '@/store/types';
-import { InfrastructureComponent } from '@/types/infrastructure';
+import { InfrastructureComponent, RackProfile } from '@/types/infrastructure';
 import { useConnectionManager } from '@/hooks/design/useConnectionManager';
 
-// Selector and equality function for designComponents (used by ConnectionPanel via props)
-const panelSelector = (state: StoreState) => state.activeDesign?.components || [];
-const componentsEqualityFn = (oldComponents: InfrastructureComponent[], newComponents: InfrastructureComponent[]): boolean => {
-  if (oldComponents === newComponents) return true;
-  if (oldComponents.length !== newComponents.length) return false;
-  return JSON.stringify(oldComponents) === JSON.stringify(newComponents);
+// Explicit type for the selector function
+const panelSelector = (state: StoreState): InfrastructureComponent[] => state.activeDesign?.components || [];
+
+// Explicit type for the equality function
+const componentsEqualityFn = (
+  oldState: InfrastructureComponent[], 
+  newState: InfrastructureComponent[]
+): boolean => {
+  if (oldState === newState) return true;
+  if (oldState.length !== newState.length) return false;
+  return JSON.stringify(oldState) === JSON.stringify(newState);
 };
 
 export const RackLayoutsTab: React.FC = () => {
   const { rackProfiles: initializedRackProfiles, availabilityZones: initializedAzNames } = useRackInitialization();
-  const activeDesignFromStore = useDesignStore(state => state.activeDesign);
+  const activeDesign = useDesignStore(state => state.activeDesign);
+  const rackProfilesFromStore = useMemo(() => {
+    return activeDesign?.rackProfiles || [];
+  }, [activeDesign?.rackProfiles]);
 
   const [selectedRackId, setSelectedRackId] = useState<string | null>(null);
   const [rackStats, setRackStats] = useState<any | null>(null);
@@ -48,51 +56,40 @@ export const RackLayoutsTab: React.FC = () => {
   const [placementReport, setPlacementReport] = useState<PlacementReport | null>(null);
   const [isPlacing, setIsPlacing] = useState(false);
   const scrollStep = 300;
-  const testDeviceId = "test-device-id-for-debug"; // Hardcoded ID for testing
-  const renderCountRef = React.useRef(0); // Ref for logging render counts
+  const testDeviceId = "test-device-id-for-debug";
+  const renderCountRef = React.useRef(0);
   
-  // Data for ConnectionPanel (hoisted from ConnectionPanel)
-  const designComponentsForPanel = useDesignStore(panelSelector, componentsEqualityFn);
+  // Explicitly type the store hook call if linter is still confused
+  const designComponentsForPanel: InfrastructureComponent[] = useDesignStore(panelSelector, componentsEqualityFn);
   const connectionManagerData = useConnectionManager();
 
   useEffect(() => {
     renderCountRef.current += 1;
-    console.log(`RackLayoutsTab: Render count: ${renderCountRef.current}`);
+    // console.log(`RackLayoutsTab: Render count: ${renderCountRef.current}`); // Keep logs minimal for now
   });
 
   useEffect(() => {
-    console.log("EFFECT: Initial selectedRackId - Firing", { 
-      initializedRackProfilesLength: initializedRackProfiles.length, 
-      selectedRackId,
-      activeDesignRackProfilesLength: activeDesignFromStore?.rackProfiles?.length
-    });
-    const currentRackProfilesSource = activeDesignFromStore?.rackProfiles || initializedRackProfiles;
+    // console.log("EFFECT: Initial selectedRackId - Firing", { /* ... */ });
+    const currentRackProfilesSource = rackProfilesFromStore.length > 0 ? rackProfilesFromStore : initializedRackProfiles;
     if (currentRackProfilesSource.length > 0 && 
         (!selectedRackId || !currentRackProfilesSource.find(r => r.id === selectedRackId))) {
       const newSelectedRackId = currentRackProfilesSource[0].id;
-      console.log("EFFECT: Initial selectedRackId - Setting selectedRackId to:", newSelectedRackId);
+      // console.log("EFFECT: Initial selectedRackId - Setting selectedRackId to:", newSelectedRackId);
       setSelectedRackId(newSelectedRackId); 
     } else if (currentRackProfilesSource.length === 0 && selectedRackId) {
-      console.log("EFFECT: Initial selectedRackId - Setting selectedRackId to null (no racks)");
+      // console.log("EFFECT: Initial selectedRackId - Setting selectedRackId to null (no racks)");
       setSelectedRackId(null);
     } else {
-      console.log("EFFECT: Initial selectedRackId - No change to selectedRackId");
+      // console.log("EFFECT: Initial selectedRackId - No change to selectedRackId");
     }
-  }, [activeDesignFromStore?.rackProfiles, initializedRackProfiles, selectedRackId]);
+  }, [rackProfilesFromStore, initializedRackProfiles, selectedRackId]);
   
   useEffect(() => {
-    if (selectedRackId && activeDesignFromStore) {
-      try {
-        const stats = analyzeRackLayout(selectedRackId);
-        setRackStats(stats);
-      } catch (error) {
-        console.error(`Error analyzing rack layout for ${selectedRackId}:`, error);
-        setRackStats(null);
-      }
-    } else {
-      setRackStats(null);
-    }
-  }, [selectedRackId, activeDesignFromStore]);
+    if (selectedRackId && activeDesign) {
+      try { const stats = analyzeRackLayout(selectedRackId); setRackStats(stats); }
+      catch (error) { console.error(`Error analyzing rack layout for ${selectedRackId}:`, error); setRackStats(null); }
+    } else { setRackStats(null); }
+  }, [selectedRackId, activeDesign]);
 
   const handleDeviceClick = useCallback((deviceId: string) => {
     setSelectedDeviceId(deviceId);
@@ -105,21 +102,16 @@ export const RackLayoutsTab: React.FC = () => {
   }, []);
   
   const currentDisplayRackProfiles = useMemo((): RackProfileInitializationData[] => {
-    const profilesFromStore = activeDesignFromStore?.rackProfiles;
-    if (profilesFromStore) {
-      return profilesFromStore.map(r => ({
-        id: r.id,
-        name: r.name,
+    const profilesToUse = rackProfilesFromStore.length > 0 ? rackProfilesFromStore : initializedRackProfiles;
+    return profilesToUse.map(r => ({
+        id: r.id, name: r.name,
         azName: initializedRackProfiles.find(irp => irp.availabilityZoneId === r.availabilityZoneId)?.azName || 
-                initializedAzNames.find(azName => azName === r.availabilityZoneId) ||
-                r.availabilityZoneId || 
-                (r.rackType === 'Core' ? 'Core' : 'Unknown AZ'),
+                initializedAzNames.find(azName => azName === r.availabilityZoneId) || 
+                r.availabilityZoneId || (r.rackType === 'Core' ? 'Core' : 'Unknown AZ'),
         availabilityZoneId: r.availabilityZoneId,
         rackType: r.rackType
-      }));
-    }
-    return initializedRackProfiles;
-  }, [activeDesignFromStore?.rackProfiles, initializedRackProfiles, initializedAzNames]);
+      }) as RackProfileInitializationData);
+  }, [rackProfilesFromStore, initializedRackProfiles, initializedAzNames]);
 
   const uniqueAzNamesForFilter = useMemo(() => {
     return [...new Set(currentDisplayRackProfiles.map(r => r.azName).filter(Boolean))] as string[];
