@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
@@ -61,17 +60,16 @@ export const RackLayoutsTab: React.FC = () => {
     }
   }, [selectedRackId]);
 
-  // Simplified device click handler
+  // Device click handler
   const handleDeviceClick = useCallback((deviceId: string) => {
     console.log("Device clicked:", deviceId);
     setSelectedDeviceId(deviceId);
     setIsConnectionDialogOpen(true);
   }, []);
 
-  // Simplified dialog close handler
+  // Dialog close handler
   const handleCloseConnectionDialog = useCallback(() => {
     setIsConnectionDialogOpen(false);
-    // Don't immediately clear the selectedDeviceId
   }, []);
   
   const filteredRacks = rackProfiles.filter(
@@ -150,9 +148,8 @@ export const RackLayoutsTab: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
 
-      {/* Ultra simplified Connection Dialog */}
+      {/* Connection Dialog */}
       {isConnectionDialogOpen && selectedDeviceId && (
         <Dialog 
           open={isConnectionDialogOpen} 
