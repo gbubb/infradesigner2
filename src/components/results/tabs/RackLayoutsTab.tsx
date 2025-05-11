@@ -193,12 +193,15 @@ export const RackLayoutsTab: React.FC = () => {
       </div>
 
       {/* Connection Management Dialog */}
-      <Dialog open={isConnectionDialogOpen} onOpenChange={setIsConnectionDialogOpen}>
+      <Dialog 
+        open={isConnectionDialogOpen} 
+        // onOpenChange={setIsConnectionDialogOpen} // Temporarily remove onOpenChange
+      >
         <DialogContent className="sm:max-w-[600px]">
           {selectedDeviceId && (
             <ConnectionPanel 
               deviceId={selectedDeviceId}
-              onClose={handleCloseConnectionDialog}
+              onClose={handleCloseConnectionDialog} // This will set isConnectionDialogOpen to false
             />
           )}
         </DialogContent>
