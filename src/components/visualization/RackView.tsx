@@ -15,6 +15,7 @@ interface RackViewProps {
   showLabels?: boolean;
   labelInterval?: number;
   onDeviceClick?: (deviceId: string) => void;
+  onDeviceRemoved?: () => void;
 }
 
 // Component type color mapping
@@ -147,9 +148,10 @@ export const RackView: React.FC<RackViewProps> = ({
   width = 300,
   showLabels = true,
   labelInterval = 5,
-  onDeviceClick
+  onDeviceClick,
+  onDeviceRemoved
 }) => {
-  const { rackProfile, placedDevices, placeDevice, moveDevice } = useRackLayout(rackProfileId);
+  const { rackProfile, placedDevices, placeDevice, moveDevice, removeDevice } = useRackLayout(rackProfileId);
   const activeDesign = useDesignStore(state => state.activeDesign);
   
   // Calculate RU height once outside the component to prevent re-calculations on every render
@@ -217,6 +219,20 @@ export const RackView: React.FC<RackViewProps> = ({
       canDrop: !!monitor.canDrop(),
     }),
   }), [rackProfileId, placeDevice, moveDevice, calculateDropRUPosition]);
+  
+  // Handle device removal with callback notification
+  const handleRemoveDevice = useCallback((deviceId: string) => {
+    if (!rackProfile) return { success: false, error: "No rack selected" };
+    
+    const result = removeDevice(deviceId);
+    
+    if (result.success && onDeviceRemoved) {
+      // Notify parent component that a device was removed
+      onDeviceRemoved();
+    }
+    
+    return result;
+  }, [rackProfile, removeDevice, onDeviceRemoved]);
   
   if (!rackProfile) {
     return (
