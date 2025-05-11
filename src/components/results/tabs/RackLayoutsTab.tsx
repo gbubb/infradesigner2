@@ -194,11 +194,16 @@ export const RackLayoutsTab: React.FC = () => {
         // onOpenChange={setIsConnectionDialogOpen} // Temporarily remove onOpenChange
       >
         <DialogContent className="sm:max-w-[600px]">
-          {isConnectionDialogOpen && (
-            <ConnectionPanel 
-              deviceId={selectedDeviceId || testDeviceId}
-              onClose={handleCloseConnectionDialog}
-            />
+          {/* CONDITIONAL RENDERING FOR DEBUGGING */}
+          {isConnectionDialogOpen && selectedDeviceId && (
+            <div>
+              <p>Debug: Dialog is open for device ID: {selectedDeviceId}</p>
+              <p>ConnectionPanel itself is NOT rendered for this test.</p>
+              <Button onClick={handleCloseConnectionDialog}>Close Debug Dialog</Button>
+            </div>
+          )}
+          {isConnectionDialogOpen && !selectedDeviceId && (
+             <p>Debug: Dialog is open, but no selectedDeviceId.</p>
           )}
         </DialogContent>
       </Dialog>
