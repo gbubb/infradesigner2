@@ -89,17 +89,7 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
     </div>
   );
 
-  // Determine if we have enough space for two lines (name + model)
-  const canShowTwoLines = height >= 38 && ruSize > 1; // Threshold for two distinct lines
-
-  let nameFontSize = '0.7rem';
-  if (ruSize === 1 && height < 20) { // Very small 1U
-    nameFontSize = '0.6rem';
-  } else if (ruSize === 1) {
-    nameFontSize = '0.65rem';
-  } else if (height < 30) { // Any multi-RU device with very small visual height
-    nameFontSize = '0.6rem';
-  }
+  const showModelLine = height >= 30 && ruSize > 1; // Only show model if enough space AND not a 1U device
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -108,7 +98,7 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
           <div
             ref={drag}
             className={cn(
-              "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-1 py-0 overflow-hidden text-center",
+              "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-1 py-0 overflow-hidden", // Minimal padding
               getDeviceColor(type),
               "cursor-move"
             )}
@@ -117,32 +107,28 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
               height: `${height}px`,
               zIndex: 10,
               opacity: isDragging ? 0.5 : 1,
-              boxSizing: 'border-box',
+              fontSize: ruSize === 1 ? '0.65rem' : '0.7rem', // Slightly larger for 1U name if it's the only text
+              lineHeight: '1.1', // Consistent tighter line height
+              boxSizing: 'border-box', // Ensure padding/border are included in height
             }}
             onClick={handleClick}
           >
-            <div 
-              className="w-full truncate flex items-center justify-center"
-              style={{ 
-                fontWeight: 500, 
-                fontSize: nameFontSize, 
-                lineHeight: '1.1', 
-                height: canShowTwoLines ? '55%' : '100%', // Give name full height if only one line of text shown on face
-                padding: '1px 0', // Minimal vertical padding for the text itself
-              }}
-            >
+            <div className="w-full text-center truncate" style={{ fontWeight: 500, lineHeight: ruSize === 1 ? `${height-2}px` : 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               {name}
             </div>
-
-            {canShowTwoLines && (
-              <div 
-                className="w-full text-center truncate opacity-80"
-                style={{ fontSize: '0.6rem', height: '45%', lineHeight: '1.1', padding: '0 0 1px 0' }}
-              >
+            {/* Conditionally render model line only if showModelLine is true (which implies ruSize > 1) */}
+            {showModelLine && (
+              <div className="w-full text-center truncate opacity-80" style={{ fontSize: '0.6rem'}}>
                 {model}
               </div>
             )}
-            {/* No separate RU size display on the device face anymore; rely on tooltip */}
+            {/* DO NOT show separate RU size for 1U devices to save space for name */}
+            {/* For multi-RU devices where model isn't shown due to small height, show RU size instead of model */} 
+            {!showModelLine && ruSize > 1 && height > 15 && (
+              <div className="w-full text-center truncate opacity-70" style={{ fontSize: '0.6rem'}}>
+                {ruSize}U
+              </div>
+            )}
           </div>
         </TooltipTrigger>
         <TooltipContent side="right" align="start">

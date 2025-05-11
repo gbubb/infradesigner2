@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
 import { DndProvider } from 'react-dnd';
@@ -7,7 +7,7 @@ import { ConnectionPanel } from '@/components/connections/ConnectionPanel';
 import { RackFilterControls } from './rack-layouts/RackFilterControls';
 import { RackHorizontalScroller } from './rack-layouts/RackHorizontalScroller';
 import { RackDetailView } from './rack-layouts/RackDetailView';
-import { useRackInitialization, RackProfileInitializationData } from './rack-layouts/useRackInitialization';
+import { useRackInitialization } from './rack-layouts/useRackInitialization';
 import { DevicePalette } from '@/components/palette/DevicePalette';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -21,35 +21,17 @@ import {
   AlertDialogFooter, 
   AlertDialogCancel 
 } from '@/components/ui/alert-dialog';
-import { useDesignStore } from '@/store/designStore';
-import { shallow } from 'zustand/shallow';
-import { StoreState } from '@/store/types';
-import { InfrastructureComponent, RackProfile } from '@/types/infrastructure';
-import { useConnectionManager } from '@/hooks/design/useConnectionManager';
-
-// Explicit type for the selector function
-const panelSelector = (state: StoreState): InfrastructureComponent[] => state.activeDesign?.components || [];
-
-// Explicit type for the equality function
-const componentsEqualityFn = (
-  oldState: InfrastructureComponent[], 
-  newState: InfrastructureComponent[]
-): boolean => {
-  if (oldState === newState) return true;
-  if (oldState.length !== newState.length) return false;
-  return JSON.stringify(oldState) === JSON.stringify(newState);
-};
 
 export const RackLayoutsTab: React.FC = () => {
-  const { rackProfiles: initializedRackProfiles, availabilityZones: initializedAzNames } = useRackInitialization();
-  const activeDesign = useDesignStore(state => state.activeDesign);
-  const rackProfilesFromStore: RackProfile[] = useDesignStore(
-    (state: StoreState) => state.activeDesign?.rackProfiles || [],
-    shallow
-  );
-
+  const { rackProfiles, availabilityZones } = useRackInitialization();
   const [selectedRackId, setSelectedRackId] = useState<string | null>(null);
-  const [rackStats, setRackStats] = useState<any | null>(null);
+  const [rackStats, setRackStats] = useState<{
+    totalRU: number;
+    usedRU: number;
+    availableRU: number;
+    utilizationPercentage: number;
+    deviceCount: number;
+  } | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
   const [selectedAZ, setSelectedAZ] = useState<string | 'all'>('all');
@@ -58,66 +40,29 @@ export const RackLayoutsTab: React.FC = () => {
   const [placementReport, setPlacementReport] = useState<PlacementReport | null>(null);
   const [isPlacing, setIsPlacing] = useState(false);
   const scrollStep = 300;
-  const testDeviceId = "test-device-id-for-debug";
-  const renderCountRef = React.useRef(0);
   
-  // Explicitly type the store hook call if linter is still confused
-  const designComponentsForPanel: InfrastructureComponent[] = useDesignStore(panelSelector, componentsEqualityFn);
-  const connectionManagerData = useConnectionManager();
-
-  // BOLD CHANGE: Create a memoized list of just rack IDs for the effect's dependency
-  const currentRackProfileIds = useMemo(() => {
-    const source = rackProfilesFromStore.length > 0 ? rackProfilesFromStore : initializedRackProfiles;
-    return source.map(r => r.id);
-  }, [rackProfilesFromStore, initializedRackProfiles]);
-
+  // Set initial selected rack when rack profiles are loaded
   useEffect(() => {
-    renderCountRef.current += 1;
-    console.log(`RackLayoutsTab: Render count: ${renderCountRef.current}`);
-  });
-
-  useEffect(() => {
-    // console.log(`EFFECT: Initial selectedRackId - Firing. SelectedRackId: ${selectedRackId}`);
-    // console.log("EFFECT: rackProfilesFromStore IDs:", rackProfilesFromStore.map(r => r.id));
-    // console.log("EFFECT: initializedRackProfiles IDs:", initializedRackProfiles.map(r => r.id));
-    // console.log("EFFECT: currentRackProfileIds:", currentRackProfileIds);
-    
-    // const currentRackProfilesSource = rackProfilesFromStore.length > 0 ? rackProfilesFromStore : initializedRackProfiles; // Old way
-
-    if (currentRackProfileIds.length > 0) { // Use the memoized ID list
-      const firstRackId = currentRackProfileIds[0];
-      // Condition to select the first rack:
-      // 1. If no rack is currently selected (selectedRackId is null/undefined)
-      // OR
-      // 2. If the currently selected rack is no longer found in the current list of rack IDs
-      if (!selectedRackId || !currentRackProfileIds.includes(selectedRackId)) { // Use the memoized ID list
-        // console.log(`EFFECT: Condition met to potentially set selectedRackId. Current: ${selectedRackId}, Proposed new: ${firstRackId}`);
-        if (selectedRackId !== firstRackId) { // Guard: Only set if different
-          // console.log(`EFFECT: Setting selectedRackId to ${firstRackId}`);
-          setSelectedRackId(firstRackId);
-        } else {
-          // console.log(`EFFECT: selectedRackId is already ${firstRackId}. No change.`);
-        }
-      } else {
-        // console.log(`EFFECT: selectedRackId (${selectedRackId}) is valid and found in currentRackProfileIds. No change needed.`);
-      }
-    } else if (selectedRackId !== null) { // If there are no racks, but one is still selected
-      // console.log(`EFFECT: No racks available (currentRackProfileIds is empty), but selectedRackId is ${selectedRackId}. Setting to null.`);
-      setSelectedRackId(null); // Guard is implicit: selectedRackId !== null
-    } else {
-      // console.log("EFFECT: No racks available, and selectedRackId is already null. No change.");
+    if (rackProfiles.length > 0 && !selectedRackId) {
+      setSelectedRackId(rackProfiles[0].id);
     }
-  }, [currentRackProfileIds, selectedRackId]); // MODIFIED Dependency array
+  }, [rackProfiles, selectedRackId]);
   
+  // Update rack stats when selected rack changes
   useEffect(() => {
-    if (selectedRackId && activeDesign) {
-      try { const stats = analyzeRackLayout(selectedRackId); setRackStats(stats); }
-      catch (error) { console.error(`Error analyzing rack layout for ${selectedRackId}:`, error); setRackStats(null); }
-    } else { setRackStats(null); }
-  }, [selectedRackId, activeDesign]);
+    if (selectedRackId) {
+      try {
+        const stats = analyzeRackLayout(selectedRackId);
+        setRackStats(stats);
+      } catch (error) {
+        console.error("Error analyzing rack layout:", error);
+        setRackStats(null);
+      }
+    }
+  }, [selectedRackId]);
 
-  const handleDeviceClick = useCallback((deviceIdClicked: string) => {
-    console.log(`RackLayoutsTab: DEBUG - handleDeviceClick for deviceId: ${deviceIdClicked}. ONLY setting isConnectionDialogOpen = true.`);
+  const handleDeviceClick = useCallback((deviceId: string) => {
+    setSelectedDeviceId(deviceId);
     setIsConnectionDialogOpen(true);
   }, []);
 
@@ -126,27 +71,11 @@ export const RackLayoutsTab: React.FC = () => {
     setSelectedDeviceId(null);
   }, []);
   
-  const currentDisplayRackProfiles = useMemo((): RackProfileInitializationData[] => {
-    const profilesToUse = rackProfilesFromStore.length > 0 ? rackProfilesFromStore : initializedRackProfiles;
-    return profilesToUse.map(r => ({
-        id: r.id, name: r.name,
-        azName: initializedRackProfiles.find(irp => irp.availabilityZoneId === r.availabilityZoneId)?.azName || 
-                initializedAzNames.find(azName => azName === r.availabilityZoneId) || 
-                r.availabilityZoneId || (r.rackType === 'Core' ? 'Core' : 'Unknown AZ'),
-        availabilityZoneId: r.availabilityZoneId,
-        rackType: r.rackType
-      }) as RackProfileInitializationData);
-  }, [rackProfilesFromStore, initializedRackProfiles, initializedAzNames]);
-
-  const uniqueAzNamesForFilter = useMemo(() => {
-    return [...new Set(currentDisplayRackProfiles.map(r => r.azName).filter(Boolean))] as string[];
-  }, [currentDisplayRackProfiles]);
-
-  const filteredRacks = useMemo(() => currentDisplayRackProfiles.filter(
-    rack => selectedAZ === 'all' || rack.availabilityZoneId === selectedAZ || rack.azName === selectedAZ
-  ), [currentDisplayRackProfiles, selectedAZ]);
+  const filteredRacks = rackProfiles.filter(
+    rack => selectedAZ === 'all' || rack.availabilityZoneId === selectedAZ
+  );
   
-  const selectedRackDetails = useMemo(() => currentDisplayRackProfiles.find(r => r.id === selectedRackId), [currentDisplayRackProfiles, selectedRackId]);
+  const selectedRack = rackProfiles.find(r => r.id === selectedRackId);
 
   const handleAutoPlaceDevices = () => {
     setIsPlacing(true);
@@ -194,9 +123,9 @@ export const RackLayoutsTab: React.FC = () => {
         <RackFilterControls
           selectedAZ={selectedAZ}
           setSelectedAZ={setSelectedAZ}
-          availabilityZones={uniqueAzNamesForFilter}
+          availabilityZones={availabilityZones}
           selectedRackId={selectedRackId}
-          setSelectedRackId={() => { console.log("RackFilterControls attempted to set rack ID - NO_OP"); }}
+          setSelectedRackId={setSelectedRackId}
           filteredRacks={filteredRacks}
         />
         
@@ -204,7 +133,7 @@ export const RackLayoutsTab: React.FC = () => {
         <RackHorizontalScroller
           racks={filteredRacks}
           selectedRackId={selectedRackId}
-          setSelectedRackId={() => { console.log("RackHorizontalScroller attempted to set rack ID - NO_OP"); }}
+          setSelectedRackId={setSelectedRackId}
           scrollPosition={scrollPosition}
           setScrollPosition={setScrollPosition}
           scrollStep={scrollStep}
@@ -224,7 +153,7 @@ export const RackLayoutsTab: React.FC = () => {
                 rackProfileId={selectedRackId}
                 onDeviceClick={handleDeviceClick}
                 rackStats={rackStats}
-                selectedRack={selectedRackDetails}
+                selectedRack={selectedRack}
               />
             )}
             {!selectedRackId && (
@@ -237,14 +166,11 @@ export const RackLayoutsTab: React.FC = () => {
       </div>
 
       {/* Connection Management Dialog */}
-      <Dialog 
-        open={isConnectionDialogOpen} 
-        // onOpenChange={setIsConnectionDialogOpen} // Temporarily remove onOpenChange
-      >
+      <Dialog open={isConnectionDialogOpen} onOpenChange={setIsConnectionDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
-          {isConnectionDialogOpen && (
+          {selectedDeviceId && (
             <ConnectionPanel 
-              deviceId={"debug-test-device-id"}
+              deviceId={selectedDeviceId}
               onClose={handleCloseConnectionDialog}
             />
           )}
@@ -296,13 +222,13 @@ export const RackLayoutsTab: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {item.rackId ? currentDisplayRackProfiles.find(r => r.id === item.rackId)?.name : '-'}
+                          {item.rackId ? rackProfiles.find(r => r.id === item.rackId)?.name : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {item.ruPosition || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {item.azId ? (item.azId === 'default' ? 'Default' : currentDisplayRackProfiles.find(r => r.availabilityZoneId === item.azId)?.azName || item.azId) : '-'}
+                          {item.azId ? (item.azId === 'default' ? 'Default' : item.azId) : '-'}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                           {item.reason || '-'}
