@@ -65,7 +65,7 @@ export const RackLayoutsTab: React.FC = () => {
 
   useEffect(() => {
     renderCountRef.current += 1;
-    // console.log(`RackLayoutsTab: Render count: ${renderCountRef.current}`); // Keep logs minimal for now
+    console.log(`RackLayoutsTab: Render count: ${renderCountRef.current}`);
   });
 
   useEffect(() => {
@@ -91,8 +91,8 @@ export const RackLayoutsTab: React.FC = () => {
     } else { setRackStats(null); }
   }, [selectedRackId, activeDesign]);
 
-  const handleDeviceClick = useCallback((deviceId: string) => {
-    setSelectedDeviceId(deviceId);
+  const handleDeviceClick = useCallback((deviceIdClicked: string) => {
+    console.log(`RackLayoutsTab: DEBUG - handleDeviceClick for deviceId: ${deviceIdClicked}. ONLY setting isConnectionDialogOpen = true.`);
     setIsConnectionDialogOpen(true);
   }, []);
 
@@ -217,16 +217,10 @@ export const RackLayoutsTab: React.FC = () => {
         // onOpenChange={setIsConnectionDialogOpen} // Temporarily remove onOpenChange
       >
         <DialogContent className="sm:max-w-[600px]">
-          {selectedDeviceId && (
+          {isConnectionDialogOpen && (
             <ConnectionPanel 
-              deviceId={selectedDeviceId}
+              deviceId={"debug-test-device-id"}
               onClose={handleCloseConnectionDialog}
-              // Pass data from hoisted hooks
-              designComponents={designComponentsForPanel}
-              connections={connectionManagerData.connections}
-              addConnection={connectionManagerData.addConnection}
-              removeConnection={connectionManagerData.removeConnection}
-              // getConnectedPort will be defined inside ConnectionPanel using these props
             />
           )}
         </DialogContent>
