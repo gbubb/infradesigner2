@@ -1,292 +1,137 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRackLayout } from '@/hooks/design/useRackLayout';
-import { ComponentType } from '@/types/infrastructure/component-types';
-import { cn } from '@/lib/utils';
-import { Card } from '@/components/ui/card';
-import { useDesignStore } from '@/store/designStore';
-import { useDrop, useDrag } from 'react-dnd';
-import { toast } from 'sonner';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useDrop } from 'react-dnd';
 
 interface RackViewProps {
-  rackProfileId: string;
-  height?: number;
-  width?: number;
-  showLabels?: boolean;
-  labelInterval?: number;
+  rackId: string;
   onDeviceClick?: (deviceId: string) => void;
+  onDevicePlaced?: () => void;
 }
 
-// Component type color mapping
-const getDeviceColor = (type: string): string => {
-  switch (type) {
-    case ComponentType.Server:
-      return 'bg-blue-200 border-blue-400 text-blue-800';
-    case ComponentType.Switch:
-      return 'bg-green-200 border-green-400 text-green-800';
-    case ComponentType.Router:
-      return 'bg-yellow-200 border-yellow-400 text-yellow-800';
-    case ComponentType.Firewall:
-      return 'bg-red-200 border-red-400 text-red-800';
-    case ComponentType.FiberPatchPanel:
-    case ComponentType.CopperPatchPanel:
-      return 'bg-cyan-200 border-cyan-400 text-cyan-800';
-    default:
-      return 'bg-gray-200 border-gray-400 text-gray-800';
-  }
-};
-
-interface PlacedDeviceItemProps {
-  deviceId: string;
-  name: string;
-  model: string;
-  type: ComponentType;
-  ruSize: number;
-  ruPosition: number;
-  bottom: number;
-  height: number;
-  onDeviceClick?: (deviceId: string) => void;
-  manufacturer?: string;
-  powerRequired?: number;
-  portsCount?: number;
-}
-
-const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
-  deviceId,
-  name,
-  model,
-  type,
-  ruSize,
-  ruPosition,
-  bottom,
-  height,
-  onDeviceClick,
-  manufacturer,
-  powerRequired,
-  portsCount
-}) => {
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'RACK_PLACED_DEVICE',
-    item: { id: deviceId, ruSize, currentPosition: ruPosition },
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
-    }),
-  }), [deviceId, ruSize, ruPosition]);
-
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onDeviceClick) onDeviceClick(deviceId);
-  }, [deviceId, onDeviceClick]);
-
-  const tooltipContent = (
-    <div>
-      <p><strong>{name}</strong> ({model})</p>
-      <p>Type: {type} ({ruSize}U)</p>
-      <p>Position: RU {ruPosition}</p>
-      {manufacturer && <p>Manufacturer: {manufacturer}</p>}
-      {powerRequired !== undefined && <p>Power: {powerRequired}W</p>}
-      {portsCount !== undefined && <p>Ports: {portsCount}</p>}
-    </div>
-  );
-
-  const showModelLine = height >= 30 && ruSize > 1; // Only show model if enough space AND not a 1U device
-
-  return (
-    <TooltipProvider delayDuration={300}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div
-            ref={drag}
-            className={cn(
-              "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-1 py-0 overflow-hidden", // Minimal padding
-              getDeviceColor(type),
-              "cursor-move"
-            )}
-            style={{
-              bottom: `${bottom}px`,
-              height: `${height}px`,
-              zIndex: 10,
-              opacity: isDragging ? 0.5 : 1,
-              fontSize: ruSize === 1 ? '0.65rem' : '0.7rem', // Slightly larger for 1U name if it's the only text
-              lineHeight: '1.1', // Consistent tighter line height
-              boxSizing: 'border-box', // Ensure padding/border are included in height
-            }}
-            onClick={handleClick}
-          >
-            <div className="w-full text-center truncate" style={{ fontWeight: 500, lineHeight: ruSize === 1 ? `${height-2}px` : 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              {name}
-            </div>
-            {/* Conditionally render model line only if showModelLine is true (which implies ruSize > 1) */}
-            {showModelLine && (
-              <div className="w-full text-center truncate opacity-80" style={{ fontSize: '0.6rem'}}>
-                {model}
-              </div>
-            )}
-            {/* DO NOT show separate RU size for 1U devices to save space for name */}
-            {/* For multi-RU devices where model isn't shown due to small height, show RU size instead of model */} 
-            {!showModelLine && ruSize > 1 && height > 15 && (
-              <div className="w-full text-center truncate opacity-70" style={{ fontSize: '0.6rem'}}>
-                {ruSize}U
-              </div>
-            )}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="right" align="start">
-          {tooltipContent}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-});
-
-PlacedDeviceItem.displayName = 'PlacedDeviceItem';
-
-export const RackView: React.FC<RackViewProps> = ({
-  rackProfileId,
-  height = 700,
-  width = 300,
-  showLabels = true,
-  labelInterval = 5,
-  onDeviceClick
-}) => {
-  const { rackProfile, placedDevices, placeDevice, moveDevice } = useRackLayout(rackProfileId);
-  const activeDesign = useDesignStore(state => state.activeDesign);
+export const RackView: React.FC<RackViewProps> = ({ rackId, onDeviceClick, onDevicePlaced }) => {
+  const { rackProfile, placedDevices, placeDevice } = useRackLayout(rackId);
+  const [isDropping, setIsDropping] = useState(false);
   
-  // Calculate RU height once outside the component to prevent re-calculations on every render
-  const unitHeight = useMemo(() => {
-    return rackProfile ? height / rackProfile.uHeight : 0;
-  }, [rackProfile, height]);
-  
-  // Generate array of rack units once
-  const rackUnits = useMemo(() => {
-    return rackProfile ? Array.from({ length: rackProfile.uHeight }, (_, i) => i + 1) : [];
-  }, [rackProfile]);
-
-  const calculateDropRUPosition = useCallback((clientOffset: { y: number }) => {
-    if (!rackProfile) return 1;
-
-    // Get the rack DOM element
-    const rackElement = document.getElementById(`rack-${rackProfileId}`);
-    if (!rackElement) return 1;
-    
-    // Get rack rect
-    const rackRect = rackElement.getBoundingClientRect();
-    
-    // Calculate y position within rack
-    const rackY = clientOffset.y - rackRect.top;
-    const totalUnits = rackProfile.uHeight;
-    
-    // Convert to RU position (bottom to top)
-    const ruPosition = totalUnits - Math.floor((rackY / rackRect.height) * totalUnits);
-    
-    // Ensure value is in bounds
-    return Math.max(1, Math.min(ruPosition, totalUnits));
-  }, [rackProfileId, rackProfile]);
-
-  const [{ isOver, canDrop }, drop] = useDrop(() => ({
-    accept: ['RACK_DEVICE', 'RACK_PLACED_DEVICE'],
-    drop: (item: { id: string; ruSize: number; currentPosition?: number }, monitor) => {
-      // Get drop position from client offset
-      const clientOffset = monitor.getClientOffset();
-      
-      if (!clientOffset) return;
-      
-      const ruPosition = calculateDropRUPosition(clientOffset);
-      
-      // If it's a device already in the rack being moved
-      if (monitor.getItemType() === 'RACK_PLACED_DEVICE' && item.currentPosition !== undefined) {
-        const result = moveDevice(item.id, ruPosition);
-        if (result.success) {
-          toast.success(`Device moved to RU ${ruPosition}`);
-        } else {
-          toast.error(result.error || 'Failed to move device');
-        }
-      } 
-      // If it's a new device being added from the palette
-      else if (monitor.getItemType() === 'RACK_DEVICE') {
-        const result = placeDevice(item.id, ruPosition);
-        if (result.success) {
-          toast.success(`Device placed at RU ${ruPosition}`);
-        } else {
-          toast.error(result.error || 'Failed to place device');
-        }
-      }
+  // Set up drop target
+  const [{ isOver }, drop] = useDrop({
+    accept: 'device',
+    drop: (item: { deviceId: string, rackId?: string }, monitor) => {
+      console.log('Dropping device:', item.deviceId);
+      handleDeviceDrop(item.deviceId);
+      return { rackId };
     },
     collect: (monitor) => ({
       isOver: !!monitor.isOver(),
-      canDrop: !!monitor.canDrop(),
     }),
-  }), [rackProfileId, placeDevice, moveDevice, calculateDropRUPosition]);
+  });
+
+  // Handle dropping a device onto the rack
+  const handleDeviceDrop = useCallback((deviceId: string) => {
+    setIsDropping(true);
+    
+    // Place the device in the rack
+    const result = placeDevice(deviceId);
+    
+    if (result.success) {
+      console.log(`Device ${deviceId} placed successfully at position ${result.placedPosition}`);
+      
+      // Notify parent component about device placement
+      if (onDevicePlaced) {
+        onDevicePlaced();
+      }
+    } else {
+      console.error(`Failed to place device ${deviceId}: ${result.error}`);
+    }
+    
+    setIsDropping(false);
+  }, [placeDevice, onDevicePlaced]);
+
+  // Handle device click
+  const handleDeviceClick = useCallback((deviceId: string) => {
+    if (onDeviceClick) {
+      onDeviceClick(deviceId);
+    }
+  }, [onDeviceClick]);
   
   if (!rackProfile) {
     return (
-      <Card className="p-4 flex items-center justify-center h-[200px]">
-        <p className="text-muted-foreground">No rack found with ID: {rackProfileId}</p>
-      </Card>
+      <div className="flex items-center justify-center h-[600px] border rounded-md bg-muted/20">
+        <p className="text-muted-foreground">Rack not found</p>
+      </div>
     );
   }
-  
+
+  // Create an array representing each RU position in the rack
+  const ruPositions = Array.from({ length: rackProfile.uHeight }, (_, i) => rackProfile.uHeight - i);
+
   return (
-    <Card className="p-4">
-      <div className="flex flex-col">
-        <div className="text-lg font-medium mb-2">{rackProfile.name}</div>
-        <div className="text-sm text-muted-foreground mb-4">
-          {rackProfile.uHeight}U - {placedDevices.length} devices
-        </div>
-        
-        <div 
-          id={`rack-${rackProfileId}`}
-          ref={drop}
-          className={`relative ${isOver ? 'bg-blue-50' : 'bg-gray-100'}`} 
-          style={{ height: `${height}px`, width: `${width}px` }}
-        >
-          {/* Rack background with unit markings */}
-          <div className="absolute inset-0 border border-gray-300 rounded">
-            {/* Rack unit markers */}
-            {rackUnits.map(unit => (
-              <div 
-                key={`ru-marker-${unit}`}
-                className="absolute w-full border-t border-gray-200" 
-                style={{ 
-                  bottom: `${(unit - 1) * unitHeight}px`, 
-                  height: `${unitHeight}px`
-                }}
-              >
-                {showLabels && unit % labelInterval === 0 && (
-                  <div className="absolute -left-8 text-xs font-medium" 
-                    style={{ bottom: `${unitHeight / 2 - 6}px` }}>
-                    {unit}
-                  </div>
-                )}
-              </div>
-            ))}
-            
-            {/* Placed devices */}
-            {placedDevices.map(({ placedDevice, component }) => {
-              const deviceHeight = (component.ruSize || 1) * unitHeight;
-              const bottomPosition = (placedDevice.ruPosition - 1) * unitHeight;
-              
-              return (
-                <PlacedDeviceItem
-                  key={`placed-device-${placedDevice.deviceId}`}
-                  deviceId={placedDevice.deviceId}
-                  name={component.name}
-                  model={component.model}
-                  type={component.type}
-                  ruSize={component.ruSize || 1}
-                  ruPosition={placedDevice.ruPosition}
-                  bottom={bottomPosition}
-                  height={deviceHeight}
-                  onDeviceClick={onDeviceClick}
-                  manufacturer={component.manufacturer}
-                  powerRequired={component.powerRequired}
-                  portsCount={component.ports?.length}
-                />
-              );
-            })}
-          </div>
-        </div>
+    <div 
+      ref={drop}
+      className={`relative border-2 rounded-md overflow-y-auto h-[600px] ${
+        isOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/20'
+      }`}
+    >
+      <div className="sticky top-0 bg-background z-10 flex justify-between border-b px-2 py-1">
+        <span className="font-medium">{rackProfile.name}</span>
+        <span className="text-muted-foreground">{rackProfile.uHeight}U</span>
       </div>
-    </Card>
+      
+      <div className="relative">
+        {ruPositions.map(position => {
+          // Find device at this position
+          const deviceAtPosition = placedDevices.find(
+            item => 
+              item.placedDevice.ruPosition <= position && 
+              item.placedDevice.ruPosition + (item.component?.ruSize || 1) - 1 >= position
+          );
+          
+          return (
+            <div 
+              key={position} 
+              className={`flex border-b h-8 ${deviceAtPosition ? '' : 'hover:bg-muted/50'}`}
+            >
+              <div className="w-8 flex items-center justify-center border-r bg-muted/20 text-xs font-mono">
+                {position}
+              </div>
+              
+              {deviceAtPosition ? (
+                <div 
+                  className={`flex-1 ${
+                    deviceAtPosition.placedDevice.ruPosition === position ? 'border-t-2 border-blue-500' : ''
+                  } ${
+                    deviceAtPosition.placedDevice.ruPosition + (deviceAtPosition.component?.ruSize || 1) - 1 === position ? 'border-b-2 border-blue-500' : ''
+                  }`}
+                >
+                  {deviceAtPosition.placedDevice.ruPosition === position && (
+                    <div 
+                      className={`h-full bg-blue-100 hover:bg-blue-200 cursor-pointer px-2 flex items-center`}
+                      style={{
+                        height: `${(deviceAtPosition.component?.ruSize || 1) * 2}rem`
+                      }}
+                      onClick={() => handleDeviceClick(deviceAtPosition.component.id)}
+                    >
+                      <div>
+                        <div className="font-medium truncate">{deviceAtPosition.component.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {deviceAtPosition.component.type} - {deviceAtPosition.component.ruSize || 1}U
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex-1"></div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      
+      {isDropping && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-20">
+          <div className="bg-white p-4 rounded shadow">Placing device...</div>
+        </div>
+      )}
+    </div>
   );
 };

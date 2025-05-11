@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
-import { DndProvider as ReactDndProvider } from 'react-dnd';
+import { ReactDndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ConnectionPanel } from '@/components/connections/ConnectionPanel';
 import { RackFilterControls } from './rack-layouts/RackFilterControls';
@@ -21,6 +21,7 @@ import {
   AlertDialogFooter, 
   AlertDialogCancel 
 } from '@/components/ui/alert-dialog';
+import { AutomatedPlacementService, PlacementReport } from '@/services/automatedPlacementService';
 
 export const RackLayoutsTab: React.FC = () => {
   const { rackProfiles, availabilityZones } = useRackInitialization();
@@ -37,7 +38,7 @@ export const RackLayoutsTab: React.FC = () => {
   const [selectedAZ, setSelectedAZ] = useState<string | 'all'>('all');
   const [scrollPosition, setScrollPosition] = useState(0);
   const [isPlacementDialogOpen, setIsPlacementDialogOpen] = useState(false);
-  const [placementReport, setPlacementReport] = useState<any | null>(null);
+  const [placementReport, setPlacementReport] = useState<PlacementReport | null>(null);
   const [isPlacing, setIsPlacing] = useState(false);
   const scrollStep = 300;
   
@@ -48,8 +49,8 @@ export const RackLayoutsTab: React.FC = () => {
     }
   }, [rackProfiles, selectedRackId]);
   
-  // Update rack stats when selected rack changes
-  useEffect(() => {
+  // Update rack stats when selected rack changes or when devices are added/removed
+  const updateRackStats = useCallback(() => {
     if (selectedRackId) {
       try {
         const stats = analyzeRackLayout(selectedRackId);
@@ -60,6 +61,11 @@ export const RackLayoutsTab: React.FC = () => {
       }
     }
   }, [selectedRackId]);
+  
+  // Initial stats load when rack changes
+  useEffect(() => {
+    updateRackStats();
+  }, [updateRackStats, selectedRackId]);
 
   // Device click handler
   const handleDeviceClick = useCallback((deviceId: string) => {
@@ -79,10 +85,41 @@ export const RackLayoutsTab: React.FC = () => {
   
   const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
 
-  const handleAutoPlaceDevices = () => {
-    // Simplified auto-place function
-    toast.info("Auto-placement disabled for debugging");
+  // Re-enable auto-placement functionality
+  const handleAutoPlaceDevices = async () => {
+    if (isPlacing) return;
+    
+    setIsPlacing(true);
+    toast.info("Starting automated device placement...");
+    
+    try {
+      // Run the automated placement service
+      const report = AutomatedPlacementService.placeAllDesignDevices();
+      
+      setPlacementReport(report);
+      setIsPlacementDialogOpen(true);
+      
+      // Update rack stats after placement
+      updateRackStats();
+      
+      if (report.success) {
+        toast.success(`Placed ${report.placedDevices} devices successfully`);
+      } else {
+        toast.error(`Placed ${report.placedDevices} devices, but failed to place ${report.failedDevices} devices`);
+      }
+    } catch (error) {
+      console.error("Error in automated placement:", error);
+      toast.error("Failed to execute automated placement");
+    } finally {
+      setIsPlacing(false);
+    }
   };
+
+  // Handler for device placement events to update rack stats
+  const handleDevicePlaced = useCallback(() => {
+    console.log("Device placement detected, updating rack stats");
+    updateRackStats();
+  }, [updateRackStats]);
 
   return (
     <ReactDndProvider backend={HTML5Backend}>
@@ -129,7 +166,10 @@ export const RackLayoutsTab: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Device palette - takes 1/4 of the space (now on the left) */}
           <div className="md:col-span-1">
-            <DevicePalette rackId={selectedRackId || undefined} />
+            <DevicePalette 
+              rackId={selectedRackId || undefined} 
+              onDevicePlaced={handleDevicePlaced}
+            />
           </div>
 
           {/* Rack detail view - takes 3/4 of the space (now on the right) */}
@@ -140,6 +180,7 @@ export const RackLayoutsTab: React.FC = () => {
                 onDeviceClick={handleDeviceClick}
                 rackStats={rackStats}
                 selectedRack={selectedRack}
+                onDevicePlaced={handleDevicePlaced}
               />
             )}
             {!selectedRackId && (
@@ -167,13 +208,70 @@ export const RackLayoutsTab: React.FC = () => {
           </Dialog>
         )}
         
-        {/* Placement Report Dialog - simplified */}
+        {/* Placement Report Dialog */}
         <AlertDialog open={isPlacementDialogOpen} onOpenChange={setIsPlacementDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="max-h-[80vh] overflow-y-auto">
             <AlertDialogHeader>
               <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
               <AlertDialogDescription>
-                Simplified for debugging
+                {placementReport && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-lg">
+                      Status: 
+                      {placementReport.success ? (
+                        <span className="text-green-500 font-medium">Successful</span>
+                      ) : (
+                        <span className="text-amber-500 font-medium">Partial Success</span>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2 bg-muted rounded">
+                        <div className="text-sm font-medium">Total Devices</div>
+                        <div className="text-xl">{placementReport.totalDevices}</div>
+                      </div>
+                      <div className="p-2 bg-muted rounded">
+                        <div className="text-sm font-medium">Successfully Placed</div>
+                        <div className="text-xl text-green-500">{placementReport.placedDevices}</div>
+                      </div>
+                      {placementReport.failedDevices > 0 && (
+                        <div className="p-2 bg-muted rounded col-span-2">
+                          <div className="text-sm font-medium">Failed Placements</div>
+                          <div className="text-xl text-amber-500">{placementReport.failedDevices}</div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {placementReport.items && placementReport.items.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="font-medium mb-2">Placement Details</h4>
+                        <div className="max-h-[400px] overflow-y-auto border rounded-md">
+                          {placementReport.items.map((item, index) => (
+                            <div key={index} className={`p-2 border-b ${
+                              item.status === "placed" ? "bg-green-50" : "bg-amber-50"
+                            }`}>
+                              <div className="flex justify-between">
+                                <span className="font-medium">{item.deviceName}</span>
+                                <span>{item.status === "placed" ? "✅ Placed" : "⚠️ Failed"}</span>
+                              </div>
+                              {item.status === "placed" && (
+                                <div className="text-xs text-slate-500">
+                                  Placed in rack at position {item.ruPosition}
+                                </div>
+                              )}
+                              {item.status === "failed" && item.reason && (
+                                <div className="text-xs text-slate-500">
+                                  Reason: {item.reason}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!placementReport && "No placement report available."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

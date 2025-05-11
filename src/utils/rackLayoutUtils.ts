@@ -20,7 +20,7 @@ export const initializeExampleRack = (): string => {
   
   // Find all rackable components
   const rackableComponents = activeDesign.components.filter(comp => 
-    comp.ruHeight && comp.ruHeight > 0
+    comp.ruSize && comp.ruSize > 0
   );
   
   // Place some components for demonstration
@@ -70,10 +70,10 @@ export const analyzeRackLayout = (rackId: string): {
   for (const device of rack.devices) {
     const component = activeDesign.components.find(c => c.id === device.deviceId);
     if (component) {
-      const ruHeight = component.ruHeight || 1;
+      const ruSize = component.ruSize || 1;
       
       // Mark all RUs used by this component
-      for (let i = 0; i < ruHeight; i++) {
+      for (let i = 0; i < ruSize; i++) {
         usedRUs.add(device.ruPosition + i);
       }
       
@@ -85,6 +85,8 @@ export const analyzeRackLayout = (rackId: string): {
   const totalRU = rack.uHeight;
   const availableRU = totalRU - usedRU;
   const utilizationPercentage = (usedRU / totalRU) * 100;
+  
+  console.log(`Rack ${rackId} analysis: ${usedRU}/${totalRU} RU used (${utilizationPercentage.toFixed(1)}%), ${deviceCount} devices`);
   
   return {
     totalRU,
