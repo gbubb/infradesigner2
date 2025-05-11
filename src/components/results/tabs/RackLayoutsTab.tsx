@@ -64,8 +64,13 @@ export const RackLayoutsTab: React.FC = () => {
 
   const handleDeviceClick = useCallback((deviceId: string) => {
     setSelectedDeviceId(deviceId);
-    setIsConnectionDialogOpen(true);
   }, []);
+
+  useEffect(() => {
+    if (selectedDeviceId) {
+      setIsConnectionDialogOpen(true);
+    }
+  }, [selectedDeviceId]);
 
   const handleCloseConnectionDialog = useCallback(() => {
     setIsConnectionDialogOpen(false);
