@@ -89,18 +89,17 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
     </div>
   );
 
-  // Simplified text display logic: Prioritize name, use tooltip for details.
-  // For 1RU, try to make name as legible as possible.
-  // For >1RU, if height is very small, only name. If more height, name + model.
-  
-  let nameFontSize = '0.7rem';
-  if (ruSize === 1) {
-    nameFontSize = '0.65rem';
-  } else if (ruSize === 2 && height < 40) { // Moderately sized 2RU
-    nameFontSize = '0.65rem';
-  } // Larger devices can use 0.7rem or more if needed, but this is a good base.
+  // Determine if we have enough space for two lines (name + model)
+  const canShowTwoLines = height >= 38 && ruSize > 1; // Threshold for two distinct lines
 
-  const showModelLine = ruSize > 1 && height >= 40; // Show model only if multi-RU and enough height (e.g. ~2 lines possible)
+  let nameFontSize = '0.7rem';
+  if (ruSize === 1 && height < 20) { // Very small 1U
+    nameFontSize = '0.6rem';
+  } else if (ruSize === 1) {
+    nameFontSize = '0.65rem';
+  } else if (height < 30) { // Any multi-RU device with very small visual height
+    nameFontSize = '0.6rem';
+  }
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -109,7 +108,7 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
           <div
             ref={drag}
             className={cn(
-              "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-1 py-0.5 overflow-hidden text-center",
+              "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-1 py-0 overflow-hidden text-center",
               getDeviceColor(type),
               "cursor-move"
             )}
@@ -123,28 +122,27 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
             onClick={handleClick}
           >
             <div 
-              className="w-full truncate" 
+              className="w-full truncate flex items-center justify-center"
               style={{ 
                 fontWeight: 500, 
                 fontSize: nameFontSize, 
-                lineHeight: '1.1',
-                display: showModelLine ? 'block' : 'flex', 
-                alignItems: showModelLine ? 'normal' : 'center', 
-                justifyContent: showModelLine ? 'normal' : 'center',
-                height: showModelLine ? '60%' : '100%',
+                lineHeight: '1.1', 
+                height: canShowTwoLines ? '55%' : '100%', // Give name full height if only one line of text shown on face
+                padding: '1px 0', // Minimal vertical padding for the text itself
               }}
             >
               {name}
             </div>
 
-            {showModelLine && (
+            {canShowTwoLines && (
               <div 
                 className="w-full text-center truncate opacity-80"
-                style={{ fontSize: '0.6rem', height: '40%', lineHeight: '1.1' }}
+                style={{ fontSize: '0.6rem', height: '45%', lineHeight: '1.1', padding: '0 0 1px 0' }}
               >
                 {model}
               </div>
             )}
+            {/* No separate RU size display on the device face anymore; rely on tooltip */}
           </div>
         </TooltipTrigger>
         <TooltipContent side="right" align="start">
