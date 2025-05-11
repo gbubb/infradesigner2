@@ -4,6 +4,9 @@ import { RackService } from '@/services/rackService';
 import { DeviceRoleType } from '@/types/infrastructure/requirements-types';
 import { ComponentType } from '@/types/infrastructure/component-types';
 import { toast } from 'sonner';
+import { StoreState } from '@/store/types';
+import { v4 as uuidv4 } from 'uuid';
+import { RackProfile } from '@/types/infrastructure/rack-types';
 
 export interface RackProfileInitializationData {
   id: string;
@@ -14,61 +17,72 @@ export interface RackProfileInitializationData {
 }
 
 export const useRackInitialization = () => {
-  const activeDesign = useDesignStore(state => state.activeDesign);
+  const activeDesignId = useDesignStore(state => state.activeDesign?.id);
+  const updateDesignInStore = useDesignStore(state => state.updateDesign);
+
   const [rackProfiles, setRackProfiles] = useState<RackProfileInitializationData[]>([]);
   const [availabilityZones, setAvailabilityZones] = useState<string[]>([]);
   
-  // Use a ref instead of state to track initialization to avoid re-renders
-  const initializedRef = useRef(false);
-  // Store the previous design ID to detect design changes
-  const prevDesignIdRef = useRef<string | null>(null);
+  const initializedDesignsRef = useRef<Set<string>>(new Set());
 
-  // Initialize racks based on requirements
   useEffect(() => {
-    // Skip if already initialized for this design or no active design
-    if (!activeDesign || 
-        (initializedRef.current && prevDesignIdRef.current === activeDesign.id)) {
+    const currentDesign = useDesignStore.getState().activeDesign as StoreState['activeDesign'];
+
+    if (!currentDesign || !currentDesign.id) {
+      setRackProfiles([]);
+      setAvailabilityZones([]);
+      return;
+    }
+
+    if (initializedDesignsRef.current.has(currentDesign.id)) {
+      const storeRacks = currentDesign.rackProfiles || [];
+      const localRackIds = new Set(rackProfiles.map(r => r.id));
+      const storeRackIds = new Set(storeRacks.map(r => r.id));
+      if (storeRacks.length !== rackProfiles.length || !storeRacks.every(sr => localRackIds.has(sr.id)) || !rackProfiles.every(lr => storeRackIds.has(lr.id) )) {
+        console.log("Re-syncing local rackProfiles state from store for already initialized design:", currentDesign.id);
+        const azNamesFromStore = [...new Set(storeRacks.map(r => {
+          const matchingInitializedProfile = rackProfiles.find(irp => irp.availabilityZoneId === r.availabilityZoneId && irp.id === r.id);
+          return matchingInitializedProfile?.azName || r.availabilityZoneId || (r.rackType === 'Core' ? 'Core' : 'Unknown AZ');
+        }).filter(Boolean))] as string[];
+        setRackProfiles(storeRacks.map(r => ({
+          id: r.id, name: r.name,
+          azName: rackProfiles.find(irp => irp.availabilityZoneId === r.availabilityZoneId && irp.id === r.id)?.azName || r.availabilityZoneId || (r.rackType === 'Core' ? 'Core' : 'Unknown AZ'),
+          availabilityZoneId: r.availabilityZoneId, rackType: r.rackType
+        })));
+        setAvailabilityZones(azNamesFromStore);
+      }
       return;
     }
     
-    // If design changed, allow re-initialization
-    if (prevDesignIdRef.current !== activeDesign.id) {
-      initializedRef.current = false;
-      prevDesignIdRef.current = activeDesign.id;
-    }
+    console.log("EFFECT (useRackInitialization): Initializing racks for new design ID:", currentDesign.id);
     
-    // Prevent multiple initializations for the same design
-    if (initializedRef.current) return;
-    
-    console.log("Initializing racks for design:", activeDesign.id);
-    
-    // Clear existing racks
     RackService.clearAllRackProfiles();
-    
-    // Determine availability zones
-    const definedAZs = activeDesign.requirements.physicalConstraints.availabilityZones || [];
+
+    const definedAZs = currentDesign.requirements.physicalConstraints.availabilityZones || [];
     const azCount = definedAZs.length > 0 
       ? definedAZs.length 
-      : (activeDesign.requirements.physicalConstraints.totalAvailabilityZones || 1);
+      : (currentDesign.requirements.physicalConstraints.totalAvailabilityZones || 1);
     
-    // Calculate number of racks needed based on requirements
-    const computeStorageRackTotalQuantity = activeDesign.requirements.physicalConstraints.computeStorageRackQuantity || (azCount * 2);
-    const computeRacksPerAZ = Math.ceil(computeStorageRackTotalQuantity / azCount);
-    const networkCoreRackQuantity = activeDesign.requirements.physicalConstraints.networkCoreRackQuantity || 
-      (activeDesign.requirements.networkRequirements.dedicatedNetworkCoreRacks ? 2 : 0);
+    const computeStorageRackTotalQuantity = currentDesign.requirements.physicalConstraints.computeStorageRackQuantity || (azCount * 2);
+    const computeRacksPerAZ = Math.max(1, Math.ceil(computeStorageRackTotalQuantity / azCount));
     
-    const newRacks: RackProfileInitializationData[] = [];
-    const newAvailabilityZones: string[] = [];
+    const networkCoreRackQuantity = currentDesign.requirements.physicalConstraints.networkCoreRackQuantity || 
+      (currentDesign.requirements.networkRequirements.dedicatedNetworkCoreRacks ? 2 : 0);
+    
+    const newRacksLocalData: RackProfileInitializationData[] = [];
+    const newAvailabilityZonesLocalData: string[] = [];
     let globalRackCounter = 1;
+    let profilesForStoreUpdate: RackProfile[] = [];
 
     if (definedAZs.length > 0) {
       definedAZs.forEach(az => {
-        newAvailabilityZones.push(az.name);
+        newAvailabilityZonesLocalData.push(az.name);
         for (let rackNumInAZ = 1; rackNumInAZ <= computeRacksPerAZ; rackNumInAZ++) {
-          if (newRacks.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
+          if (newRacksLocalData.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
           const simpleRackName = `Rack ${globalRackCounter}`;
-          const rackId = RackService.createRackProfile(simpleRackName, 42, az.id, 'ComputeStorage');
-          newRacks.push({ id: rackId, name: simpleRackName, azName: az.name, availabilityZoneId: az.id, rackType: 'ComputeStorage' });
+          const rackId = uuidv4();
+          profilesForStoreUpdate.push({ id: rackId, name: simpleRackName, uHeight: 42, devices: [], availabilityZoneId: az.id, rackType: 'ComputeStorage' });
+          newRacksLocalData.push({ id: rackId, name: simpleRackName, azName: az.name, availabilityZoneId: az.id, rackType: 'ComputeStorage' });
           globalRackCounter++;
         }
       });
@@ -76,12 +90,13 @@ export const useRackInitialization = () => {
       for (let azNum = 1; azNum <= azCount; azNum++) {
         const azName = `AZ${azNum}`;
         const azId = `auto-az-${azNum}`;
-        newAvailabilityZones.push(azName);
+        newAvailabilityZonesLocalData.push(azName);
         for (let rackNumInAZ = 1; rackNumInAZ <= computeRacksPerAZ; rackNumInAZ++) {
-          if (newRacks.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
+          if (newRacksLocalData.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
           const simpleRackName = `Rack ${globalRackCounter}`;
-          const rackId = RackService.createRackProfile(simpleRackName, 42, azId, 'ComputeStorage');
-          newRacks.push({ id: rackId, name: simpleRackName, azName: azName, availabilityZoneId: azId, rackType: 'ComputeStorage' });
+          const rackId = uuidv4();
+          profilesForStoreUpdate.push({ id: rackId, name: simpleRackName, uHeight: 42, devices: [], availabilityZoneId: azId, rackType: 'ComputeStorage' });
+          newRacksLocalData.push({ id: rackId, name: simpleRackName, azName: azName, availabilityZoneId: azId, rackType: 'ComputeStorage' });
           globalRackCounter++;
         }
       }
@@ -91,38 +106,40 @@ export const useRackInitialization = () => {
     if (networkCoreRackQuantity > 0) {
       const coreAzName = 'Core';
       const coreAzId = 'core-az-id';
-      if (!newAvailabilityZones.includes(coreAzName)) {
-        newAvailabilityZones.push(coreAzName);
-      }
+      if (!newAvailabilityZonesLocalData.includes(coreAzName)) newAvailabilityZonesLocalData.push(coreAzName);
       for (let i = 1; i <= networkCoreRackQuantity; i++) {
         const simpleCoreRackName = `Core Rack ${coreRackCounter}`;
-        const rackId = RackService.createRackProfile(simpleCoreRackName, 42, coreAzId, 'Core');
-        newRacks.push({ id: rackId, name: simpleCoreRackName, azName: coreAzName, availabilityZoneId: coreAzId, rackType: 'Core' });
+        const rackId = uuidv4();
+        profilesForStoreUpdate.push({ id: rackId, name: simpleCoreRackName, uHeight: 42, devices: [], availabilityZoneId: coreAzId, rackType: 'Core' });
+        newRacksLocalData.push({ id: rackId, name: simpleCoreRackName, azName: coreAzName, availabilityZoneId: coreAzId, rackType: 'Core' });
         coreRackCounter++;
       }
     }
     
-    setRackProfiles(newRacks);
-    setAvailabilityZones(newAvailabilityZones);
-    
-    // distributeComponentsAcrossRacks(newRacks);
-    
-    initializedRef.current = true;
-    console.log("Rack initialization complete with sequential names.");
-  }, [activeDesign]);
+    if (currentDesign.id) {
+        updateDesignInStore(currentDesign.id, { rackProfiles: profilesForStoreUpdate });
+    } else {
+        console.error("Cannot update design with racks, active design ID is missing.");
+    }
 
-  // Distribute components across racks based on role and AZ
+    setRackProfiles(newRacksLocalData);
+    setAvailabilityZones(newAvailabilityZonesLocalData);
+    
+    initializedDesignsRef.current.add(currentDesign.id);
+    console.log("Rack init complete for design ID:", currentDesign.id);
+
+  }, [activeDesignId, updateDesignInStore]);
+
   const distributeComponentsAcrossRacks = (racks: RackProfileInitializationData[]) => {
-    if (!activeDesign || !activeDesign.components || !activeDesign.componentRoles) return;
+    if (!currentDesign || !currentDesign.components || !currentDesign.componentRoles) return;
     
     const azNames = [...new Set(racks.map(rack => rack.azName))].filter(az => az !== 'Core');
     const coreRacks = racks.filter(rack => rack.azName === 'Core');
     
-    // Group components by role
     const componentsByRole: Record<string, any[]> = {};
     
-    activeDesign.componentRoles.forEach(role => {
-      const assignedComponents = activeDesign.components.filter(comp => 
+    currentDesign.componentRoles.forEach(role => {
+      const assignedComponents = currentDesign.components.filter(comp => 
         comp.assignedRoles && comp.assignedRoles.includes(role.id)
       );
       
@@ -131,12 +148,9 @@ export const useRackInitialization = () => {
       }
     });
     
-    // Distribute components by role and AZ
     Object.entries(componentsByRole).forEach(([roleName, components]) => {
-      // Skip components that don't need rack placement
       if (!components.some(comp => comp.ruHeight && comp.ruHeight > 0)) return;
       
-      // Get racks per AZ
       const racksByAZ: Record<string, { id: string; name: string }[]> = {};
       azNames.forEach(azName => {
         racksByAZ[azName] = racks.filter(rack => rack.azName === azName);
@@ -146,26 +160,22 @@ export const useRackInitialization = () => {
         case DeviceRoleType.Compute:
         case DeviceRoleType.Controller:
         case DeviceRoleType.Infrastructure:
-          // Distribute compute nodes evenly across all AZs
           distributeComponentsEvenly(components, racksByAZ, azNames);
           break;
           
         case DeviceRoleType.Storage:
-          // For storage nodes, respect the specific AZ quantity per cluster
           distributeStorageNodes(components, racksByAZ, azNames);
           break;
           
         case DeviceRoleType.LeafSwitch:
         case DeviceRoleType.ManagementSwitch:
         case DeviceRoleType.IPMISwitch:
-          // Place switches near the top of each rack in each AZ
           placeNetworkDevicesInAZs(components, racksByAZ, azNames);
           break;
           
         case DeviceRoleType.SpineSwitch:
         case DeviceRoleType.BorderLeafSwitch:
         case DeviceRoleType.Firewall:
-          // Place core network devices in core racks
           if (coreRacks.length > 0) {
             placeNetworkDevicesInCoreRacks(components, coreRacks);
           }
@@ -210,7 +220,6 @@ export const useRackInitialization = () => {
   ) => {
     if (!components.length || !azNames.length) return;
     
-    // Group storage nodes by cluster
     const nodesByCluster: Record<string, any[]> = {};
     
     components.forEach(component => {
@@ -222,16 +231,14 @@ export const useRackInitialization = () => {
       }
     });
     
-    // For each cluster, distribute its nodes
     Object.entries(nodesByCluster).forEach(([clusterId, nodes]) => {
       const clusterInfo = nodes[0]?.clusterInfo;
-      const storageCluster = activeDesign?.requirements.storageRequirements.storageClusters
+      const storageCluster = currentDesign?.requirements.storageRequirements.storageClusters
         .find(sc => sc.id === clusterId);
       
       const targetAZCount = storageCluster?.availabilityZoneQuantity || azNames.length;
       const effectiveAZCount = Math.min(targetAZCount, azNames.length);
       
-      // Place nodes in the first N AZs
       nodes.forEach((node, index) => {
         const azIndex = index % effectiveAZCount;
         const targetAZ = azNames[azIndex];
@@ -258,17 +265,15 @@ export const useRackInitialization = () => {
     const deviceType = components[0]?.type;
     let ruStartPosition: number;
     
-    // Determine starting position based on device type
     switch (deviceType) {
       case ComponentType.Switch:
-        ruStartPosition = 42; // Top of rack
+        ruStartPosition = 42;
         break;
       default:
         ruStartPosition = 40;
         break;
     }
     
-    // Group components by AZ
     const componentsPerAZ = Math.ceil(components.length / azNames.length);
     
     components.forEach((component, index) => {
@@ -285,7 +290,6 @@ export const useRackInitialization = () => {
         );
         
         if (!result.success) {
-          // Try auto-placement if specific placement fails
           const fallbackResult = RackService.placeDevice(targetRacks[rackIndex].id, component.id);
           if (!fallbackResult.success) {
             console.warn(`Failed to place network device ${component.name}: ${fallbackResult.error}`);
@@ -298,7 +302,7 @@ export const useRackInitialization = () => {
   const placeNetworkDevicesInCoreRacks = (components: any[], coreRacks: Array<{ id: string; name: string }>) => {
     if (!components.length || !coreRacks.length) return;
     
-    const ruStartPosition = 42; // Start from top of rack
+    const ruStartPosition = 42;
     
     components.forEach((component, index) => {
       const rackIndex = index % coreRacks.length;
@@ -309,7 +313,6 @@ export const useRackInitialization = () => {
       );
       
       if (!result.success) {
-        // Try auto-placement if specific placement fails
         const fallbackResult = RackService.placeDevice(coreRacks[rackIndex].id, component.id);
         if (!fallbackResult.success) {
           console.warn(`Failed to place core network device ${component.name}: ${fallbackResult.error}`);
