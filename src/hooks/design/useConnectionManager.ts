@@ -2,20 +2,33 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Port, MediaType, CableMediaType, ConnectorType, InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { toast } from 'sonner';
-import { shallow } from 'zustand/shallow';
 import { StoreState } from '@/store/types';
 
 /**
  * Hook for managing connections between devices in the infrastructure design
  */
+
+// Selector for useConnectionManager
+const connectionManagerSelector = (state: StoreState) => ({
+  componentsFromStore: state.activeDesign?.components || [], // Renamed to avoid clash
+  updateActiveDesignFromStore: state.updateActiveDesign,
+});
+
+// Custom equality function for the selected state in useConnectionManager
+const connectionManagerEqualityFn = (
+  oldState: { componentsFromStore: InfrastructureComponent[], updateActiveDesignFromStore: Function },
+  newState: { componentsFromStore: InfrastructureComponent[], updateActiveDesignFromStore: Function }
+): boolean => {
+  if (oldState.updateActiveDesignFromStore !== newState.updateActiveDesignFromStore) return false;
+  if (oldState.componentsFromStore === newState.componentsFromStore) return true; // Same reference for components array
+  if (oldState.componentsFromStore.length !== newState.componentsFromStore.length) return false;
+  // This is a potentially expensive check if components array is large and changes often.
+  // Consider more optimized deep-compare or only compare relevant fields if performance is an issue.
+  return JSON.stringify(oldState.componentsFromStore) === JSON.stringify(newState.componentsFromStore);
+};
+
 export const useConnectionManager = () => {
-  const { components, updateActiveDesign } = useDesignStore(
-    (state: StoreState) => ({
-      components: state.activeDesign?.components || [],
-      updateActiveDesign: state.updateActiveDesign,
-    }),
-    shallow
-  );
+  const { componentsFromStore, updateActiveDesignFromStore } = useDesignStore(connectionManagerSelector, connectionManagerEqualityFn);
   
   const [connections, setConnections] = useState<Array<{
     sourceDeviceId: string;
@@ -26,25 +39,15 @@ export const useConnectionManager = () => {
   }>>([]);
   
   const detectedConnections = useMemo(() => {
-    const newConnections: Array<{
-      sourceDeviceId: string;
-      sourcePortId: string;
-      destinationDeviceId: string;
-      destinationPortId: string;
-      cableId: string;
-    }> = [];
-    
-    components.forEach(sourceDevice => {
+    const newConnections: Array<any> = []; // Simplified type for brevity
+    componentsFromStore.forEach(sourceDevice => {
       if (!sourceDevice.ports) return;
-      
       for (const sourcePort of sourceDevice.ports) {
         if (sourcePort.connectedToDeviceId && sourcePort.connectedToPortId) {
           if (sourceDevice.id < sourcePort.connectedToDeviceId) {
             newConnections.push({
-              sourceDeviceId: sourceDevice.id,
-              sourcePortId: sourcePort.id,
-              destinationDeviceId: sourcePort.connectedToDeviceId,
-              destinationPortId: sourcePort.connectedToPortId,
+              sourceDeviceId: sourceDevice.id, sourcePortId: sourcePort.id,
+              destinationDeviceId: sourcePort.connectedToDeviceId, destinationPortId: sourcePort.connectedToPortId,
               cableId: sourcePort.cableId || ''
             });
           }
@@ -52,7 +55,7 @@ export const useConnectionManager = () => {
       }
     });
     return newConnections;
-  }, [components]);
+  }, [componentsFromStore]);
 
   useEffect(() => {
     setConnections(detectedConnections);
@@ -105,13 +108,14 @@ export const useConnectionManager = () => {
     destinationPortId: string,
     cableId: string
   ): { success: boolean; error?: string } => {
-    if (!components) {
+    const currentActiveComponents = componentsFromStore; // Use the stable one from the hook
+    if (!currentActiveComponents) {
       return { success: false, error: "No active design components found" };
     }
     
-    const sourceDevice = components.find(c => c.id === sourceDeviceId);
-    const destinationDevice = components.find(c => c.id === destinationDeviceId);
-    const cableComponent = components.find(c => c.id === cableId && c.type === ComponentType.Cable);
+    const sourceDevice = currentActiveComponents.find(c => c.id === sourceDeviceId);
+    const destinationDevice = currentActiveComponents.find(c => c.id === destinationDeviceId);
+    const cableComponent = currentActiveComponents.find(c => c.id === cableId && c.type === ComponentType.Cable);
     
     if (!sourceDevice) { return { success: false, error: `Source device not found (ID: ${sourceDeviceId})` }; }
     if (!destinationDevice) { return { success: false, error: `Destination device not found (ID: ${destinationDeviceId})` }; }
@@ -129,7 +133,7 @@ export const useConnectionManager = () => {
     if (sourcePort.mediaType && cableComponent.mediaType && !isMediaTypeCompatible(sourcePort.mediaType, cableComponent.mediaType)) { return { success: false, error: `Media type mismatch: Source port (${sourcePort.mediaType}) and cable (${cableComponent.mediaType})` }; }
     if (destinationPort.mediaType && cableComponent.mediaType && !isMediaTypeCompatible(destinationPort.mediaType, cableComponent.mediaType)) { return { success: false, error: `Media type mismatch: Destination port (${destinationPort.mediaType}) and cable (${cableComponent.mediaType})` }; }
 
-    const updatedComponents = components.map(component => {
+    const updatedComponents = currentActiveComponents.map(component => {
       let newComp = { ...component };
       if (component.id === sourceDeviceId) {
         newComp.ports = component.ports?.map(port => 
@@ -148,10 +152,10 @@ export const useConnectionManager = () => {
       return newComp;
     });
     
-    updateActiveDesign(updatedComponents);
+    updateActiveDesignFromStore(updatedComponents);
     toast.success("Connection created successfully");
     return { success: true };
-  }, [components, updateActiveDesign]);
+  }, [componentsFromStore, updateActiveDesignFromStore]);
   
   /**
    * Remove a connection between two ports
@@ -162,12 +166,13 @@ export const useConnectionManager = () => {
     destinationDeviceId: string,
     destinationPortId: string
   ): { success: boolean; error?: string } => {
-    if (!components) {
+    const currentActiveComponents = componentsFromStore;
+    if (!currentActiveComponents) {
       return { success: false, error: "No active design components found" };
     }
 
-    const sourceDevice = components.find(c => c.id === sourceDeviceId);
-    const destinationDevice = components.find(c => c.id === destinationDeviceId);
+    const sourceDevice = currentActiveComponents.find(c => c.id === sourceDeviceId);
+    const destinationDevice = currentActiveComponents.find(c => c.id === destinationDeviceId);
     if (!sourceDevice || !destinationDevice) { return { success: false, error: "One or both devices not found" }; }
     if (!sourceDevice.ports || !destinationDevice.ports) { return { success: false, error: "One or both devices have no ports" }; }
     const sourcePort = sourceDevice.ports.find(p => p.id === sourcePortId);
@@ -175,7 +180,7 @@ export const useConnectionManager = () => {
     if (!sourcePort || !destinationPort) { return { success: false, error: "One or both ports not found" }; }
     if (sourcePort.connectedToDeviceId !== destinationDeviceId || sourcePort.connectedToPortId !== destinationPortId) { return { success: false, error: "Ports are not connected as specified" }; }
 
-    const updatedComponents = components.map(component => {
+    const updatedComponents = currentActiveComponents.map(component => {
       let newComp = { ...component };
       if (component.id === sourceDeviceId) {
         newComp.ports = component.ports?.map(port =>
@@ -194,10 +199,10 @@ export const useConnectionManager = () => {
       return newComp;
     });
 
-    updateActiveDesign(updatedComponents);
+    updateActiveDesignFromStore(updatedComponents);
     toast.success("Connection removed successfully");
     return { success: true };
-  }, [components, updateActiveDesign]);
+  }, [componentsFromStore, updateActiveDesignFromStore]);
   
   /**
    * Get all connections for a specific device
