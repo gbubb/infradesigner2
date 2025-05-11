@@ -1,88 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { RackService } from '@/services/rackService';
-import { toast } from 'sonner';
+
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Server } from 'lucide-react';
 
 interface RackPropertiesCardProps {
   rack: {
     id: string;
-    name: string;      // This is the simple name like "Rack 1"
-    azName: string;   // This is the AZ name like "AZ1"
+    name: string;
+    azName?: string;
+    availabilityZoneId?: string;
+    rackType?: string;
   } | undefined;
 }
 
 export const RackPropertiesCard: React.FC<RackPropertiesCardProps> = ({ rack }) => {
-  const [rackName, setRackName] = useState(rack?.name || '');
-  const [isEditing, setIsEditing] = useState(false);
-
-  useEffect(() => {
-    setRackName(rack?.name || '');
-  }, [rack?.name]);
-
-  if (!rack) {
-    return null; // Or a placeholder if no rack is selected
-  }
-
-  const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRackName(event.target.value);
-  };
-
-  const handleSaveName = () => {
-    if (rackName.trim() === '') {
-      toast.error("Rack name cannot be empty.");
-      return;
-    }
-    if (rack.id && rackName !== rack.name) {
-      const success = RackService.updateRackProfile(rack.id, { name: rackName });
-      if (success) {
-        toast.success(`Rack name updated to "${rackName}"`);
-        // Optionally, trigger a re-fetch or update of rack data in parent component if needed
-      } else {
-        toast.error("Failed to update rack name.");
-      }
-    }
-    setIsEditing(false);
-  };
-
-  const handleCancelEdit = () => {
-    setRackName(rack.name); // Reset to original name
-    setIsEditing(false);
-  };
-
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Rack Properties</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-1">
-          <Label htmlFor="rackNameInput">Name</Label>
-          {isEditing ? (
-            <div className="flex items-center space-x-2">
-              <Input 
-                id="rackNameInput" 
-                type="text" 
-                value={rackName} 
-                onChange={handleNameChange} 
-              />
-              <Button onClick={handleSaveName} size="sm">Save</Button>
-              <Button onClick={handleCancelEdit} variant="outline" size="sm">Cancel</Button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <p>{rackName}</p>
-              <Button onClick={() => setIsEditing(true)} variant="ghost" size="sm">Edit</Button>
-            </div>
-          )}
-        </div>
-        <div className="space-y-1">
-          <Label>Availability Zone</Label>
-          <p className="text-sm text-muted-foreground">{rack.azName}</p>
-        </div>
-        {/* Add other rack properties here as needed */}
+      <CardContent className="pt-6">
+        <h3 className="font-medium text-lg mb-4 flex items-center gap-2">
+          <Server className="h-5 w-5" />
+          Rack Properties
+        </h3>
+        
+        {rack ? (
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="text-muted-foreground">Rack Name:</div>
+            <div className="font-medium">{rack.name}</div>
+            
+            <div className="text-muted-foreground">Rack ID:</div>
+            <div className="font-medium truncate">{rack.id}</div>
+            
+            <div className="text-muted-foreground">Availability Zone:</div>
+            <div className="font-medium">{rack.azName || 'Default'}</div>
+            
+            <div className="text-muted-foreground">Rack Type:</div>
+            <div className="font-medium">{rack.rackType || 'Standard'}</div>
+          </div>
+        ) : (
+          <p className="text-muted-foreground">No rack selected</p>
+        )}
       </CardContent>
     </Card>
   );

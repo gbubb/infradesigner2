@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
-import { DndProvider as ReactDndProvider } from 'react-dnd';
+import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ConnectionPanel } from '@/components/connections/ConnectionPanel';
 import { RackFilterControls } from './rack-layouts/RackFilterControls';
@@ -19,8 +19,12 @@ import {
   AlertDialogTitle, 
   AlertDialogDescription, 
   AlertDialogFooter, 
-  AlertDialogCancel 
+  AlertDialogCancel,
+  AlertDialogAction 
 } from '@/components/ui/alert-dialog';
+import { AutomatedPlacementService, PlacementReport } from '@/services/automatedPlacementService';
+import { ClusterAZAssignmentDialog } from './rack-layouts/ClusterAZAssignmentDialog';
+import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
 
 export const RackLayoutsTab: React.FC = () => {
   const { rackProfiles, availabilityZones } = useRackInitialization();
@@ -37,8 +41,10 @@ export const RackLayoutsTab: React.FC = () => {
   const [selectedAZ, setSelectedAZ] = useState<string | 'all'>('all');
   const [scrollPosition, setScrollPosition] = useState(0);
   const [isPlacementDialogOpen, setIsPlacementDialogOpen] = useState(false);
-  const [placementReport, setPlacementReport] = useState<any | null>(null);
+  const [placementReport, setPlacementReport] = useState<PlacementReport | null>(null);
   const [isPlacing, setIsPlacing] = useState(false);
+  const [isAZAssignmentDialogOpen, setIsAZAssignmentDialogOpen] = useState(false);
+  const [clusterAZAssignments, setClusterAZAssignments] = useState<ClusterAZAssignment[]>([]);
   const scrollStep = 300;
   
   // Set initial selected rack when rack profiles are loaded
@@ -80,12 +86,32 @@ export const RackLayoutsTab: React.FC = () => {
   const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
 
   const handleAutoPlaceDevices = () => {
-    // Simplified auto-place function
-    toast.info("Auto-placement disabled for debugging");
+    // Open the AZ assignment dialog first
+    setIsAZAssignmentDialogOpen(true);
+  };
+
+  const handleConfirmAutoPlacement = () => {
+    setIsPlacing(true);
+    
+    // Pass cluster AZ assignments to the placement service
+    const report = AutomatedPlacementService.placeAllDesignDevices(undefined, clusterAZAssignments);
+    setPlacementReport(report);
+    setIsPlacementDialogOpen(true);
+    setIsPlacing(false);
+    
+    // Update rack stats for the selected rack
+    if (selectedRackId) {
+      try {
+        const updatedStats = analyzeRackLayout(selectedRackId);
+        setRackStats(updatedStats);
+      } catch (error) {
+        console.error("Error updating rack stats:", error);
+      }
+    }
   };
 
   return (
-    <ReactDndProvider backend={HTML5Backend}>
+    <DndProvider backend={HTML5Backend}>
       <div className="space-y-6">
         <div>
           <h2 className="text-xl font-semibold">Rack Layouts</h2>
@@ -129,7 +155,17 @@ export const RackLayoutsTab: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Device palette - takes 1/4 of the space (now on the left) */}
           <div className="md:col-span-1">
-            <DevicePalette rackId={selectedRackId || undefined} />
+            <DevicePalette rackId={selectedRackId || undefined} onDevicePlaced={() => {
+              // Update rack stats after device placement
+              if (selectedRackId) {
+                try {
+                  const updatedStats = analyzeRackLayout(selectedRackId);
+                  setRackStats(updatedStats);
+                } catch (error) {
+                  console.error("Error updating rack stats:", error);
+                }
+              }
+            }} />
           </div>
 
           {/* Rack detail view - takes 3/4 of the space (now on the right) */}
@@ -167,13 +203,67 @@ export const RackLayoutsTab: React.FC = () => {
           </Dialog>
         )}
         
-        {/* Placement Report Dialog - simplified */}
+        {/* Placement Report Dialog */}
         <AlertDialog open={isPlacementDialogOpen} onOpenChange={setIsPlacementDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="max-w-[600px] max-h-[80vh] overflow-y-auto">
             <AlertDialogHeader>
               <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
-              <AlertDialogDescription>
-                Simplified for debugging
+              <AlertDialogDescription className="space-y-4">
+                {placementReport && (
+                  <>
+                    <div className="text-sm font-medium">
+                      <p className="mb-2">
+                        <span className="mr-2">Total devices processed:</span>
+                        <span className="font-bold">{placementReport.totalDevices}</span>
+                      </p>
+                      <p className="mb-2">
+                        <span className="mr-2">Successfully placed:</span>
+                        <span className="text-green-600 font-bold">{placementReport.placedDevices}</span>
+                      </p>
+                      <p>
+                        <span className="mr-2">Failed to place:</span>
+                        <span className="text-red-600 font-bold">{placementReport.failedDevices}</span>
+                      </p>
+                    </div>
+                    
+                    {placementReport.items.length > 0 && (
+                      <div className="border rounded-md overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {placementReport.items.map((item, index) => (
+                              <tr key={index} className={item.status === "failed" ? "bg-red-50" : ""}>
+                                <td className="px-4 py-2 text-sm">{item.deviceName}</td>
+                                <td className="px-4 py-2 text-sm">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    item.status === "placed" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                  }`}>
+                                    {item.status === "placed" ? "Placed" : "Failed"}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-2 text-sm">
+                                  {item.status === "placed" ? (
+                                    <span>
+                                      AZ: {item.azId} | Rack: {item.rackId?.slice(0, 6)}... | Position: {item.ruPosition}
+                                    </span>
+                                  ) : (
+                                    <span className="text-red-600">{item.reason}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -181,7 +271,17 @@ export const RackLayoutsTab: React.FC = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Cluster AZ Assignment Dialog */}
+        <ClusterAZAssignmentDialog
+          open={isAZAssignmentDialogOpen}
+          onOpenChange={setIsAZAssignmentDialogOpen}
+          availabilityZones={availabilityZones}
+          clusterAssignments={clusterAZAssignments}
+          setClusterAssignments={setClusterAZAssignments}
+          onConfirm={handleConfirmAutoPlacement}
+        />
       </div>
-    </ReactDndProvider>
+    </DndProvider>
   );
 };

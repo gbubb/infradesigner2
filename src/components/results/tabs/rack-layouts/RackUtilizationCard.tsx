@@ -14,6 +14,13 @@ interface RackUtilizationCardProps {
 }
 
 export const RackUtilizationCard: React.FC<RackUtilizationCardProps> = ({ rackStats }) => {
+  // Determine progress bar color based on utilization percentage
+  const getUtilizationColor = (percentage: number) => {
+    if (percentage < 50) return 'bg-green-500';
+    if (percentage < 75) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -44,7 +51,7 @@ export const RackUtilizationCard: React.FC<RackUtilizationCardProps> = ({ rackSt
             {/* Progress bar for utilization */}
             <div className="w-full bg-gray-200 rounded-full h-2.5">
               <div 
-                className="bg-blue-600 h-2.5 rounded-full" 
+                className={`${getUtilizationColor(rackStats.utilizationPercentage)} h-2.5 rounded-full transition-all duration-300`} 
                 style={{ width: `${rackStats.utilizationPercentage}%` }}
               ></div>
             </div>

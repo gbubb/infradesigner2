@@ -24,6 +24,15 @@ export interface RackProfile {
   devices: PlacedDevice[];
   availabilityZoneId?: string;
   rackType?: RackType;
+  azName?: string; // Added for UI display purposes
+}
+
+// Cluster placement configuration types
+export interface ClusterAZAssignment {
+  clusterId: string;
+  clusterName: string;
+  clusterType: 'compute' | 'storage' | 'controller' | 'infrastructure';
+  selectedAZs: string[];
 }
 
 // Additional rack-related types could be added here in the future

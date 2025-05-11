@@ -2,6 +2,7 @@
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from './rackService';
 import { InfrastructureComponent, RackProfile, RackType, ComponentType } from '@/types/infrastructure';
+import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface PlacementReportItem {
@@ -26,9 +27,13 @@ export class AutomatedPlacementService {
   /**
    * Place all unplaced devices in the design across available racks
    * @param designId Optional design ID (uses active design if not specified)
+   * @param clusterAZAssignments Optional cluster to AZ mapping
    * @returns Placement report with results for each device
    */
-  static placeAllDesignDevices(designId?: string): PlacementReport {
+  static placeAllDesignDevices(
+    designId?: string, 
+    clusterAZAssignments?: ClusterAZAssignment[]
+  ): PlacementReport {
     const state = useDesignStore.getState();
     const design = designId 
       ? state.savedDesigns.find(d => d.id === designId) 
@@ -55,22 +60,17 @@ export class AutomatedPlacementService {
       rackProfiles.flatMap(rack => rack.devices.map(device => device.deviceId))
     );
     
-    // Temporary debug logging - REMOVE AFTER DEBUGGING
-    console.log("AutomatedPlacementService [ruSize]: All design components count:", design.components.length);
-    design.components.forEach(comp => {
-      console.log(`Component [ruSize]: ${comp.name} (ID: ${comp.id}), Type: ${comp.type}, ruSize: ${comp.ruSize}, Placed: ${placedDeviceIds.has(comp.id)}`);
-    });
-    // End temporary debug logging
-
+    // Debug logging
+    console.log("AutomatedPlacementService: All design components count:", design.components.length);
+    
     const devicesToPlace = design.components.filter(component => 
       component.ruSize && 
       component.ruSize > 0 && 
       !placedDeviceIds.has(component.id)
     );
     
-    // Temporary debug logging - REMOVE AFTER DEBUGGING
-    console.log("AutomatedPlacementService [ruSize]: Devices initially considered for placement (devicesToPlace):", devicesToPlace.map(d => ({ name: d.name, id: d.id, ruSize: d.ruSize })));
-    // End temporary debug logging
+    // More debug logging
+    console.log("Devices for placement:", devicesToPlace.length);
 
     if (devicesToPlace.length === 0) {
       return {
@@ -100,6 +100,58 @@ export class AutomatedPlacementService {
       racksByAZ[azId].push(rack);
     }
     
+    // Generate device-to-AZ mapping based on cluster assignments
+    const deviceAZMapping = new Map<string, string[]>();
+    
+    if (clusterAZAssignments && clusterAZAssignments.length > 0) {
+      console.log("Using cluster AZ assignments:", clusterAZAssignments);
+      
+      // Map devices to their assigned AZs based on roles
+      for (const device of devicesToPlace) {
+        // Default to all AZs if no specific assignments
+        let azList: string[] = Object.keys(racksByAZ).filter(az => az !== 'default');
+        
+        if (device.assignedRoles && device.assignedRoles.length > 0) {
+          // Get component roles from design
+          const roles = design.componentRoles || [];
+          
+          for (const roleId of device.assignedRoles) {
+            const role = roles.find(r => r.id === roleId);
+            
+            if (role) {
+              // For controller, infrastructure, compute and storage nodes
+              if (role.role.includes('Node')) {
+                // Look for matching assignment
+                let assignment: ClusterAZAssignment | undefined;
+                
+                if (role.role === 'controllerNode') {
+                  assignment = clusterAZAssignments.find(a => a.clusterType === 'controller');
+                } else if (role.role === 'infrastructureNode') {
+                  assignment = clusterAZAssignments.find(a => a.clusterType === 'infrastructure');
+                } else if (role.role === 'computeNode' && device.clusterInfo?.clusterId) {
+                  assignment = clusterAZAssignments.find(a => 
+                    a.clusterId === device.clusterInfo?.clusterId
+                  );
+                } else if (role.role === 'storageNode' && device.clusterInfo?.clusterId) {
+                  assignment = clusterAZAssignments.find(a => 
+                    a.clusterId === device.clusterInfo?.clusterId
+                  );
+                }
+                
+                if (assignment && assignment.selectedAZs.length > 0) {
+                  azList = assignment.selectedAZs;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        
+        // Store the AZ list for this device
+        deviceAZMapping.set(device.id, azList);
+      }
+    }
+    
     // Sort devices by RU size (largest first) for better placement
     const sortedDevices = [...devicesToPlace].sort((a, b) => 
       (b.ruSize || 1) - (a.ruSize || 1)
@@ -113,39 +165,55 @@ export class AutomatedPlacementService {
       items: []
     };
 
-    const azIds = Object.keys(racksByAZ).filter(azId => racksByAZ[azId] && racksByAZ[azId].length > 0);
-    if (azIds.length === 0) {
-      report.items.push(...sortedDevices.map(device => ({ deviceId: device.id, deviceName: device.name, status: "failed", reason: "No racks available in any AZ." } as PlacementReportItem)));
-      report.failedDevices = sortedDevices.length;
-      report.success = false;
-      return report;
-    }
+    // Track placements per AZ and rack for even distribution
+    const placementCountPerAZ: Record<string, number> = {};
+    const placementCountPerRack: Record<string, number> = {};
+    
+    // Initialize counters
+    Object.keys(racksByAZ).forEach(azId => {
+      placementCountPerAZ[azId] = 0;
+      racksByAZ[azId].forEach(rack => {
+        placementCountPerRack[rack.id] = 0;
+      });
+    });
 
-    let currentGlobalRackIndex = 0; // To cycle through all available racks globally
-    const allAvailableRacksFlat: RackProfile[] = azIds.reduce((acc, azId) => acc.concat(racksByAZ[azId]), [] as RackProfile[]);
-
-    if (allAvailableRacksFlat.length === 0) {
-        report.items.push(...sortedDevices.map(device => ({ deviceId: device.id, deviceName: device.name, status: "failed", reason: "No racks available for placement." } as PlacementReportItem)));
-        report.failedDevices = sortedDevices.length;
-        report.success = false;
-        return report;
-    }
-
-    // Now let's implement a more strategic placement based on device type and rack type
+    // Process each device for placement
     for (const device of sortedDevices) {
+      const validAZs = deviceAZMapping.get(device.id) || Object.keys(racksByAZ);
       let placed = false;
       let attemptedDetails: string[] = [];
       
-      // First pass: try to place devices in the appropriate rack type
-      // Network devices (like switches and routers) should go in Core racks if available
-      if (device.type === ComponentType.Switch || device.type === ComponentType.Router) {
-        // Try to place in Core racks first
-        const coreRacks = allAvailableRacksFlat.filter(rack => rack.rackType === RackType.Core);
+      // Determine if this is a network device
+      const isNetworkDevice = device.type === ComponentType.Switch || 
+                              device.type === ComponentType.Router;
+      
+      // Determine if this is a core network device
+      const isCoreNetworkDevice = isNetworkDevice && 
+        (device.assignedRoles?.some(roleId => {
+          const role = design.componentRoles?.find(r => r.id === roleId);
+          return role?.role.includes('Spine') || role?.role.includes('Border');
+        }) || false);
+      
+      // First pass: try to place based on device type and cluster assignment
+      if (isCoreNetworkDevice) {
+        // Try to place core network devices in Core racks
+        const coreRacks = Object.values(racksByAZ)
+          .flat()
+          .filter(rack => rack.rackType === RackType.Core);
         
-        for (const coreRack of coreRacks) {
+        // Sort racks by placement count (least used first)
+        const sortedCoreRacks = [...coreRacks].sort(
+          (a, b) => (placementCountPerRack[a.id] || 0) - (placementCountPerRack[b.id] || 0)
+        );
+        
+        for (const coreRack of sortedCoreRacks) {
           const result = this.tryPlaceDeviceInRack(device, coreRack, design.components);
           if (result.success) {
             placed = true;
+            placementCountPerRack[coreRack.id] = (placementCountPerRack[coreRack.id] || 0) + 1;
+            placementCountPerAZ[coreRack.availabilityZoneId || 'default'] = 
+              (placementCountPerAZ[coreRack.availabilityZoneId || 'default'] || 0) + 1;
+              
             report.items.push({
               deviceId: device.id,
               deviceName: device.name,
@@ -158,51 +226,115 @@ export class AutomatedPlacementService {
           }
           attemptedDetails.push(`${coreRack.name}: ${result.error}`);
         }
-      } 
-      // Servers and storage should go in Compute/Storage racks if available
-      else if (device.type === ComponentType.Server || device.type === ComponentType.Disk) {
-        // Try to place in ComputeStorage racks first
-        const computeRacks = allAvailableRacksFlat.filter(rack => rack.rackType === RackType.ComputeStorage);
+      } else if (isNetworkDevice && validAZs.length > 0) {
+        // For non-core network devices, distribute evenly across selected AZs
+        // Sort valid AZs by placement count (least used first)
+        const sortedAZs = [...validAZs].sort(
+          (a, b) => (placementCountPerAZ[a] || 0) - (placementCountPerAZ[b] || 0)
+        );
         
-        for (const computeRack of computeRacks) {
-          const result = this.tryPlaceDeviceInRack(device, computeRack, design.components);
-          if (result.success) {
-            placed = true;
-            report.items.push({
-              deviceId: device.id,
-              deviceName: device.name,
-              status: "placed", 
-              rackId: computeRack.id,
-              ruPosition: result.placedPosition,
-              azId: computeRack.availabilityZoneId || 'default'
-            });
-            break;
+        for (const azId of sortedAZs) {
+          if (!racksByAZ[azId] || racksByAZ[azId].length === 0) continue;
+          
+          // Sort racks within this AZ by placement count
+          const sortedRacks = [...racksByAZ[azId]].sort(
+            (a, b) => (placementCountPerRack[a.id] || 0) - (placementCountPerRack[b.id] || 0)
+          );
+          
+          for (const rack of sortedRacks) {
+            const result = this.tryPlaceDeviceInRack(device, rack, design.components);
+            if (result.success) {
+              placed = true;
+              placementCountPerRack[rack.id] = (placementCountPerRack[rack.id] || 0) + 1;
+              placementCountPerAZ[azId] = (placementCountPerAZ[azId] || 0) + 1;
+                
+              report.items.push({
+                deviceId: device.id,
+                deviceName: device.name,
+                status: "placed", 
+                rackId: rack.id,
+                ruPosition: result.placedPosition,
+                azId: azId
+              });
+              break;
+            }
+            attemptedDetails.push(`${rack.name}: ${result.error}`);
           }
-          attemptedDetails.push(`${computeRack.name}: ${result.error}`);
+          
+          if (placed) break;
+        }
+      } else if (validAZs.length > 0) {
+        // For compute/storage/controller nodes, distribute evenly across selected AZs
+        // Sort valid AZs by placement count (least used first)
+        const sortedAZs = [...validAZs].sort(
+          (a, b) => (placementCountPerAZ[a] || 0) - (placementCountPerAZ[b] || 0)
+        );
+        
+        for (const azId of sortedAZs) {
+          if (!racksByAZ[azId] || racksByAZ[azId].length === 0) continue;
+          
+          // Filter for ComputeStorage racks in this AZ
+          const computeStorageRacks = racksByAZ[azId].filter(
+            rack => rack.rackType === RackType.ComputeStorage || !rack.rackType
+          );
+          
+          if (computeStorageRacks.length === 0) continue;
+          
+          // Sort racks within this AZ by placement count
+          const sortedRacks = [...computeStorageRacks].sort(
+            (a, b) => (placementCountPerRack[a.id] || 0) - (placementCountPerRack[b.id] || 0)
+          );
+          
+          for (const rack of sortedRacks) {
+            const result = this.tryPlaceDeviceInRack(device, rack, design.components);
+            if (result.success) {
+              placed = true;
+              placementCountPerRack[rack.id] = (placementCountPerRack[rack.id] || 0) + 1;
+              placementCountPerAZ[azId] = (placementCountPerAZ[azId] || 0) + 1;
+                
+              report.items.push({
+                deviceId: device.id,
+                deviceName: device.name,
+                status: "placed", 
+                rackId: rack.id,
+                ruPosition: result.placedPosition,
+                azId: azId
+              });
+              break;
+            }
+            attemptedDetails.push(`${rack.name}: ${result.error}`);
+          }
+          
+          if (placed) break;
         }
       }
       
-      // Second pass: If not placed in the preferred rack type, try any rack
+      // Second pass: If not placed in any valid AZ, try any rack
       if (!placed) {
-        for (let i = 0; i < allAvailableRacksFlat.length; i++) {
-          const targetRackIndex = (currentGlobalRackIndex + i) % allAvailableRacksFlat.length;
-          const targetRack = allAvailableRacksFlat[targetRackIndex];
-          
-          const result = this.tryPlaceDeviceInRack(device, targetRack, design.components);
+        // Flatten all racks into a single array and sort by placement count
+        const allRacks = Object.values(racksByAZ).flat().sort(
+          (a, b) => (placementCountPerRack[a.id] || 0) - (placementCountPerRack[b.id] || 0)
+        );
+        
+        for (const rack of allRacks) {
+          const result = this.tryPlaceDeviceInRack(device, rack, design.components);
           if (result.success) {
             placed = true;
+            placementCountPerRack[rack.id] = (placementCountPerRack[rack.id] || 0) + 1;
+            placementCountPerAZ[rack.availabilityZoneId || 'default'] = 
+              (placementCountPerAZ[rack.availabilityZoneId || 'default'] || 0) + 1;
+              
             report.items.push({
               deviceId: device.id,
               deviceName: device.name,
               status: "placed", 
-              rackId: targetRack.id,
+              rackId: rack.id,
               ruPosition: result.placedPosition,
-              azId: targetRack.availabilityZoneId || 'default'
+              azId: rack.availabilityZoneId || 'default'
             });
-            currentGlobalRackIndex = (targetRackIndex + 1) % allAvailableRacksFlat.length; // Move to next rack for next device
-            break; // Device placed, move to next device
+            break;
           }
-          attemptedDetails.push(`${targetRack.name}: ${result.error}`);
+          attemptedDetails.push(`${rack.name}: ${result.error}`);
         }
       }
 
@@ -271,7 +403,23 @@ export class AutomatedPlacementService {
         );
 
         if (constrainedPositions.length > 0) {
-            targetPosition = constrainedPositions[0]; // Take the first valid one
+            // Prefer positions based on device type:
+            // Networking devices: top of rack
+            // Storage devices: bottom of rack
+            // Compute/other: middle
+            if (device.type === ComponentType.Switch || device.type === ComponentType.Router) {
+                // Sort from top to bottom (highest RU first)
+                constrainedPositions.sort((a, b) => b - a);
+            } else if (device.type === ComponentType.Disk || device.type.includes('Storage')) {
+                // Sort from bottom to top (lowest RU first)
+                constrainedPositions.sort((a, b) => a - b);
+            } else {
+                // Sort from middle outward
+                const middle = Math.floor(rack.uHeight / 2);
+                constrainedPositions.sort((a, b) => Math.abs(a - middle) - Math.abs(b - middle));
+            }
+            
+            targetPosition = constrainedPositions[0];
         }
     }
     

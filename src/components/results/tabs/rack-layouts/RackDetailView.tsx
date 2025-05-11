@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { RackView } from '@/components/visualization/RackView';
 import { RackUtilizationCard } from './RackUtilizationCard';
@@ -16,7 +17,8 @@ interface RackDetailViewProps {
   selectedRack: {
     id: string;
     name: string;
-    azName: string;
+    azName?: string;
+    availabilityZoneId?: string;
   } | undefined;
 }
 
@@ -38,6 +40,10 @@ export const RackDetailView: React.FC<RackDetailViewProps> = ({
             showLabels={true}
             labelInterval={5}
             onDeviceClick={onDeviceClick}
+            onDeviceRemoved={() => {
+              // This will trigger a refresh of the stats when a device is removed
+              console.log("Device removed from rack view");
+            }}
           />
         </div>
       </div>
