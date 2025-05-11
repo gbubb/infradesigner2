@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
-import { DndProvider } from 'react-dnd';
+import { DndProvider as ReactDndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ConnectionPanel } from '@/components/connections/ConnectionPanel';
 import { RackFilterControls } from './rack-layouts/RackFilterControls';
@@ -84,7 +85,7 @@ export const RackLayoutsTab: React.FC = () => {
   };
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <ReactDndProvider backend={HTML5Backend}>
       <div className="space-y-6">
         <div>
           <h2 className="text-xl font-semibold">Rack Layouts</h2>
@@ -149,37 +150,38 @@ export const RackLayoutsTab: React.FC = () => {
           </div>
         </div>
 
-      {/* Connection Dialog */}
-      {isConnectionDialogOpen && selectedDeviceId && (
-        <Dialog 
-          open={isConnectionDialogOpen} 
-          onOpenChange={(open) => {
-            if (!open) handleCloseConnectionDialog();
-          }}
-        >
-          <DialogContent className="sm:max-w-[600px]">
-            <ConnectionPanel 
-              deviceId={selectedDeviceId}
-              onClose={handleCloseConnectionDialog}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
-      
-      {/* Placement Report Dialog - simplified */}
-      <AlertDialog open={isPlacementDialogOpen} onOpenChange={setIsPlacementDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
-            <AlertDialogDescription>
-              Simplified for debugging
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Close</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </DndProvider>
+        {/* Connection Dialog */}
+        {isConnectionDialogOpen && selectedDeviceId && (
+          <Dialog 
+            open={isConnectionDialogOpen} 
+            onOpenChange={(open) => {
+              if (!open) handleCloseConnectionDialog();
+            }}
+          >
+            <DialogContent className="sm:max-w-[600px]">
+              <ConnectionPanel 
+                deviceId={selectedDeviceId}
+                onClose={handleCloseConnectionDialog}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+        
+        {/* Placement Report Dialog - simplified */}
+        <AlertDialog open={isPlacementDialogOpen} onOpenChange={setIsPlacementDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
+              <AlertDialogDescription>
+                Simplified for debugging
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Close</AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </ReactDndProvider>
   );
 };
