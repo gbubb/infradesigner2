@@ -12,7 +12,6 @@ import { useRackInitialization } from './rack-layouts/useRackInitialization';
 import { DevicePalette } from '@/components/palette/DevicePalette';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { AutomatedPlacementService, PlacementReport } from '@/services/automatedPlacementService';
 import { 
   AlertDialog, 
   AlertDialogContent, 
@@ -38,7 +37,7 @@ export const RackLayoutsTab: React.FC = () => {
   const [selectedAZ, setSelectedAZ] = useState<string | 'all'>('all');
   const [scrollPosition, setScrollPosition] = useState(0);
   const [isPlacementDialogOpen, setIsPlacementDialogOpen] = useState(false);
-  const [placementReport, setPlacementReport] = useState<PlacementReport | null>(null);
+  const [placementReport, setPlacementReport] = useState<any | null>(null);
   const [isPlacing, setIsPlacing] = useState(false);
   const scrollStep = 300;
   
@@ -62,26 +61,17 @@ export const RackLayoutsTab: React.FC = () => {
     }
   }, [selectedRackId]);
 
-  // Handle device click - make sure we're safely setting state
+  // Simplified device click handler
   const handleDeviceClick = useCallback((deviceId: string) => {
-    if (deviceId) {
-      // First set the selected device ID 
-      setSelectedDeviceId(deviceId);
-      // Then open the dialog in a separate state update to prevent re-render loops
-      setTimeout(() => {
-        setIsConnectionDialogOpen(true);
-      }, 0);
-    }
+    console.log("Device clicked:", deviceId);
+    setSelectedDeviceId(deviceId);
+    setIsConnectionDialogOpen(true);
   }, []);
 
-  // Handle closing connection dialog - make sure we clean up state
+  // Simplified dialog close handler
   const handleCloseConnectionDialog = useCallback(() => {
-    // First close the dialog
     setIsConnectionDialogOpen(false);
-    // Then clear the selected device ID after the dialog animation completes
-    setTimeout(() => {
-      setSelectedDeviceId(null);
-    }, 300); // Allowing time for dialog close animation
+    // Don't immediately clear the selectedDeviceId
   }, []);
   
   const filteredRacks = rackProfiles.filter(
@@ -91,24 +81,8 @@ export const RackLayoutsTab: React.FC = () => {
   const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
 
   const handleAutoPlaceDevices = () => {
-    setIsPlacing(true);
-    
-    try {
-      const report = AutomatedPlacementService.placeAllDesignDevices();
-      setPlacementReport(report);
-      setIsPlacementDialogOpen(true);
-      
-      if (report.success) {
-        toast.success(`Successfully placed ${report.placedDevices} devices`);
-      } else {
-        toast.warning(`Placed ${report.placedDevices} devices, but ${report.failedDevices} failed`);
-      }
-    } catch (error) {
-      console.error("Error during auto-placement:", error);
-      toast.error("An error occurred during auto-placement");
-    } finally {
-      setIsPlacing(false);
-    }
+    // Simplified auto-place function
+    toast.info("Auto-placement disabled for debugging");
   };
 
   return (
@@ -178,89 +152,32 @@ export const RackLayoutsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Connection Management Dialog */}
-      <Dialog 
-        open={isConnectionDialogOpen} 
-        onOpenChange={(open) => {
-          if (!open) {
-            handleCloseConnectionDialog();
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-[600px]">
-          {isConnectionDialogOpen && selectedDeviceId && (
+      {/* Ultra simplified Connection Dialog */}
+      {isConnectionDialogOpen && selectedDeviceId && (
+        <Dialog 
+          open={isConnectionDialogOpen} 
+          onOpenChange={(open) => {
+            if (!open) handleCloseConnectionDialog();
+          }}
+        >
+          <DialogContent className="sm:max-w-[600px]">
             <ConnectionPanel 
               deviceId={selectedDeviceId}
               onClose={handleCloseConnectionDialog}
             />
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
       
-      {/* Placement Report Dialog */}
+      {/* Placement Report Dialog - simplified */}
       <AlertDialog open={isPlacementDialogOpen} onOpenChange={setIsPlacementDialogOpen}>
-        <AlertDialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
             <AlertDialogDescription>
-              Results of automated device placement
+              Simplified for debugging
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
-          {placementReport && (
-            <div className="py-4">
-              <div className="flex justify-between mb-4">
-                <span>Total devices: {placementReport.totalDevices}</span>
-                <span className="text-green-600">Placed: {placementReport.placedDevices}</span>
-                <span className="text-red-600">Failed: {placementReport.failedDevices}</span>
-              </div>
-              
-              <div className="border rounded-lg overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rack</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AZ</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {placementReport.items.map((item, index) => (
-                      <tr key={index} className={item.status === 'failed' ? 'bg-red-50' : ''}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.deviceName}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold 
-                            ${item.status === 'placed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {item.rackId ? rackProfiles.find(r => r.id === item.rackId)?.name : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {item.ruPosition || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {item.azId ? (item.azId === 'default' ? 'Default' : item.azId) : '-'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                          {item.reason || '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          
           <AlertDialogFooter>
             <AlertDialogCancel>Close</AlertDialogCancel>
           </AlertDialogFooter>
