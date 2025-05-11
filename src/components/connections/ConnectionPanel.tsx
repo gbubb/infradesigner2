@@ -136,6 +136,8 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
+          {/* Connected Ports - TEMPORARILY COMMENTED OUT FOR DEBUGGING */}
+          {/*
           <div>
             <h3 className="text-lg font-medium mb-2">Connected Ports</h3>
             {sourceDevice.ports && sourceDevice.ports.some(port => port.connectedToPortId) ? (
@@ -170,8 +172,9 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
               <p className="text-muted-foreground">No connected ports</p>
             )}
           </div>
+          */}
           
-          {/* Create New Connection - TEMPORARILY COMMENTED OUT FOR DEBUGGING */}
+          {/* Create New Connection - REMAINS COMMENTED OUT FOR DEBUGGING */}
           {/*
           <div className="border-t pt-4">
             <h3 className="text-lg font-medium mb-3">Create New Connection</h3>
@@ -242,6 +245,11 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
             </div>
           </div>
           */}
+          {(sourceDevice.ports && sourceDevice.ports.some(port => port.connectedToPortId)) ? null : <p className="text-muted-foreground">No connected ports found for this device.</p> }
+          {/* Placeholder if both sections are commented out to ensure some content */}
+          {!(sourceDevice.ports && sourceDevice.ports.some(port => port.connectedToPortId)) && 
+           (<p className="text-muted-foreground">Connection management UI is temporarily simplified for debugging.</p>)
+          }
         </div>
       </CardContent>
     </Card>
