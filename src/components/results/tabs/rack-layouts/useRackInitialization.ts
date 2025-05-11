@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
 import { DeviceRoleType } from '@/types/infrastructure/requirements-types';
@@ -321,8 +321,8 @@ export const useRackInitialization = () => {
     });
   };
 
-  return {
+  return useMemo(() => ({
     rackProfiles,
     availabilityZones
-  };
+  }), [rackProfiles, availabilityZones]);
 };

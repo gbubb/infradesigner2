@@ -22,6 +22,7 @@ import {
   AlertDialogCancel 
 } from '@/components/ui/alert-dialog';
 import { useDesignStore } from '@/store/designStore';
+import { shallow } from 'zustand/shallow';
 import { StoreState } from '@/store/types';
 import { InfrastructureComponent, RackProfile } from '@/types/infrastructure';
 import { useConnectionManager } from '@/hooks/design/useConnectionManager';
@@ -42,9 +43,10 @@ const componentsEqualityFn = (
 export const RackLayoutsTab: React.FC = () => {
   const { rackProfiles: initializedRackProfiles, availabilityZones: initializedAzNames } = useRackInitialization();
   const activeDesign = useDesignStore(state => state.activeDesign);
-  const rackProfilesFromStore = useMemo(() => {
-    return activeDesign?.rackProfiles || [];
-  }, [activeDesign?.rackProfiles]);
+  const rackProfilesFromStore: RackProfile[] = useDesignStore(
+    (state: StoreState) => state.activeDesign?.rackProfiles || [],
+    shallow
+  );
 
   const [selectedRackId, setSelectedRackId] = useState<string | null>(null);
   const [rackStats, setRackStats] = useState<any | null>(null);
