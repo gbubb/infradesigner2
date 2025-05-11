@@ -22,10 +22,21 @@ import {
   AlertDialogCancel 
 } from '@/components/ui/alert-dialog';
 import { useDesignStore } from '@/store/designStore';
+import { StoreState } from '@/store/types';
+import { InfrastructureComponent } from '@/types/infrastructure';
+import { useConnectionManager } from '@/hooks/design/useConnectionManager';
+
+// Selector and equality function for designComponents (used by ConnectionPanel via props)
+const panelSelector = (state: StoreState) => state.activeDesign?.components || [];
+const componentsEqualityFn = (oldComponents: InfrastructureComponent[], newComponents: InfrastructureComponent[]): boolean => {
+  if (oldComponents === newComponents) return true;
+  if (oldComponents.length !== newComponents.length) return false;
+  return JSON.stringify(oldComponents) === JSON.stringify(newComponents);
+};
 
 export const RackLayoutsTab: React.FC = () => {
   const { rackProfiles: initializedRackProfiles, availabilityZones: initializedAzNames } = useRackInitialization();
-  const activeDesign = useDesignStore(state => state.activeDesign);
+  const activeDesignFromStore = useDesignStore(state => state.activeDesign);
 
   const [selectedRackId, setSelectedRackId] = useState<string | null>(null);
   const [rackStats, setRackStats] = useState<any | null>(null);
@@ -39,18 +50,22 @@ export const RackLayoutsTab: React.FC = () => {
   const scrollStep = 300;
   const testDeviceId = "test-device-id-for-debug"; // Hardcoded ID for testing
   
+  // Data for ConnectionPanel (hoisted from ConnectionPanel)
+  const designComponentsForPanel = useDesignStore(panelSelector, componentsEqualityFn);
+  const connectionManagerData = useConnectionManager();
+
   useEffect(() => {
-    const currentRackProfilesSource = activeDesign?.rackProfiles || initializedRackProfiles;
+    const currentRackProfilesSource = activeDesignFromStore?.rackProfiles || initializedRackProfiles;
     if (currentRackProfilesSource.length > 0 && 
         (!selectedRackId || !currentRackProfilesSource.find(r => r.id === selectedRackId))) {
       setSelectedRackId(currentRackProfilesSource[0].id);
     } else if (currentRackProfilesSource.length === 0 && selectedRackId) {
       setSelectedRackId(null);
     }
-  }, [activeDesign?.rackProfiles, initializedRackProfiles, selectedRackId]);
+  }, [activeDesignFromStore?.rackProfiles, initializedRackProfiles, selectedRackId]);
   
   useEffect(() => {
-    if (selectedRackId && activeDesign) {
+    if (selectedRackId && activeDesignFromStore) {
       try {
         const stats = analyzeRackLayout(selectedRackId);
         setRackStats(stats);
@@ -61,11 +76,11 @@ export const RackLayoutsTab: React.FC = () => {
     } else {
       setRackStats(null);
     }
-  }, [selectedRackId, activeDesign]);
+  }, [selectedRackId, activeDesignFromStore]);
 
-  const handleDeviceClick = useCallback((originalDeviceId: string) => {
-    setSelectedDeviceId(originalDeviceId); 
-    setIsConnectionDialogOpen(true); 
+  const handleDeviceClick = useCallback((deviceId: string) => {
+    setSelectedDeviceId(deviceId);
+    setIsConnectionDialogOpen(true);
   }, []);
 
   const handleCloseConnectionDialog = useCallback(() => {
@@ -74,7 +89,7 @@ export const RackLayoutsTab: React.FC = () => {
   }, []);
   
   const currentDisplayRackProfiles = useMemo((): RackProfileInitializationData[] => {
-    const profilesFromStore = activeDesign?.rackProfiles;
+    const profilesFromStore = activeDesignFromStore?.rackProfiles;
     if (profilesFromStore) {
       return profilesFromStore.map(r => ({
         id: r.id,
@@ -88,7 +103,7 @@ export const RackLayoutsTab: React.FC = () => {
       }));
     }
     return initializedRackProfiles;
-  }, [activeDesign?.rackProfiles, initializedRackProfiles, initializedAzNames]);
+  }, [activeDesignFromStore?.rackProfiles, initializedRackProfiles, initializedAzNames]);
 
   const uniqueAzNamesForFilter = useMemo(() => {
     return [...new Set(currentDisplayRackProfiles.map(r => r.azName).filter(Boolean))] as string[];
@@ -194,16 +209,17 @@ export const RackLayoutsTab: React.FC = () => {
         // onOpenChange={setIsConnectionDialogOpen} // Temporarily remove onOpenChange
       >
         <DialogContent className="sm:max-w-[600px]">
-          {/* CONDITIONAL RENDERING FOR DEBUGGING */}
-          {isConnectionDialogOpen && selectedDeviceId && (
-            <div>
-              <p>Debug: Dialog is open for device ID: {selectedDeviceId}</p>
-              <p>ConnectionPanel itself is NOT rendered for this test.</p>
-              <Button onClick={handleCloseConnectionDialog}>Close Debug Dialog</Button>
-            </div>
-          )}
-          {isConnectionDialogOpen && !selectedDeviceId && (
-             <p>Debug: Dialog is open, but no selectedDeviceId.</p>
+          {selectedDeviceId && (
+            <ConnectionPanel 
+              deviceId={selectedDeviceId}
+              onClose={handleCloseConnectionDialog}
+              // Pass data from hoisted hooks
+              designComponents={designComponentsForPanel}
+              connections={connectionManagerData.connections}
+              addConnection={connectionManagerData.addConnection}
+              removeConnection={connectionManagerData.removeConnection}
+              // getConnectedPort will be defined inside ConnectionPanel using these props
+            />
           )}
         </DialogContent>
       </Dialog>
