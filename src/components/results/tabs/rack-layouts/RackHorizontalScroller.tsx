@@ -1,10 +1,8 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, HardDrive, Database } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { RackProfile } from '@/types/infrastructure/rack-types';
 
 interface RackHorizontalScrollerProps {
   racks: Array<{ id: string; name: string; azName: string }>;

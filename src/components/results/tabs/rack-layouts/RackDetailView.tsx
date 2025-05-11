@@ -1,14 +1,11 @@
-
-import React, { useCallback } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React from 'react';
+import { RackView } from '@/components/visualization/RackView';
 import { RackUtilizationCard } from './RackUtilizationCard';
 import { RackPropertiesCard } from './RackPropertiesCard';
-import { RackView } from '@/components/visualization/RackView';
-import { RackProfile } from '@/types/infrastructure/rack-types';
 
 interface RackDetailViewProps {
   rackProfileId: string;
-  onDeviceClick?: (deviceId: string) => void;
+  onDeviceClick: (deviceId: string) => void;
   rackStats: {
     totalRU: number;
     usedRU: number;
@@ -16,48 +13,44 @@ interface RackDetailViewProps {
     utilizationPercentage: number;
     deviceCount: number;
   } | null;
-  selectedRack?: RackProfile;
-  onDevicePlaced?: () => void;
+  selectedRack: {
+    id: string;
+    name: string;
+    azName: string;
+  } | undefined;
 }
 
 export const RackDetailView: React.FC<RackDetailViewProps> = ({
   rackProfileId,
   onDeviceClick,
   rackStats,
-  selectedRack,
-  onDevicePlaced
+  selectedRack
 }) => {
-  const handleDeviceClick = useCallback((deviceId: string) => {
-    if (onDeviceClick) {
-      onDeviceClick(deviceId);
-    }
-  }, [onDeviceClick]);
-
-  const handleDevicePlaced = useCallback(() => {
-    if (onDevicePlaced) {
-      onDevicePlaced();
-    }
-  }, [onDevicePlaced]);
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-      {/* Rack visualization - takes 3/4 of the space */}
-      <div className="lg:col-span-3 order-2 lg:order-1">
-        <Card>
-          <CardContent className="pt-6">
-            <RackView 
-              rackId={rackProfileId} 
-              onDeviceClick={handleDeviceClick}
-              onDevicePlaced={handleDevicePlaced}
-            />
-          </CardContent>
-        </Card>
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+      {/* Rack visualization - takes 7 columns */}
+      <div className="md:col-span-7">
+        <div className="flex justify-center">
+          <RackView 
+            rackProfileId={rackProfileId}
+            height={700}
+            width={300}
+            showLabels={true}
+            labelInterval={5}
+            onDeviceClick={onDeviceClick}
+          />
+        </div>
       </div>
       
-      {/* Rack info panels - take 1/4 of the space */}
-      <div className="lg:col-span-1 space-y-4 order-1 lg:order-2">
-        <RackUtilizationCard rackStats={rackStats} />
-        <RackPropertiesCard rack={selectedRack} />
+      {/* Rack info - takes 5 columns - DevicePalette removed from here */}
+      <div className="md:col-span-5">
+        <div className="space-y-6">
+          {/* Rack Utilization Card */}
+          <RackUtilizationCard rackStats={rackStats} />
+          
+          {/* Rack Properties */}
+          <RackPropertiesCard rack={selectedRack} />
+        </div>
       </div>
     </div>
   );

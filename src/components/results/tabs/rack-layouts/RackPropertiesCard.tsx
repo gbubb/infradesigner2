@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,38 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RackService } from '@/services/rackService';
 import { toast } from 'sonner';
-import { RackProfile } from '@/types/infrastructure/rack-types';
 
 interface RackPropertiesCardProps {
-  rack: RackProfile | undefined;
+  rack: {
+    id: string;
+    name: string;      // This is the simple name like "Rack 1"
+    azName: string;   // This is the AZ name like "AZ1"
+  } | undefined;
 }
 
 export const RackPropertiesCard: React.FC<RackPropertiesCardProps> = ({ rack }) => {
   const [rackName, setRackName] = useState(rack?.name || '');
   const [isEditing, setIsEditing] = useState(false);
-  
-  // Get the availability zone name for display
-  const getAzName = () => {
-    if (!rack) return '';
-    
-    // Try to find AZ name from various sources
-    if ('azName' in rack && typeof (rack as any).azName === 'string') {
-      return (rack as any).azName;
-    }
-    
-    // Extract AZ name from the ID if available
-    if (rack.availabilityZoneId) {
-      if (rack.availabilityZoneId.startsWith('auto-az-')) {
-        return `AZ${rack.availabilityZoneId.replace('auto-az-', '')}`;
-      }
-      if (rack.availabilityZoneId === 'core-az-id') {
-        return 'Core';
-      }
-      return rack.availabilityZoneId;
-    }
-    
-    return 'Default AZ';
-  };
 
   useEffect(() => {
     setRackName(rack?.name || '');
@@ -101,7 +80,7 @@ export const RackPropertiesCard: React.FC<RackPropertiesCardProps> = ({ rack }) 
         </div>
         <div className="space-y-1">
           <Label>Availability Zone</Label>
-          <p className="text-sm text-muted-foreground">{getAzName()}</p>
+          <p className="text-sm text-muted-foreground">{rack.azName}</p>
         </div>
         {/* Add other rack properties here as needed */}
       </CardContent>

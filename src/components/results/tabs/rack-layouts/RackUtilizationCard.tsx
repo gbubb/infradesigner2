@@ -44,11 +44,8 @@ export const RackUtilizationCard: React.FC<RackUtilizationCardProps> = ({ rackSt
             {/* Progress bar for utilization */}
             <div className="w-full bg-gray-200 rounded-full h-2.5">
               <div 
-                className={`h-2.5 rounded-full ${
-                  rackStats.utilizationPercentage < 70 ? 'bg-green-600' : 
-                  rackStats.utilizationPercentage < 90 ? 'bg-amber-500' : 'bg-red-600'
-                }`}
-                style={{ width: `${Math.min(100, rackStats.utilizationPercentage)}%` }}
+                className="bg-blue-600 h-2.5 rounded-full" 
+                style={{ width: `${rackStats.utilizationPercentage}%` }}
               ></div>
             </div>
           </div>

@@ -24,8 +24,6 @@ export interface RackProfile {
   devices: PlacedDevice[];
   availabilityZoneId?: string;
   rackType?: RackType;
-  // Add this optional property to maintain compatibility with existing code
-  azName?: string;
 }
 
 // Additional rack-related types could be added here in the future
