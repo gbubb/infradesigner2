@@ -22,7 +22,8 @@ const panelSelector = (state: StoreState) => ({
 
 export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onClose }) => {
   // Use a more stable selector for components from activeDesign
-  const { components: designComponents } = useDesignStore(panelSelector, shallow);
+  const { components: designComponents } = useDesignStore(panelSelector);
+  
   const { connections, addConnection, removeConnection } = useConnectionManager();
   
   const [selectedPortId, setSelectedPortId] = useState<string>('');
