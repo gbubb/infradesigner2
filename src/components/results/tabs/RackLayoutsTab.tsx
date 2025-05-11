@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
-import { ReactDndProvider } from 'react-dnd';
+import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ConnectionPanel } from '@/components/connections/ConnectionPanel';
 import { RackFilterControls } from './rack-layouts/RackFilterControls';
@@ -122,7 +121,7 @@ export const RackLayoutsTab: React.FC = () => {
   }, [updateRackStats]);
 
   return (
-    <ReactDndProvider backend={HTML5Backend}>
+    <DndProvider backend={HTML5Backend}>
       <div className="space-y-6">
         <div>
           <h2 className="text-xl font-semibold">Rack Layouts</h2>
@@ -280,6 +279,6 @@ export const RackLayoutsTab: React.FC = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </ReactDndProvider>
+    </DndProvider>
   );
 };

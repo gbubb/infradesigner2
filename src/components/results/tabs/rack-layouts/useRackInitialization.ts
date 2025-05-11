@@ -1,10 +1,10 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
 import { DeviceRoleType } from '@/types/infrastructure/requirements-types';
 import { ComponentType, RackType } from '@/types/infrastructure';
 import { toast } from 'sonner';
+import { RackProfile } from '@/types/infrastructure/rack-types';
 
 export interface RackProfileInitializationData {
   id: string;
@@ -12,6 +12,8 @@ export interface RackProfileInitializationData {
   azName: string;
   availabilityZoneId?: string;
   rackType?: 'Core' | 'ComputeStorage';
+  uHeight: number;
+  devices: { deviceId: string; ruPosition: number; orientation: 'Front' | 'Rear' }[];
 }
 
 export const useRackInitialization = () => {
@@ -41,7 +43,7 @@ export const useRackInitialization = () => {
     // Prevent multiple initializations for the same design
     if (initializedRef.current) return;
     
-    console.log("Initializing racks for design:", activeDesign.id);
+    console.log("Initializing racks for design:", activeDesign?.id);
     
     // Clear existing racks
     RackService.clearAllRackProfiles();
@@ -62,14 +64,26 @@ export const useRackInitialization = () => {
     const newAvailabilityZones: string[] = [];
     let globalRackCounter = 1;
 
-    if (definedAZs.length > 0) {
+    if (definedAZs && definedAZs.length > 0) {
       definedAZs.forEach(az => {
         newAvailabilityZones.push(az.name);
         for (let rackNumInAZ = 1; rackNumInAZ <= computeRacksPerAZ; rackNumInAZ++) {
           if (newRacks.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
           const simpleRackName = `Rack ${globalRackCounter}`;
           const rackId = RackService.createRackProfile(simpleRackName, 42, az.id, RackType.ComputeStorage);
-          newRacks.push({ id: rackId, name: simpleRackName, azName: az.name, availabilityZoneId: az.id, rackType: 'ComputeStorage' });
+          const rackProfile = RackService.getRackProfile(rackId);
+          if (rackProfile) {
+            const formattedRack: RackProfileInitializationData = {
+              id: rackProfile.id,
+              name: rackProfile.name,
+              azName: az.name,
+              availabilityZoneId: az.id,
+              rackType: 'ComputeStorage',
+              uHeight: rackProfile.uHeight,
+              devices: rackProfile.devices
+            };
+            newRacks.push(formattedRack);
+          }
           globalRackCounter++;
         }
       });
@@ -82,7 +96,19 @@ export const useRackInitialization = () => {
           if (newRacks.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
           const simpleRackName = `Rack ${globalRackCounter}`;
           const rackId = RackService.createRackProfile(simpleRackName, 42, azId, RackType.ComputeStorage);
-          newRacks.push({ id: rackId, name: simpleRackName, azName: azName, availabilityZoneId: azId, rackType: 'ComputeStorage' });
+          const rackProfile = RackService.getRackProfile(rackId);
+          if (rackProfile) {
+            const formattedRack: RackProfileInitializationData = {
+              id: rackProfile.id,
+              name: rackProfile.name,
+              azName: azName,
+              availabilityZoneId: azId,
+              rackType: 'ComputeStorage',
+              uHeight: rackProfile.uHeight,
+              devices: rackProfile.devices
+            };
+            newRacks.push(formattedRack);
+          }
           globalRackCounter++;
         }
       }

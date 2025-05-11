@@ -8,7 +8,12 @@ interface RackFilterControlsProps {
   availabilityZones: string[];
   selectedRackId: string | null;
   setSelectedRackId: (value: string | null) => void;
-  filteredRacks: Array<{ id: string; name: string; availabilityZoneId?: string }>;
+  filteredRacks: Array<{ 
+    id: string; 
+    name: string; 
+    availabilityZoneId?: string;
+    azName?: string;
+  }>;
 }
 
 export const RackFilterControls: React.FC<RackFilterControlsProps> = ({
