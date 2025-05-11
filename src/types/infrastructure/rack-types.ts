@@ -1,8 +1,14 @@
+
 // Rack and device placement definitions
 
 export enum DeviceOrientation {
   Front = 'Front',
   Rear = 'Rear'
+}
+
+export enum RackType {
+  Core = 'Core',
+  ComputeStorage = 'ComputeStorage'
 }
 
 export interface PlacedDevice {
@@ -17,7 +23,7 @@ export interface RackProfile {
   uHeight: number;
   devices: PlacedDevice[];
   availabilityZoneId?: string;
-  rackType?: 'Core' | 'ComputeStorage';
+  rackType?: RackType;
 }
 
 // Additional rack-related types could be added here in the future

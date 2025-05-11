@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
@@ -61,21 +62,28 @@ export const RackLayoutsTab: React.FC = () => {
     }
   }, [selectedRackId]);
 
+  // Handle device click - make sure we're safely setting state
   const handleDeviceClick = useCallback((deviceId: string) => {
-    setSelectedDeviceId(deviceId);
-    setIsConnectionDialogOpen(true);
+    if (deviceId) {
+      setSelectedDeviceId(deviceId);
+      setIsConnectionDialogOpen(true);
+    }
   }, []);
 
+  // Handle closing connection dialog - make sure we clean up state
   const handleCloseConnectionDialog = useCallback(() => {
     setIsConnectionDialogOpen(false);
-    setSelectedDeviceId(null);
+    // Set the selected device ID to null AFTER the dialog closes
+    setTimeout(() => {
+      setSelectedDeviceId(null);
+    }, 100);
   }, []);
   
   const filteredRacks = rackProfiles.filter(
     rack => selectedAZ === 'all' || rack.availabilityZoneId === selectedAZ
   );
   
-  const selectedRack = rackProfiles.find(r => r.id === selectedRackId);
+  const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
 
   const handleAutoPlaceDevices = () => {
     setIsPlacing(true);
@@ -165,10 +173,21 @@ export const RackLayoutsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Connection Management Dialog */}
-      <Dialog open={isConnectionDialogOpen} onOpenChange={setIsConnectionDialogOpen}>
+      {/* Connection Management Dialog - Only render ConnectionPanel when dialog is open and we have a deviceId */}
+      <Dialog 
+        open={isConnectionDialogOpen} 
+        onOpenChange={(open) => {
+          setIsConnectionDialogOpen(open);
+          if (!open) {
+            // Clean up selected device when dialog closes
+            setTimeout(() => {
+              setSelectedDeviceId(null);
+            }, 100);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[600px]">
-          {selectedDeviceId && (
+          {isConnectionDialogOpen && selectedDeviceId && (
             <ConnectionPanel 
               deviceId={selectedDeviceId}
               onClose={handleCloseConnectionDialog}

@@ -1,6 +1,6 @@
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from './rackService';
-import { InfrastructureComponent, RackProfile } from '@/types/infrastructure';
+import { InfrastructureComponent, RackProfile, RackType } from '@/types/infrastructure';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface PlacementReportItem {
@@ -130,31 +130,79 @@ export class AutomatedPlacementService {
         return report;
     }
 
+    // Now let's implement a more strategic placement based on device type and rack type
     for (const device of sortedDevices) {
       let placed = false;
       let attemptedDetails: string[] = [];
-
-      // Try to place the device by cycling through all racks
-      // This is a simple round-robin across ALL racks. For more specific AZ balancing, this loop needs to be smarter.
-      for (let i = 0; i < allAvailableRacksFlat.length; i++) {
-        const targetRackIndex = (currentGlobalRackIndex + i) % allAvailableRacksFlat.length;
-        const targetRack = allAvailableRacksFlat[targetRackIndex];
+      
+      // First pass: try to place devices in the appropriate rack type
+      // Network devices (like switches and routers) should go in Core racks if available
+      if (device.type === ComponentType.Switch || device.type === ComponentType.Router) {
+        // Try to place in Core racks first
+        const coreRacks = allAvailableRacksFlat.filter(rack => rack.rackType === RackType.Core);
         
-        const result = this.tryPlaceDeviceInRack(device, targetRack, design.components);
-        if (result.success) {
-          placed = true;
-          report.items.push({
-            deviceId: device.id,
-            deviceName: device.name,
-            status: "placed", 
-            rackId: targetRack.id,
-            ruPosition: result.placedPosition,
-            azId: targetRack.availabilityZoneId || 'default'
-          });
-          currentGlobalRackIndex = (targetRackIndex + 1) % allAvailableRacksFlat.length; // Move to next rack for next device
-          break; // Device placed, move to next device
+        for (const coreRack of coreRacks) {
+          const result = this.tryPlaceDeviceInRack(device, coreRack, design.components);
+          if (result.success) {
+            placed = true;
+            report.items.push({
+              deviceId: device.id,
+              deviceName: device.name,
+              status: "placed", 
+              rackId: coreRack.id,
+              ruPosition: result.placedPosition,
+              azId: coreRack.availabilityZoneId || 'default'
+            });
+            break;
+          }
+          attemptedDetails.push(`${coreRack.name}: ${result.error}`);
         }
-        attemptedDetails.push(`${targetRack.name}: ${result.error}`);
+      } 
+      // Servers and storage should go in Compute/Storage racks if available
+      else if (device.type === ComponentType.Server || device.type === ComponentType.Disk) {
+        // Try to place in ComputeStorage racks first
+        const computeRacks = allAvailableRacksFlat.filter(rack => rack.rackType === RackType.ComputeStorage);
+        
+        for (const computeRack of computeRacks) {
+          const result = this.tryPlaceDeviceInRack(device, computeRack, design.components);
+          if (result.success) {
+            placed = true;
+            report.items.push({
+              deviceId: device.id,
+              deviceName: device.name,
+              status: "placed", 
+              rackId: computeRack.id,
+              ruPosition: result.placedPosition,
+              azId: computeRack.availabilityZoneId || 'default'
+            });
+            break;
+          }
+          attemptedDetails.push(`${computeRack.name}: ${result.error}`);
+        }
+      }
+      
+      // Second pass: If not placed in the preferred rack type, try any rack
+      if (!placed) {
+        for (let i = 0; i < allAvailableRacksFlat.length; i++) {
+          const targetRackIndex = (currentGlobalRackIndex + i) % allAvailableRacksFlat.length;
+          const targetRack = allAvailableRacksFlat[targetRackIndex];
+          
+          const result = this.tryPlaceDeviceInRack(device, targetRack, design.components);
+          if (result.success) {
+            placed = true;
+            report.items.push({
+              deviceId: device.id,
+              deviceName: device.name,
+              status: "placed", 
+              rackId: targetRack.id,
+              ruPosition: result.placedPosition,
+              azId: targetRack.availabilityZoneId || 'default'
+            });
+            currentGlobalRackIndex = (targetRackIndex + 1) % allAvailableRacksFlat.length; // Move to next rack for next device
+            break; // Device placed, move to next device
+          }
+          attemptedDetails.push(`${targetRack.name}: ${result.error}`);
+        }
       }
 
       if (!placed) {

@@ -1,6 +1,7 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { useDesignStore } from '@/store/designStore';
-import { RackProfile, PlacedDevice, DeviceOrientation } from '@/types/infrastructure/rack-types';
+import { RackProfile, PlacedDevice, DeviceOrientation, RackType } from '@/types/infrastructure/rack-types';
 
 export interface PlacementResult {
   success: boolean;
@@ -43,7 +44,7 @@ export class RackService {
     name?: string,
     uHeight: number = 42, 
     availabilityZoneId?: string,
-    rackType: 'Core' | 'ComputeStorage' = 'ComputeStorage'
+    rackType: RackType = RackType.ComputeStorage
   ): string {
     const state = useDesignStore.getState();
     const profiles = this.getAllRackProfiles();
