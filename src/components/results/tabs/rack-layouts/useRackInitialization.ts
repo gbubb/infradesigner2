@@ -38,18 +38,44 @@ export const useRackInitialization = () => {
       const storeRacks = currentDesign.rackProfiles || [];
       const localRackIds = new Set(rackProfiles.map(r => r.id));
       const storeRackIds = new Set(storeRacks.map(r => r.id));
+      
       if (storeRacks.length !== rackProfiles.length || !storeRacks.every(sr => localRackIds.has(sr.id)) || !rackProfiles.every(lr => storeRackIds.has(lr.id) )) {
         console.log("Re-syncing local rackProfiles state from store for already initialized design:", currentDesign.id);
-        const azNamesFromStore = [...new Set(storeRacks.map(r => {
-          const matchingInitializedProfile = rackProfiles.find(irp => irp.availabilityZoneId === r.availabilityZoneId && irp.id === r.id);
-          return matchingInitializedProfile?.azName || r.availabilityZoneId || (r.rackType === 'Core' ? 'Core' : 'Unknown AZ');
-        }).filter(Boolean))] as string[];
-        setRackProfiles(storeRacks.map(r => ({
-          id: r.id, name: r.name,
-          azName: rackProfiles.find(irp => irp.availabilityZoneId === r.availabilityZoneId && irp.id === r.id)?.azName || r.availabilityZoneId || (r.rackType === 'Core' ? 'Core' : 'Unknown AZ'),
-          availabilityZoneId: r.availabilityZoneId, rackType: r.rackType
-        })));
-        setAvailabilityZones(azNamesFromStore);
+        
+        const updatedRackProfilesFromStore = storeRacks.map(storeRack => {
+          let determinedAzName = 'Unknown AZ'; // Default
+          const definedAzFromRequirements = (currentDesign.requirements.physicalConstraints.availabilityZones || []).find(az => az.id === storeRack.availabilityZoneId);
+
+          if (definedAzFromRequirements) {
+            determinedAzName = definedAzFromRequirements.name;
+          } else if (storeRack.availabilityZoneId?.startsWith('auto-az-')) {
+            determinedAzName = `AZ${storeRack.availabilityZoneId.substring('auto-az-'.length)}`;
+          } else if (storeRack.availabilityZoneId === 'core-az-id') {
+            determinedAzName = 'Core';
+          } else if (storeRack.availabilityZoneId) { // Fallback if no specific logic matches but an ID exists
+            determinedAzName = storeRack.availabilityZoneId;
+          }
+          // If rackType is 'Core' and azName is still 'Unknown AZ', override to 'Core'
+          if (storeRack.rackType === 'Core' && determinedAzName === 'Unknown AZ') {
+            determinedAzName = 'Core';
+          }
+
+          return {
+            id: storeRack.id,
+            name: storeRack.name,
+            azName: determinedAzName,
+            availabilityZoneId: storeRack.availabilityZoneId,
+            rackType: storeRack.rackType
+          };
+        });
+        
+        setRackProfiles(updatedRackProfilesFromStore);
+
+        const newAzDisplayNames = [...new Set(updatedRackProfilesFromStore.map(r => r.azName).filter(Boolean))] as string[];
+        // Only update availabilityZones if they actually changed to prevent unnecessary re-renders downstream.
+        if (JSON.stringify(availabilityZones.sort()) !== JSON.stringify(newAzDisplayNames.sort())) {
+            setAvailabilityZones(newAzDisplayNames);
+        }
       }
       return;
     }
