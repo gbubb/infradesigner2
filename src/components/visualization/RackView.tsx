@@ -89,13 +89,24 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
     </div>
   );
 
-  const showModelLine = height >= 35 && ruSize > 1; // Increased threshold for showing model line
+  // Show model line only if sufficient height AND it's a device larger than 1RU
+  const showModelLine = height >= 35 && ruSize > 1;
+
   let nameFontSize = '0.7rem';
+  let nameLineHeight = '1.1';
+
   if (ruSize === 1) {
-    nameFontSize = '0.65rem';
-  } else if (ruSize === 2 && height < 40) { // Specific case for 2RU devices with smaller visual height
-    nameFontSize = '0.65rem';
-  }
+    nameFontSize = '0.65rem'; // Maximize space for name
+    nameLineHeight = `${Math.max(height - 4, 10)}px`; // Try to vertically center based on available pixel height
+  } else if (ruSize === 2) {
+    if (height < 40) { // For 2RU devices with less visual height
+      nameFontSize = '0.65rem';
+      // If not showing model line, allow name to take more vertical space
+      if (!showModelLine) nameLineHeight = `${Math.max(height - 4, 12)}px`;
+    } else { // Ample height for 2RU
+      nameFontSize = '0.7rem';
+    }
+  } // For >2RU, default 0.7rem is usually fine with model line
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -113,22 +124,37 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
               height: `${height}px`,
               zIndex: 10,
               opacity: isDragging ? 0.5 : 1,
-              fontSize: nameFontSize, // Use dynamic nameFontSize
-              lineHeight: '1.1',
+              fontSize: nameFontSize,
               boxSizing: 'border-box',
             }}
             onClick={handleClick}
           >
-            <div className="w-full text-center truncate" style={{ fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            {/* Name - give it more flexible line height, especially for 1U or constrained 2U */}
+            <div 
+              className="w-full text-center truncate flex items-center justify-center" 
+              style={{ fontWeight: 500, height: showModelLine ? '60%' : '100%', lineHeight: nameLineHeight }}
+            >
               {name}
             </div>
+
+            {/* Model Line - only if enough space and not 1U */}
             {showModelLine && (
-              <div className="w-full text-center truncate opacity-80" style={{ fontSize: '0.6rem'}}>
+              <div 
+                className="w-full text-center truncate opacity-80" 
+                style={{ fontSize: '0.6rem', height: '40%', lineHeight: 'normal' }}
+              >
                 {model}
               </div>
             )}
-            {!showModelLine && ruSize > 1 && height > 15 && (
-              <div className="w-full text-center truncate opacity-70" style={{ fontSize: '0.6rem'}}>
+            
+            {/* RU Size text - ONLY for >1RU devices IF model line is NOT shown (due to small height) 
+                AND there's a reasonable minimum height to show it without cluttering the name further. 
+                Avoid for 1U as it's redundant and takes name space. */}
+            {!showModelLine && ruSize > 1 && height >= 25 && (
+              <div 
+                className="w-full text-center truncate opacity-70"
+                style={{ fontSize: '0.6rem', position: 'absolute', bottom: '1px' }} // Position at bottom if name takes full height
+              >
                 {ruSize}U
               </div>
             )}

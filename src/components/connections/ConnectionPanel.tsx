@@ -171,6 +171,8 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
             )}
           </div>
           
+          {/* Create New Connection - TEMPORARILY COMMENTED OUT FOR DEBUGGING */}
+          {/*
           <div className="border-t pt-4">
             <h3 className="text-lg font-medium mb-3">Create New Connection</h3>
             <div className="space-y-4">
@@ -239,6 +241,7 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
               </Button>
             </div>
           </div>
+          */}
         </div>
       </CardContent>
     </Card>
