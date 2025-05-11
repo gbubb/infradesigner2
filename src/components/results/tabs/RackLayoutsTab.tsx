@@ -196,7 +196,7 @@ export const RackLayoutsTab: React.FC = () => {
           setSelectedAZ={setSelectedAZ}
           availabilityZones={uniqueAzNamesForFilter}
           selectedRackId={selectedRackId}
-          setSelectedRackId={setSelectedRackId}
+          setSelectedRackId={() => { console.log("RackFilterControls attempted to set rack ID - NO_OP"); }}
           filteredRacks={filteredRacks}
         />
         
@@ -204,7 +204,7 @@ export const RackLayoutsTab: React.FC = () => {
         <RackHorizontalScroller
           racks={filteredRacks}
           selectedRackId={selectedRackId}
-          setSelectedRackId={setSelectedRackId}
+          setSelectedRackId={() => { console.log("RackHorizontalScroller attempted to set rack ID - NO_OP"); }}
           scrollPosition={scrollPosition}
           setScrollPosition={setScrollPosition}
           scrollStep={scrollStep}
