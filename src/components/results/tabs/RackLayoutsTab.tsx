@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
@@ -21,6 +22,7 @@ import {
   AlertDialogCancel 
 } from '@/components/ui/alert-dialog';
 import { AutomatedPlacementService, PlacementReport } from '@/services/automatedPlacementService';
+import { RackProfile } from '@/types/infrastructure/rack-types';
 
 export const RackLayoutsTab: React.FC = () => {
   const { rackProfiles, availabilityZones } = useRackInitialization();
@@ -82,7 +84,10 @@ export const RackLayoutsTab: React.FC = () => {
     rack => selectedAZ === 'all' || rack.availabilityZoneId === selectedAZ
   );
   
-  const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
+  // Find the currently selected rack from the profiles
+  const selectedRack = selectedRackId 
+    ? rackProfiles.find(r => r.id === selectedRackId) as unknown as RackProfile 
+    : undefined;
 
   // Re-enable auto-placement functionality
   const handleAutoPlaceDevices = async () => {
