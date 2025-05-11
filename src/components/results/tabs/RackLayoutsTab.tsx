@@ -69,18 +69,34 @@ export const RackLayoutsTab: React.FC = () => {
   });
 
   useEffect(() => {
-    // console.log("EFFECT: Initial selectedRackId - Firing", { /* ... */ });
+    // console.log(`EFFECT: Initial selectedRackId - Firing. SelectedRackId: ${selectedRackId}`);
+    // console.log("EFFECT: rackProfilesFromStore:", rackProfilesFromStore.map(r => r.id));
+    // console.log("EFFECT: initializedRackProfiles:", initializedRackProfiles.map(r => r.id));
+    
     const currentRackProfilesSource = rackProfilesFromStore.length > 0 ? rackProfilesFromStore : initializedRackProfiles;
-    if (currentRackProfilesSource.length > 0 && 
-        (!selectedRackId || !currentRackProfilesSource.find(r => r.id === selectedRackId))) {
-      const newSelectedRackId = currentRackProfilesSource[0].id;
-      // console.log("EFFECT: Initial selectedRackId - Setting selectedRackId to:", newSelectedRackId);
-      setSelectedRackId(newSelectedRackId); 
-    } else if (currentRackProfilesSource.length === 0 && selectedRackId) {
-      // console.log("EFFECT: Initial selectedRackId - Setting selectedRackId to null (no racks)");
-      setSelectedRackId(null);
+
+    if (currentRackProfilesSource.length > 0) {
+      const firstRackId = currentRackProfilesSource[0].id;
+      // Condition to select the first rack:
+      // 1. If no rack is currently selected (selectedRackId is null/undefined)
+      // OR
+      // 2. If the currently selected rack is no longer found in the current list of racks
+      if (!selectedRackId || !currentRackProfilesSource.find(r => r.id === selectedRackId)) {
+        // console.log(`EFFECT: Condition met to potentially set selectedRackId. Current: ${selectedRackId}, Proposed new: ${firstRackId}`);
+        if (selectedRackId !== firstRackId) { // Guard: Only set if different
+          // console.log(`EFFECT: Setting selectedRackId to ${firstRackId}`);
+          setSelectedRackId(firstRackId);
+        } else {
+          // console.log(`EFFECT: selectedRackId is already ${firstRackId}. No change.`);
+        }
+      } else {
+        // console.log(`EFFECT: selectedRackId (${selectedRackId}) is valid and found. No change needed.`);
+      }
+    } else if (selectedRackId !== null) { // If there are no racks, but one is still selected
+      // console.log(`EFFECT: No racks available, but selectedRackId is ${selectedRackId}. Setting to null.`);
+      setSelectedRackId(null); // Guard is implicit: selectedRackId !== null
     } else {
-      // console.log("EFFECT: Initial selectedRackId - No change to selectedRackId");
+      // console.log("EFFECT: No racks available, and selectedRackId is already null. No change.");
     }
   }, [rackProfilesFromStore, initializedRackProfiles, selectedRackId]);
   
