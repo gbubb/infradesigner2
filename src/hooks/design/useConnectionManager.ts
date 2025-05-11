@@ -1,14 +1,15 @@
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Port, MediaType, CableMediaType, ConnectorType, InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { toast } from 'sonner';
-import { shallow } from 'zustand/shallow';
 import { StoreState } from '@/store/types';
 
 /**
  * Hook for managing connections between devices in the infrastructure design
  */
 export const useConnectionManager = () => {
+  // Use a simple selector to avoid shallow comparison issues
   const { components, updateActiveDesign } = useDesignStore(
     (state: StoreState) => ({
       components: state.activeDesign?.components || [],
@@ -24,6 +25,7 @@ export const useConnectionManager = () => {
     cableId: string;
   }>>([]);
   
+  // Generate connections from components - memoized to prevent unnecessary recalculations
   const detectedConnections = useMemo(() => {
     const newConnections: Array<{
       sourceDeviceId: string;
@@ -53,29 +55,26 @@ export const useConnectionManager = () => {
     return newConnections;
   }, [components]);
 
+  // Update connections when detected connections change
   useEffect(() => {
     setConnections(detectedConnections);
   }, [detectedConnections]);
   
   /**
    * Check if a port connector type is compatible with a cable connector type
-   * @param portConnector Port connector type
-   * @param cableConnector Cable connector type
    */
-  const isConnectorCompatible = (
+  const isConnectorCompatible = useCallback((
     portConnector: ConnectorType,
     cableConnector: ConnectorType
   ): boolean => {
     // Simple exact match for now
     return portConnector === cableConnector;
-  };
+  }, []);
   
   /**
    * Check if a port media type is compatible with a cable media type
-   * @param portMedia Port media type
-   * @param cableMedia Cable media type
    */
-  const isMediaTypeCompatible = (
+  const isMediaTypeCompatible = useCallback((
     portMedia: MediaType,
     cableMedia: CableMediaType
   ): boolean => {
@@ -92,7 +91,7 @@ export const useConnectionManager = () => {
       default:
         return false;
     }
-  };
+  }, []);
   
   /**
    * Add a connection between two device ports
@@ -150,7 +149,7 @@ export const useConnectionManager = () => {
     updateActiveDesign(updatedComponents);
     toast.success("Connection created successfully");
     return { success: true };
-  }, [components, updateActiveDesign]);
+  }, [components, updateActiveDesign, isConnectorCompatible, isMediaTypeCompatible]);
   
   /**
    * Remove a connection between two ports
@@ -200,7 +199,6 @@ export const useConnectionManager = () => {
   
   /**
    * Get all connections for a specific device
-   * @param deviceId The device ID
    */
   const getDeviceConnections = useCallback((deviceId: string) => {
     return connections.filter(conn => 

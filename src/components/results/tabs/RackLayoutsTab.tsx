@@ -65,18 +65,23 @@ export const RackLayoutsTab: React.FC = () => {
   // Handle device click - make sure we're safely setting state
   const handleDeviceClick = useCallback((deviceId: string) => {
     if (deviceId) {
+      // First set the selected device ID 
       setSelectedDeviceId(deviceId);
-      setIsConnectionDialogOpen(true);
+      // Then open the dialog in a separate state update to prevent re-render loops
+      setTimeout(() => {
+        setIsConnectionDialogOpen(true);
+      }, 0);
     }
   }, []);
 
   // Handle closing connection dialog - make sure we clean up state
   const handleCloseConnectionDialog = useCallback(() => {
+    // First close the dialog
     setIsConnectionDialogOpen(false);
-    // Set the selected device ID to null AFTER the dialog closes
+    // Then clear the selected device ID after the dialog animation completes
     setTimeout(() => {
       setSelectedDeviceId(null);
-    }, 100);
+    }, 300); // Allowing time for dialog close animation
   }, []);
   
   const filteredRacks = rackProfiles.filter(
@@ -173,16 +178,12 @@ export const RackLayoutsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Connection Management Dialog - Only render ConnectionPanel when dialog is open and we have a deviceId */}
+      {/* Connection Management Dialog */}
       <Dialog 
         open={isConnectionDialogOpen} 
         onOpenChange={(open) => {
-          setIsConnectionDialogOpen(open);
           if (!open) {
-            // Clean up selected device when dialog closes
-            setTimeout(() => {
-              setSelectedDeviceId(null);
-            }, 100);
+            handleCloseConnectionDialog();
           }
         }}
       >

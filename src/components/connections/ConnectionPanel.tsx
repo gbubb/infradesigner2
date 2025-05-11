@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import { useConnectionManager } from '@/hooks/design/useConnectionManager';
 import { useDesignStore } from '@/store/designStore';
@@ -7,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { shallow } from 'zustand/shallow';
 import { StoreState } from '@/store/types';
 
 interface ConnectionPanelProps {
@@ -31,11 +31,12 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
   const [targetPortId, setTargetPortId] = useState<string>('');
   const [selectedCableId, setSelectedCableId] = useState<string>('');
   
+  // Use memo to prevent unnecessary re-renders
   const sourceDevice = useMemo(() => {
     return designComponents.find(component => component.id === deviceId);
   }, [designComponents, deviceId]);
   
-  // deviceConnections depends on the stabilized `connections` from useConnectionManager
+  // Stabilize deviceConnections with useMemo
   const deviceConnections = useMemo(() => {
     return connections.filter(conn => 
       conn.sourceDeviceId === deviceId || conn.destinationDeviceId === deviceId
@@ -43,7 +44,7 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
   }, [connections, deviceId]);
   
   const availableDevices = useMemo(() => {
-    if (!sourceDevice) return []; // Relies on sourceDevice which uses designComponents
+    if (!sourceDevice) return [];
     return designComponents.filter(component => 
       component.id !== deviceId && component.ports && component.ports.length > 0
     );
@@ -63,7 +64,7 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
   const getAvailablePorts = useCallback((device?: InfrastructureComponent | null) => {
     if (!device || !device.ports) return [];
     return device.ports.filter(port => !port.connectedToPortId);
-  }, []); // This callback has no external dependencies from the hook/props
+  }, []);
   
   const sourcePorts = useMemo(() => {
     return getAvailablePorts(sourceDevice);
@@ -73,6 +74,7 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
     return getAvailablePorts(targetDevice);
   }, [targetDevice, getAvailablePorts]);
   
+  // Stabilize getConnectedPort with useMemo for derived data
   const getConnectedPort = useCallback((connectedDeviceId: string, portId: string) => {
     const connection = connections.find(conn => 
       (conn.sourceDeviceId === connectedDeviceId && conn.sourcePortId === portId) || 
@@ -98,7 +100,7 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
       cableId,
       cableName: cableInfo?.name || 'Unknown Cable'
     };
-  }, [connections, designComponents]); // Depends on connections and designComponents
+  }, [connections, designComponents]);
   
   const handleCreateConnection = useCallback(() => {
     if (!selectedPortId || !targetDeviceId || !targetPortId || !selectedCableId) {
@@ -108,7 +110,10 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
     const result = addConnection(deviceId, selectedPortId, targetDeviceId, targetPortId, selectedCableId);
     if (result.success) {
       toast.success("Connection created successfully");
-      setSelectedPortId(''); setTargetDeviceId(''); setTargetPortId(''); setSelectedCableId('');
+      setSelectedPortId(''); 
+      setTargetDeviceId(''); 
+      setTargetPortId(''); 
+      setSelectedCableId('');
     } else {
       toast.error(`Failed to create connection: ${result.error}`);
     }
