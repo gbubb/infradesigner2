@@ -1,22 +1,14 @@
+
 import { useState, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
+import { toast } from 'sonner';
 
 /**
- * Simplified version of the hook for managing connections between devices
- * with more functionality added progressively
+ * Hook for managing connections between devices
  */
 export const useConnectionManager = () => {
   // Get components from the store
   const components = useDesignStore(state => state.activeDesign?.components || []);
-  
-  // Keep a simple connections state
-  const [connections, setConnections] = useState<Array<{
-    sourceDeviceId: string;
-    sourcePortId: string;
-    destinationDeviceId: string;
-    destinationPortId: string;
-    cableId: string;
-  }>>([]);
   
   // Generate connections from components - memoized to prevent unnecessary recalculations
   const detectedConnections = useMemo(() => {
@@ -25,8 +17,10 @@ export const useConnectionManager = () => {
       sourcePortId: string;
       destinationDeviceId: string;
       destinationPortId: string;
-      cableId: string;
+      cableId: string | undefined;
     }> = [];
+    
+    console.log("Detecting connections from components:", components.length);
     
     // Detection logic
     components.forEach(sourceDevice => {
@@ -41,12 +35,14 @@ export const useConnectionManager = () => {
               sourcePortId: sourcePort.id,
               destinationDeviceId: sourcePort.connectedToDeviceId,
               destinationPortId: sourcePort.connectedToPortId,
-              cableId: sourcePort.cableId || ''
+              cableId: sourcePort.cableId
             });
           }
         }
       }
     });
+    
+    console.log("Detected connections:", newConnections.length);
     return newConnections;
   }, [components]);
   
@@ -65,12 +61,20 @@ export const useConnectionManager = () => {
     );
   };
   
+  // Get connection details
+  const getConnectionDetails = (connectionId: string) => {
+    const [sourceId, destId] = connectionId.split('-');
+    return getConnection(sourceId, destId);
+  };
+  
   return {
     connections: detectedConnections,
-    // We'll gradually add back these functions as we test for stability
+    getDeviceConnections,
+    getConnection,
+    getConnectionDetails,
+    // These functions are currently disabled for debugging
     addConnection: () => ({ success: false, error: "Function disabled for debugging" }),
     removeConnection: () => ({ success: false, error: "Function disabled for debugging" }),
-    getDeviceConnections,
-    getConnection
+    connectionCount: detectedConnections.length
   };
 };
