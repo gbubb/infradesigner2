@@ -65,6 +65,12 @@ export const RackLayoutsTab: React.FC = () => {
   const designComponentsForPanel: InfrastructureComponent[] = useDesignStore(panelSelector, componentsEqualityFn);
   const connectionManagerData = useConnectionManager();
 
+  // BOLD CHANGE: Create a memoized list of just rack IDs for the effect's dependency
+  const currentRackProfileIds = useMemo(() => {
+    const source = rackProfilesFromStore.length > 0 ? rackProfilesFromStore : initializedRackProfiles;
+    return source.map(r => r.id);
+  }, [rackProfilesFromStore, initializedRackProfiles]);
+
   useEffect(() => {
     renderCountRef.current += 1;
     console.log(`RackLayoutsTab: Render count: ${renderCountRef.current}`);
@@ -72,18 +78,19 @@ export const RackLayoutsTab: React.FC = () => {
 
   useEffect(() => {
     // console.log(`EFFECT: Initial selectedRackId - Firing. SelectedRackId: ${selectedRackId}`);
-    // console.log("EFFECT: rackProfilesFromStore:", rackProfilesFromStore.map(r => r.id));
-    // console.log("EFFECT: initializedRackProfiles:", initializedRackProfiles.map(r => r.id));
+    // console.log("EFFECT: rackProfilesFromStore IDs:", rackProfilesFromStore.map(r => r.id));
+    // console.log("EFFECT: initializedRackProfiles IDs:", initializedRackProfiles.map(r => r.id));
+    // console.log("EFFECT: currentRackProfileIds:", currentRackProfileIds);
     
-    const currentRackProfilesSource = rackProfilesFromStore.length > 0 ? rackProfilesFromStore : initializedRackProfiles;
+    // const currentRackProfilesSource = rackProfilesFromStore.length > 0 ? rackProfilesFromStore : initializedRackProfiles; // Old way
 
-    if (currentRackProfilesSource.length > 0) {
-      const firstRackId = currentRackProfilesSource[0].id;
+    if (currentRackProfileIds.length > 0) { // Use the memoized ID list
+      const firstRackId = currentRackProfileIds[0];
       // Condition to select the first rack:
       // 1. If no rack is currently selected (selectedRackId is null/undefined)
       // OR
-      // 2. If the currently selected rack is no longer found in the current list of racks
-      if (!selectedRackId || !currentRackProfilesSource.find(r => r.id === selectedRackId)) {
+      // 2. If the currently selected rack is no longer found in the current list of rack IDs
+      if (!selectedRackId || !currentRackProfileIds.includes(selectedRackId)) { // Use the memoized ID list
         // console.log(`EFFECT: Condition met to potentially set selectedRackId. Current: ${selectedRackId}, Proposed new: ${firstRackId}`);
         if (selectedRackId !== firstRackId) { // Guard: Only set if different
           // console.log(`EFFECT: Setting selectedRackId to ${firstRackId}`);
@@ -92,15 +99,15 @@ export const RackLayoutsTab: React.FC = () => {
           // console.log(`EFFECT: selectedRackId is already ${firstRackId}. No change.`);
         }
       } else {
-        // console.log(`EFFECT: selectedRackId (${selectedRackId}) is valid and found. No change needed.`);
+        // console.log(`EFFECT: selectedRackId (${selectedRackId}) is valid and found in currentRackProfileIds. No change needed.`);
       }
     } else if (selectedRackId !== null) { // If there are no racks, but one is still selected
-      // console.log(`EFFECT: No racks available, but selectedRackId is ${selectedRackId}. Setting to null.`);
+      // console.log(`EFFECT: No racks available (currentRackProfileIds is empty), but selectedRackId is ${selectedRackId}. Setting to null.`);
       setSelectedRackId(null); // Guard is implicit: selectedRackId !== null
     } else {
       // console.log("EFFECT: No racks available, and selectedRackId is already null. No change.");
     }
-  }, [rackProfilesFromStore, initializedRackProfiles, selectedRackId]);
+  }, [currentRackProfileIds, selectedRackId]); // MODIFIED Dependency array
   
   useEffect(() => {
     if (selectedRackId && activeDesign) {
