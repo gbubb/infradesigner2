@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { shallow } from 'zustand/shallow';
 import { StoreState } from '@/store/types';
 
 interface ConnectionPanelProps {
@@ -16,13 +15,21 @@ interface ConnectionPanelProps {
 }
 
 // Selector for ConnectionPanel
-const panelSelector = (state: StoreState) => ({
-  components: state.activeDesign?.components || [],
-});
+const panelSelector = (state: StoreState) => state.activeDesign?.components || [];
+
+// Custom equality function for the components array
+const componentsEqualityFn = (oldComponents: InfrastructureComponent[], newComponents: InfrastructureComponent[]): boolean => {
+  if (oldComponents === newComponents) return true; // Same reference
+  if (oldComponents.length !== newComponents.length) return false;
+  // A more robust deep equality check might be needed for complex scenarios,
+  // but for now, stringify can help if the issue is subtle reference changes with same content.
+  // This is computationally more expensive than shallow but might be necessary here.
+  // Consider a proper deep-equal library if performance becomes an issue with stringify.
+  return JSON.stringify(oldComponents) === JSON.stringify(newComponents);
+};
 
 export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onClose }) => {
-  // Use a more stable selector for components from activeDesign
-  const { components: designComponents } = useDesignStore(panelSelector, shallow);
+  const designComponents = useDesignStore(panelSelector, componentsEqualityFn);
   const { connections, addConnection, removeConnection } = useConnectionManager();
   
   const [selectedPortId, setSelectedPortId] = useState<string>('');
@@ -34,7 +41,6 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
     return designComponents.find(component => component.id === deviceId);
   }, [designComponents, deviceId]);
   
-  // deviceConnections depends on the stabilized `connections` from useConnectionManager
   const deviceConnections = useMemo(() => {
     return connections.filter(conn => 
       conn.sourceDeviceId === deviceId || conn.destinationDeviceId === deviceId
@@ -42,7 +48,7 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
   }, [connections, deviceId]);
   
   const availableDevices = useMemo(() => {
-    if (!sourceDevice) return []; // Relies on sourceDevice which uses designComponents
+    if (!sourceDevice) return [];
     return designComponents.filter(component => 
       component.id !== deviceId && component.ports && component.ports.length > 0
     );
@@ -62,7 +68,7 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
   const getAvailablePorts = useCallback((device?: InfrastructureComponent | null) => {
     if (!device || !device.ports) return [];
     return device.ports.filter(port => !port.connectedToPortId);
-  }, []); // This callback has no external dependencies from the hook/props
+  }, []);
   
   const sourcePorts = useMemo(() => {
     return getAvailablePorts(sourceDevice);
@@ -77,18 +83,14 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
       (conn.sourceDeviceId === connectedDeviceId && conn.sourcePortId === portId) || 
       (conn.destinationDeviceId === connectedDeviceId && conn.destinationPortId === portId)
     );
-    
     if (!connection) return null;
-    
     const isSource = connection.sourceDeviceId === connectedDeviceId && connection.sourcePortId === portId;
     const otherDeviceId = isSource ? connection.destinationDeviceId : connection.sourceDeviceId;
     const otherPortId = isSource ? connection.destinationPortId : connection.sourcePortId;
     const cableId = connection.cableId;
-    
     const otherDevice = designComponents.find(c => c.id === otherDeviceId);
     const otherPort = otherDevice?.ports?.find(p => p.id === otherPortId);
     const cableInfo = designComponents.find(c => c.id === cableId);
-    
     return {
       deviceId: otherDeviceId,
       deviceName: otherDevice?.name || 'Unknown Device',
@@ -97,12 +99,11 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
       cableId,
       cableName: cableInfo?.name || 'Unknown Cable'
     };
-  }, [connections, designComponents]); // Depends on connections and designComponents
-  
+  }, [connections, designComponents]);
+
   const handleCreateConnection = useCallback(() => {
     if (!selectedPortId || !targetDeviceId || !targetPortId || !selectedCableId) {
-      toast.error("Please select all required fields");
-      return;
+      toast.error("Please select all required fields"); return;
     }
     const result = addConnection(deviceId, selectedPortId, targetDeviceId, targetPortId, selectedCableId);
     if (result.success) {
@@ -115,11 +116,8 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
 
   const handleRemoveConnection = useCallback((sDeviceId: string, sPortId: string, dDeviceId: string, dPortId: string) => {
     const result = removeConnection(sDeviceId, sPortId, dDeviceId, dPortId);
-    if (result.success) {
-      toast.success("Connection removed successfully");
-    } else {
-      toast.error(`Failed to remove connection: ${result.error}`);
-    }
+    if (result.success) toast.success("Connection removed successfully");
+    else toast.error(`Failed to remove connection: ${result.error}`);
   }, [removeConnection]);
 
   if (!sourceDevice) {
