@@ -49,18 +49,34 @@ export const RackLayoutsTab: React.FC = () => {
   const [isPlacing, setIsPlacing] = useState(false);
   const scrollStep = 300;
   const testDeviceId = "test-device-id-for-debug"; // Hardcoded ID for testing
+  const renderCountRef = React.useRef(0); // Ref for logging render counts
   
   // Data for ConnectionPanel (hoisted from ConnectionPanel)
   const designComponentsForPanel = useDesignStore(panelSelector, componentsEqualityFn);
   const connectionManagerData = useConnectionManager();
 
   useEffect(() => {
+    renderCountRef.current += 1;
+    console.log(`RackLayoutsTab: Render count: ${renderCountRef.current}`);
+  });
+
+  useEffect(() => {
+    console.log("EFFECT: Initial selectedRackId - Firing", { 
+      initializedRackProfilesLength: initializedRackProfiles.length, 
+      selectedRackId,
+      activeDesignRackProfilesLength: activeDesignFromStore?.rackProfiles?.length
+    });
     const currentRackProfilesSource = activeDesignFromStore?.rackProfiles || initializedRackProfiles;
     if (currentRackProfilesSource.length > 0 && 
         (!selectedRackId || !currentRackProfilesSource.find(r => r.id === selectedRackId))) {
-      setSelectedRackId(currentRackProfilesSource[0].id);
+      const newSelectedRackId = currentRackProfilesSource[0].id;
+      console.log("EFFECT: Initial selectedRackId - Setting selectedRackId to:", newSelectedRackId);
+      setSelectedRackId(newSelectedRackId); 
     } else if (currentRackProfilesSource.length === 0 && selectedRackId) {
+      console.log("EFFECT: Initial selectedRackId - Setting selectedRackId to null (no racks)");
       setSelectedRackId(null);
+    } else {
+      console.log("EFFECT: Initial selectedRackId - No change to selectedRackId");
     }
   }, [activeDesignFromStore?.rackProfiles, initializedRackProfiles, selectedRackId]);
   
