@@ -89,9 +89,7 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
     </div>
   );
 
-  // Determine if the visual height is too small for the model line
-  // Let's say if visual height is less than 30px, it's too small for two lines of text comfortably.
-  const showModelLine = height >= 30; // Adjusted threshold
+  const showModelLine = height >= 30 && ruSize > 1; // Only show model if enough space AND not a 1U device
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -100,32 +98,33 @@ const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
           <div
             ref={drag}
             className={cn(
-              "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-1 py-0.5 overflow-hidden",
+              "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-1 py-0 overflow-hidden", // Minimal padding
               getDeviceColor(type),
-              "cursor-move text-xs"
+              "cursor-move"
             )}
             style={{
               bottom: `${bottom}px`,
               height: `${height}px`,
               zIndex: 10,
               opacity: isDragging ? 0.5 : 1,
-              // Adjusted font size for better fit, especially for 1RU
-              fontSize: ruSize === 1 ? '0.6rem' : '0.7rem', 
-              lineHeight: ruSize === 1 ? '1.1' : '1.2', // Tighter line height for 1RU
+              fontSize: ruSize === 1 ? '0.65rem' : '0.7rem', // Slightly larger for 1U name if it's the only text
+              lineHeight: '1.1', // Consistent tighter line height
+              boxSizing: 'border-box', // Ensure padding/border are included in height
             }}
             onClick={handleClick}
           >
-            <div className="w-full text-center truncate" style={{ fontWeight: 500 }}>
+            <div className="w-full text-center truncate" style={{ fontWeight: 500, lineHeight: ruSize === 1 ? `${height-2}px` : 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               {name}
             </div>
-            {/* Conditionally render model line based on available space AND if it's not a 1U device where we prioritize showing RU size */} 
-            {showModelLine && ruSize > 1 && (
-              <div className="w-full text-center truncate opacity-80" style={{ fontSize: '0.65rem'}}>
+            {/* Conditionally render model line only if showModelLine is true (which implies ruSize > 1) */}
+            {showModelLine && (
+              <div className="w-full text-center truncate opacity-80" style={{ fontSize: '0.6rem'}}>
                 {model}
               </div>
             )}
-            {/* For 1U devices, or if model line is hidden due to space, show RU size if space allows and it's not already obvious */} 
-            {((ruSize === 1 && height > 15) || (!showModelLine && height > 15)) && (
+            {/* DO NOT show separate RU size for 1U devices to save space for name */}
+            {/* For multi-RU devices where model isn't shown due to small height, show RU size instead of model */} 
+            {!showModelLine && ruSize > 1 && height > 15 && (
               <div className="w-full text-center truncate opacity-70" style={{ fontSize: '0.6rem'}}>
                 {ruSize}U
               </div>
