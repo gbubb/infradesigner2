@@ -1,4 +1,3 @@
-
 import { RackService } from './rackService';
 import { useDesignStore } from '@/store/designStore';
 import { RackProfile } from '@/types/infrastructure/rack-types';
