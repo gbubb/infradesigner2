@@ -500,7 +500,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                 </div>
               )}
               
-              {/* Conditionally render Power Required */}
+              {/* Cost and Power Required -- always visible for all component types except cabling/patch panel/cassette */}
               {!['FiberPatchPanel', 'CopperPatchPanel', 'Cassette'].includes(formValues.type) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
@@ -514,7 +514,8 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             type="number" 
                             placeholder="Cost"
                             {...field} 
-                            onChange={(e) => {
+                            value={field.value ?? ''} 
+                            onChange={e => {
                               field.onChange(Number(e.target.value));
                               onInputChange(e);
                             }}
@@ -535,7 +536,8 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                             type="number" 
                             placeholder="Power Required" 
                             {...field} 
-                            onChange={(e) => {
+                            value={field.value ?? ''} 
+                            onChange={e => {
                               field.onChange(Number(e.target.value));
                               onInputChange(e);
                             }}
