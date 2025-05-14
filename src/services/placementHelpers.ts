@@ -1,4 +1,3 @@
-
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { RackService } from './rackService';
 
@@ -6,11 +5,13 @@ import { RackService } from './rackService';
 export function tryPlaceDeviceInRacksWithConstraints({
   racks,
   device,
-  ruHeight
+  ruHeight,
+  activeDesignState
 }: {
   racks: RackProfile[],
   device: any,
-  ruHeight: number
+  ruHeight: number,
+  activeDesignState: any
 }): {
   success: boolean,
   reason?: string,
@@ -32,7 +33,7 @@ export function tryPlaceDeviceInRacksWithConstraints({
       && preferredRU + ruHeight - 1 <= validRUEnd
       && preferredRU + ruHeight - 1 <= rack.uHeight
     ) {
-      const available = isRUAvailableWithComponentRU(rack, preferredRU, ruHeight);
+      const available = isRUAvailableWithComponentRU(rack, preferredRU, ruHeight, activeDesignState);
       if (available) {
         const result = RackService.placeDevice(rack.id, device.id, preferredRU);
         if (result.success) {
@@ -47,7 +48,7 @@ export function tryPlaceDeviceInRacksWithConstraints({
       ru++
     ) {
       if (preferredRU && ru === preferredRU) continue;
-      const available = isRUAvailableWithComponentRU(rack, ru, ruHeight);
+      const available = isRUAvailableWithComponentRU(rack, ru, ruHeight, activeDesignState);
       if (available) {
         const result = RackService.placeDevice(rack.id, device.id, ru);
         if (result.success) {
@@ -63,9 +64,13 @@ export function tryPlaceDeviceInRacksWithConstraints({
 }
 
 // Checks if a range of RUs is available in the rack, respecting other device ruHeight
-function isRUAvailableWithComponentRU(rack: RackProfile, ruPosition: number, ruHeight: number): boolean {
-  const state = require('@/store/designStore').useDesignStore.getState();
-  const activeDesign = state.activeDesign;
+function isRUAvailableWithComponentRU(
+  rack: RackProfile,
+  ruPosition: number,
+  ruHeight: number,
+  activeDesignState: any
+): boolean {
+  const activeDesign = activeDesignState.activeDesign;
   if (!activeDesign) return false;
 
   for (const device of rack.devices) {

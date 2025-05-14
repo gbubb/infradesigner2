@@ -177,11 +177,12 @@ export class AutomatedPlacementService {
       // RU constraints
       const ruHeight = component.ruSize || component.ruHeight || 1;
 
-      // --- Here is the key update: use the improved placement helper, which now always reads device constraints from the component
+      // << PASS state to placement helper >>
       const placement = tryPlaceDeviceInRacksWithConstraints({
         racks: eligibleRacks,
         device: component,
-        ruHeight
+        ruHeight,
+        activeDesignState: state
       });
 
       let instanceNumber = typeCounters[typeLabel]++;
