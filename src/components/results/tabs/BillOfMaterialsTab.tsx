@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,19 +7,24 @@ import { Download, FileSpreadsheet, Server, Network, Cable } from 'lucide-react'
 import { ComponentCategory, ComponentType, InfrastructureComponent, componentTypeToCategory } from '@/types/infrastructure/component-types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
 
-// Helper to create a unique key for grouping components for the BOM
 const getBomGroupKey = (component: InfrastructureComponent): string => {
-  // Use templateId if available, otherwise fallback to a composite key
-  // Fallback is important if some components don't originate from a template with templateId
   return component.templateId || `${component.manufacturer}-${component.model}-${component.type}-${component.role || ''}`;
+};
+
+// Helper: For a summarized component, attempt to find its roleId in useDesignStore.componentRoles
+const useComponentRoleId = (component: InfrastructureComponent & { summarizedQuantity: number }) => {
+  const componentRoles = useDesignStore(state => state.componentRoles);
+  if (!component.role) return null;
+  const foundRole = componentRoles.find(r => r.role === component.role);
+  return foundRole?.id || null;
 };
 
 export const BillOfMaterialsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
-  const components = activeDesign?.components || []; // This is now a flat list of individual instances
+  const components = activeDesign?.components || [];
 
-  // New: Group and summarize component instances
   const summarizedComponentsByCategory = useMemo(() => {
     if (!components.length) return {};
 
@@ -28,11 +34,11 @@ export const BillOfMaterialsTab: React.FC = () => {
       const key = getBomGroupKey(instance);
       if (!groupedByTemplate[key]) {
         groupedByTemplate[key] = {
-          ...instance, // Use the first instance as representative (name, model, cost, type, etc.)
+          ...instance,
           summarizedQuantity: 0,
         };
       }
-      groupedByTemplate[key].summarizedQuantity += (instance.quantity || 1); // instance.quantity should be 1
+      groupedByTemplate[key].summarizedQuantity += (instance.quantity || 1);
     });
 
     const result: Record<string, (InfrastructureComponent & { summarizedQuantity: number })[]> = {};
@@ -48,12 +54,10 @@ export const BillOfMaterialsTab: React.FC = () => {
     return result;
   }, [components]);
   
-  // Grand total cost should now sum costs of individual instances
   const grandTotalCost = useMemo(() => {
-    return components.reduce((sum, comp) => sum + comp.cost, 0); // Each comp is an instance, quantity is 1
+    return components.reduce((sum, comp) => sum + comp.cost, 0);
   }, [components]);
   
-  // Format a category name for display
   const formatCategoryName = (name: string) => name.replace(/([A-Z])/g, ' $1').trim();
 
   const [activeTab, setActiveTab] = useState('compute');
@@ -144,6 +148,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                   {summarizedComponentsByCategory['Compute']?.map((component) => {
                     const quantity = component.summarizedQuantity;
                     const totalCost = component.cost * quantity;
+                    const roleId = useComponentRoleId(component);
                     return (
                       <TableRow key={`compute-${getBomGroupKey(component)}`}>
                         <TableCell>{component.type}</TableCell>
@@ -152,7 +157,12 @@ export const BillOfMaterialsTab: React.FC = () => {
                         <TableCell>{component.model}</TableCell>
                         <TableCell>{(component as any).cpuModel || '-'}</TableCell>
                         <TableCell className="text-right">{(component as any).memoryCapacity || (component as any).memoryGB || '-'}</TableCell>
-                        <TableCell className="text-right">{quantity}</TableCell>
+                        <TableCell className="text-right flex items-center gap-1 justify-end">
+                          {quantity}
+                          {roleId && (
+                            <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
                         <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
                       </TableRow>
@@ -161,8 +171,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                   {summarizedComponentsByCategory['Storage']?.filter(c => c.type === ComponentType.Server && c.role === 'storageNode').map((server) => {
                     const quantity = server.summarizedQuantity;
                     const totalCost = server.cost * quantity;
-                    // This logic for associatedDisks might need to be re-thought if disks are part of the main component list explicitly
-                    // For now, assuming disks for storage nodes are separate line items if they are separate components.
+                    const roleId = useComponentRoleId(server);
                     return (
                       <React.Fragment key={`storage-node-${getBomGroupKey(server)}`}>
                         <TableRow>
@@ -172,7 +181,12 @@ export const BillOfMaterialsTab: React.FC = () => {
                           <TableCell>{server.model}</TableCell>
                           <TableCell>{(server as any).cpuModel || '-'}</TableCell>
                           <TableCell className="text-right">{(server as any).memoryCapacity || (server as any).memoryGB || '-'}</TableCell>
-                          <TableCell className="text-right">{quantity}</TableCell>
+                          <TableCell className="text-right flex items-center gap-1 justify-end">
+                            {quantity}
+                            {roleId && (
+                              <CalculationBreakdownDialog roleId={roleId} roleName={server.role || ''} />
+                            )}
+                          </TableCell>
                           <TableCell className="text-right">€{server.cost.toLocaleString()}</TableCell>
                           <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
                         </TableRow>
@@ -182,6 +196,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                   {summarizedComponentsByCategory['Storage']?.filter(c => c.type === ComponentType.Disk).map((disk) => {
                      const quantity = disk.summarizedQuantity;
                      const totalCost = disk.cost * quantity;
+                     // Disks do not have roles/role id, so no calculation breakdown 
                      return (
                        <TableRow key={`disk-${getBomGroupKey(disk)}`}>
                          <TableCell className="pl-4">Disk</TableCell>
@@ -199,6 +214,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                   {summarizedComponentsByCategory['Acceleration']?.map((component) => {
                     const quantity = component.summarizedQuantity;
                     const totalCost = component.cost * quantity;
+                    const roleId = useComponentRoleId(component);
                     return (
                       <TableRow key={`gpu-${getBomGroupKey(component)}`}>
                         <TableCell>{component.type}</TableCell>
@@ -207,7 +223,12 @@ export const BillOfMaterialsTab: React.FC = () => {
                         <TableCell>{component.model}</TableCell>
                         <TableCell>-</TableCell>
                         <TableCell className="text-right">-</TableCell>
-                        <TableCell className="text-right">{quantity}</TableCell>
+                        <TableCell className="text-right flex items-center gap-1 justify-end">
+                          {quantity}
+                          {roleId && (
+                            <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
                         <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
                       </TableRow>
@@ -246,6 +267,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                   {[...(summarizedComponentsByCategory['Network'] || []), ...(summarizedComponentsByCategory['Security'] || [])].map((component) => {
                     const quantity = component.summarizedQuantity;
                     const totalCost = component.cost * quantity;
+                    const roleId = useComponentRoleId(component);
                     return (
                       <TableRow key={`network-${getBomGroupKey(component)}`}>
                         <TableCell>{component.type}</TableCell>
@@ -254,7 +276,12 @@ export const BillOfMaterialsTab: React.FC = () => {
                         <TableCell>{component.model}</TableCell>
                         <TableCell>{(component as any).portCount || (component as any).portsProvidedQuantity || '-'}</TableCell>
                         <TableCell>{(component as any).portSpeed || (component as any).portSpeedType || '-'}</TableCell>
-                        <TableCell className="text-right">{quantity}</TableCell>
+                        <TableCell className="text-right flex items-center gap-1 justify-end">
+                          {quantity}
+                          {roleId && (
+                            <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
                         <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
                       </TableRow>
@@ -296,6 +323,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                     else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${(component as any).portQuantity} ports`;
                     else if (component.type === ComponentType.Cassette) details = `${(component as any).portType}, ${(component as any).portQuantity} ports`;
                     else if (component.type === ComponentType.Cable) details = `${(component as any).length}m, ${(component as any).connectorA_Type} to ${(component as any).connectorB_Type}, ${(component as any).mediaType}`;
+                    // Cabling inventory does not have calculation breakdowns
                     return (
                       <TableRow key={`cabling-${getBomGroupKey(component)}`}>
                         <TableCell>{component.type}</TableCell>
@@ -347,6 +375,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                       {categoryComponents.map(component => {
                         const quantity = component.summarizedQuantity;
                         const totalCost = component.cost * quantity;
+                        const roleId = useComponentRoleId(component);
                         return (
                           <TableRow key={`all-${getBomGroupKey(component)}`}>
                             <TableCell></TableCell> 
@@ -354,7 +383,12 @@ export const BillOfMaterialsTab: React.FC = () => {
                             <TableCell>{component.role || 'Unassigned'}</TableCell>
                             <TableCell>{component.manufacturer}</TableCell>
                             <TableCell>{component.model}</TableCell>
-                            <TableCell className="text-right">{quantity}</TableCell>
+                            <TableCell className="text-right flex items-center gap-1 justify-end">
+                              {quantity}
+                              {roleId && (
+                                <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
+                              )}
+                            </TableCell>
                             <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
                             <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
                           </TableRow>
