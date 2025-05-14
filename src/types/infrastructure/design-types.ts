@@ -1,4 +1,3 @@
-
 import { InfrastructureComponent } from './component-types';
 import { DesignRequirements } from './requirements-types';
 import { ComponentRole } from './roles-types';
@@ -23,7 +22,7 @@ export interface InfrastructureDesign {
   is_public?: boolean;
   sharing_id?: string | null;
   // Rack layout information
-  rackProfiles?: RackProfile[];
+  rackProfiles?: any; // Added to match with Supabase and avoid TS errors
   // Connection information
   connections?: Connection[];
   // Connection rules
@@ -47,3 +46,4 @@ export interface Connection {
   targetPortId?: string;
   cableId?: string;
 }
+

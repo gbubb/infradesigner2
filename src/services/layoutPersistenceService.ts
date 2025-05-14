@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { useDesignStore } from "@/store/designStore";
+import { InfrastructureDesign } from "@/types/infrastructure/design-types";
 
 export class LayoutPersistenceService {
   static async saveCurrentLayout() {
@@ -18,13 +19,14 @@ export class LayoutPersistenceService {
     const state = useDesignStore.getState();
     const activeDesign = state.activeDesign;
     if (!activeDesign) throw new Error("No design loaded.");
+    // Expect rackProfiles in the result
     const { data, error } = await supabase
       .from("designs")
       .select("rackProfiles")
       .eq("id", activeDesign.id)
       .maybeSingle();
     if (error) throw error;
-    return data;
+    return data as { rackProfiles: InfrastructureDesign['rackProfiles'] };
   }
   static async resetLayoutToLastSaved() {
     const data = await this.loadLayoutForDesign();

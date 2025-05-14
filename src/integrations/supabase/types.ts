@@ -66,6 +66,7 @@ export type Database = {
           id: string
           is_public: boolean | null
           name: string
+          rackprofiles: Json | null
           requirements: Json | null
           selected_disks_by_role: Json | null
           selected_gpus_by_role: Json | null
@@ -81,6 +82,7 @@ export type Database = {
           id?: string
           is_public?: boolean | null
           name: string
+          rackprofiles?: Json | null
           requirements?: Json | null
           selected_disks_by_role?: Json | null
           selected_gpus_by_role?: Json | null
@@ -96,6 +98,7 @@ export type Database = {
           id?: string
           is_public?: boolean | null
           name?: string
+          rackprofiles?: Json | null
           requirements?: Json | null
           selected_disks_by_role?: Json | null
           selected_gpus_by_role?: Json | null
