@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
@@ -25,6 +24,7 @@ import {
 import { AutomatedPlacementService, PlacementReport } from '@/services/automatedPlacementService';
 import { ClusterAZAssignmentDialog } from './rack-layouts/ClusterAZAssignmentDialog';
 import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
+import { LayoutPersistenceService } from '@/services/layoutPersistenceService';
 
 export const RackLayoutsTab: React.FC = () => {
   const { rackProfiles, availabilityZones } = useRackInitialization();
@@ -45,8 +45,28 @@ export const RackLayoutsTab: React.FC = () => {
   const [isPlacing, setIsPlacing] = useState(false);
   const [isAZAssignmentDialogOpen, setIsAZAssignmentDialogOpen] = useState(false);
   const [clusterAZAssignments, setClusterAZAssignments] = useState<ClusterAZAssignment[]>([]);
-  const scrollStep = 300;
+  const [isSaving, setIsSaving] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [scrollStep, setScrollStep] = useState(300);
   
+  // Map of AZ/rackId to friendly names
+  const azNameMap = React.useMemo(() => {
+    const m: Record<string, string> = {};
+    availabilityZones.forEach(name => {
+      m[name] = name; // If using AZ struct with .id/.name, update this logic
+    });
+    rackProfiles.forEach(rp => {
+      if (rp.availabilityZoneId && rp.azName)
+        m[rp.availabilityZoneId] = rp.azName;
+    });
+    return m;
+  }, [availabilityZones, rackProfiles]);
+  const rackNameMap = React.useMemo(() => {
+    const m: Record<string, string> = {};
+    rackProfiles.forEach(rp => { m[rp.id] = rp.name; });
+    return m;
+  }, [rackProfiles]);
+
   // Set initial selected rack when rack profiles are loaded
   useEffect(() => {
     if (rackProfiles.length > 0 && !selectedRackId) {
@@ -110,6 +130,35 @@ export const RackLayoutsTab: React.FC = () => {
     }
   };
 
+  // Loading saved layout
+  useEffect(() => {
+    async function loadLayout() {
+      if (!selectedRackId) return;
+      const data = await LayoutPersistenceService.loadLayoutForDesign();
+      if (data?.rackProfiles) {
+        // Overwrite racks/devices with loaded layout
+        // (could replace rackProfile state or trigger reload with newly loaded data)
+      }
+    }
+    loadLayout();
+  }, [selectedRackId]);
+
+  // Save Layout
+  const handleSaveLayout = async () => {
+    setIsSaving(true);
+    await LayoutPersistenceService.saveCurrentLayout();
+    toast.success('Rack layout saved!');
+    setIsSaving(false);
+  }
+
+  // Reset Layout
+  const handleResetLayout = async () => {
+    setIsResetting(true);
+    await LayoutPersistenceService.resetLayoutToLastSaved();
+    toast.success('Rack layout reset to last saved version!');
+    setIsResetting(false);
+  }
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="space-y-6">
@@ -121,13 +170,19 @@ export const RackLayoutsTab: React.FC = () => {
         </div>
         
         {/* Actions Row */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-2">
           <Button 
             variant="default"
             onClick={handleAutoPlaceDevices}
             disabled={isPlacing}
           >
             {isPlacing ? "Placing Devices..." : "Auto-Place Devices"}
+          </Button>
+          <Button variant="secondary" onClick={handleSaveLayout} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save Layout"}
+          </Button>
+          <Button variant="destructive" onClick={handleResetLayout} disabled={isResetting}>
+            {isResetting ? "Resetting..." : "Reset Layout"}
           </Button>
         </div>
         
@@ -239,7 +294,11 @@ export const RackLayoutsTab: React.FC = () => {
                           <tbody className="bg-white divide-y divide-gray-200">
                             {placementReport.items.map((item, index) => (
                               <tr key={index} className={item.status === "failed" ? "bg-red-50" : ""}>
-                                <td className="px-4 py-2 text-sm">{item.deviceName}</td>
+                                <td className="px-4 py-2 text-sm">
+                                  {/* Show device name - instance name if exists */}
+                                  {item.deviceName}
+                                  {item.instanceName ? ` - ${item.instanceName}` : ""}
+                                </td>
                                 <td className="px-4 py-2 text-sm">
                                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                     item.status === "placed" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
@@ -250,7 +309,7 @@ export const RackLayoutsTab: React.FC = () => {
                                 <td className="px-4 py-2 text-sm">
                                   {item.status === "placed" ? (
                                     <span>
-                                      AZ: {item.azId} | Rack: {item.rackId?.slice(0, 6)}... | Position: {item.ruPosition}
+                                      AZ: {azNameMap[item.azId] || item.azId} | Rack: {rackNameMap[item.rackId] || item.rackId} | Position: {item.ruPosition}
                                     </span>
                                   ) : (
                                     <span className="text-red-600">{item.reason}</span>

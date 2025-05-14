@@ -1,4 +1,3 @@
-
 import { RackService } from '@/services/rackService';
 import { PlacementResult } from '@/services/rackService';
 import { useDesignStore } from '@/store/designStore';
@@ -51,48 +50,32 @@ export const analyzeRackLayout = (rackId: string): {
   deviceCount: number;
 } => {
   const rack = RackService.getRackProfile(rackId);
-  
-  if (!rack) {
-    throw new Error(`Rack with ID ${rackId} not found`);
-  }
-  
+  if (!rack) throw new Error(`Rack with ID ${rackId} not found`);
   const state = useDesignStore.getState();
   const activeDesign = state.activeDesign;
-  
-  if (!activeDesign) {
-    throw new Error("No active design found");
-  }
-  
+  if (!activeDesign) throw new Error("No active design found");
+
   let usedRUs = new Set<number>();
   let deviceCount = 0;
-  
-  // Calculate used rack units
+
+  // Use the RU *size* of each device
   for (const device of rack.devices) {
     const component = activeDesign.components.find(c => c.id === device.deviceId);
     if (component) {
-      const ruHeight = component.ruHeight || 1;
-      
-      // Mark all RUs used by this component
-      for (let i = 0; i < ruHeight; i++) {
+      const ruSize = component.ruSize || 1;
+      for (let i = 0; i < ruSize; i++) {
         usedRUs.add(device.ruPosition + i);
       }
-      
       deviceCount++;
     }
   }
-  
+
   const usedRU = usedRUs.size;
   const totalRU = rack.uHeight;
   const availableRU = totalRU - usedRU;
   const utilizationPercentage = (usedRU / totalRU) * 100;
-  
-  return {
-    totalRU,
-    usedRU,
-    availableRU,
-    utilizationPercentage,
-    deviceCount
-  };
+
+  return { totalRU, usedRU, availableRU, utilizationPercentage, deviceCount };
 };
 
 /**
