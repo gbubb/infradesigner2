@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
@@ -29,7 +28,7 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
   const coreAZ = availabilityZones.find(az => az.toLowerCase().includes('core')) || 'Core';
 
   // Build array of roles/types for clusters and relevant device types
-  const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
+  const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] } = [];
   for (const role of activeDesign.componentRoles) {
     // Lowercase key for matching types.
     const key = role.role?.toLowerCase() || '';
