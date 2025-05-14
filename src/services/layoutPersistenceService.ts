@@ -8,10 +8,10 @@ export class LayoutPersistenceService {
     const state = useDesignStore.getState();
     const activeDesign = state.activeDesign;
     if (!activeDesign) throw new Error("No design loaded.");
-    // Save the rackProfiles to DB (patch the design)
+    // Save the rackprofiles to DB (patch the design)
     const { error } = await supabase
       .from("designs")
-      .update({ rackProfiles: activeDesign.rackProfiles })
+      .update({ rackprofiles: activeDesign.rackprofiles }) // use rackprofiles, not rackProfiles
       .eq("id", activeDesign.id);
     if (error) throw error;
   }
@@ -19,22 +19,22 @@ export class LayoutPersistenceService {
     const state = useDesignStore.getState();
     const activeDesign = state.activeDesign;
     if (!activeDesign) throw new Error("No design loaded.");
-    // Expect rackProfiles in the result
+    // Expect rackprofiles in the result
     const { data, error } = await supabase
       .from("designs")
-      .select("rackProfiles")
+      .select("rackprofiles") // use rackprofiles, not rackProfiles
       .eq("id", activeDesign.id)
       .maybeSingle();
     if (error) throw error;
-    return data as { rackProfiles: InfrastructureDesign['rackProfiles'] };
+    return { rackprofiles: data?.rackprofiles } as { rackprofiles: InfrastructureDesign['rackprofiles'] };
   }
   static async resetLayoutToLastSaved() {
     const data = await this.loadLayoutForDesign();
-    if (data && data.rackProfiles) {
-      // Replace the design's rackProfiles with loaded version
+    if (data && data.rackprofiles) {
+      // Replace the design's rackprofiles with loaded version
       const state = useDesignStore.getState();
       if (state.activeDesign && typeof state.updateDesign === "function") {
-        state.updateDesign(state.activeDesign.id, { rackProfiles: data.rackProfiles });
+        state.updateDesign(state.activeDesign.id, { rackprofiles: data.rackprofiles });
       }
     }
   }

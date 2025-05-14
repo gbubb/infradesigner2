@@ -21,8 +21,8 @@ export interface InfrastructureDesign {
   user_id?: string | null;
   is_public?: boolean;
   sharing_id?: string | null;
-  // Rack layout information
-  rackProfiles?: any; // Added to match with Supabase and avoid TS errors
+  // Rack layout information - match DB: rackprofiles
+  rackprofiles?: any;
   // Connection information
   connections?: Connection[];
   // Connection rules
@@ -46,4 +46,3 @@ export interface Connection {
   targetPortId?: string;
   cableId?: string;
 }
-
