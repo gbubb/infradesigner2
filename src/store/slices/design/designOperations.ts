@@ -11,7 +11,7 @@ export const createNewDesignOperation = (
   currentRequirements: any
 ): InfrastructureDesign => {
   const newDesignId = uuidv4();
-  
+
   return {
     id: newDesignId,
     name,
@@ -24,7 +24,7 @@ export const createNewDesignOperation = (
     selectedDisksByRole: existingDesign?.selectedDisksByRole || {},
     selectedGPUsByRole: existingDesign?.selectedGPUsByRole || {},
     connectionRules: existingDesign?.connectionRules || [],
-    rackProfiles: existingDesign?.rackProfiles || []
+    rackprofiles: existingDesign?.rackprofiles || [] // <-- correct property
   };
 };
 
@@ -49,3 +49,4 @@ export const updateActiveDesignOperation = (
     updatedAt: new Date()
   };
 };
+

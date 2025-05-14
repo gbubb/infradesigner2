@@ -135,9 +135,9 @@ export const RackLayoutsTab: React.FC = () => {
     async function loadLayout() {
       if (!selectedRackId) return;
       const data = await LayoutPersistenceService.loadLayoutForDesign();
-      if (data?.rackProfiles) {
+      if (data?.rackprofiles) {
         // Overwrite racks/devices with loaded layout
-        // (could replace rackProfile state or trigger reload with newly loaded data)
+        // (could replace rackprofile state or trigger reload with newly loaded data)
       }
     }
     loadLayout();
