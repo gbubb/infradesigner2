@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -22,13 +22,16 @@ interface ClusterAZAssignmentDialogProps {
 }
 
 // Helper to extract all unique cluster and standalone device lines
-const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[]): { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] => {
+const getAllConfigurableRoles = (
+  activeDesign: any,
+  availabilityZones: string[]
+): { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] => {
   if (!activeDesign || !activeDesign.componentRoles) return [];
 
   const coreAZ = availabilityZones.find(az => az.toLowerCase().includes('core')) || 'Core';
 
   // Build array of roles/types for clusters and relevant device types
-  const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] } = [];
+  const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
   for (const role of activeDesign.componentRoles) {
     // Lowercase key for matching types.
     const key = role.role?.toLowerCase() || '';
@@ -39,7 +42,7 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
       autoDefaultTo = coreAZ ? [coreAZ] : [];
     } else if (
       [
-        'compute', 'ipmiswitch', 'managementswitch', 
+        'compute', 'ipmiswitch', 'managementswitch',
         'leafswitch', 'copperpatchpanel', 'fiberpatchpanel'
       ].some(type => key.includes(type))
     ) {
