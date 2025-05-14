@@ -31,6 +31,12 @@ import { RouterFirewallFormFields } from '../forms/RouterFirewallFormFields';
 import { CablingFormFields } from '../forms/CablingFormFields';
 import { useDesignStore } from '@/store/designStore';
 
+// NEW FIELDS
+import { ServerFields } from "./fields/ServerFields";
+import { SwitchFields } from "./fields/SwitchFields";
+import { RouterFirewallFields } from "./fields/RouterFirewallFields";
+import { CablingFields } from "./fields/CablingFields";
+
 const formSchema = z.object({
   type: z.nativeEnum(ComponentType),
   name: z.string().min(2, {
@@ -207,12 +213,11 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0">
         <DialogHeader className="px-6 pt-6">
-          <DialogTitle>{isEditing ? 'Edit Component' : 'Add Component'}</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Component" : "Add Component"}</DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Edit an existing component in the library' : 'Add a new component to the library'}
+            {isEditing ? "Edit an existing component in the library" : "Add a new component to the library"}
           </DialogDescription>
         </DialogHeader>
-        
         <ScrollArea className="max-h-[calc(90vh-8rem)] px-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
@@ -267,471 +272,54 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                 ComponentType={ComponentType}
               />
 
-              {/* Cost and Power — always visible for all except cabling/patch/cassette */}
+              {/* Cost and Power Section */}
               <CostAndPowerSection
                 control={control}
                 formValues={formValues}
                 onInputChange={onInputChange}
               />
 
+              {/* Server fields */}
               {formValues.type === ComponentType.Server && (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={control}
-                      name="serverRole"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Server Role</FormLabel>
-                          <Select 
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              onSelectChange('serverRole', value);
-                            }}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a role" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value={ServerRole.Compute}>{ServerRole.Compute}</SelectItem>
-                              <SelectItem value={ServerRole.GPU}>{ServerRole.GPU}</SelectItem>
-                              <SelectItem value={ServerRole.Storage}>{ServerRole.Storage}</SelectItem>
-                              <SelectItem value={ServerRole.Controller}>{ServerRole.Controller}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="ruSize"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Rack Units (RU)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              name="ruSize"
-                              onChange={e => {
-                                const value = Number(e.target.value) || 0;
-                                field.onChange(value);
-                                onInputChange(e);
-                              }}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="cpuModel"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CPU Model</FormLabel>
-                          <FormControl>
-                            <Input placeholder="CPU Model" {...field} onChange={(e) => {
-                              field.onChange(e);
-                              onInputChange(e);
-                            }} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={control}
-                      name="cpuCount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CPU Count</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              name="cpuCount"
-                              onChange={e => {
-                                const value = Number(e.target.value) || 0;
-                                field.onChange(value);
-                                onInputChange(e);
-                              }}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="cpuSockets"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CPU Sockets</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              name="cpuSockets"
-                              onChange={e => {
-                                const value = Number(e.target.value) || 0;
-                                field.onChange(value);
-                                onInputChange(e);
-                              }}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="cpuCoresPerSocket"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CPU Cores Per Socket</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              name="cpuCoresPerSocket"
-                              onChange={e => {
-                                const value = Number(e.target.value) || 0;
-                                field.onChange(value);
-                                onInputChange(e);
-                              }}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={control}
-                      name="memoryCapacity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Memory Capacity (GB)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              name="memoryCapacity"
-                              onChange={e => {
-                                const value = Number(e.target.value) || 0;
-                                field.onChange(value);
-                                onInputChange(e);
-                              }}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="diskSlotType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Disk Slot Type</FormLabel>
-                          <Select 
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              onSelectChange('diskSlotType', value);
-                            }}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a slot type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value={DiskSlotType.TwoPointFive}>{DiskSlotType.TwoPointFive}</SelectItem>
-                              <SelectItem value={DiskSlotType.ThreePointFive}>{DiskSlotType.ThreePointFive}</SelectItem>
-                              <SelectItem value={DiskSlotType.NVMe}>{DiskSlotType.NVMe}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="diskSlotQuantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Disk Slot Quantity</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              name="diskSlotQuantity"
-                              onChange={e => {
-                                const value = Number(e.target.value) || 0;
-                                field.onChange(value);
-                                onInputChange(e);
-                              }}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={control}
-                      name="networkPortType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Network Port Type</FormLabel>
-                          <Select 
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              onSelectChange('networkPortType', value);
-                            }}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a port type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value={NetworkPortType.SFP}>{NetworkPortType.SFP}</SelectItem>
-                              <SelectItem value={NetworkPortType.QSFP}>{NetworkPortType.QSFP}</SelectItem>
-                              <SelectItem value={NetworkPortType.RJ45}>{NetworkPortType.RJ45}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="portsConsumedQuantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ports Consumed Quantity</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              name="portsConsumedQuantity"
-                              onChange={e => {
-                                const value = Number(e.target.value) || 0;
-                                field.onChange(value);
-                                onInputChange(e);
-                              }}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </>
+                <ServerFields
+                  control={control}
+                  formValues={formValues}
+                  onInputChange={onInputChange}
+                  onSelectChange={onSelectChange}
+                />
               )}
-              
+
+              {/* Switch fields */}
               {formValues.type === ComponentType.Switch && (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <FormField
-                      control={control}
-                      name="switchRole"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Switch Role</FormLabel>
-                          <Select 
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              onSelectChange('switchRole', value);
-                            }}
-                            defaultValue={field.value}
-                            value={field.value ?? SwitchRole.Access}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a role" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {Object.values(SwitchRole).map((role) => (
-                                <SelectItem key={role} value={role}>{role}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="layer"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Layer</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number"
-                              placeholder="2 or 3"
-                              {...field}
-                              value={field.value ?? ''}
-                              onChange={e => {
-                                const val = e.target.value;
-                                field.onChange(val === '' ? null : Number(val));
-                                onInputChange(e);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="ruSize"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Rack Units (RU)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              value={field.value ?? ''} 
-                              onChange={e => {
-                                const val = e.target.value;
-                                field.onChange(val === '' ? 0 : Number(val)); 
-                                onInputChange(e);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="portCount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Port Count</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              value={field.value ?? ''} 
-                              onChange={e => {
-                                const val = e.target.value;
-                                field.onChange(val === '' ? 0 : Number(val));
-                                onInputChange(e);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={control}
-                      name="portSpeedType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Port Speed</FormLabel>
-                          <Select 
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              onSelectChange('portSpeedType', value);
-                            }}
-                            defaultValue={field.value}
-                            value={field.value ?? PortSpeed.Speed10G}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a speed" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {Object.values(PortSpeed).map((speed) => (
-                                <SelectItem key={speed} value={speed}>{speed}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="portsProvidedQuantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ports Provided Quantity</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              value={field.value ?? ''} 
-                              onChange={e => {
-                                const val = e.target.value;
-                                field.onChange(val === '' ? 0 : Number(val));
-                                onInputChange(e);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </>
-              )}
-              
-              {formValues.type === ComponentType.Router && (
-                <RouterFirewallFormFields register={{ control }} />
-              )}
-              
-              {formValues.type === ComponentType.Firewall && (
-                <RouterFirewallFormFields register={{ control }} />
+                <SwitchFields
+                  control={control}
+                  formValues={formValues}
+                  onInputChange={onInputChange}
+                  onSelectChange={onSelectChange}
+                />
               )}
 
-              {formValues.type === 'FiberPatchPanel' && (
-                <CablingFormFields register={{control}} componentType="FiberPatchPanel" onInputChange={onInputChange} onSelectChange={onSelectChange} />
+              {/* Router/Firewall fields */}
+              {(formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) && (
+                <RouterFirewallFields control={control} />
               )}
 
-              {formValues.type === 'CopperPatchPanel' && (
-                <CablingFormFields register={{control}} componentType="CopperPatchPanel" onInputChange={onInputChange} onSelectChange={onSelectChange} />
+              {/* Cabling/Panel/Cassette fields */}
+              {(formValues.type === "FiberPatchPanel" ||
+                formValues.type === "CopperPatchPanel" ||
+                formValues.type === "Cassette" ||
+                formValues.type === "Cable") && (
+                <CablingFields
+                  control={control}
+                  componentType={formValues.type}
+                  onInputChange={onInputChange}
+                  onSelectChange={onSelectChange}
+                />
               )}
 
-              {formValues.type === 'Cable' && (
-                <CablingFormFields register={{control}} componentType="Cable" onInputChange={onInputChange} onSelectChange={onSelectChange} />
-              )}
-
-              {/* Add rendering for Cassette type */}
-              {formValues.type === 'Cassette' && (
-                <CablingFormFields register={{control}} componentType="Cassette" onInputChange={onInputChange} onSelectChange={onSelectChange} />
-              )}
             </form>
           </Form>
         </ScrollArea>
-        
         <DialogFooter className="px-6 py-4 border-t">
           <Button variant="ghost" onClick={onCancel}>
             Cancel
