@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import {
   AlertDialog,
@@ -95,7 +94,13 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
         setClusterAssignments(initialAssignments);
       }
     }
-  }, [open, activeDesign, availabilityZones, clusterAssignments, setClusterAssignments]);
+  }, [
+    open, 
+    activeDesign, 
+    availabilityZones, 
+    setClusterAssignments
+    // Removed clusterAssignments from dependencies!
+  ]);
 
   const handleToggleAZ = (clusterId: string, azName: string) => {
     setClusterAssignments(
