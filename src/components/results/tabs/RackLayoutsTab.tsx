@@ -70,11 +70,14 @@ export const RackLayoutsTab: React.FC = () => {
 
   // Set initial selected rack when rack profiles are loaded
   useEffect(() => {
+    // Only set when transitioning from no selection to has racks
     if (rackProfiles.length > 0 && !selectedRackId) {
       setSelectedRackId(rackProfiles[0].id);
     }
-  }, [rackProfiles, selectedRackId]);
-  
+    // Do not include selectedRackId as dependency; prevents update loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rackProfiles]);
+
   // Update rack stats when selected rack changes
   useEffect(() => {
     if (selectedRackId) {

@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   AlertDialogContent,
@@ -38,22 +37,22 @@ export const PlacementReportDialog: React.FC<PlacementReportDialogProps> = ({
         {placementReport && (
           <>
             <div className="text-sm font-medium">
-              <p className="mb-2">
+              <div className="mb-2">
                 <span className="mr-2">Total devices processed:</span>
                 <span className="font-bold">{placementReport.totalDevices}</span>
-              </p>
-              <p className="mb-2">
+              </div>
+              <div className="mb-2">
                 <span className="mr-2">Successfully placed:</span>
                 <span className="text-green-600 font-bold">
                   {placementReport.placedDevices}
                 </span>
-              </p>
-              <p>
+              </div>
+              <div>
                 <span className="mr-2">Failed to place:</span>
                 <span className="text-red-600 font-bold">
                   {placementReport.failedDevices}
                 </span>
-              </p>
+              </div>
             </div>
 
             {placementReport.items.length > 0 && (
