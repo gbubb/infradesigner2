@@ -106,6 +106,12 @@ interface ComponentFormDialogProps {
   isEditing: boolean;
 }
 
+// NEW — import sub components for modularization
+import { BasicInfoFields } from './fields/BasicInfoFields';
+import { NamingSection } from './fields/NamingSection';
+import { PlacementSection } from './fields/PlacementSection';
+import { CostAndPowerSection } from './fields/CostAndPowerSection';
+
 export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   isOpen,
   onOpenChange,
@@ -118,7 +124,6 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   onSubmit,
   isEditing
 }) => {
-  // Get rack units from the design store to validate RU range
   const physicalConstraints = useDesignStore((state) => 
     state.activeDesign?.requirements?.physicalConstraints);
   const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
@@ -176,9 +181,6 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
     values: formValues,
   });
 
-  const { register, control } = form;
-
-  // Generate a default naming prefix based on component type
   const getDefaultPrefix = (type: string) => {
     switch(type) {
       case ComponentType.Server: return 'SRV';
@@ -199,6 +201,8 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
     onSubmit();
   };
 
+  const { control } = form;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0">
@@ -213,110 +217,13 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
               {/* Basic Component Information Section */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Component Type Selector */}
-                <FormField
-                  control={control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Component Type</FormLabel>
-                      <Select 
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          onTypeChange(value);
-                        }}
-                        defaultValue={field.value}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={ComponentType.Server}>{ComponentType.Server}</SelectItem>
-                          <SelectItem value={ComponentType.Switch}>{ComponentType.Switch}</SelectItem>
-                          <SelectItem value={ComponentType.Router}>{ComponentType.Router}</SelectItem>
-                          <SelectItem value={ComponentType.Firewall}>{ComponentType.Firewall}</SelectItem>
-                          <SelectItem value={ComponentType.Disk}>{ComponentType.Disk}</SelectItem>
-                          <SelectItem value={ComponentType.GPU}>{ComponentType.GPU}</SelectItem>
-                          <SelectItem value="FiberPatchPanel">Fiber Patch Panel</SelectItem>
-                          <SelectItem value="CopperPatchPanel">Copper Patch Panel</SelectItem>
-                          <SelectItem value="Cassette">Cassette</SelectItem>
-                          <SelectItem value="Cable">Cable</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Component Name" 
-                          {...field} 
-                          onChange={(e) => {
-                            field.onChange(e);
-                            onInputChange(e);
-                          }} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={control}
-                  name="manufacturer"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Manufacturer</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Manufacturer" 
-                          {...field} 
-                          onChange={(e) => {
-                            field.onChange(e);
-                            onInputChange(e);
-                          }} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={control}
-                  name="model"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Model</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Model" 
-                          {...field} 
-                          onChange={(e) => {
-                            field.onChange(e);
-                            onInputChange(e);
-                          }} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <BasicInfoFields
+                control={control}
+                formValues={formValues}
+                onInputChange={onInputChange}
+                onSelectChange={onSelectChange}
+                onTypeChange={onTypeChange}
+              />
 
               {/* Set as Default */}
               <FormField
@@ -344,212 +251,29 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
               />
 
               {/* Naming Section */}
-              <div className="mt-6 pt-6 border-t">
-                <h3 className="text-lg font-medium">Naming</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Configure how this component will be named in designs
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={control}
-                    name="namingPrefix"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Default Name Prefix</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Name Prefix" 
-                            {...field} 
-                            value={field.value || getDefaultPrefix(formValues.type)}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              onInputChange(e);
-                            }} 
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Used as a prefix when generating component names
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+              <NamingSection
+                control={control}
+                formValues={formValues}
+                onInputChange={onInputChange}
+                getDefaultPrefix={getDefaultPrefix}
+              />
 
               {/* Placement Section */}
-              {formValues.type !== ComponentType.Cable && formValues.type !== ComponentType.Disk && formValues.type !== ComponentType.GPU && (
-                <div className="mt-6 pt-6 border-t">
-                  <h3 className="text-lg font-medium">Placement</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Define valid rack positions for this component
-                  </p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={control}
-                      name="validRUStart"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valid RU Range Start</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="1"
-                              max={maxRackUnits}
-                              {...field} 
-                              onChange={(e) => {
-                                const value = Number(e.target.value);
-                                if (value >= 1 && value <= maxRackUnits) {
-                                  field.onChange(value);
-                                  onInputChange(e);
-                                }
-                              }} 
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Lowest RU position allowed (1 - {maxRackUnits})
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="validRUEnd"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valid RU Range End</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number"
-                              min="1"
-                              max={maxRackUnits}
-                              {...field} 
-                              onChange={(e) => {
-                                const value = Number(e.target.value);
-                                if (value >= 1 && value <= maxRackUnits) {
-                                  field.onChange(value);
-                                  onInputChange(e);
-                                }
-                              }} 
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Highest RU position allowed (1 - {maxRackUnits})
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="preferredRU"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Preferred RU Position</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number"
-                              min="1"
-                              max={maxRackUnits}
-                              {...field} 
-                              onChange={(e) => {
-                                const value = Number(e.target.value);
-                                if (value >= 1 && value <= maxRackUnits) {
-                                  field.onChange(value);
-                                  onInputChange(e);
-                                }
-                              }} 
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Recommended position in rack
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={control}
-                      name="preferredRack"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Preferred Rack</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number"
-                              min="1"
-                              {...field} 
-                              onChange={(e) => {
-                                const value = Number(e.target.value);
-                                if (value >= 1) {
-                                  field.onChange(value);
-                                  onInputChange(e);
-                                }
-                              }} 
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Recommended rack number
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              )}
-              
-              {/* Cost and Power Required -- always visible for all component types except cabling/patch panel/cassette */}
-              {!['FiberPatchPanel', 'CopperPatchPanel', 'Cassette'].includes(formValues.type) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={control}
-                    name="cost"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cost ($)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="Cost"
-                            {...field} 
-                            value={field.value ?? ''} 
-                            onChange={e => {
-                              field.onChange(Number(e.target.value));
-                              onInputChange(e);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="powerRequired"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Power Required (Watts)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="Power Required" 
-                            {...field} 
-                            value={field.value ?? ''} 
-                            onChange={e => {
-                              field.onChange(Number(e.target.value));
-                              onInputChange(e);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-              
+              <PlacementSection
+                control={control}
+                formValues={formValues}
+                onInputChange={onInputChange}
+                maxRackUnits={maxRackUnits}
+                ComponentType={ComponentType}
+              />
+
+              {/* Cost and Power — always visible for all except cabling/patch/cassette */}
+              <CostAndPowerSection
+                control={control}
+                formValues={formValues}
+                onInputChange={onInputChange}
+              />
+
               {formValues.type === ComponentType.Server && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
