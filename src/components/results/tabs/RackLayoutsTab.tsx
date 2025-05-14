@@ -286,7 +286,8 @@ export const RackLayoutsTab: React.FC = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component Name</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Generated Name</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                             </tr>
@@ -295,9 +296,12 @@ export const RackLayoutsTab: React.FC = () => {
                             {placementReport.items.map((item, index) => (
                               <tr key={index} className={item.status === "failed" ? "bg-red-50" : ""}>
                                 <td className="px-4 py-2 text-sm">
-                                  {/* Show device name - instance name if exists */}
+                                  {/* Component name */}
                                   {item.deviceName}
-                                  {item.instanceName ? ` - ${item.instanceName}` : ""}
+                                </td>
+                                <td className="px-4 py-2 text-sm">
+                                  {/* Generated name */}
+                                  {item.instanceName}
                                 </td>
                                 <td className="px-4 py-2 text-sm">
                                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
