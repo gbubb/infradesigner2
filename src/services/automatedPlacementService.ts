@@ -3,6 +3,8 @@ import { useDesignStore } from '@/store/designStore';
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
 
+import { tryPlaceDeviceInRacksWithConstraints } from './placementHelpers';
+
 export interface PlacementReportItem {
   deviceName: string;
   instanceName?: string;
@@ -151,9 +153,11 @@ export class AutomatedPlacementService {
       totalDevices++;
       const typeLabel = getTypeKey(component);
       if (!typeCounters[typeLabel]) typeCounters[typeLabel] = 1;
+
       // Pick AZ for this instance in round-robin per type, according to desired per-AZ count for this type
       let allowedAZs = getAllowedAZsForComponent(component);
       if (!allowedAZs || allowedAZs.length === 0) allowedAZs = allAZs;
+
       // Find which AZ has fewest of this type placed (compared to desired), in round robin order
       let minAz: string | null = null, minPlaced = Infinity;
       for (const az of allowedAZs) {
@@ -164,24 +168,22 @@ export class AutomatedPlacementService {
           minAz = az;
         }
       }
-      // If all at desired count, just pick first available
       let targetAz = minAz || allowedAZs[0];
-      // Find racks in that AZ
       let eligibleRacks = rackProfiles.filter(rp => rp.availabilityZoneId === targetAz);
       if (eligibleRacks.length === 0) {
-        // Try any allowedAZs as fallback
         eligibleRacks = rackProfiles.filter(rp => allowedAZs.includes(rp.availabilityZoneId || ""));
       }
 
       // RU constraints
       const ruHeight = component.ruSize || component.ruHeight || 1;
+
+      // --- Here is the key update: use the improved placement helper, which now always reads device constraints from the component
       const placement = tryPlaceDeviceInRacksWithConstraints({
         racks: eligibleRacks,
         device: component,
         ruHeight
       });
 
-      // Generate instance name unique to component type
       let instanceNumber = typeCounters[typeLabel]++;
       let instanceName = `${typeLabel}-${instanceNumber}`;
       let deviceDisplayName = component.name;
@@ -197,9 +199,7 @@ export class AutomatedPlacementService {
         continue;
       }
 
-      // Track placement
       placedDevices++;
-      // Update placedCountByAZType for accurately balancing future placements
       if (!placedCountByAZType[targetAz]) placedCountByAZType[targetAz] = {};
       if (!placedCountByAZType[targetAz][typeLabel]) placedCountByAZType[targetAz][typeLabel] = 0;
       placedCountByAZType[targetAz][typeLabel]++;
@@ -220,66 +220,6 @@ export class AutomatedPlacementService {
 
     return placementResult;
   }
-}
-
-// Helper: Try to place device with permitted/preferred RU
-function tryPlaceDeviceInRacksWithConstraints({
-  racks,
-  device,
-  ruHeight
-}: {
-  racks: RackProfile[],
-  device: any,
-  ruHeight: number
-}): {
-  success: boolean,
-  reason?: string,
-  azId?: string,
-  rackId?: string,
-  ruPosition?: number
-} {
-  // RU constraints
-  const placement = device.placement || {};
-  const validRUStart = placement.validRUStart || 1;
-  const validRUEnd = placement.validRUEnd || (racks[0]?.uHeight || 42);
-  const preferredRU = placement.preferredRU || undefined;
-
-  // Try preferredRU first, then from start to end
-  for (const rack of racks) {
-    // Try preferred first if specified
-    if (preferredRU) {
-      if (
-        preferredRU >= validRUStart &&
-        preferredRU + ruHeight - 1 <= validRUEnd &&
-        preferredRU + ruHeight - 1 <= rack.uHeight
-      ) {
-        // Is this space available?
-        const available = isRUAvailable(rack, preferredRU, ruHeight);
-        if (available) {
-          const result = RackService.placeDevice(rack.id, device.id, preferredRU);
-          if (result.success) {
-            return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: preferredRU };
-          }
-        }
-      }
-    }
-    // Try all in permitted range
-    for (let ru = validRUStart; ru <= Math.min(rack.uHeight - ruHeight + 1, validRUEnd); ru++) {
-      // If preferredRU already checked, skip it
-      if (preferredRU && ru === preferredRU) continue;
-      const available = isRUAvailable(rack, ru, ruHeight);
-      if (available) {
-        const result = RackService.placeDevice(rack.id, device.id, ru);
-        if (result.success) {
-          return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: ru };
-        }
-      }
-    }
-  }
-  return {
-    success: false,
-    reason: `No valid RU position in permitted range (${validRUStart}-${validRUEnd}) for device ${device.name}`
-  };
 }
 
 function isRUAvailable(rack: RackProfile, ruPosition: number, ruHeight: number): boolean {
