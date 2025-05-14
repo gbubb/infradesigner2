@@ -205,8 +205,8 @@ function tryPlaceDeviceInRacksWithConstraints({
 function isRUAvailable(rack: RackProfile, ruPosition: number, ruHeight: number): boolean {
   const devices = rack.devices;
   for (const device of devices) {
-    const deviceEnd = device.ruPosition + ruHeight - 1;
-    const existingDeviceEnd = device.ruPosition + (device.ruHeight || 1) - 1;
+    const deviceHeight = 1; // Since PlacedDevice does not have ruHeight, default to 1U
+    const existingDeviceEnd = device.ruPosition + deviceHeight - 1;
     // Check overlapping
     if (
       (ruPosition <= existingDeviceEnd && ruPosition + ruHeight - 1 >= device.ruPosition)
