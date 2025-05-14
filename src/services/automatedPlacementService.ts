@@ -41,10 +41,104 @@ export class AutomatedPlacementService {
     const components = activeDesign.components;
     const rackProfiles = RackService.getAllRackProfiles();
     const allAZs = [...new Set(rackProfiles.map(r => r.availabilityZoneId).filter(Boolean))] as string[];
+    const coreAZId = rackProfiles.find(r => r.rackType === 'Core')?.availabilityZoneId || "core-az-id";
 
     let totalDevices = 0;
     let placedDevices = 0;
     let failedDevices = 0;
+
+    // Map of clusterId -> selected AZs from UI
+    const allowedAZsMap: Record<string, string[]> = {};
+    if (clusterAZAssignments) {
+      clusterAZAssignments.forEach(a => { allowedAZsMap[a.clusterId] = a.selectedAZs; });
+    }
+
+    // Reverse map: AZ -> {type->count}
+    const placedCountByAZType: Record<string, Record<string, number>> = {};
+    const allTypes = new Set<string>();
+
+    // For generated instance names
+    const typeCounters: Record<string, number> = {};
+
+    // Helper to get all allowed AZs for a device (including defaulting for certain device types)
+    const getAllowedAZsForComponent = (component: any) => {
+      // Handle core network devices: restrict to Core AZ if available
+      const isCoreNet = isCoreNetwork(component);
+      if (isCoreNet && allAZs.includes(coreAZId)) return [coreAZId];
+
+      // Identify type label/type
+      const deviceTypeKey = getTypeKey(component);
+
+      // Try cluster assignments
+      let azs: string[] = [];
+      if (component.clusterInfo && component.clusterInfo.clusterId && allowedAZsMap[component.clusterInfo.clusterId]) {
+        azs = allowedAZsMap[component.clusterInfo.clusterId];
+      } else if (allowedAZsMap[deviceTypeKey]) {
+        azs = allowedAZsMap[deviceTypeKey];
+      } else {
+        azs = allAZs;
+      }
+      // For other specific types, select all AZs by default
+      if (
+        [
+          "compute", "ipmiswitch", "managementswitch", "leafswitch", "copperpatchpanel", "fiberpatchpanel"
+        ].some(str => deviceTypeKey.includes(str))
+      ) {
+        if (azs.length === 0) azs = allAZs;
+      }
+      return azs;
+    };
+
+    // Count existing placements in racks for (az, type)
+    for (const rack of rackProfiles) {
+      const az = rack.availabilityZoneId || "";
+      if (!placedCountByAZType[az]) placedCountByAZType[az] = {};
+      for (const device of rack.devices) {
+        // Find device in design to get its type key
+        const comp = components.find(c => c.id === device.deviceId);
+        if (!comp) continue;
+        const typeLabel = getTypeKey(comp);
+        if (!placedCountByAZType[az][typeLabel]) placedCountByAZType[az][typeLabel] = 0;
+        placedCountByAZType[az][typeLabel]++;
+        allTypes.add(typeLabel);
+      }
+    }
+
+    // Build desired count per AZ/type map
+    const desiredAZCountForType: Record<string, Record<string, number>> = {};
+    for (const comp of components) {
+      const typeLabel = getTypeKey(comp);
+      allTypes.add(typeLabel);
+      const allowedAZs = getAllowedAZsForComponent(comp);
+      if (!allowedAZs || allowedAZs.length === 0) continue;
+      // For each AZ, tally the components count intended there (even round-robin)
+      if (!desiredAZCountForType[typeLabel]) desiredAZCountForType[typeLabel] = {};
+      allowedAZs.forEach(az => {
+        if (!desiredAZCountForType[typeLabel][az]) desiredAZCountForType[typeLabel][az] = 0;
+      });
+    }
+    // Distribute instances evenly per type-AZ
+    for (const typeLabel of Array.from(allTypes)) {
+      const compsOfType = components.filter(c => getTypeKey(c) === typeLabel);
+      // For each, get allowedAZs, then distribute round robin
+      if (!compsOfType.length) continue;
+      let azs = getAllowedAZsForComponent(compsOfType[0]);
+      if (!azs.length) continue;
+      for (let i = 0; i < compsOfType.length; i++) {
+        const az = azs[i % azs.length];
+        if (!desiredAZCountForType[typeLabel][az]) desiredAZCountForType[typeLabel][az] = 0;
+        desiredAZCountForType[typeLabel][az]++;
+      }
+    }
+
+    // Used to ensure per-type/per-AZ round robin
+    const perTypeAzPlacementIndex: Record<string, Record<string, number>> = {};
+    for (const typeLabel of Array.from(allTypes)) {
+      perTypeAzPlacementIndex[typeLabel] = {};
+      for (const az in desiredAZCountForType[typeLabel]) {
+        perTypeAzPlacementIndex[typeLabel][az] = 0;
+      }
+    }
 
     const placementResult: PlacementReport = {
       totalDevices: 0,
@@ -53,59 +147,41 @@ export class AutomatedPlacementService {
       items: []
     };
 
-    // Map of clusterId -> selected AZs from UI
-    const allowedAZsMap: Record<string, string[]> = {};
-    if (clusterAZAssignments) {
-      clusterAZAssignments.forEach(a => { allowedAZsMap[a.clusterId] = a.selectedAZs; });
-    }
-    // Build set of all allowed AZs for quick checks
-    const permittedAZs = new Set(Object.values(allowedAZsMap).flat());
-
-    // Track numbering per component type
-    const typeCounters: Record<string, number> = {};
-
     for (const component of components) {
       totalDevices++;
-
-      // Determine target AZ pool for this device
-      let clusterId = component.clusterInfo && component.clusterInfo.clusterId
-        ? component.clusterInfo.clusterId
-        : undefined;
-
-      let azPool: string[] = allAZs;
-      if (clusterId && allowedAZsMap[clusterId]) {
-        azPool = allowedAZsMap[clusterId];
-      } else if (permittedAZs.size > 0) {
-        azPool = Array.from(permittedAZs);
+      const typeLabel = getTypeKey(component);
+      if (!typeCounters[typeLabel]) typeCounters[typeLabel] = 1;
+      // Pick AZ for this instance in round-robin per type, according to desired per-AZ count for this type
+      let allowedAZs = getAllowedAZsForComponent(component);
+      if (!allowedAZs || allowedAZs.length === 0) allowedAZs = allAZs;
+      // Find which AZ has fewest of this type placed (compared to desired), in round robin order
+      let minAz: string | null = null, minPlaced = Infinity;
+      for (const az of allowedAZs) {
+        const alreadyPlaced = placedCountByAZType[az]?.[typeLabel] || 0;
+        const desiredCount = desiredAZCountForType[typeLabel]?.[az] || 0;
+        if ((alreadyPlaced < desiredCount) && (alreadyPlaced < minPlaced)) {
+          minPlaced = alreadyPlaced;
+          minAz = az;
+        }
       }
-
-      // For core network devices, force to core racks/AZ if available
-      const isCoreNetwork = 
-        ['firewall', 'spineSwitch', 'borderLeafSwitch', 'router'].some(
-          t => (component.role && component.role.toLowerCase().includes(t)) ||
-               (component.type && String(component.type).toLowerCase().includes(t.replace(/switch$/, '')))
-        );
-
-      let eligibleRacks: RackProfile[] = [];
-      if (isCoreNetwork) {
-        eligibleRacks = rackProfiles.filter(r => r.rackType === 'Core');
-      }
-      if (!eligibleRacks.length) {
-        // If not core or no core racks, use racks in allowed AZs (if any configured)
-        eligibleRacks = rackProfiles.filter(rp => azPool.includes(rp.availabilityZoneId || ""));
+      // If all at desired count, just pick first available
+      let targetAz = minAz || allowedAZs[0];
+      // Find racks in that AZ
+      let eligibleRacks = rackProfiles.filter(rp => rp.availabilityZoneId === targetAz);
+      if (eligibleRacks.length === 0) {
+        // Try any allowedAZs as fallback
+        eligibleRacks = rackProfiles.filter(rp => allowedAZs.includes(rp.availabilityZoneId || ""));
       }
 
       // RU constraints
       const ruHeight = component.ruSize || component.ruHeight || 1;
       const placement = tryPlaceDeviceInRacksWithConstraints({
-        racks: eligibleRacks, 
-        device: component, 
+        racks: eligibleRacks,
+        device: component,
         ruHeight
       });
 
       // Generate instance name unique to component type
-      const typeLabel = (component.namingPrefix || component.typePrefix || component.type || "").toString().toLowerCase();
-      if (!typeCounters[typeLabel]) typeCounters[typeLabel] = 1;
       let instanceNumber = typeCounters[typeLabel]++;
       let instanceName = `${typeLabel}-${instanceNumber}`;
       let deviceDisplayName = component.name;
@@ -116,13 +192,17 @@ export class AutomatedPlacementService {
           deviceName: deviceDisplayName,
           instanceName,
           status: 'failed',
-          reason: placement.reason || 'No suitable rack/RU position found in selected AZs'
+          reason: placement.reason || `No suitable rack/RU in AZ ${targetAz || 'unknown'}`
         });
         continue;
       }
 
-      // Mark as placed in system
+      // Track placement
       placedDevices++;
+      // Update placedCountByAZType for accurately balancing future placements
+      if (!placedCountByAZType[targetAz]) placedCountByAZType[targetAz] = {};
+      if (!placedCountByAZType[targetAz][typeLabel]) placedCountByAZType[targetAz][typeLabel] = 0;
+      placedCountByAZType[targetAz][typeLabel]++;
 
       placementResult.items.push({
         deviceName: deviceDisplayName,
@@ -215,4 +295,26 @@ function isRUAvailable(rack: RackProfile, ruPosition: number, ruHeight: number):
     }
   }
   return true;
+}
+
+function getTypeKey(component: any): string {
+  // Uses standard fields to make type key lower-cased and normalized
+  // Try typePrefix, namingPrefix, type, etc (cluster names etc are not used for key, only type-centric)
+  return (
+    component.namingPrefix ||
+    component.typePrefix ||
+    component.type ||
+    (component.role && component.role.toLowerCase())
+  ).toString().toLowerCase();
+}
+
+function isCoreNetwork(component: any): boolean {
+  // List core network keys
+  const coreKeys = ['firewall', 'spineswitch', 'borderleafswitch', 'border-switch', 'spine-switch', 'router', 'core'];
+  const typeStr = (
+    (component.role ? component.role.toLowerCase() : '')
+    + ' '
+    + (component.type ? String(component.type).toLowerCase() : '')
+  );
+  return coreKeys.some(key => typeStr.includes(key));
 }

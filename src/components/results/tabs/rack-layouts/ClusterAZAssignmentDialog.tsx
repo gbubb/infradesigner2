@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
@@ -21,18 +22,40 @@ interface ClusterAZAssignmentDialogProps {
   onConfirm: () => void;
 }
 
-// Add helper to extract all unique cluster and standalone roles from design, including network/core classes
-const getAllConfigurableRoles = (activeDesign: any): { id: string; name: string; clusterType: string }[] => {
+// Helper to extract all unique cluster and standalone device lines
+const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[]): { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] => {
   if (!activeDesign || !activeDesign.componentRoles) return [];
 
-  const roles = activeDesign.componentRoles.map(role => ({
-    id: role.id,
-    name: role.role,
-    clusterType: role.role // Assuming role name can act as cluster type for now
-  }));
+  const coreAZ = availabilityZones.find(az => az.toLowerCase().includes('core')) || 'Core';
 
-  // Add any standalone network/core device types here if needed
-  return roles;
+  // Build array of roles/types for clusters and relevant device types
+  const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
+  for (const role of activeDesign.componentRoles) {
+    // Lowercase key for matching types.
+    const key = role.role?.toLowerCase() || '';
+
+    // Decide default zones
+    let autoDefaultTo: string[] = [];
+    if (['firewall', 'spineswitch', 'borderleafswitch', 'border-switch', 'spine-switch', 'router'].some(type => key.includes(type))) {
+      autoDefaultTo = coreAZ ? [coreAZ] : [];
+    } else if (
+      [
+        'compute', 'ipmiswitch', 'managementswitch', 
+        'leafswitch', 'copperpatchpanel', 'fiberpatchpanel'
+      ].some(type => key.includes(type))
+    ) {
+      autoDefaultTo = [...availabilityZones];
+    } else {
+      autoDefaultTo = [...availabilityZones];
+    }
+    lines.push({
+      id: role.id,
+      name: role.role,
+      clusterType: role.role, // Simplified
+      autoDefaultTo,
+    });
+  }
+  return lines;
 };
 
 export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps> = ({
@@ -49,19 +72,24 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
   useEffect(() => {
     // Initialize local assignments from props
     if (activeDesign) {
-      const allRoles = getAllConfigurableRoles(activeDesign);
+      const allRoles = getAllConfigurableRoles(activeDesign, availabilityZones);
       const initialAssignments = allRoles.map(role => {
         const existingAssignment = clusterAssignments.find(ca => ca.clusterId === role.id);
         return {
           clusterId: role.id,
           clusterName: role.name,
           clusterType: role.clusterType as 'compute' | 'storage' | 'controller' | 'infrastructure',
-          selectedAZs: existingAssignment ? existingAssignment.selectedAZs : [],
+          selectedAZs: existingAssignment
+            ? existingAssignment.selectedAZs.length > 0
+              ? existingAssignment.selectedAZs
+              : role.autoDefaultTo
+            : role.autoDefaultTo,
         };
       });
       setLocalAssignments(initialAssignments);
     }
-  }, [activeDesign, clusterAssignments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDesign, clusterAssignments, availabilityZones?.join('|')]);
 
   const handleAZSelection = (clusterId: string, az: string, checked: boolean) => {
     setLocalAssignments(prevAssignments => {
@@ -78,7 +106,6 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
   };
 
   const handleConfirm = () => {
-    // Update the cluster assignments in the parent component
     setClusterAssignments(localAssignments);
     onConfirm();
     onOpenChange(false);
@@ -86,11 +113,11 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[625px]">
+      <DialogContent className="sm:max-w-[900px] w-full">  {/* wider dialog */}
         <DialogHeader>
           <DialogTitle>Select Availability Zones</DialogTitle>
           <DialogDescription>
-            Choose the availability zones for each cluster.
+            Choose the availability zones for each cluster/device line. (AZ selections for firewalls, spine, border, etc are limited to "Core" by default)
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -99,7 +126,7 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
               <div className="text-sm font-medium leading-none">{assignment.clusterName}</div>
               <div className="flex flex-wrap gap-2">
                 {availabilityZones.map(az => (
-                  <div key={az} className="flex items-center space-x-2">
+                  <div key={az} className="flex items-center space-x-2 min-w-[110px]">
                     <Checkbox
                       id={`${assignment.clusterId}-${az}`}
                       checked={assignment.selectedAZs.includes(az)}
