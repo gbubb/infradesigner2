@@ -107,20 +107,22 @@ export const RackLayoutsTab: React.FC = () => {
   const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
 
   const handleAutoPlaceDevices = () => {
-    // Open the AZ assignment dialog first
     setIsAZAssignmentDialogOpen(true);
   };
 
   const handleConfirmAutoPlacement = () => {
     setIsPlacing(true);
+
+    // placementReport will be generated synchronously, but give UI time for possible loading
+    setTimeout(() => {
+      // Pass cluster AZ assignments to the placement service
+      const report = AutomatedPlacementService.placeAllDesignDevices(undefined, clusterAZAssignments);
+      setPlacementReport(report);
+      setIsPlacing(false);
+      setIsPlacementDialogOpen(true); // Only open after report is set
+    }, 200);
     
-    // Pass cluster AZ assignments to the placement service
-    const report = AutomatedPlacementService.placeAllDesignDevices(undefined, clusterAZAssignments);
-    setPlacementReport(report);
-    setIsPlacementDialogOpen(true);
-    setIsPlacing(false);
-    
-    // Update rack stats for the selected rack
+    // Update rack stats for the selected rack (UI safe to do outside setTimeout)
     if (selectedRackId) {
       try {
         const updatedStats = analyzeRackLayout(selectedRackId);

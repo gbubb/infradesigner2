@@ -39,6 +39,9 @@ export const PlacementReportDialog: React.FC<PlacementReportDialogProps> = ({
       <AlertDialogHeader className="px-6">
         <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
         <AlertDialogDescription>
+          {!placementReport && (
+            <span className="text-sm text-muted-foreground">Generating placement report...</span>
+          )}
           {placementReport && (
             <span>
               Total devices processed:{" "}
@@ -53,7 +56,16 @@ export const PlacementReportDialog: React.FC<PlacementReportDialogProps> = ({
           )}
         </AlertDialogDescription>
       </AlertDialogHeader>
-      {placementReport && (
+      {/* When placementReport is present, show table; else, a loading spinner/indicator */}
+      {!placementReport ? (
+        <div className="flex items-center justify-center min-h-[180px] pb-6">
+          <svg className="animate-spin h-8 w-8 mr-2 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+          </svg>
+          <span className="text-lg text-muted-foreground">Processing auto-placement...</span>
+        </div>
+      ) : (
         <div className="space-y-4 px-6 pb-3">
           <div className="border rounded-md overflow-hidden w-full">
             <table className="min-w-full divide-y divide-gray-200">
