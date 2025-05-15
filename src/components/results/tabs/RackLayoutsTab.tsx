@@ -272,7 +272,7 @@ export const RackLayoutsTab: React.FC = () => {
             <AlertDialogHeader className="px-6">
               <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
               <AlertDialogDescription>
-                {/* Only inline or short summary text should go here */}
+                {/* Only keep summary stats (plain text) here */}
                 {placementReport && (
                   <>
                     Total devices processed: <span className="font-bold">{placementReport.totalDevices}</span>
@@ -282,7 +282,7 @@ export const RackLayoutsTab: React.FC = () => {
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            {/* Move the table and detailed info OUT of AlertDialogDescription! */}
+            {/* Detailed table and info must go OUTSIDE the description */}
             {placementReport && (
               <div className="space-y-4 px-6 pb-3">
                 <div className="border rounded-md overflow-hidden w-full">

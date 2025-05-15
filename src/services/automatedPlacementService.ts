@@ -109,7 +109,8 @@ export class AutomatedPlacementService {
       if (!typeCounters[typeLabel]) typeCounters[typeLabel] = 1;
       let placed = false;
 
-      // ---- Placement rules:
+      // ----- Placement rules:
+
       // 1. If core network, only in core racks, distributed evenly
       if (isCoreNet(component)) {
         // Evenly distribute to core racks
@@ -163,20 +164,31 @@ export class AutomatedPlacementService {
         }
         continue;
       }
-      // 2. Patch panels per rules
+
+      // 2. Patch panels per rules - IMPROVED: if any core rack, always fill them first!
       if (isPatchPanel(component)) {
-        // Fiber/copper panel - quantity rules
-        // if in core AZ, 4 per core rack; if in compute AZ, 1 per rack
         let eligibleRacks: typeof rackProfiles = [];
-        // Use string-key access for non-typed placement keys:
-        if ((component.placement?.['requiredInCoreRack'] ?? false) || component.placement?.['perCoreRack']) {
+        // Check both explicit flag or fallback to naming for core/compute racks
+        const isCorePanelDevice = (() => {
+          // If requiredInCoreRack/perCoreRack available, use.
+          if ((component.placement?.['requiredInCoreRack'] ?? false) || component.placement?.['perCoreRack']) return true;
+          // Fallback: look for "core" in component name, type, or requirements if necessary
+          const lowerName = (component.name || "").toLowerCase();
+          if (lowerName.includes("core")) return true;
+          return false;
+        })();
+
+        // If any core racks exist, and this is a "core" panel, fill core racks.
+        if (coreRacks.length > 0 && isCorePanelDevice) {
           eligibleRacks = coreRacks;
         } else {
           eligibleRacks = computeRacks;
         }
-        // How many per rack
+
+        // Required per rack?
         let perRackQty = 1;
         if (eligibleRacks && eligibleRacks[0] && eligibleRacks[0].rackType === 'Core') perRackQty = 4;
+
         for (const r of eligibleRacks) {
           patchPanelAssignedPerRack[r.id] = patchPanelAssignedPerRack[r.id] || 0;
           if (patchPanelAssignedPerRack[r.id] >= perRackQty) continue;
@@ -214,15 +226,28 @@ export class AutomatedPlacementService {
         }
         continue;
       }
-      // 3. Compute/controller/storage/ipmi/leafswitch: not in core racks/az!
+
+      // 3. Compute/controller/storage/ipmi/leafswitch: not in core racks/AZ!
       if (isComputeLike(component)) {
-        // Find all non-core AZ racks for this component
+        // Which AZs can this cluster go in? If cluster assignment is provided, use it!
+        let allowedAZs: string[] = allAZs.filter(id => id !== coreAZId);
+        // Find this device's cluster assignment (matching clusterId):
+        let clusterAZs: string[] | undefined;
+        if (component.clusterId && allowedAZsMap[component.clusterId]) {
+          clusterAZs = allowedAZsMap[component.clusterId];
+        } else if (component.clusterInfo?.clusterId && allowedAZsMap[component.clusterInfo.clusterId]) {
+          clusterAZs = allowedAZsMap[component.clusterInfo.clusterId];
+        }
+        if (Array.isArray(clusterAZs) && clusterAZs.length > 0) {
+          allowedAZs = clusterAZs;
+        }
+        // Now only consider compute racks in allowed AZs
         const azRacks = computeRacks.filter(rk =>
-          rk.availabilityZoneId && rk.availabilityZoneId !== coreAZId
+          rk.availabilityZoneId && allowedAZs.includes(rk.availabilityZoneId)
         );
         // Choose the AZ which has least devices of this type (spread between AZs)
         let bestAz: string | undefined = undefined, minInAz = Infinity;
-        for (const az of allAZs.filter(id => id !== coreAZId)) {
+        for (const az of allowedAZs) {
           const racksInAZ = azRacks.filter(r => r.availabilityZoneId === az);
           const count = racksInAZ.reduce((acc, r) =>
             acc + r.devices.filter(d =>
@@ -240,7 +265,7 @@ export class AutomatedPlacementService {
             deviceName: component.name,
             instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
             status: "failed",
-            reason: "No AZ/rack in which to place (non-core)"
+            reason: "No AZ/rack in which to place (non-core, AZ selection may be restricting placement)"
           });
           continue;
         }
@@ -297,9 +322,19 @@ export class AutomatedPlacementService {
         }
         continue;
       }
-      // 4. All others: allowed anywhere, spread among all racks for their AZ evenly
+
+      // For everything else, allow in all AZs unless restricted by clusterAZAssignments
       let allowedAZs = allAZs;
-      // Try to limit to non-core racks if not core/patch/compute-like
+      // If Cluster assignment exists, narrow allowedAZs for this device
+      let componentClusterAZs: string[] | undefined;
+      if (component.clusterId && allowedAZsMap[component.clusterId]) {
+        componentClusterAZs = allowedAZsMap[component.clusterId];
+      } else if (component.clusterInfo?.clusterId && allowedAZsMap[component.clusterInfo.clusterId]) {
+        componentClusterAZs = allowedAZsMap[component.clusterInfo.clusterId];
+      }
+      if (Array.isArray(componentClusterAZs) && componentClusterAZs.length > 0) {
+        allowedAZs = componentClusterAZs;
+      }
       let eligibleRacks = rackProfiles.filter(rk =>
           allowedAZs.includes(rk.availabilityZoneId || '')
       );
