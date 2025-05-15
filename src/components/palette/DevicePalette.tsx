@@ -21,7 +21,7 @@ export const DevicePalette: React.FC<DevicePaletteProps> = ({ rackId, onDevicePl
   const placedDeviceIds = useMemo(() => {
     if (!activeDesign) return new Set<string>();
     return new Set(
-      (activeDesign.rackProfiles || [])
+      (activeDesign.rackprofiles || [])
         .flatMap((rp: any) => rp.devices?.map((d: any) => d.deviceId) || [])
     );
   }, [activeDesign]);

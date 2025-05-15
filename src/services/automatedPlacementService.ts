@@ -168,7 +168,8 @@ export class AutomatedPlacementService {
         // Fiber/copper panel - quantity rules
         // if in core AZ, 4 per core rack; if in compute AZ, 1 per rack
         let eligibleRacks: typeof rackProfiles = [];
-        if ((component.placement?.requiredInCoreRack ?? false) || component.placement?.perCoreRack) {
+        // Use string-key access for non-typed placement keys:
+        if ((component.placement?.['requiredInCoreRack'] ?? false) || component.placement?.['perCoreRack']) {
           eligibleRacks = coreRacks;
         } else {
           eligibleRacks = computeRacks;
