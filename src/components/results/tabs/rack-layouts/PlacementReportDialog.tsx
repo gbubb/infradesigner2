@@ -42,7 +42,9 @@ export const PlacementReportDialog: React.FC<PlacementReportDialogProps> = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent style={{ width: '700px', maxHeight: '80vh', overflowY: 'auto', padding: '0px' }}>
+      <AlertDialogContent 
+        className="sm:max-w-[1100px] w-full max-h-[80vh] overflow-y-auto relative"
+      >
         <button
           className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 z-[10000] text-2xl bg-white p-1 rounded"
           style={{ lineHeight: 1, border: "none", cursor: "pointer" }}
