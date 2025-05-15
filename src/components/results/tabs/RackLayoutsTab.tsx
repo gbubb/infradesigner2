@@ -50,12 +50,14 @@ export const RackLayoutsTab: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
   const [scrollStep, setScrollStep] = useState(300);
   const [readyToOpenReportDialog, setReadyToOpenReportDialog] = useState(false);
+  const [snapshotAzNameMap, setSnapshotAzNameMap] = useState<Record<string, string>>({});
+  const [snapshotRackNameMap, setSnapshotRackNameMap] = useState<Record<string, string>>({});
   
-  // Map of AZ/rackId to friendly names
+  // Map of AZ/rackId to friendly names (live maps)
   const azNameMap = React.useMemo(() => {
     const m: Record<string, string> = {};
     availabilityZones.forEach(name => {
-      m[name] = name; // If using AZ struct with .id/.name, update this logic
+      m[name] = name; 
     });
     rackProfiles.forEach(rp => {
       if (rp.availabilityZoneId && rp.azName)
@@ -114,19 +116,18 @@ export const RackLayoutsTab: React.FC = () => {
   const handleConfirmAutoPlacement = () => {
     setIsPlacing(true);
 
-    // Pass cluster AZ assignments to the placement service
     const report = AutomatedPlacementService.placeAllDesignDevices(undefined, clusterAZAssignments);
-    console.log('Generated placement report in RackLayoutsTab:', report); // For internal debugging
+    console.log('Generated placement report in RackLayoutsTab:', report); 
 
     setPlacementReport(report);
+    // Capture current maps for the report dialog
+    setSnapshotAzNameMap(azNameMap); 
+    setSnapshotRackNameMap(rackNameMap);
+
     setIsPlacing(false);    
-    
-    // Close the AZ assignment dialog
     setIsAZAssignmentDialogOpen(false);
-    // Signal that the report is ready and dialog can be opened
     setReadyToOpenReportDialog(true); 
     
-    // Update rack stats for the selected rack
     if (selectedRackId) {
       try {
         const updatedStats = analyzeRackLayout(selectedRackId);
@@ -280,11 +281,14 @@ export const RackLayoutsTab: React.FC = () => {
             setIsPlacementDialogOpen(open);
             if (!open) {
               setPlacementReport(null); // Clear report when dialog is closed
+              // Optionally clear snapshot maps too if they are large and not needed
+              // setSnapshotAzNameMap({}); 
+              // setSnapshotRackNameMap({});
             }
           }}
           placementReport={placementReport}
-          azNameMap={azNameMap}
-          rackNameMap={rackNameMap}
+          azNameMap={snapshotAzNameMap}
+          rackNameMap={snapshotRackNameMap}
         />
 
         {/* Cluster AZ Assignment Dialog */}
