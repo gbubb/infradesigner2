@@ -113,15 +113,17 @@ export const RackLayoutsTab: React.FC = () => {
   const handleConfirmAutoPlacement = () => {
     setIsPlacing(true);
 
-    // placementReport will be generated synchronously, but give UI time for possible loading
-    setTimeout(() => {
-      // Pass cluster AZ assignments to the placement service
-      const report = AutomatedPlacementService.placeAllDesignDevices(undefined, clusterAZAssignments);
-      setPlacementReport(report);
-      setIsPlacing(false);
-      setIsPlacementDialogOpen(true); // Only open after report is set
-      setIsAZAssignmentDialogOpen(false); // Close AZ dialog only after placement is ready
-    }, 200);
+    // Pass cluster AZ assignments to the placement service
+    const report = AutomatedPlacementService.placeAllDesignDevices(undefined, clusterAZAssignments);
+    console.log('Generated placement report in RackLayoutsTab:', report); // For internal debugging
+
+    setPlacementReport(report);
+    setIsPlacing(false);
+    
+    // Close the AZ assignment dialog and open the placement report dialog
+    // These state updates should be batched by React.
+    setIsAZAssignmentDialogOpen(false);
+    setIsPlacementDialogOpen(true); 
     
     // Update rack stats for the selected rack (UI safe to do outside setTimeout)
     if (selectedRackId) {
