@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
@@ -27,6 +26,7 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
   if (!activeDesign || !activeDesign.componentRoles) return [];
 
   const coreAZ = availabilityZones.find(az => az.toLowerCase().includes('core')) || 'Core';
+  const nonCoreAZs = availabilityZones.filter(az => az !== coreAZ);
 
   // Build array of roles/types for clusters and relevant device types
   const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
@@ -36,17 +36,17 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
 
     // Decide default zones
     let autoDefaultTo: string[] = [];
-    if (['firewall', 'spineswitch', 'borderleafswitch', 'border-switch', 'spine-switch', 'router'].some(type => key.includes(type))) {
+    if ([
+      'firewall', 'spineswitch', 'borderleafswitch', 'border-switch', 'spine-switch', 'router'
+    ].some(type => key.includes(type))) {
       autoDefaultTo = coreAZ ? [coreAZ] : [];
-    } else if (
-      [
-        'compute', 'ipmiswitch', 'managementswitch', 
-        'leafswitch', 'copperpatchpanel', 'fiberpatchpanel'
-      ].some(type => key.includes(type))
-    ) {
-      autoDefaultTo = [...availabilityZones];
+    } else if ([
+      'compute', 'controller', 'storage', 'ipmiswitch', 'managementswitch',
+      'leafswitch', 'copperpatchpanel', 'fiberpatchpanel'
+    ].some(type => key.includes(type))) {
+      autoDefaultTo = [...nonCoreAZs];
     } else {
-      autoDefaultTo = [...availabilityZones];
+      autoDefaultTo = [...nonCoreAZs];
     }
     lines.push({
       id: role.id,
@@ -108,7 +108,7 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
   const handleConfirm = () => {
     setClusterAssignments(localAssignments);
     onConfirm();
-    onOpenChange(false);
+    // Do not close dialog here; parent will close after placement is done
   };
 
   return (

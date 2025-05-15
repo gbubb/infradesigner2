@@ -120,6 +120,7 @@ export const RackLayoutsTab: React.FC = () => {
       setPlacementReport(report);
       setIsPlacing(false);
       setIsPlacementDialogOpen(true); // Only open after report is set
+      setIsAZAssignmentDialogOpen(false); // Close AZ dialog only after placement is ready
     }, 200);
     
     // Update rack stats for the selected rack (UI safe to do outside setTimeout)
