@@ -49,6 +49,7 @@ export const RackLayoutsTab: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [scrollStep, setScrollStep] = useState(300);
+  const [readyToOpenReportDialog, setReadyToOpenReportDialog] = useState(false);
   
   // Map of AZ/rackId to friendly names
   const azNameMap = React.useMemo(() => {
@@ -118,14 +119,14 @@ export const RackLayoutsTab: React.FC = () => {
     console.log('Generated placement report in RackLayoutsTab:', report); // For internal debugging
 
     setPlacementReport(report);
-    setIsPlacing(false);
+    setIsPlacing(false);    
     
-    // Close the AZ assignment dialog and open the placement report dialog
-    // These state updates should be batched by React.
+    // Close the AZ assignment dialog
     setIsAZAssignmentDialogOpen(false);
-    setIsPlacementDialogOpen(true); 
+    // Signal that the report is ready and dialog can be opened
+    setReadyToOpenReportDialog(true); 
     
-    // Update rack stats for the selected rack (UI safe to do outside setTimeout)
+    // Update rack stats for the selected rack
     if (selectedRackId) {
       try {
         const updatedStats = analyzeRackLayout(selectedRackId);
@@ -135,6 +136,14 @@ export const RackLayoutsTab: React.FC = () => {
       }
     }
   };
+
+  // Effect to open the placement report dialog once the report is ready
+  useEffect(() => {
+    if (readyToOpenReportDialog && placementReport) {
+      setIsPlacementDialogOpen(true);
+      setReadyToOpenReportDialog(false); // Reset the trigger
+    }
+  }, [readyToOpenReportDialog, placementReport]);
 
   // Loading saved layout
   useEffect(() => {
@@ -267,7 +276,12 @@ export const RackLayoutsTab: React.FC = () => {
         {/* Placement Report Dialog */}
         <PlacementReportDialog
           open={isPlacementDialogOpen}
-          onOpenChange={setIsPlacementDialogOpen}
+          onOpenChange={(open) => {
+            setIsPlacementDialogOpen(open);
+            if (!open) {
+              setPlacementReport(null); // Clear report when dialog is closed
+            }
+          }}
           placementReport={placementReport}
           azNameMap={azNameMap}
           rackNameMap={rackNameMap}
