@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
@@ -28,7 +29,7 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
   const coreAZ = availabilityZones.find(az => az.toLowerCase().includes('core')) || 'Core';
 
   // Build array of roles/types for clusters and relevant device types
-  const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] } = [];
+  const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
   for (const role of activeDesign.componentRoles) {
     // Lowercase key for matching types.
     const key = role.role?.toLowerCase() || '';
@@ -112,14 +113,13 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1100px] w-full"> {/* wider dialog for grid */}
+      <DialogContent className="sm:max-w-[1100px] w-full">
         <DialogHeader>
           <DialogTitle>Select Availability Zones</DialogTitle>
           <DialogDescription>
             Choose the availability zones for each cluster/device line. (AZ selections for firewalls, spine, border, etc are limited to "Core" by default)
           </DialogDescription>
         </DialogHeader>
-        {/* Make grid-based layout */}
         <div className="overflow-x-auto py-4">
           <table className="min-w-full border border-muted rounded">
             <thead>

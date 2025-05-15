@@ -1,3 +1,4 @@
+
 import { RackService } from './rackService';
 import { useDesignStore } from '@/store/designStore';
 import { RackProfile } from '@/types/infrastructure/rack-types';
@@ -40,6 +41,11 @@ export class AutomatedPlacementService {
       };
     }
 
+    // Fix: Declare counters!
+    let totalDevices = 0;
+    let placedDevices = 0;
+    let failedDevices = 0;
+
     const components = activeDesign.components;
     const rackProfiles = RackService.getAllRackProfiles();
     const allAZs = [...new Set(rackProfiles.map(r => r.availabilityZoneId).filter(Boolean))] as string[];
@@ -67,7 +73,7 @@ export class AutomatedPlacementService {
 
     // Refined AZ logic: these types NEVER default to core
     const neverInCoreTypes = [
-      'controller', 'compute', 'storage', 
+      'controller', 'compute', 'storage',
       "ipmiswitch", "leafswitch"
     ];
 
@@ -202,7 +208,7 @@ export class AutomatedPlacementService {
       if (!perTypeAzPlacementIndex[typeLabel]) perTypeAzPlacementIndex[typeLabel] = {};
       allowedAZs.forEach(az => { if (!(az in perTypeAzPlacementIndex[typeLabel])) perTypeAzPlacementIndex[typeLabel][az] = 0; });
       const azSelectionList = allowedAZs.slice().sort();
-      // Find first AZ with spare "slot" for this type (per even target AZ distribution)  
+      // Find first AZ with spare "slot" for this type (per even target AZ distribution)
       chosenAZ = azSelectionList.find(az =>
         (placedCountByAZType[az]?.[typeLabel] ?? 0)
         < (desiredAZCountForType[typeLabel]?.[az] ?? Infinity)
