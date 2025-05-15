@@ -5,6 +5,7 @@ import { getTypeKey } from './placementUtils';
 
 /**
  * When placing patch panels, AZ-wide quantities must be split across all racks in that AZ and placed round-robin.
+ * Core-specific patch panel values are per rack and only affect core racks.
  */
 export function placePatchPanel({
   component,
@@ -34,14 +35,13 @@ export function placePatchPanel({
   fiberPatchPanelsPerAZ: number,
 }): { placed: boolean, reportItem: any } {
   let placed = false;
+  let reportItem = null;
 
   const isCopperPatchPanel = typeLabel.includes('copperpatchpanel');
   const isFiberPatchPanel = typeLabel.includes('fiberpatchpanel');
-  const perCoreRackQty = isCopperPatchPanel ? copperPatchPanelsPerCoreRack : fiberPatchPanelsPerCoreRack;
-  const perAZQty = isCopperPatchPanel ? copperPatchPanelsPerAZ : fiberPatchPanelsPerAZ;
-  let reportItem = null;
 
-  // 1. Place in Core racks up to perCoreRackQty each
+  // === 1. Place in Core racks up to perCoreRackQty each (from *per-rack* variable, not the AZ-wide one) ===
+  const perCoreRackQty = isCopperPatchPanel ? copperPatchPanelsPerCoreRack : fiberPatchPanelsPerCoreRack;
   if (perCoreRackQty > 0 && coreRacks.length > 0) {
     for (const r of coreRacks) {
       const matchingTypeCount = r.devices.filter(d => {
@@ -56,7 +56,7 @@ export function placePatchPanel({
           racks: [r],
           device: component,
           ruHeight,
-          activeDesignState: state
+          activeDesignState: state,
         });
         let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
         if (placement.success) {
@@ -69,18 +69,16 @@ export function placePatchPanel({
             rackId: r.id,
             ruPosition: placement.ruPosition,
           };
-          break;
+          return { placed, reportItem };
         }
       }
     }
-    if (placed) {
-      return { placed, reportItem };
-    }
   }
 
-  // 2. Place per AZ (in compute racks, split per rack, round-robin distribution)
-  if (!placed && perAZQty > 0) {
-    // Group racks by AZ
+  // === 2. Place in compute racks based on AZ quantity (split AZ-wide value among compute racks in that AZ, round-robin) ===
+  const perAZQty = isCopperPatchPanel ? copperPatchPanelsPerAZ : fiberPatchPanelsPerAZ;
+  if (perAZQty > 0 && computeRacks.length > 0) {
+    // Group compute racks by AZ
     const racksByAZ: Record<string, RackProfile[]> = {};
     for (const r of computeRacks) {
       if (!r.availabilityZoneId) continue;
@@ -95,16 +93,15 @@ export function placePatchPanel({
       ? [component.availabilityZoneId]
       : Object.keys(racksByAZ);
 
-    // Determine the AZ to operate in, or use the first if only one
     for (const azId of azKeys) {
       const racks = racksByAZ[azId] || [];
       if (racks.length === 0) continue;
 
-      // Calculate fair share per rack (integer division, remainder handled round-robin)
+      // Calculate fair share per rack for this AZ (integer division, remainder round-robin)
       const basePerRack = Math.floor(perAZQty / racks.length);
       const remainder = perAZQty % racks.length;
 
-      // Count existing panel types in these racks
+      // Count existing panels of this type in each rack in this AZ
       const existingPanelsPerRack = racks.map(r =>
         r.devices.filter(d => {
           const dev = components.find(cmp => cmp.id === d.deviceId);
@@ -117,7 +114,7 @@ export function placePatchPanel({
       // Calculate per-rack limits: first 'remainder' racks get (base+1), rest get base
       const perRackLimits = Array(racks.length).fill(basePerRack).map((v, i) => i < remainder ? v + 1 : v);
 
-      // Round-robin place panels in racks with available slots by type
+      // Round-robin placement: try each rack in order until we find one under its AZ limit
       for (let attempt = 0; attempt < racks.length; attempt++) {
         for (let i = 0; i < racks.length; i++) {
           if (existingPanelsPerRack[i] < perRackLimits[i]) {
@@ -127,7 +124,7 @@ export function placePatchPanel({
               racks: [r],
               device: component,
               ruHeight,
-              activeDesignState: state
+              activeDesignState: state,
             });
             let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
             if (placement.success) {
@@ -141,23 +138,22 @@ export function placePatchPanel({
                 ruPosition: placement.ruPosition,
               };
               return { placed, reportItem };
-            } else {
-              // If placement fails, try next rack in round-robin
-              continue;
             }
+            // If placement fails, try next rack in round-robin
+            continue;
           }
         }
       }
     }
   }
 
-  // If not placed, fail
+  // If not placed, fail with a report
   if (!placed) {
     reportItem = {
       deviceName: component.name,
       instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
       status: "failed",
-      reason: "Could not place patch panel (all racks at required quantity)"
+      reason: "Could not place patch panel (all racks at required quantity)",
     };
   }
 
