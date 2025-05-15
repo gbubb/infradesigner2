@@ -4,7 +4,7 @@ import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
 
 /**
- * When placing patch panels, AZ-wide quantities must be split across all racks in that AZ.
+ * When placing patch panels, AZ-wide quantities must be split across all racks in that AZ and placed round-robin.
  */
 export function placePatchPanel({
   component,
@@ -73,9 +73,12 @@ export function placePatchPanel({
         }
       }
     }
+    if (placed) {
+      return { placed, reportItem };
+    }
   }
 
-  // 2. Place per AZ (in compute racks, split per rack)
+  // 2. Place per AZ (in compute racks, split per rack, round-robin distribution)
   if (!placed && perAZQty > 0) {
     // Group racks by AZ
     const racksByAZ: Record<string, RackProfile[]> = {};
@@ -86,48 +89,65 @@ export function placePatchPanel({
       }
       racksByAZ[r.availabilityZoneId].push(r);
     }
-    // If component.availabilityZoneId is set, restrict racks to that AZ only
+
+    // If a component.availabilityZoneId is set, restrict to that AZ only
     let azKeys = component.availabilityZoneId
       ? [component.availabilityZoneId]
       : Object.keys(racksByAZ);
 
+    // Determine the AZ to operate in, or use the first if only one
     for (const azId of azKeys) {
       const racks = racksByAZ[azId] || [];
       if (racks.length === 0) continue;
-      // Divide panels per AZ as evenly as possible
-      const perRackMax = Math.ceil(perAZQty / racks.length);
 
-      for (const r of racks) {
-        const matchingTypeCount = r.devices.filter(d => {
+      // Calculate fair share per rack (integer division, remainder handled round-robin)
+      const basePerRack = Math.floor(perAZQty / racks.length);
+      const remainder = perAZQty % racks.length;
+
+      // Count existing panel types in these racks
+      const existingPanelsPerRack = racks.map(r =>
+        r.devices.filter(d => {
           const dev = components.find(cmp => cmp.id === d.deviceId);
           if (!dev) return false;
           const lbl = getTypeKey(dev);
           return isCopperPatchPanel ? lbl.includes('copperpatchpanel') : lbl.includes('fiberpatchpanel');
-        }).length;
-        if (matchingTypeCount < perRackMax) {
-          const ruHeight = component.ruSize || component.ruHeight || 1;
-          const placement = tryPlaceDeviceInRacksWithConstraints({
-            racks: [r],
-            device: component,
-            ruHeight,
-            activeDesignState: state
-          });
-          let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
-          if (placement.success) {
-            placed = true;
-            reportItem = {
-              deviceName: component.name,
-              instanceName,
-              status: 'placed',
-              azId: r.availabilityZoneId,
-              rackId: r.id,
-              ruPosition: placement.ruPosition,
-            };
-            break;
+        }).length
+      );
+
+      // Calculate per-rack limits: first 'remainder' racks get (base+1), rest get base
+      const perRackLimits = Array(racks.length).fill(basePerRack).map((v, i) => i < remainder ? v + 1 : v);
+
+      // Round-robin place panels in racks with available slots by type
+      for (let attempt = 0; attempt < racks.length; attempt++) {
+        for (let i = 0; i < racks.length; i++) {
+          if (existingPanelsPerRack[i] < perRackLimits[i]) {
+            const ruHeight = component.ruSize || component.ruHeight || 1;
+            const r = racks[i];
+            const placement = tryPlaceDeviceInRacksWithConstraints({
+              racks: [r],
+              device: component,
+              ruHeight,
+              activeDesignState: state
+            });
+            let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+            if (placement.success) {
+              placed = true;
+              reportItem = {
+                deviceName: component.name,
+                instanceName,
+                status: 'placed',
+                azId: r.availabilityZoneId,
+                rackId: r.id,
+                ruPosition: placement.ruPosition,
+              };
+              return { placed, reportItem };
+            } else {
+              // If placement fails, try next rack in round-robin
+              continue;
+            }
           }
         }
       }
-      if (placed) break;
     }
   }
 
@@ -143,4 +163,3 @@ export function placePatchPanel({
 
   return { placed, reportItem };
 }
-
