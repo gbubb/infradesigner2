@@ -80,45 +80,12 @@ export const PlacementReportDialog: React.FC<PlacementReportDialogProps> = ({
             <span className="text-lg text-muted-foreground">Processing auto-placement...</span>
           </div>
         ) : (
-          <div className="space-y-4 px-6 pb-3">
-            <div className="border rounded-md overflow-hidden w-full">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component Name</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Generated Name</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {placementReport.items.map((item, index) => (
-                    <tr key={index} className={item.status === "failed" ? "bg-red-50" : ""}>
-                      <td className="px-4 py-2 text-sm">{item.deviceName}</td>
-                      <td className="px-4 py-2 text-sm">{item.instanceName}</td>
-                      <td className="px-4 py-2 text-sm">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            item.status === "placed" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {item.status === "placed" ? "Placed" : "Failed"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-sm">
-                        {item.status === "placed" ? (
-                          <span>
-                            AZ: {azNameMap[item.azId ?? ""] || item.azId} | Rack: {rackNameMap[item.rackId ?? ""] || item.rackId} | Position: {item.ruPosition}
-                          </span>
-                        ) : (
-                          <span className="text-red-600">{item.reason}</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-2">Simple Test Content</h3>
+            <p>If you see this, the dialog is receiving the report data.</p>
+            <p>Report has {placementReport.items?.length || 'N/A'} items.</p>
+            <p>AZ Map has {Object.keys(azNameMap || {}).length} entries.</p>
+            <p>Rack Map has {Object.keys(rackNameMap || {}).length} entries.</p>
           </div>
         )}
         <AlertDialogFooter className="px-6">
