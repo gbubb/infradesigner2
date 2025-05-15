@@ -44,6 +44,8 @@ export class AutomatedPlacementService {
     const rackProfiles = RackService.getAllRackProfiles();
     const allAZs = [...new Set(rackProfiles.map(r => r.availabilityZoneId).filter(Boolean))] as string[];
     const coreAZId = rackProfiles.find(r => r.rackType === 'Core')?.availabilityZoneId || "core-az-id";
+    const coreRacks = rackProfiles.filter(r => r.rackType === 'Core');
+    const computeRacks = rackProfiles.filter(r => r.rackType === 'ComputeStorage');
 
     let totalDevices = 0;
     let placedDevices = 0;
@@ -55,93 +57,40 @@ export class AutomatedPlacementService {
       clusterAZAssignments.forEach(a => { allowedAZsMap[a.clusterId] = a.selectedAZs; });
     }
 
-    // Reverse map: AZ -> {type->count}
-    const placedCountByAZType: Record<string, Record<string, number>> = {};
-    const allTypes = new Set<string>();
+    // Per-rack device tracking for patch panels
+    const patchPanelAssignedPerRack: Record<string, number> = {};
 
-    // For generated instance names
-    const typeCounters: Record<string, number> = {};
+    // Helper to get type key
+    const getTypeKey = (component: any) => (
+      component.namingPrefix ||
+      component.typePrefix ||
+      component.type ||
+      (component.role && component.role.toLowerCase())
+    ).toString().toLowerCase();
 
-    // Helper to get all allowed AZs for a device (including defaulting for certain device types)
-    const getAllowedAZsForComponent = (component: any) => {
-      // Handle core network devices: restrict to Core AZ if available
-      const isCoreNet = isCoreNetwork(component);
-      if (isCoreNet && allAZs.includes(coreAZId)) return [coreAZId];
-
-      // Identify type label/type
-      const deviceTypeKey = getTypeKey(component);
-
-      // Try cluster assignments
-      let azs: string[] = [];
-      if (component.clusterInfo && component.clusterInfo.clusterId && allowedAZsMap[component.clusterInfo.clusterId]) {
-        azs = allowedAZsMap[component.clusterInfo.clusterId];
-      } else if (allowedAZsMap[deviceTypeKey]) {
-        azs = allowedAZsMap[deviceTypeKey];
-      } else {
-        azs = allAZs;
-      }
-      // For other specific types, select all AZs by default
-      if (
-        [
-          "compute", "ipmiswitch", "managementswitch", "leafswitch", "copperpatchpanel", "fiberpatchpanel"
-        ].some(str => deviceTypeKey.includes(str))
-      ) {
-        if (azs.length === 0) azs = allAZs;
-      }
-      return azs;
+    // Helper to identify device type for placement rule exclusion
+    const isCoreNet = (c: any) => {
+      const coreKeys = ['firewall', 'spineswitch', 'borderleafswitch', 'border-switch', 'spine-switch', 'router', 'core'];
+      const typeStr = ((c.role ? c.role.toLowerCase() : '') + ' ' + (c.type ? String(c.type).toLowerCase() : ''));
+      return coreKeys.some(key => typeStr.includes(key));
+    };
+    const isPatchPanel = (c: any) => {
+      const k = getTypeKey(c);
+      return k.includes('patchpanel');
+    };
+    const isComputeLike = (c: any) => {
+      const k = getTypeKey(c);
+      return ['controller', 'compute', 'storage', 'ipmiswitch', 'leafswitch'].some(t =>
+        k.includes(t) || (c.role && c.role.toLowerCase().includes(t))
+      );
     };
 
-    // Count existing placements in racks for (az, type)
-    for (const rack of rackProfiles) {
-      const az = rack.availabilityZoneId || "";
-      if (!placedCountByAZType[az]) placedCountByAZType[az] = {};
-      for (const device of rack.devices) {
-        // Find device in design to get its type key
-        const comp = components.find(c => c.id === device.deviceId);
-        if (!comp) continue;
-        const typeLabel = getTypeKey(comp);
-        if (!placedCountByAZType[az][typeLabel]) placedCountByAZType[az][typeLabel] = 0;
-        placedCountByAZType[az][typeLabel]++;
-        allTypes.add(typeLabel);
-      }
-    }
+    // Calculate placed devices per deviceId
+    const placedDeviceIds = new Set(
+      rackProfiles.flatMap(r => r.devices.map(d => d.deviceId))
+    );
 
-    // Build desired count per AZ/type map
-    const desiredAZCountForType: Record<string, Record<string, number>> = {};
-    for (const comp of components) {
-      const typeLabel = getTypeKey(comp);
-      allTypes.add(typeLabel);
-      const allowedAZs = getAllowedAZsForComponent(comp);
-      if (!allowedAZs || allowedAZs.length === 0) continue;
-      // For each AZ, tally the components count intended there (even round-robin)
-      if (!desiredAZCountForType[typeLabel]) desiredAZCountForType[typeLabel] = {};
-      allowedAZs.forEach(az => {
-        if (!desiredAZCountForType[typeLabel][az]) desiredAZCountForType[typeLabel][az] = 0;
-      });
-    }
-    // Distribute instances evenly per type-AZ
-    for (const typeLabel of Array.from(allTypes)) {
-      const compsOfType = components.filter(c => getTypeKey(c) === typeLabel);
-      // For each, get allowedAZs, then distribute round robin
-      if (!compsOfType.length) continue;
-      let azs = getAllowedAZsForComponent(compsOfType[0]);
-      if (!azs.length) continue;
-      for (let i = 0; i < compsOfType.length; i++) {
-        const az = azs[i % azs.length];
-        if (!desiredAZCountForType[typeLabel][az]) desiredAZCountForType[typeLabel][az] = 0;
-        desiredAZCountForType[typeLabel][az]++;
-      }
-    }
-
-    // Used to ensure per-type/per-AZ round robin
-    const perTypeAzPlacementIndex: Record<string, Record<string, number>> = {};
-    for (const typeLabel of Array.from(allTypes)) {
-      perTypeAzPlacementIndex[typeLabel] = {};
-      for (const az in desiredAZCountForType[typeLabel]) {
-        perTypeAzPlacementIndex[typeLabel][az] = 0;
-      }
-    }
-
+    // Prepare placement result
     const placementResult: PlacementReport = {
       totalDevices: 0,
       placedDevices: 0,
@@ -149,75 +98,256 @@ export class AutomatedPlacementService {
       items: []
     };
 
-    for (const component of components) {
+    // For generated instance names
+    const typeCounters: Record<string, number> = {};
+
+    // Main placement loop: filter out devices already placed (user/manual placement protection)
+    const toPlaceComponents = components.filter(c => !placedDeviceIds.has(c.id));
+    for (const component of toPlaceComponents) {
       totalDevices++;
       const typeLabel = getTypeKey(component);
       if (!typeCounters[typeLabel]) typeCounters[typeLabel] = 1;
+      let placed = false;
 
-      // Pick AZ for this instance in round-robin per type, according to desired per-AZ count for this type
-      let allowedAZs = getAllowedAZsForComponent(component);
-      if (!allowedAZs || allowedAZs.length === 0) allowedAZs = allAZs;
-
-      // Find which AZ has fewest of this type placed (compared to desired), in round robin order
-      let minAz: string | null = null, minPlaced = Infinity;
-      for (const az of allowedAZs) {
-        const alreadyPlaced = placedCountByAZType[az]?.[typeLabel] || 0;
-        const desiredCount = desiredAZCountForType[typeLabel]?.[az] || 0;
-        if ((alreadyPlaced < desiredCount) && (alreadyPlaced < minPlaced)) {
-          minPlaced = alreadyPlaced;
-          minAz = az;
+      // ---- Placement rules:
+      // 1. If core network, only in core racks, distributed evenly
+      if (isCoreNet(component)) {
+        // Evenly distribute to core racks
+        if (coreRacks.length === 0) {
+          failedDevices++;
+          placementResult.items.push({
+            deviceName: component.name,
+            instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
+            status: 'failed',
+            reason: "No core racks available for core device"
+          });
+          continue;
+        }
+        // Select core rack with least of this type
+        let minRack = coreRacks[0], minCount = Infinity;
+        for (const r of coreRacks) {
+          const count = r.devices.filter(d => getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel).length;
+          if (count < minCount) {
+            minRack = r;
+            minCount = count;
+          }
+        }
+        // Try placing in the minRack
+        const ruHeight = component.ruSize || component.ruHeight || 1;
+        const placement = tryPlaceDeviceInRacksWithConstraints({
+          racks: [minRack],
+          device: component,
+          ruHeight,
+          activeDesignState: state
+        });
+        let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+        if (placement.success) {
+          placedDevices++;
+          placementResult.items.push({
+            deviceName: component.name,
+            instanceName,
+            status: 'placed',
+            azId: placement.azId,
+            rackId: placement.rackId,
+            ruPosition: placement.ruPosition
+          });
+          placed = true;
+        } else {
+          failedDevices++;
+          placementResult.items.push({
+            deviceName: component.name,
+            instanceName,
+            status: "failed",
+            reason: placement.reason
+          });
+        }
+        continue;
+      }
+      // 2. Patch panels per rules
+      if (isPatchPanel(component)) {
+        // Fiber/copper panel - quantity rules
+        // if in core AZ, 4 per core rack; if in compute AZ, 1 per rack
+        let eligibleRacks: typeof rackProfiles = [];
+        if ((component.placement?.requiredInCoreRack ?? false) || component.placement?.perCoreRack) {
+          eligibleRacks = coreRacks;
+        } else {
+          eligibleRacks = computeRacks;
+        }
+        // How many per rack
+        let perRackQty = 1;
+        if (eligibleRacks && eligibleRacks[0] && eligibleRacks[0].rackType === 'Core') perRackQty = 4;
+        for (const r of eligibleRacks) {
+          patchPanelAssignedPerRack[r.id] = patchPanelAssignedPerRack[r.id] || 0;
+          if (patchPanelAssignedPerRack[r.id] >= perRackQty) continue;
+          const ruHeight = component.ruSize || component.ruHeight || 1;
+          const placement = tryPlaceDeviceInRacksWithConstraints({
+            racks: [r],
+            device: component,
+            ruHeight,
+            activeDesignState: state
+          });
+          let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+          if (placement.success) {
+            placedDevices++;
+            placementResult.items.push({
+              deviceName: component.name,
+              instanceName,
+              status: 'placed',
+              azId: placement.azId,
+              rackId: placement.rackId,
+              ruPosition: placement.ruPosition
+            });
+            patchPanelAssignedPerRack[r.id]++;
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) {
+          failedDevices++;
+          placementResult.items.push({
+            deviceName: component.name,
+            instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
+            status: "failed",
+            reason: "Could not place patch panel (all racks at required quantity)"
+          });
+        }
+        continue;
+      }
+      // 3. Compute/controller/storage/ipmi/leafswitch: not in core racks/az!
+      if (isComputeLike(component)) {
+        // Find all non-core AZ racks for this component
+        const azRacks = computeRacks.filter(rk =>
+          rk.availabilityZoneId && rk.availabilityZoneId !== coreAZId
+        );
+        // Choose the AZ which has least devices of this type (spread between AZs)
+        let bestAz: string | undefined = undefined, minInAz = Infinity;
+        for (const az of allAZs.filter(id => id !== coreAZId)) {
+          const racksInAZ = azRacks.filter(r => r.availabilityZoneId === az);
+          const count = racksInAZ.reduce((acc, r) =>
+            acc + r.devices.filter(d =>
+              getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel
+            ).length, 0
+          );
+          if (count < minInAz) {
+            bestAz = az;
+            minInAz = count;
+          }
+        }
+        if (!bestAz) {
+          failedDevices++;
+          placementResult.items.push({
+            deviceName: component.name,
+            instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
+            status: "failed",
+            reason: "No AZ/rack in which to place (non-core)"
+          });
+          continue;
+        }
+        // Evenly spread among racks in that AZ
+        const racksInAz = azRacks.filter(r => r.availabilityZoneId === bestAz);
+        if (racksInAz.length === 0) {
+          failedDevices++;
+          placementResult.items.push({
+            deviceName: component.name,
+            instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
+            status: "failed",
+            reason: "No racks in target AZ"
+          });
+          continue;
+        }
+        // Find rack with least of this type
+        let rackToPlace = racksInAz[0], minCount = Infinity;
+        for (const r of racksInAz) {
+          const count = r.devices.filter(d =>
+            getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel
+          ).length;
+          if (count < minCount) {
+            rackToPlace = r;
+            minCount = count;
+          }
+        }
+        const ruHeight = component.ruSize || component.ruHeight || 1;
+        const placement = tryPlaceDeviceInRacksWithConstraints({
+          racks: [rackToPlace],
+          device: component,
+          ruHeight,
+          activeDesignState: state
+        });
+        let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+        if (placement.success) {
+          placedDevices++;
+          placementResult.items.push({
+            deviceName: component.name,
+            instanceName,
+            status: 'placed',
+            azId: placement.azId,
+            rackId: placement.rackId,
+            ruPosition: placement.ruPosition
+          });
+          placed = true;
+        } else {
+          failedDevices++;
+          placementResult.items.push({
+            deviceName: component.name,
+            instanceName,
+            status: "failed",
+            reason: placement.reason
+          });
+        }
+        continue;
+      }
+      // 4. All others: allowed anywhere, spread among all racks for their AZ evenly
+      let allowedAZs = allAZs;
+      // Try to limit to non-core racks if not core/patch/compute-like
+      let eligibleRacks = rackProfiles.filter(rk =>
+          allowedAZs.includes(rk.availabilityZoneId || '')
+      );
+      // spread to racks with lowest device of this type
+      let minRack = eligibleRacks[0], minCount = Infinity;
+      for (const r of eligibleRacks) {
+        const count = r.devices.filter(d =>
+          getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel
+        ).length;
+        if (count < minCount) {
+          minRack = r;
+          minCount = count;
         }
       }
-      let targetAz = minAz || allowedAZs[0];
-      let eligibleRacks = rackProfiles.filter(rp => rp.availabilityZoneId === targetAz);
-      if (eligibleRacks.length === 0) {
-        eligibleRacks = rackProfiles.filter(rp => allowedAZs.includes(rp.availabilityZoneId || ""));
-      }
-
-      // RU constraints
       const ruHeight = component.ruSize || component.ruHeight || 1;
-
-      // << PASS state to placement helper >>
       const placement = tryPlaceDeviceInRacksWithConstraints({
-        racks: eligibleRacks,
+        racks: [minRack],
         device: component,
         ruHeight,
         activeDesignState: state
       });
-
-      let instanceNumber = typeCounters[typeLabel]++;
-      let instanceName = `${typeLabel}-${instanceNumber}`;
-      let deviceDisplayName = component.name;
-
-      if (!placement.success) {
+      let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+      if (placement.success) {
+        placedDevices++;
+        placementResult.items.push({
+          deviceName: component.name,
+          instanceName,
+          status: 'placed',
+          azId: placement.azId,
+          rackId: placement.rackId,
+          ruPosition: placement.ruPosition
+        });
+        placed = true;
+      } else {
         failedDevices++;
         placementResult.items.push({
-          deviceName: deviceDisplayName,
+          deviceName: component.name,
           instanceName,
-          status: 'failed',
-          reason: placement.reason || `No suitable rack/RU in AZ ${targetAz || 'unknown'}`
+          status: "failed",
+          reason: placement.reason
         });
-        continue;
       }
-
-      placedDevices++;
-      if (!placedCountByAZType[targetAz]) placedCountByAZType[targetAz] = {};
-      if (!placedCountByAZType[targetAz][typeLabel]) placedCountByAZType[targetAz][typeLabel] = 0;
-      placedCountByAZType[targetAz][typeLabel]++;
-
-      placementResult.items.push({
-        deviceName: deviceDisplayName,
-        instanceName,
-        status: 'placed',
-        azId: placement.azId,
-        rackId: placement.rackId,
-        ruPosition: placement.ruPosition
-      });
     }
 
     placementResult.totalDevices = totalDevices;
     placementResult.placedDevices = placedDevices;
     placementResult.failedDevices = failedDevices;
+
+    // --- WARNING: This file is very long. Consider refactoring soon! ---
 
     return placementResult;
   }

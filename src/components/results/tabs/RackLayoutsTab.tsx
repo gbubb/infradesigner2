@@ -260,29 +260,36 @@ export const RackLayoutsTab: React.FC = () => {
         
         {/* Placement Report Dialog */}
         <AlertDialog open={isPlacementDialogOpen} onOpenChange={setIsPlacementDialogOpen}>
-          <AlertDialogContent className="max-w-[600px] max-h-[80vh] overflow-y-auto">
-            <AlertDialogHeader>
+          <AlertDialogContent className="max-w-[700px] w-[700px] max-h-[80vh] overflow-y-auto relative px-0">
+            <button
+              className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 z-10 text-2xl"
+              style={{ lineHeight: 1, background: "transparent", border: "none", cursor: "pointer" }}
+              onClick={() => setIsPlacementDialogOpen(false)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <AlertDialogHeader className="px-6">
               <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
               <AlertDialogDescription className="space-y-4">
                 {placementReport && (
                   <>
                     <div className="text-sm font-medium">
-                      <p className="mb-2">
+                      <div className="mb-2">
                         <span className="mr-2">Total devices processed:</span>
                         <span className="font-bold">{placementReport.totalDevices}</span>
-                      </p>
-                      <p className="mb-2">
+                      </div>
+                      <div className="mb-2">
                         <span className="mr-2">Successfully placed:</span>
                         <span className="text-green-600 font-bold">{placementReport.placedDevices}</span>
-                      </p>
-                      <p>
+                      </div>
+                      <div>
                         <span className="mr-2">Failed to place:</span>
                         <span className="text-red-600 font-bold">{placementReport.failedDevices}</span>
-                      </p>
+                      </div>
                     </div>
-                    
                     {placementReport.items.length > 0 && (
-                      <div className="border rounded-md overflow-hidden">
+                      <div className="border rounded-md overflow-hidden w-full">
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
@@ -296,11 +303,9 @@ export const RackLayoutsTab: React.FC = () => {
                             {placementReport.items.map((item, index) => (
                               <tr key={index} className={item.status === "failed" ? "bg-red-50" : ""}>
                                 <td className="px-4 py-2 text-sm">
-                                  {/* Component name */}
                                   {item.deviceName}
                                 </td>
                                 <td className="px-4 py-2 text-sm">
-                                  {/* Generated name */}
                                   {item.instanceName}
                                 </td>
                                 <td className="px-4 py-2 text-sm">
@@ -329,7 +334,7 @@ export const RackLayoutsTab: React.FC = () => {
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="px-6">
               <AlertDialogCancel>Close</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>

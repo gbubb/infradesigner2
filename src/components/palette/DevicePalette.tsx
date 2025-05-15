@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDesignStore } from '@/store/designStore';
@@ -17,17 +16,28 @@ export const DevicePalette: React.FC<DevicePaletteProps> = ({ rackId, onDevicePl
   const [searchTerm, setSearchTerm] = useState('');
   const activeDesign = useDesignStore(state => state.activeDesign);
   const { availableDevices, placeDevice } = useRackLayout(rackId);
-  
+
+  // Only show devices not already placed anywhere
+  const placedDeviceIds = useMemo(() => {
+    if (!activeDesign) return new Set<string>();
+    return new Set(
+      (activeDesign.rackProfiles || [])
+        .flatMap((rp: any) => rp.devices?.map((d: any) => d.deviceId) || [])
+    );
+  }, [activeDesign]);
+
   const filteredDevices = useMemo(() => {
-    if (!availableDevices) return [];
-    
+    // Only devices NOT already placed in any rack
+    const unplaced = availableDevices
+      ? availableDevices.filter(device => !placedDeviceIds.has(device.id))
+      : [];
     return searchTerm 
-      ? availableDevices.filter(device => 
+      ? unplaced.filter(device => 
           device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           device.type.toLowerCase().includes(searchTerm.toLowerCase())
         )
-      : availableDevices;
-  }, [availableDevices, searchTerm]);
+      : unplaced;
+  }, [availableDevices, searchTerm, placedDeviceIds]);
 
   const handlePlaceDevice = (deviceId: string) => {
     if (rackId) {
