@@ -2,8 +2,8 @@ import { RackService } from './rackService';
 import { useDesignStore } from '@/store/designStore';
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
-
 import { tryPlaceDeviceInRacksWithConstraints } from './placementHelpers';
+import { defaultRequirements } from '@/store/slices/requirements/types';
 
 export interface PlacementReportItem {
   deviceName: string;
@@ -102,7 +102,7 @@ export class AutomatedPlacementService {
     const typeCounters: Record<string, number> = {};
 
     // Get network requirements if available (for panel quantities)
-    const requirements = state.requirements || {};
+    const requirements = state.requirements || defaultRequirements;
     const copperPatchPanelsPerAZ = requirements.networkRequirements?.copperPatchPanelsPerAZ ?? 0;
     const fiberPatchPanelsPerAZ = requirements.networkRequirements?.fiberPatchPanelsPerAZ ?? 0;
     const copperPatchPanelsPerCoreRack = requirements.networkRequirements?.copperPatchPanelsPerCoreRack ?? 0;
