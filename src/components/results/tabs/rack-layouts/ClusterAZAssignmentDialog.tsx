@@ -113,13 +113,14 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1100px] w-full">
+      <DialogContent className="sm:max-w-[1100px] w-full"> {/* wider dialog for grid */}
         <DialogHeader>
           <DialogTitle>Select Availability Zones</DialogTitle>
           <DialogDescription>
             Choose the availability zones for each cluster/device line. (AZ selections for firewalls, spine, border, etc are limited to "Core" by default)
           </DialogDescription>
         </DialogHeader>
+        {/* Make grid-based layout */}
         <div className="overflow-x-auto py-4">
           <table className="min-w-full border border-muted rounded">
             <thead>

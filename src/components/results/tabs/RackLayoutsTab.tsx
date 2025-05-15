@@ -260,15 +260,7 @@ export const RackLayoutsTab: React.FC = () => {
         
         {/* Placement Report Dialog */}
         <AlertDialog open={isPlacementDialogOpen} onOpenChange={setIsPlacementDialogOpen}>
-          <AlertDialogContent className="max-w-[1100px] w-full max-h-[80vh] overflow-y-auto relative">
-            {/* X button in top right */}
-            <button
-              className="absolute top-4 right-4 text-lg text-gray-500 hover:text-gray-800 rounded transition"
-              onClick={() => setIsPlacementDialogOpen(false)}
-              aria-label="Close placement report"
-            >
-              &times;
-            </button>
+          <AlertDialogContent className="max-w-[600px] max-h-[80vh] overflow-y-auto">
             <AlertDialogHeader>
               <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
               <AlertDialogDescription className="space-y-4">
@@ -304,9 +296,11 @@ export const RackLayoutsTab: React.FC = () => {
                             {placementReport.items.map((item, index) => (
                               <tr key={index} className={item.status === "failed" ? "bg-red-50" : ""}>
                                 <td className="px-4 py-2 text-sm">
+                                  {/* Component name */}
                                   {item.deviceName}
                                 </td>
                                 <td className="px-4 py-2 text-sm">
+                                  {/* Generated name */}
                                   {item.instanceName}
                                 </td>
                                 <td className="px-4 py-2 text-sm">
