@@ -3,6 +3,9 @@ import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
 
+/**
+ * When placing patch panels, AZ-wide quantities must be split across all racks in that AZ.
+ */
 export function placePatchPanel({
   component,
   rackProfiles,
@@ -72,41 +75,59 @@ export function placePatchPanel({
     }
   }
 
-  // 2. Place per AZ (in compute racks)
+  // 2. Place per AZ (in compute racks, split per rack)
   if (!placed && perAZQty > 0) {
-    let matchedAZRacks = computeRacks;
-    if (component.availabilityZoneId) {
-      matchedAZRacks = computeRacks.filter(r => r.availabilityZoneId === component.availabilityZoneId);
+    // Group racks by AZ
+    const racksByAZ: Record<string, RackProfile[]> = {};
+    for (const r of computeRacks) {
+      if (!r.availabilityZoneId) continue;
+      if (!racksByAZ[r.availabilityZoneId]) {
+        racksByAZ[r.availabilityZoneId] = [];
+      }
+      racksByAZ[r.availabilityZoneId].push(r);
     }
-    for (const r of matchedAZRacks) {
-      const matchingTypeCount = r.devices.filter(d => {
-        const dev = components.find(cmp => cmp.id === d.deviceId);
-        if (!dev) return false;
-        const lbl = getTypeKey(dev);
-        return isCopperPatchPanel ? lbl.includes('copperpatchpanel') : lbl.includes('fiberpatchpanel');
-      }).length;
-      if (matchingTypeCount < perAZQty) {
-        const ruHeight = component.ruSize || component.ruHeight || 1;
-        const placement = tryPlaceDeviceInRacksWithConstraints({
-          racks: [r],
-          device: component,
-          ruHeight,
-          activeDesignState: state
-        });
-        let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
-        if (placement.success) {
-          placed = true;
-          reportItem = {
-            deviceName: component.name,
-            instanceName,
-            status: 'placed',
-            azId: r.availabilityZoneId,
-            rackId: r.id,
-            ruPosition: placement.ruPosition,
-          };
-          break;
+    // If component.availabilityZoneId is set, restrict racks to that AZ only
+    let azKeys = component.availabilityZoneId
+      ? [component.availabilityZoneId]
+      : Object.keys(racksByAZ);
+
+    for (const azId of azKeys) {
+      const racks = racksByAZ[azId] || [];
+      if (racks.length === 0) continue;
+      // Divide panels per AZ as evenly as possible
+      const perRackMax = Math.ceil(perAZQty / racks.length);
+
+      for (const r of racks) {
+        const matchingTypeCount = r.devices.filter(d => {
+          const dev = components.find(cmp => cmp.id === d.deviceId);
+          if (!dev) return false;
+          const lbl = getTypeKey(dev);
+          return isCopperPatchPanel ? lbl.includes('copperpatchpanel') : lbl.includes('fiberpatchpanel');
+        }).length;
+        if (matchingTypeCount < perRackMax) {
+          const ruHeight = component.ruSize || component.ruHeight || 1;
+          const placement = tryPlaceDeviceInRacksWithConstraints({
+            racks: [r],
+            device: component,
+            ruHeight,
+            activeDesignState: state
+          });
+          let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+          if (placement.success) {
+            placed = true;
+            reportItem = {
+              deviceName: component.name,
+              instanceName,
+              status: 'placed',
+              azId: r.availabilityZoneId,
+              rackId: r.id,
+              ruPosition: placement.ruPosition,
+            };
+            break;
+          }
         }
       }
+      if (placed) break;
     }
   }
 
@@ -122,3 +143,4 @@ export function placePatchPanel({
 
   return { placed, reportItem };
 }
+
