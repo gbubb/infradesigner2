@@ -1,4 +1,3 @@
-
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
@@ -40,7 +39,7 @@ export function placePatchPanel({
   const isCopperPatchPanel = typeLabel.includes('copperpatchpanel');
   const isFiberPatchPanel = typeLabel.includes('fiberpatchpanel');
 
-  // === 1. Place in Core racks up to perCoreRackQty each (from *per-rack* variable, not the AZ-wide one) ===
+  // === 1. Place in Core racks up to perCoreRackQty each (core gets its own per-rack variable, distinct from AZ/compute racks) ===
   const perCoreRackQty = isCopperPatchPanel ? copperPatchPanelsPerCoreRack : fiberPatchPanelsPerCoreRack;
   if (perCoreRackQty > 0 && coreRacks.length > 0) {
     for (const r of coreRacks) {
@@ -75,7 +74,7 @@ export function placePatchPanel({
     }
   }
 
-  // === 2. Place in compute racks based on AZ quantity (split AZ-wide value among compute racks in that AZ, round-robin) ===
+  // === 2. Place in compute racks based on AZ quantity: divide AZ quantity by # racks in that AZ, permit at most that per rack ===
   const perAZQty = isCopperPatchPanel ? copperPatchPanelsPerAZ : fiberPatchPanelsPerAZ;
   if (perAZQty > 0 && computeRacks.length > 0) {
     // Group compute racks by AZ
@@ -88,62 +87,65 @@ export function placePatchPanel({
       racksByAZ[r.availabilityZoneId].push(r);
     }
 
-    // If a component.availabilityZoneId is set, restrict to that AZ only
+    // If the component requires a specific AZ, restrict to that AZ
     let azKeys = component.availabilityZoneId
       ? [component.availabilityZoneId]
       : Object.keys(racksByAZ);
 
+    // Try to place only if there is room in the AZ's perAZQty, and not exceeding per-rack limits
     for (const azId of azKeys) {
       const racks = racksByAZ[azId] || [];
       if (racks.length === 0) continue;
 
-      // Calculate fair share per rack for this AZ (integer division, remainder round-robin)
-      const basePerRack = Math.floor(perAZQty / racks.length);
-      const remainder = perAZQty % racks.length;
-
-      // Count existing panels of this type in each rack in this AZ
-      const existingPanelsPerRack = racks.map(r =>
-        r.devices.filter(d => {
+      // Count, across all compute racks in this AZ, how many devices of this type are already present
+      let totalPlacedInAZ = 0;
+      // To keep up-to-date counts, recalc for each rack (since the design may not have been in order)
+      const currentPlacedPerRack = racks.map(r => {
+        const count = r.devices.filter(d => {
           const dev = components.find(cmp => cmp.id === d.deviceId);
           if (!dev) return false;
           const lbl = getTypeKey(dev);
           return isCopperPatchPanel ? lbl.includes('copperpatchpanel') : lbl.includes('fiberpatchpanel');
-        }).length
-      );
+        }).length;
+        totalPlacedInAZ += count;
+        return count;
+      });
 
-      // Calculate per-rack limits: first 'remainder' racks get (base+1), rest get base
-      const perRackLimits = Array(racks.length).fill(basePerRack).map((v, i) => i < remainder ? v + 1 : v);
+      // Distribute allowed panels among racks: base allocation, and give +1 to the first 'remainder' racks
+      const basePerRack = Math.floor(perAZQty / racks.length);
+      const remainder = perAZQty % racks.length;
+      const perRackLimits = racks.map((_, i) => i < remainder ? basePerRack + 1 : basePerRack);
 
-      // Round-robin placement: try each rack in order until we find one under its AZ limit
-      for (let attempt = 0; attempt < racks.length; attempt++) {
-        for (let i = 0; i < racks.length; i++) {
-          if (existingPanelsPerRack[i] < perRackLimits[i]) {
-            const ruHeight = component.ruSize || component.ruHeight || 1;
-            const r = racks[i];
-            const placement = tryPlaceDeviceInRacksWithConstraints({
-              racks: [r],
-              device: component,
-              ruHeight,
-              activeDesignState: state,
-            });
-            let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
-            if (placement.success) {
-              placed = true;
-              reportItem = {
-                deviceName: component.name,
-                instanceName,
-                status: 'placed',
-                azId: r.availabilityZoneId,
-                rackId: r.id,
-                ruPosition: placement.ruPosition,
-              };
-              return { placed, reportItem };
-            }
-            // If placement fails, try next rack in round-robin
-            continue;
+      // Only place if there is at least 1 allowed left in the entire AZ
+      if (totalPlacedInAZ >= perAZQty) continue;
+
+      // Find the first eligible rack (with less than its limit)
+      for (let i = 0; i < racks.length; i++) {
+        if (currentPlacedPerRack[i] < perRackLimits[i]) {
+          const ruHeight = component.ruSize || component.ruHeight || 1;
+          const r = racks[i];
+          const placement = tryPlaceDeviceInRacksWithConstraints({
+            racks: [r],
+            device: component,
+            ruHeight,
+            activeDesignState: state,
+          });
+          let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+          if (placement.success) {
+            placed = true;
+            reportItem = {
+              deviceName: component.name,
+              instanceName,
+              status: 'placed',
+              azId: r.availabilityZoneId,
+              rackId: r.id,
+              ruPosition: placement.ruPosition,
+            };
+            return { placed, reportItem };
           }
         }
       }
+      // If none found, continue to next AZ
     }
   }
 
