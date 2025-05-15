@@ -101,6 +101,13 @@ export class AutomatedPlacementService {
     // For generated instance names
     const typeCounters: Record<string, number> = {};
 
+    // Get network requirements if available (for panel quantities)
+    const requirements = state.requirements || {};
+    const copperPatchPanelsPerAZ = requirements.networkRequirements?.copperPatchPanelsPerAZ ?? 0;
+    const fiberPatchPanelsPerAZ = requirements.networkRequirements?.fiberPatchPanelsPerAZ ?? 0;
+    const copperPatchPanelsPerCoreRack = requirements.networkRequirements?.copperPatchPanelsPerCoreRack ?? 0;
+    const fiberPatchPanelsPerCoreRack = requirements.networkRequirements?.fiberPatchPanelsPerCoreRack ?? 0;
+
     // Main placement loop: filter out devices already placed (user/manual placement protection)
     const toPlaceComponents = components.filter(c => !placedDeviceIds.has(c.id));
     for (const component of toPlaceComponents) {
@@ -108,6 +115,121 @@ export class AutomatedPlacementService {
       const typeLabel = getTypeKey(component);
       if (!typeCounters[typeLabel]) typeCounters[typeLabel] = 1;
       let placed = false;
+
+      // ----- PATCH PANEL LOGIC OVERRIDE -----
+      // Handle copper and fiber patch panels specially
+      const isCopperPatchPanel = typeLabel.includes('copperpatchpanel');
+      const isFiberPatchPanel = typeLabel.includes('fiberpatchpanel');
+
+      if (isCopperPatchPanel || isFiberPatchPanel) {
+        // Prepare rack lists
+        const isCoreRack = (r: RackProfile) => r.rackType === 'Core';
+        const isComputeRack = (r: RackProfile) => r.rackType === 'ComputeStorage';
+
+        let eligibleAZRacks = computeRacks;
+        let eligibleCoreRacks = coreRacks;
+
+        // 1. Per Core Rack: Place in core racks up to the UX-defined quantity per core rack
+        let perCoreRackQty = isCopperPatchPanel ? copperPatchPanelsPerCoreRack : fiberPatchPanelsPerCoreRack;
+        let perAZQty = isCopperPatchPanel ? copperPatchPanelsPerAZ : fiberPatchPanelsPerAZ;
+
+        // A flag to know if we tried both strategies (core, then AZ, possibly in both)
+        let triedPlacement = false;
+
+        // Place patch panels per core rack (for each core rack, up to perCoreRackQty)
+        if (perCoreRackQty > 0 && eligibleCoreRacks.length > 0) {
+          for (const r of eligibleCoreRacks) {
+            // Count placed patch panels of this type in the rack already
+            const matchingTypeCount = r.devices.filter(d => {
+              const dev = components.find(cmp => cmp.id === d.deviceId);
+              if (!dev) return false;
+              const lbl = getTypeKey(dev);
+              return isCopperPatchPanel ? lbl.includes('copperpatchpanel') : lbl.includes('fiberpatchpanel');
+            }).length;
+            // Fill up to perCoreRackQty for this rack
+            if (matchingTypeCount < perCoreRackQty) {
+              const ruHeight = component.ruSize || component.ruHeight || 1;
+              const placement = tryPlaceDeviceInRacksWithConstraints({
+                racks: [r],
+                device: component,
+                ruHeight,
+                activeDesignState: state
+              });
+              let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+              if (placement.success) {
+                placedDevices++;
+                placementResult.items.push({
+                  deviceName: component.name,
+                  instanceName,
+                  status: 'placed',
+                  azId: r.availabilityZoneId,
+                  rackId: r.id,
+                  ruPosition: placement.ruPosition
+                });
+                placed = true;
+                break; // Placed in a core rack - only place in one!
+              }
+            }
+          }
+          triedPlacement = true;
+        }
+
+        // 2. Per AZ Panel: Place in any rack in the AZ, up to perAZQty
+        // Only try if not placed yet (for this component instance)
+        if (!placed && perAZQty > 0) {
+          // Try placing in eligible compute racks per AZ
+          let matchedAZRacks = eligibleAZRacks;
+          if (component.availabilityZoneId) {
+            matchedAZRacks = eligibleAZRacks.filter(r => r.availabilityZoneId === component.availabilityZoneId);
+          }
+          // Try all eligible racks in compute racks per AZ
+          for (const r of matchedAZRacks) {
+            // Count already placed patch panels of this type in this AZ/rack
+            const matchingTypeCount = r.devices.filter(d => {
+              const dev = components.find(cmp => cmp.id === d.deviceId);
+              if (!dev) return false;
+              const lbl = getTypeKey(dev);
+              return isCopperPatchPanel ? lbl.includes('copperpatchpanel') : lbl.includes('fiberpatchpanel');
+            }).length;
+            if (matchingTypeCount < perAZQty) {
+              const ruHeight = component.ruSize || component.ruHeight || 1;
+              const placement = tryPlaceDeviceInRacksWithConstraints({
+                racks: [r],
+                device: component,
+                ruHeight,
+                activeDesignState: state
+              });
+              let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+              if (placement.success) {
+                placedDevices++;
+                placementResult.items.push({
+                  deviceName: component.name,
+                  instanceName,
+                  status: 'placed',
+                  azId: r.availabilityZoneId,
+                  rackId: r.id,
+                  ruPosition: placement.ruPosition
+                });
+                placed = true;
+                break; // Only place once per patch panel instance
+              }
+            }
+          }
+          triedPlacement = true;
+        }
+
+        // If after all attempts not placed, fail
+        if (!placed) {
+          failedDevices++;
+          placementResult.items.push({
+            deviceName: component.name,
+            instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
+            status: "failed",
+            reason: "Could not place patch panel (all racks at required quantity)"
+          });
+        }
+        continue;
+      }
 
       // ----- Placement rules:
 
