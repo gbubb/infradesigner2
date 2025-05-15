@@ -108,6 +108,12 @@ export function placePatchPanel({
       racksByAZ[r.availabilityZoneId].push(r);
     }
 
+    // Log racks grouped by AZ for debugging
+    console.log(`[TRACE][COMPUTE][${typeLabel}] Grouped racksByAZ:`);
+    Object.entries(racksByAZ).forEach(([azId, racks]) => {
+      console.log(`  AZ: ${azId} -> racksInThisAZ=${racks.length}`, racks.map(rr=>`[${rr.name} (${rr.id})]`).join(', '));
+    });
+
     // Limit placement to the allowed AZ as needed
     let azKeys = component.availabilityZoneId
       ? [component.availabilityZoneId]
@@ -115,12 +121,15 @@ export function placePatchPanel({
 
     azKeys.forEach(azId => {
       const racks = racksByAZ[azId] || [];
-      if (racks.length === 0) return;
+      console.log(`[TRACE][COMPUTE][${typeLabel}][AZ:${azId}] racks (count: ${racks.length}):`, racks.map(rk => `${rk.name} (${rk.id})`));
+      if (racks.length === 0) {
+        console.log(`[WARN][COMPUTE][${typeLabel}][AZ:${azId}] No racks found for this AZ`);
+        return;
+      }
 
       // Only count patch panels of the current *type* in this AZ (never both!)
       let totalPlacedOfThisTypeInAZ = 0;
       const placedPerRackForThisType = racks.map((r, idx) => {
-        // Only count this type per rack, not both types
         const count = r.devices.filter(d => {
           const dev = components.find(cmp => cmp.id === d.deviceId);
           if (!dev) return false;
