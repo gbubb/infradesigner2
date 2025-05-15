@@ -42,55 +42,35 @@ export const PlacementReportDialog: React.FC<PlacementReportDialogProps> = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-[700px] w-[700px] max-h-[80vh] overflow-y-auto relative px-0">
+      <AlertDialogContent 
+        style={{ 
+          backgroundColor: 'red', 
+          minWidth: '300px', 
+          minHeight: '200px', 
+          padding: '20px',
+          zIndex: 9999, // Force high z-index
+        }}
+      >
         <button
-          className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 z-10 text-2xl"
-          style={{ lineHeight: 1, background: "transparent", border: "none", cursor: "pointer" }}
+          className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 z-[10000] text-2xl bg-white p-1 rounded"
+          style={{ lineHeight: 1, border: "none", cursor: "pointer" }}
           onClick={() => onOpenChange(false)}
           aria-label="Close"
         >
           ×
         </button>
-        <AlertDialogHeader className="px-6">
-          <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
-          <AlertDialogDescription>
-            {!placementReport && (
-              <span className="text-sm text-muted-foreground">Generating placement report...</span>
-            )}
-            {placementReport && (
-              <span>
-                Total devices processed:{" "}
-                <span className="font-bold">{placementReport.totalDevices}</span>
-                {" | "}
-                Successfully placed:{" "}
-                <span className="text-green-600 font-bold">{placementReport.placedDevices}</span>
-                {" | "}
-                Failed to place:{" "}
-                <span className="text-red-600 font-bold">{placementReport.failedDevices}</span>
-              </span>
-            )}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        {!placementReport ? (
-          <div className="flex items-center justify-center min-h-[180px] pb-6">
-            <svg className="animate-spin h-8 w-8 mr-2 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-            </svg>
-            <span className="text-lg text-muted-foreground">Processing auto-placement...</span>
-          </div>
-        ) : (
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-2">Simple Test Content</h3>
-            <p>If you see this, the dialog is receiving the report data.</p>
-            <p>Report has {placementReport.items?.length || 'N/A'} items.</p>
-            <p>AZ Map has {Object.keys(azNameMap || {}).length} entries.</p>
-            <p>Rack Map has {Object.keys(rackNameMap || {}).length} entries.</p>
-          </div>
-        )}
-        <AlertDialogFooter className="px-6">
-          <AlertDialogCancel>Close</AlertDialogCancel>
-        </AlertDialogFooter>
+        
+        <div style={{ color: 'white', fontSize: '16px' }}>
+          <h3 className="text-lg font-semibold mb-2">Dialog Content Test Area</h3>
+          {placementReport ? (
+            <p>Report IS present. Items: {placementReport.items?.length || 'N/A'}</p>
+          ) : (
+            <p>Report is NOT present. Showing loading/spinner content normally.</p>
+          )}
+          <p>If you see this red box with white text, the issue is likely with the original classes or more complex children.</p>
+          <p>If not, the AlertDialogContent itself is not rendering its children visibly.</p>
+        </div>
+
       </AlertDialogContent>
     </AlertDialog>
   );
