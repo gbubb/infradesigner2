@@ -1,3 +1,4 @@
+
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
@@ -39,32 +40,32 @@ export function placePatchPanel({
   const isCopperPatchPanel = typeLabel.includes('copperpatchpanel');
   const isFiberPatchPanel = typeLabel.includes('fiberpatchpanel');
 
-  console.log("=== Patch Panel Placement Called ===");
-  console.log("Component:", component);
-  console.log("TypeLabel:", typeLabel);
-  console.log("copperPatchPanelsPerCoreRack:", copperPatchPanelsPerCoreRack, "fiberPatchPanelsPerCoreRack:", fiberPatchPanelsPerCoreRack);
-  console.log("copperPatchPanelsPerAZ:", copperPatchPanelsPerAZ, "fiberPatchPanelsPerAZ:", fiberPatchPanelsPerAZ);
+  // Extensive debug logs to trace patch panel count enforcement
+  console.log("=== PATCH PANEL DEBUG: Begin placement attempt ===");
+  console.log(`[DEBUG] Component: ${component.name} (id: ${component.id}), typeLabel: ${typeLabel}`);
+  console.log(`[DEBUG] Placement vars: copperPatchPanelsPerAZ=${copperPatchPanelsPerAZ}, fiberPatchPanelsPerAZ=${fiberPatchPanelsPerAZ}, copperPatchPanelsPerCoreRack=${copperPatchPanelsPerCoreRack}, fiberPatchPanelsPerCoreRack=${fiberPatchPanelsPerCoreRack}`);
 
-  // === 1. Place in Core racks up to perCoreRackQty each (core gets its own per-rack variable, distinct from AZ/compute racks) ===
+  // 1. Place in Core racks with their specific perCoreRackQty (separate for copper/fiber, only applies to core)
   const perCoreRackQty = isCopperPatchPanel ? copperPatchPanelsPerCoreRack : fiberPatchPanelsPerCoreRack;
   if (perCoreRackQty > 0 && coreRacks.length > 0) {
     coreRacks.forEach((r, idx) => {
-      const matchingTypeCount = r.devices.filter(d => {
+      // For this *type* only
+      const countOfThisType = r.devices.filter(d => {
         const dev = components.find(cmp => cmp.id === d.deviceId);
         if (!dev) return false;
         const lbl = getTypeKey(dev);
         return isCopperPatchPanel ? lbl.includes('copperpatchpanel') : lbl.includes('fiberpatchpanel');
       }).length;
-      console.log(`[CORE] Rack ${r.name} (${r.id}) has ${matchingTypeCount} of max allowed ${perCoreRackQty}`);
+      console.log(`[DEBUG][CORE][${typeLabel}] Rack ${r.name} (${r.id}) has ${countOfThisType}/${perCoreRackQty}`);
     });
     for (const r of coreRacks) {
-      const matchingTypeCount = r.devices.filter(d => {
+      const countOfThisType = r.devices.filter(d => {
         const dev = components.find(cmp => cmp.id === d.deviceId);
         if (!dev) return false;
         const lbl = getTypeKey(dev);
         return isCopperPatchPanel ? lbl.includes('copperpatchpanel') : lbl.includes('fiberpatchpanel');
       }).length;
-      if (matchingTypeCount < perCoreRackQty) {
+      if (countOfThisType < perCoreRackQty) {
         const ruHeight = component.ruSize || component.ruHeight || 1;
         const placement = tryPlaceDeviceInRacksWithConstraints({
           racks: [r],
@@ -83,18 +84,18 @@ export function placePatchPanel({
             rackId: r.id,
             ruPosition: placement.ruPosition,
           };
-          console.log(`[CORE] Placed ${typeLabel} in rack ${r.name} (${r.id}) at RU position ${placement.ruPosition}`);
+          console.log(`[DEBUG][CORE][${typeLabel}] Placed in rack ${r.name} (${r.id}) at RU pos ${placement.ruPosition}, now count: ${countOfThisType+1}/${perCoreRackQty}`);
           return { placed, reportItem };
         } else {
-          console.log(`[CORE] Failed to place ${typeLabel} in rack ${r.name} (${r.id}) - no available RU`);
+          console.log(`[DEBUG][CORE][${typeLabel}] Could not place in rack ${r.name} (${r.id}) - no available RU`);
         }
       } else {
-        console.log(`[CORE] Rack ${r.name} (${r.id}) has already met or exceeded patch panel limit for core racks`);
+        console.log(`[DEBUG][CORE][${typeLabel}] Rack ${r.name} (${r.id}) already at or over limit (${countOfThisType}/${perCoreRackQty})`);
       }
     }
   }
 
-  // === 2. Place in compute racks based on AZ quantity: divide AZ quantity by # racks in that AZ, permit at most that per rack ===
+  // 2. Place in COMPUTE racks using PER-TYPE AZ quantity. Each type (copper/fiber) gets its own independent perAZQty.
   const perAZQty = isCopperPatchPanel ? copperPatchPanelsPerAZ : fiberPatchPanelsPerAZ;
   if (perAZQty > 0 && computeRacks.length > 0) {
     // Group compute racks by AZ
@@ -107,7 +108,7 @@ export function placePatchPanel({
       racksByAZ[r.availabilityZoneId].push(r);
     }
 
-    // If the component requires a specific AZ, restrict to that AZ
+    // Limit placement to the allowed AZ as needed
     let azKeys = component.availabilityZoneId
       ? [component.availabilityZoneId]
       : Object.keys(racksByAZ);
@@ -115,39 +116,39 @@ export function placePatchPanel({
     azKeys.forEach(azId => {
       const racks = racksByAZ[azId] || [];
       if (racks.length === 0) return;
-      console.log(`[COMPUTE] AZ ${azId} has ${racks.length} racks for ${typeLabel}. perAZQty (total allowed in AZ): ${perAZQty}`);
 
-      // Count, across all compute racks in this AZ, how many devices of this type are already present
-      let totalPlacedInAZ = 0;
-      // To keep up-to-date counts, recalc for each rack (since the design may not have been in order)
-      const currentPlacedPerRack = racks.map((r, idx) => {
+      // Only count patch panels of the current *type* in this AZ (never both!)
+      let totalPlacedOfThisTypeInAZ = 0;
+      const placedPerRackForThisType = racks.map((r, idx) => {
+        // Only count this type per rack, not both types
         const count = r.devices.filter(d => {
           const dev = components.find(cmp => cmp.id === d.deviceId);
           if (!dev) return false;
           const lbl = getTypeKey(dev);
           return isCopperPatchPanel ? lbl.includes('copperpatchpanel') : lbl.includes('fiberpatchpanel');
         }).length;
-        console.log(`[COMPUTE]   Rack ${r.name} (${r.id}) currently has ${count} ${typeLabel}`);
-        totalPlacedInAZ += count;
+        totalPlacedOfThisTypeInAZ += count;
+        console.log(`[DEBUG][COMPUTE][${typeLabel}][AZ:${azId}] Rack ${r.name} (${r.id}) has ${count} of this type`);
         return count;
       });
 
-      // Distribute allowed panels among racks: base allocation, and give +1 to the first 'remainder' racks
+      console.log(`[DEBUG][COMPUTE][${typeLabel}][AZ:${azId}] totalPlacedOfThisTypeInAZ=${totalPlacedOfThisTypeInAZ}, perAZQty=${perAZQty}, racksInThisAZ=${racks.length}`);
+
+      // Per rack per-type limit: Distribute perAZQty among racks for THIS PANEL TYPE ONLY
       const basePerRack = Math.floor(perAZQty / racks.length);
       const remainder = perAZQty % racks.length;
-      const perRackLimits = racks.map((_, i) => i < remainder ? basePerRack + 1 : basePerRack);
+      const limitPerRack = racks.map((_, i) => i < remainder ? basePerRack + 1 : basePerRack);
 
-      console.log(`[COMPUTE]   basePerRack: ${basePerRack}, remainder: ${remainder}, perRackLimits: ${perRackLimits}`);
+      console.log(`[DEBUG][COMPUTE][${typeLabel}][AZ:${azId}] basePerRack=${basePerRack}, remainder=${remainder}, limitPerRack=${JSON.stringify(limitPerRack)}`);
 
-      // Only place if there is at least 1 allowed left in the entire AZ
-      if (totalPlacedInAZ >= perAZQty) {
-        console.log(`[COMPUTE]   Already placed ${totalPlacedInAZ} patch panels in AZ ${azId} (limit is ${perAZQty}), cannot place more.`);
+      if (totalPlacedOfThisTypeInAZ >= perAZQty) {
+        console.log(`[DEBUG][COMPUTE][${typeLabel}][AZ:${azId}] Already placed all allowed for this type: ${totalPlacedOfThisTypeInAZ} (limit: ${perAZQty})`);
         return;
       }
 
-      // Try round-robin placement
+      // Now try to place, but only if rack for this AZ has less than *per-type* rack limit
       for (let i = 0; i < racks.length; i++) {
-        if (currentPlacedPerRack[i] < perRackLimits[i]) {
+        if (placedPerRackForThisType[i] < limitPerRack[i]) {
           const ruHeight = component.ruSize || component.ruHeight || 1;
           const r = racks[i];
           const placement = tryPlaceDeviceInRacksWithConstraints({
@@ -167,17 +168,16 @@ export function placePatchPanel({
               rackId: r.id,
               ruPosition: placement.ruPosition,
             };
-            console.log(`[COMPUTE] Placed ${typeLabel} in rack ${r.name} (${r.id}) in AZ ${azId} at RU position ${placement.ruPosition}`);
+            console.log(`[DEBUG][COMPUTE][${typeLabel}][AZ:${azId}] Placed in rack ${r.name} (${r.id}) at RU ${placement.ruPosition}: #now placed=${placedPerRackForThisType[i]+1}/${limitPerRack[i]}`);
             return { placed, reportItem };
           } else {
-            console.log(`[COMPUTE] Could not place ${typeLabel} in rack ${r.name} (${r.id}) in AZ ${azId} - no available RU`);
+            console.log(`[DEBUG][COMPUTE][${typeLabel}][AZ:${azId}] Could not place in rack ${r.name} (${r.id}) - no available RU`);
           }
         } else {
-          console.log(`[COMPUTE]   Rack ${racks[i].name} (${racks[i].id}) already has its per-rack limit (${perRackLimits[i]})`);
+          console.log(`[DEBUG][COMPUTE][${typeLabel}][AZ:${azId}] Rack ${racks[i].name} (${racks[i].id}) already at/over limit for this type: ${placedPerRackForThisType[i]}/${limitPerRack[i]}`);
         }
       }
-      // If none found, continue to next AZ
-      console.log(`[COMPUTE]   No eligible racks in AZ ${azId} remain under limit, skipping`);
+      console.log(`[DEBUG][COMPUTE][${typeLabel}][AZ:${azId}] No eligible racks for this type remain below per-type rack limit in this AZ`);
     });
   }
 
@@ -187,9 +187,9 @@ export function placePatchPanel({
       deviceName: component.name,
       instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
       status: "failed",
-      reason: "Could not place patch panel (all racks/AZs at capacity)",
+      reason: "Could not place patch panel of this type (all racks/AZs at capacity for this TYPE)",
     };
-    console.log(`[FAIL] Could not place ${typeLabel} anywhere (all racks/AZs at capacity)`);
+    console.log(`[FAIL][${typeLabel}] Could not place anywhere: all racks/AZs at capacity for this type`);
   }
 
   return { placed, reportItem };
