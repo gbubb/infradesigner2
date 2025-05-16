@@ -55,6 +55,7 @@ export class AutomatedPlacementService {
     let placedDevices = 0;
     let failedDevices = 0;
 
+    // Map of clusterId -> selected AZs from UI
     const allowedAZsMap: Record<string, string[]> = {};
     if (clusterAZAssignments) {
       clusterAZAssignments.forEach(a => { allowedAZsMap[a.clusterId] = a.selectedAZs; });
@@ -77,21 +78,14 @@ export class AutomatedPlacementService {
       items: [],
     };
 
+    // For generated instance names
     const typeCounters: Record<string, number> = {};
 
-    // Separate components by type for easier processing, especially patch panels
-    let allComponentsToPlace = components.filter(c => !placedDeviceIds.has(c.id));
-
-    // --- PATCH PANEL PLACEMENT --- 
-    // We handle patch panels first according to specific rules, then other devices.
-
-    const copperPatchPanelComponents = allComponentsToPlace.filter(isCopperPatchPanel);
-    const fiberPatchPanelComponents = allComponentsToPlace.filter(isFiberPatchPanel);
-    // Filter out patch panels from the main list to avoid double processing
-    allComponentsToPlace = allComponentsToPlace.filter(c => !isCopperPatchPanel(c) && !isFiberPatchPanel(c) && !isGenericPatchPanel(c));
-
-    const placePanel = (panelComponent: any, targetRack: RackProfile, panelTypeLabel: string) => {
-      const typeLabel = getTypeKey(panelComponent) || panelTypeLabel;
+    // Main placement loop: filter out devices already placed (user/manual placement protection)
+    const toPlaceComponents = components.filter(c => !placedDeviceIds.has(c.id));
+    for (const component of toPlaceComponents) {
+      totalDevices++;
+      const typeLabel = getTypeKey(component);
       if (!typeCounters[typeLabel]) typeCounters[typeLabel] = 1;
 
       // PATCH PANEL logic
