@@ -27,39 +27,34 @@ export const RackView: React.FC<RackViewProps> = ({
 }) => {
   const { rackProfile, placedDevices, placeDevice, moveDevice, removeDevice } = useRackLayout(rackProfileId);
   const activeDesign = useDesignStore(state => state.activeDesign);
-  
-  // Calculate RU height once outside the component to prevent re-calculations on every render
+
   const unitHeight = useMemo(() => {
     return rackProfile ? height / rackProfile.uHeight : 0;
   }, [rackProfile, height]);
-  
-  // Generate array of rack units once
+
   const rackUnits = useMemo(() => {
     return rackProfile ? Array.from({ length: rackProfile.uHeight }, (_, i) => i + 1) : [];
   }, [rackProfile]);
 
-  // Use the dropzone hook to handle drag and drop
   const { isOver, canDrop, drop } = useRackDropzone({
     rackProfileId,
     rackProfile,
     placeDevice,
     moveDevice
   });
-  
-  // Handle device removal with callback notification
+
   const handleRemoveDevice = useCallback((deviceId: string) => {
     if (!rackProfile) return { success: false, error: "No rack selected" };
-    
+
     const result = removeDevice(deviceId);
-    
+
     if (result.success && onDeviceRemoved) {
-      // Notify parent component that a device was removed
       onDeviceRemoved();
     }
-    
+
     return result;
   }, [rackProfile, removeDevice, onDeviceRemoved]);
-  
+
   if (!rackProfile) {
     return (
       <Card className="p-4 flex items-center justify-center h-[200px]">
@@ -67,7 +62,9 @@ export const RackView: React.FC<RackViewProps> = ({
       </Card>
     );
   }
-  
+
+  // Make the RU numbers part of the rack box: layout is now a flex-row,
+  // labels column (about 32px width), rack body (rest of width).
   return (
     <Card className="p-4">
       <div className="flex flex-col">
@@ -75,39 +72,57 @@ export const RackView: React.FC<RackViewProps> = ({
         <div className="text-sm text-muted-foreground mb-4">
           {rackProfile.uHeight}U - {placedDevices.length} devices
         </div>
-        
-        <div 
-          id={`rack-${rackProfileId}`}
-          ref={drop}
-          className={`relative ${isOver ? 'bg-blue-50' : 'bg-gray-100'}`} 
-          style={{ height: `${height}px`, width: `${width}px` }}
-        >
-          {/* Rack background with unit markings */}
-          <div className="absolute inset-0 border border-gray-300 rounded">
-            {/* Rack unit markers */}
-            {rackUnits.map(unit => (
-              <div 
-                key={`ru-marker-${unit}`}
-                className="absolute w-full border-t border-gray-200" 
-                style={{ 
-                  bottom: `${(unit - 1) * unitHeight}px`, 
-                  height: `${unitHeight}px`
-                }}
-              >
-                {showLabels && unit % labelInterval === 0 && (
-                  <div className="absolute -left-8 text-xs font-medium" 
-                    style={{ bottom: `${unitHeight / 2 - 6}px` }}>
+
+        <div className="flex flex-row" style={{ height: `${height}px`, width: `${width}px` }}>
+          {showLabels && (
+            <div
+              className="relative flex flex-col items-end z-10 select-none"
+              style={{ width: 32, height: '100%' }}
+            >
+              {rackUnits.slice().reverse().map(unit => (
+                unit % labelInterval === 0 ? (
+                  <div
+                    key={`ru-label-${unit}`}
+                    className="absolute right-1 text-xs font-medium text-gray-500"
+                    style={{
+                      bottom: `${(unit - 1) * unitHeight + unitHeight / 2 - 7}px`
+                    }}
+                  >
                     {unit}
                   </div>
-                )}
-              </div>
+                ) : null
+              ))}
+            </div>
+          )}
+
+          <div
+            id={`rack-${rackProfileId}`}
+            ref={drop}
+            className={`relative bg-gray-100 border border-gray-300 rounded flex-1`}
+            style={{
+              height: `${height}px`,
+              width: `${width - 32}px`,
+              overflow: 'hidden'
+            }}
+          >
+            {/* Rack unit markers */}
+            {rackUnits.map(unit => (
+              <div
+                key={`ru-marker-${unit}`}
+                className="absolute w-full border-t border-gray-200"
+                style={{
+                  bottom: `${(unit - 1) * unitHeight}px`,
+                  height: `${unitHeight}px`,
+                  left: 0,
+                }}
+              />
             ))}
-            
+
             {/* Placed devices */}
             {placedDevices.map(({ placedDevice, component }) => {
               const deviceHeight = (component.ruSize || 1) * unitHeight;
               const bottomPosition = (placedDevice.ruPosition - 1) * unitHeight;
-              
+
               return (
                 <PlacedDeviceItem
                   key={`placed-device-${placedDevice.deviceId}`}
