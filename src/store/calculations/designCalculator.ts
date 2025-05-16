@@ -69,17 +69,88 @@ export const recalculateDesign = () => {
       });
       
       const updatedComponentsArray = updatedRoles
-        .filter(role => role.assignedComponentId && role.adjustedRequiredCount && role.adjustedRequiredCount > 0)
+        .filter(role =>
+          role.assignedComponentId &&
+          role.adjustedRequiredCount &&
+          role.adjustedRequiredCount > 0
+        )
         .flatMap(role => {
           const componentTemplate = state.componentTemplates.find(
             c => c.id === role.assignedComponentId
           );
-          
           if (!componentTemplate) return [];
-          
-          const instances: InfrastructureComponent[] = [];
-          const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
 
+          // -- STORAGE NODE ROLES --
+          if (role.role === 'storageNode') {
+            // Gather disks assigned to this cluster's storage role
+            const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
+            const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
+            const instances: InfrastructureComponent[] = [];
+            for (let i = 0; i < requiredQuantity; i++) {
+              const attachedDisks: any[] = [];
+              let instanceComponent: InfrastructureComponent = {
+                ...componentTemplate,
+                id: uuidv4(),
+                templateId: componentTemplate.id,
+                quantity: 1,
+                role: role.role,
+                ruSize: componentTemplate.ruSize,
+              };
+              if (roleDiskConfigs.length > 0) {
+                roleDiskConfigs.forEach(diskConfig => {
+                  const diskTemplate = state.componentTemplates.find(c => c.id === diskConfig.diskId);
+                  if (diskTemplate) {
+                    attachedDisks.push({
+                      ...diskTemplate,
+                      quantity: diskConfig.quantity,
+                    });
+                  }
+                });
+              }
+              if (attachedDisks.length > 0) (instanceComponent as any).attachedDisks = attachedDisks;
+              if (role.clusterInfo) (instanceComponent as any).clusterInfo = role.clusterInfo;
+              instances.push(instanceComponent);
+            }
+            return instances;
+          }
+
+          // -- GPU NODE ROLES --
+          if (role.role === 'gpuNode') {
+            const roleGPUConfigs = state.selectedGPUsByRole[role.id] || [];
+            const attachedGPUs: any[] = [];
+            const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
+            const instances: InfrastructureComponent[] = [];
+            for (let i = 0; i < requiredQuantity; i++) {
+              let instanceComponent: InfrastructureComponent = {
+                ...componentTemplate,
+                id: uuidv4(),
+                templateId: componentTemplate.id,
+                quantity: 1,
+                role: role.role,
+                ruSize: componentTemplate.ruSize,
+              };
+              if (roleGPUConfigs.length > 0) {
+                roleGPUConfigs.forEach(gpuConfig => {
+                  const gpuTemplate = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
+                  if (gpuTemplate) {
+                    attachedGPUs.push({
+                      ...gpuTemplate,
+                      quantity: gpuConfig.quantity,
+                    });
+                  }
+                });
+              }
+              if (attachedGPUs.length > 0) (instanceComponent as any).attachedGPUs = attachedGPUs;
+              if (role.clusterInfo) (instanceComponent as any).clusterInfo = role.clusterInfo;
+              instances.push(instanceComponent);
+            }
+            return instances;
+          }
+
+          // -- ALL OTHER NODE ROLES --
+          // no change; preserve logic
+          const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
+          const instances: InfrastructureComponent[] = [];
           for (let i = 0; i < requiredQuantity; i++) {
             const instanceComponent: InfrastructureComponent = {
               ...componentTemplate,
@@ -89,47 +160,13 @@ export const recalculateDesign = () => {
               role: role.role,
               ruSize: componentTemplate.ruSize,
             };
-
-            if (role.role === 'storageNode') {
-              const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
-              let instanceCost = componentTemplate.cost;
-              let instancePower = componentTemplate.powerRequired;
-              const attachedDisks: any[] = [];
-
-              if (roleDiskConfigs.length > 0) {
-                roleDiskConfigs.forEach(diskConfig => {
-                  const diskTemplate = state.componentTemplates.find(c => c.id === diskConfig.diskId);
-                  if (diskTemplate) {
-                    attachedDisks.push({
-                      ...diskTemplate,
-                      quantity: diskConfig.quantity
-                    });
-                  }
-                });
-              }
-              if (attachedDisks.length > 0) (instanceComponent as any).attachedDisks = attachedDisks;
-              if (role.clusterInfo) (instanceComponent as any).clusterInfo = role.clusterInfo;
-            }
-
-            if (role.role === 'gpuNode') {
-              const roleGPUConfigs = state.selectedGPUsByRole[role.id] || [];
-              const attachedGPUs: any[] = [];
-              if (roleGPUConfigs.length > 0) {
-                 roleGPUConfigs.forEach(gpuConfig => {
-                    const gpuTemplate = state.componentTemplates.find(c => c.id === gpuConfig.gpuId);
-                    if (gpuTemplate) {
-                        attachedGPUs.push({ ...gpuTemplate, quantity: gpuConfig.quantity });
-                    }
-                 });
-              }
-              if (attachedGPUs.length > 0) (instanceComponent as any).attachedGPUs = attachedGPUs;
-              if (role.clusterInfo) (instanceComponent as any).clusterInfo = role.clusterInfo;
-            }
+            if (role.clusterInfo) (instanceComponent as any).clusterInfo = role.clusterInfo;
             instances.push(instanceComponent);
           }
           return instances;
         });
-      
+
+      // 4. Update the design's component list
       const finalComponentList = updatedComponentsArray;
 
       if (finalComponentList && finalComponentList.length > 0) {
@@ -174,4 +211,3 @@ export const manualRecalculateDesign = () => {
     });
   }, 100);
 };
-
