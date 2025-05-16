@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +9,9 @@ interface DiskFormFieldsProps {
   onChange: (name: string, value: any) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
+
+const INTERFACE_TYPES = ["SATA", "SAS", "NVMe", "PCIe"];
+const FORM_FACTORS = ['2.5"', '3.5"', 'M.2', 'U.2', 'E1.S', 'E1.L'];
 
 export const DiskFormFields: React.FC<DiskFormFieldsProps> = ({ 
   formValues, 
@@ -27,7 +29,8 @@ export const DiskFormFields: React.FC<DiskFormFieldsProps> = ({
             type="number"
             value={formValues.capacityTB || 0}
             onChange={onInputChange}
-            placeholder="0"
+            placeholder="e.g. 8"
+            min={0}
           />
         </div>
         
@@ -62,8 +65,9 @@ export const DiskFormFields: React.FC<DiskFormFieldsProps> = ({
               <SelectValue placeholder="Select form factor" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='2.5"'>2.5"</SelectItem>
-              <SelectItem value='3.5"'>3.5"</SelectItem>
+              {FORM_FACTORS.map(ff => (
+                <SelectItem value={ff} key={ff}>{ff}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -78,9 +82,9 @@ export const DiskFormFields: React.FC<DiskFormFieldsProps> = ({
               <SelectValue placeholder="Select interface" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="SATA">SATA</SelectItem>
-              <SelectItem value="SAS">SAS</SelectItem>
-              <SelectItem value="NVMe">NVMe</SelectItem>
+              {INTERFACE_TYPES.map(iface => (
+                <SelectItem value={iface} key={iface}>{iface}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

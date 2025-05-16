@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDesignStore } from '@/store/designStore';
@@ -12,29 +11,29 @@ export const CapacityAnalysisTab: React.FC = () => {
   const { resourceMetrics, resourceUtilization } = useDesignCalculations();
   const { powerUsage, energyCosts, hasDedicatedNetworkRacks, hasDedicatedStorageNetwork } = usePowerCalculations();
   
-  // Calculate potential additional capacity
+  // Calculate potential additional capacity, correcting rack & adding network port constraint
   const additionalCapacity = useMemo(() => {
     if (!activeDesign || !resourceMetrics) return null;
     
     // Get base values from requirements
     const physicalConstraints = activeDesign.requirements.physicalConstraints;
     const powerPerRackWatts = physicalConstraints?.powerPerRackWatts || 5000;
+    const rackUnitsPerRack = physicalConstraints?.rackUnitsPerRack || 42;
     const totalRackQuantity = resourceMetrics.totalRackQuantity || 1;
     
     // Calculate remaining power capacity for compute only (exclude network racks)
     const networkRackQuantity = hasDedicatedNetworkRacks ? 
-      Math.ceil((resourceMetrics.networkRackUnits || 0) / (physicalConstraints?.rackUnitsPerRack || 42)) : 0;
-    const computeRackQuantity = totalRackQuantity - networkRackQuantity;
+      Math.ceil((resourceMetrics.networkRackUnits || 0) / (rackUnitsPerRack)) : 0;
+    const computeStorageRackQuantity = totalRackQuantity - networkRackQuantity;
     
     // Only use compute rack power for calculations
-    const computeRackPower = powerPerRackWatts * computeRackQuantity;
+    const computeRackPower = powerPerRackWatts * computeStorageRackQuantity;
     const networkPower = resourceMetrics.networkPower || 0;
     const computeAndStoragePower = (resourceMetrics.totalPower || 0) - networkPower;
     const remainingPower = Math.max(0, computeRackPower - computeAndStoragePower);
     
     // Calculate remaining rack space (only in compute racks)
-    const rackUnitsPerRack = physicalConstraints?.rackUnitsPerRack || 42;
-    const totalComputeRackRU = rackUnitsPerRack * computeRackQuantity;
+    const totalComputeRackRU = rackUnitsPerRack * computeStorageRackQuantity;
     const computeAndStorageRU = (resourceMetrics.totalRackUnits || 0) - (resourceMetrics.networkRackUnits || 0);
     const remainingRU = Math.max(0, totalComputeRackRU - computeAndStorageRU);
     
@@ -62,11 +61,33 @@ export const CapacityAnalysisTab: React.FC = () => {
     const avgComputeNodeMemoryGb = totalMemoryGb / computeNodes.length;
     
     // Calculate additional nodes possible based on power and space constraints
-    const nodesByPower = Math.floor(remainingPower / avgComputeNodePower);
-    const nodesBySpace = Math.floor(remainingRU / avgComputeNodeRU);
+    const nodesByPower = avgComputeNodePower > 0 ? Math.floor(remainingPower / avgComputeNodePower) : 0;
+    const nodesBySpace = avgComputeNodeRU > 0 ? Math.floor(remainingRU / avgComputeNodeRU) : 0;
     
-    // The limiting factor determines how many nodes we can add
-    const possibleAdditionalNodes = Math.min(nodesByPower, nodesBySpace);
+    // -------- NEW: Add network port constraint --------
+    // Get available/used leaf network ports (for compute nodes)
+    const leafPortsAvailable = resourceMetrics.leafPortsAvailable || 0;
+    const leafPortsUsed = resourceMetrics.leafPortsUsed || 0;
+    // Approximate: average number of leaf network ports per compute node
+    let avgLeafPortsPerComputeNode = 1;
+    if (leafPortsUsed > 0 && computeNodes.length > 0)
+      avgLeafPortsPerComputeNode = Math.max(1, Math.round(leafPortsUsed / computeNodes.length));
+    // Compute add'l nodes by network
+    const remainingLeafPorts = leafPortsAvailable - leafPortsUsed;
+    const nodesByNetwork = avgLeafPortsPerComputeNode > 0 ? Math.floor(remainingLeafPorts / avgLeafPortsPerComputeNode) : 0;
+    
+    // -------- Update limiting factor --------
+    // The constraining/limiting factor
+    let limitingFactor = 'Power';
+    let possibleAdditionalNodes = nodesByPower;
+    if (nodesBySpace < possibleAdditionalNodes) {
+      limitingFactor = 'Space';
+      possibleAdditionalNodes = nodesBySpace;
+    }
+    if (nodesByNetwork < possibleAdditionalNodes) {
+      limitingFactor = 'Network Port Availability';
+      possibleAdditionalNodes = nodesByNetwork;
+    }
     
     // Calculate resulting additional capacity
     const additionalMemoryTB = (possibleAdditionalNodes * avgComputeNodeMemoryGb) / 1024;
@@ -79,17 +100,20 @@ export const CapacityAnalysisTab: React.FC = () => {
     const additionalVCpus = Math.floor(avgComputeNodeCores * possibleAdditionalNodes * overcommitRatio);
     
     return {
-      limitingFactor: nodesByPower < nodesBySpace ? 'Power' : 'Space',
+      limitingFactor,
       possibleAdditionalNodes,
       nodesByPower,
       nodesBySpace,
+      nodesByNetwork,
       additionalVCpus,
       additionalMemoryTB: parseFloat(additionalMemoryTB.toFixed(2)),
       avgComputeNodePower,
       avgComputeNodeRU,
       remainingPower,
       remainingRU,
-      computeRackQuantity
+      remainingLeafPorts,
+      avgLeafPortsPerComputeNode,
+      computeStorageRackQuantity // corrected rack calculation
     };
   }, [activeDesign, resourceMetrics, hasDedicatedNetworkRacks]);
 
@@ -138,13 +162,18 @@ export const CapacityAnalysisTab: React.FC = () => {
                 </div>
                 
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground">Remaining Power Capacity (Compute Racks Only)</div>
+                  <div className="text-sm font-medium text-muted-foreground">Remaining Power Capacity (Compute/Storage Racks Only)</div>
                   <div className="text-lg">{additionalCapacity.remainingPower.toLocaleString()} W</div>
                 </div>
                 
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground">Remaining Rack Units (Compute Racks Only)</div>
+                  <div className="text-sm font-medium text-muted-foreground">Remaining Rack Units (Compute/Storage Racks Only)</div>
                   <div className="text-lg">{additionalCapacity.remainingRU} RU</div>
+                </div>
+                
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Remaining Leaf Network Ports</div>
+                  <div className="text-lg">{additionalCapacity.remainingLeafPorts}</div>
                 </div>
               </div>
               
@@ -162,11 +191,12 @@ export const CapacityAnalysisTab: React.FC = () => {
                 <div>
                   <div className="text-sm text-muted-foreground">Based on average node specs:</div>
                   <div className="text-sm">{additionalCapacity.avgComputeNodePower.toFixed(1)} W, {additionalCapacity.avgComputeNodeRU} RU per node</div>
+                  <div className="text-sm">{additionalCapacity.avgLeafPortsPerComputeNode} leaf network ports per node</div>
                 </div>
                 
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">Number of Compute/Storage Racks</div>
-                  <div className="text-lg">{additionalCapacity.computeRackQuantity}</div>
+                  <div className="text-lg">{additionalCapacity.computeStorageRackQuantity}</div>
                 </div>
               </div>
             </div>

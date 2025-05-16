@@ -134,6 +134,10 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
     state.activeDesign?.requirements?.physicalConstraints);
   const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
 
+  // Add interface types and form factors
+  const interfaceTypes = ["SATA", "SAS", "NVMe", "PCIe"];
+  const formFactors = ['2.5"', '3.5"', 'M.2', 'U.2', 'E1.S', 'E1.L'];
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -315,6 +319,73 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                   onInputChange={onInputChange}
                   onSelectChange={onSelectChange}
                 />
+              )}
+
+              {/* Disk fields */}
+              {formValues.type === ComponentType.Disk && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <FormLabel htmlFor="capacityTB">Capacity (TB)</FormLabel>
+                      <Input
+                        id="capacityTB"
+                        name="capacityTB"
+                        type="number"
+                        value={formValues.capacityTB || 0}
+                        onChange={onInputChange}
+                        placeholder="e.g. 8"
+                        min={0}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <FormLabel htmlFor="diskType">Disk Type</FormLabel>
+                      <select
+                        id="diskType"
+                        name="diskType"
+                        className="border rounded px-3 py-2 w-full"
+                        value={formValues.diskType ?? ''}
+                        onChange={(e) => onSelectChange("diskType", e.target.value)}
+                      >
+                        <option value="">Select Type</option>
+                        {Object.values(DiskType).map(dt => (
+                          <option value={dt} key={dt}>{dt}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <FormLabel htmlFor="interface">Interface Type</FormLabel>
+                      <select
+                        id="interface"
+                        name="interface"
+                        className="border rounded px-3 py-2 w-full"
+                        value={formValues.interface ?? ''}
+                        onChange={(e) => onSelectChange("interface", e.target.value)}
+                      >
+                        <option value="">Select Interface</option>
+                        {interfaceTypes.map((iface) => (
+                          <option value={iface} key={iface}>{iface}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <FormLabel htmlFor="formFactor">Form Factor</FormLabel>
+                      <select
+                        id="formFactor"
+                        name="formFactor"
+                        className="border rounded px-3 py-2 w-full"
+                        value={formValues.formFactor ?? ''}
+                        onChange={(e) => onSelectChange("formFactor", e.target.value)}
+                      >
+                        <option value="">Select Form Factor</option>
+                        {formFactors.map(ff => (
+                          <option value={ff} key={ff}>{ff}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
               )}
 
             </form>

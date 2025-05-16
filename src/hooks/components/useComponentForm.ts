@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
@@ -60,6 +59,11 @@ export const useComponentForm = () => {
     portSpeedType: '',
     portsProvidedQuantity: 0,
     layer: 2,
+    // Disk-specific fields
+    capacityTB: 1,
+    formFactor: '',  // Will use common values in the dialog/form.
+    interface: '',   // Will use common values in the dialog/form.
+    diskType: '',
   };
   
   const [componentForm, setComponentForm] = useState<ComponentFormValues>({...defaultFormState});
@@ -73,11 +77,12 @@ export const useComponentForm = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     let parsedValue: string | number = value;
-    
+
+    // This check ensures correct type for disk capacity fields
     if (['cost', 'powerRequired', 'cpuSockets', 'cpuCoresPerSocket', 'memoryCapacity', 
          'diskSlotQuantity', 'ruSize', 'portsConsumedQuantity', 'portCount', 'portSpeed', 
          'portsProvidedQuantity', 'throughput', 'capacityTB', 'cassetteCapacity', 
-         'portQuantity', 'length', 'validRUStart', 'validRUEnd', 'preferredRU', 'preferredRack'].includes(name)) {
+         'portQuantity', 'length', 'validRUStart', 'validRUEnd', 'preferredRU', 'preferredRack', 'rpm', 'iops', 'readSpeed', 'writeSpeed'].includes(name)) {
       parsedValue = value === '' ? 0 : parseFloat(value);
     }
     
