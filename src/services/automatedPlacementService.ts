@@ -47,37 +47,41 @@ export class AutomatedPlacementService {
     const coreRacks = rackProfiles.filter(r => r.rackType === 'Core');
     const computeRacks = rackProfiles.filter(r => r.rackType === 'ComputeStorage');
 
+    // Network requirements for patch panels
+    const structuredCabling = activeDesign.requirements?.networkRequirements || {
+      copperPatchPanelsPerAZ: 0,
+      fiberPatchPanelsPerAZ: 0,
+      copperPatchPanelsPerCoreRack: 0,
+      fiberPatchPanelsPerCoreRack: 0,
+    };
+
     let totalDevices = 0;
     let placedDevices = 0;
     let failedDevices = 0;
 
-    // Map of clusterId -> selected AZs from UI
     const allowedAZsMap: Record<string, string[]> = {};
     if (clusterAZAssignments) {
       clusterAZAssignments.forEach(a => { allowedAZsMap[a.clusterId] = a.selectedAZs; });
     }
 
-    // Per-rack device tracking for patch panels
-    const patchPanelAssignedPerRack: Record<string, number> = {};
-
-    // Helper to get type key
-    const getTypeKey = (component: any) => (
+    const getTypeKey = (component: any): string => (
       component.namingPrefix ||
       component.typePrefix ||
       component.type ||
-      (component.role && component.role.toLowerCase())
+      (component.role && component.role.toLowerCase()) ||
+      component.name // Fallback to name if others are not present
     ).toString().toLowerCase();
 
-    // Helper to identify device type for placement rule exclusion
     const isCoreNet = (c: any) => {
       const coreKeys = ['firewall', 'spineswitch', 'borderleafswitch', 'border-switch', 'spine-switch', 'router', 'core'];
-      const typeStr = ((c.role ? c.role.toLowerCase() : '') + ' ' + (c.type ? String(c.type).toLowerCase() : ''));
+      const typeStr = ((c.role ? c.role.toLowerCase() : '') + ' ' + (c.type ? String(c.type).toLowerCase() : '') + ' ' + (c.name ? String(c.name).toLowerCase() : ''));
       return coreKeys.some(key => typeStr.includes(key));
     };
-    const isPatchPanel = (c: any) => {
-      const k = getTypeKey(c);
-      return k.includes('patchpanel');
-    };
+
+    const isCopperPatchPanel = (c: any) => getTypeKey(c).includes('copper') && getTypeKey(c).includes('patch');
+    const isFiberPatchPanel = (c: any) => getTypeKey(c).includes('fiber') && getTypeKey(c).includes('patch');
+    const isGenericPatchPanel = (c: any) => getTypeKey(c).includes('patch'); // Fallback for other types or if distinction fails
+
     const isComputeLike = (c: any) => {
       const k = getTypeKey(c);
       return ['controller', 'compute', 'storage', 'ipmiswitch', 'leafswitch'].some(t =>
@@ -85,12 +89,10 @@ export class AutomatedPlacementService {
       );
     };
 
-    // Calculate placed devices per deviceId
     const placedDeviceIds = new Set(
       rackProfiles.flatMap(r => r.devices.map(d => d.deviceId))
     );
 
-    // Prepare placement result
     const placementResult: PlacementReport = {
       totalDevices: 0,
       placedDevices: 0,
@@ -98,27 +100,147 @@ export class AutomatedPlacementService {
       items: []
     };
 
-    // For generated instance names
     const typeCounters: Record<string, number> = {};
 
-    // Main placement loop: filter out devices already placed (user/manual placement protection)
-    const toPlaceComponents = components.filter(c => !placedDeviceIds.has(c.id));
-    for (const component of toPlaceComponents) {
-      totalDevices++;
-      const typeLabel = getTypeKey(component);
+    // Separate components by type for easier processing, especially patch panels
+    let allComponentsToPlace = components.filter(c => !placedDeviceIds.has(c.id));
+
+    // --- PATCH PANEL PLACEMENT --- 
+    // We handle patch panels first according to specific rules, then other devices.
+
+    const copperPatchPanelComponents = allComponentsToPlace.filter(isCopperPatchPanel);
+    const fiberPatchPanelComponents = allComponentsToPlace.filter(isFiberPatchPanel);
+    // Filter out patch panels from the main list to avoid double processing
+    allComponentsToPlace = allComponentsToPlace.filter(c => !isCopperPatchPanel(c) && !isFiberPatchPanel(c) && !isGenericPatchPanel(c));
+
+    const placePanel = (panelComponent: any, targetRack: RackProfile, panelTypeLabel: string) => {
+      const typeLabel = getTypeKey(panelComponent) || panelTypeLabel;
       if (!typeCounters[typeLabel]) typeCounters[typeLabel] = 1;
+      const instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+      const ruHeight = panelComponent.ruSize || panelComponent.ruHeight || 1;
+      
+      const placement = tryPlaceDeviceInRacksWithConstraints({
+        racks: [targetRack],
+        device: panelComponent,
+        ruHeight,
+        activeDesignState: state
+      });
+
+      if (placement.success) {
+        placedDevices++;
+        placementResult.items.push({
+          deviceName: panelComponent.name,
+          instanceName,
+          status: 'placed',
+          azId: placement.azId,
+          rackId: placement.rackId,
+          ruPosition: placement.ruPosition
+        });
+        // Remove placed panel from available pool (by id)
+        const cIndex = copperPatchPanelComponents.findIndex(c => c.id === panelComponent.id);
+        if (cIndex > -1) copperPatchPanelComponents.splice(cIndex, 1);
+        const fIndex = fiberPatchPanelComponents.findIndex(c => c.id === panelComponent.id);
+        if (fIndex > -1) fiberPatchPanelComponents.splice(fIndex, 1);
+        return true;
+      } else {
+        failedDevices++;
+        placementResult.items.push({
+          deviceName: panelComponent.name,
+          instanceName,
+          status: "failed",
+          reason: placement.reason || `Could not place ${panelTypeLabel} in ${targetRack.name}`
+        });
+        return false;
+      }
+    };
+
+    // 1. Place Patch Panels in Core Racks
+    if (coreRacks.length > 0) {
+      coreRacks.forEach(coreRack => {
+        // Place Copper Patch Panels per Core Rack spec
+        for (let i = 0; i < (structuredCabling.copperPatchPanelsPerCoreRack || 0); i++) {
+          const panelToPlace = copperPatchPanelComponents[0]; // Get the next available
+          if (panelToPlace) {
+            placePanel(panelToPlace, coreRack, 'copper-patch-panel-core');
+          } else {
+            // Optional: Log if not enough panels defined in components
+            break; 
+          }
+        }
+        // Place Fiber Patch Panels per Core Rack spec
+        for (let i = 0; i < (structuredCabling.fiberPatchPanelsPerCoreRack || 0); i++) {
+          const panelToPlace = fiberPatchPanelComponents[0];
+          if (panelToPlace) {
+            placePanel(panelToPlace, coreRack, 'fiber-patch-panel-core');
+          } else {
+            break;
+          }
+        }
+      });
+    }
+
+    // 2. Place Patch Panels in Compute/Storage Racks (AZ-based distribution)
+    const computeAZs = [...new Set(computeRacks.map(r => r.availabilityZoneId).filter(Boolean))];
+    computeAZs.forEach(azId => {
+      if (!azId) return; // Should not happen due to filter, but defensive
+      const racksInThisAZ = computeRacks.filter(r => r.availabilityZoneId === azId);
+      const numRacksInAZ = racksInThisAZ.length;
+
+      if (numRacksInAZ > 0) {
+        const targetCopperPanelsPerRack = Math.floor((structuredCabling.copperPatchPanelsPerAZ || 0) / numRacksInAZ);
+        const targetFiberPanelsPerRack = Math.floor((structuredCabling.fiberPatchPanelsPerAZ || 0) / numRacksInAZ);
+
+        racksInThisAZ.forEach(computeRack => {
+          // Place Copper Patch Panels for this AZ rack
+          for (let i = 0; i < targetCopperPanelsPerRack; i++) {
+            const panelToPlace = copperPatchPanelComponents[0];
+            if (panelToPlace) {
+              placePanel(panelToPlace, computeRack, 'copper-patch-panel-az');
+            } else {
+              break;
+            }
+          }
+          // Place Fiber Patch Panels for this AZ rack
+          for (let i = 0; i < targetFiberPanelsPerRack; i++) {
+            const panelToPlace = fiberPatchPanelComponents[0];
+            if (panelToPlace) {
+              placePanel(panelToPlace, computeRack, 'fiber-patch-panel-az');
+            } else {
+              break;
+            }
+          }
+        });
+      }
+    });
+    
+    // Add any unplaced patch panels back to the total device count for the report
+    // (as they were filtered out earlier)
+    totalDevices += copperPatchPanelComponents.length + fiberPatchPanelComponents.length;
+    copperPatchPanelComponents.forEach(p => {
+        failedDevices++;
+        placementResult.items.push({ deviceName: p.name, status: 'failed', reason: 'Not placed (available supply exceeded requirements or no valid spot)' });
+    });
+    fiberPatchPanelComponents.forEach(p => {
+        failedDevices++;
+        placementResult.items.push({ deviceName: p.name, status: 'failed', reason: 'Not placed (available supply exceeded requirements or no valid spot)' });
+    });
+
+    // --- REGULAR DEVICE PLACEMENT (excluding already handled patch panels) ---
+    for (const component of allComponentsToPlace) {
+      totalDevices++;
+      const typeKeyLabel = getTypeKey(component);
+      if (!typeCounters[typeKeyLabel]) typeCounters[typeKeyLabel] = 1;
+      let instanceName = `${typeKeyLabel}-${typeCounters[typeKeyLabel]++}`;
       let placed = false;
 
-      // ----- Placement rules:
-
-      // 1. If core network, only in core racks, distributed evenly
+      // Rule 1: Core network devices (Spine, Border, Firewall, etc.)
       if (isCoreNet(component)) {
         // Evenly distribute to core racks
         if (coreRacks.length === 0) {
           failedDevices++;
           placementResult.items.push({
             deviceName: component.name,
-            instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
+            instanceName,
             status: 'failed',
             reason: "No core racks available for core device"
           });
@@ -127,7 +249,7 @@ export class AutomatedPlacementService {
         // Select core rack with least of this type
         let minRack = coreRacks[0], minCount = Infinity;
         for (const r of coreRacks) {
-          const count = r.devices.filter(d => getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel).length;
+          const count = r.devices.filter(d => getTypeKey(components.find(c => c.id === d.deviceId)) === typeKeyLabel).length;
           if (count < minCount) {
             minRack = r;
             minCount = count;
@@ -141,7 +263,6 @@ export class AutomatedPlacementService {
           ruHeight,
           activeDesignState: state
         });
-        let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
         if (placement.success) {
           placedDevices++;
           placementResult.items.push({
@@ -165,69 +286,7 @@ export class AutomatedPlacementService {
         continue;
       }
 
-      // 2. Patch panels per rules - IMPROVED: if any core rack, always fill them first!
-      if (isPatchPanel(component)) {
-        let eligibleRacks: typeof rackProfiles = [];
-        // Check both explicit flag or fallback to naming for core/compute racks
-        const isCorePanelDevice = (() => {
-          // If requiredInCoreRack/perCoreRack available, use.
-          if ((component.placement?.['requiredInCoreRack'] ?? false) || component.placement?.['perCoreRack']) return true;
-          // Fallback: look for "core" in component name, type, or requirements if necessary
-          const lowerName = (component.name || "").toLowerCase();
-          if (lowerName.includes("core")) return true;
-          return false;
-        })();
-
-        // If any core racks exist, and this is a "core" panel, fill core racks.
-        if (coreRacks.length > 0 && isCorePanelDevice) {
-          eligibleRacks = coreRacks;
-        } else {
-          eligibleRacks = computeRacks;
-        }
-
-        // Required per rack?
-        let perRackQty = 1;
-        if (eligibleRacks && eligibleRacks[0] && eligibleRacks[0].rackType === 'Core') perRackQty = 4;
-
-        for (const r of eligibleRacks) {
-          patchPanelAssignedPerRack[r.id] = patchPanelAssignedPerRack[r.id] || 0;
-          if (patchPanelAssignedPerRack[r.id] >= perRackQty) continue;
-          const ruHeight = component.ruSize || component.ruHeight || 1;
-          const placement = tryPlaceDeviceInRacksWithConstraints({
-            racks: [r],
-            device: component,
-            ruHeight,
-            activeDesignState: state
-          });
-          let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
-          if (placement.success) {
-            placedDevices++;
-            placementResult.items.push({
-              deviceName: component.name,
-              instanceName,
-              status: 'placed',
-              azId: placement.azId,
-              rackId: placement.rackId,
-              ruPosition: placement.ruPosition
-            });
-            patchPanelAssignedPerRack[r.id]++;
-            placed = true;
-            break;
-          }
-        }
-        if (!placed) {
-          failedDevices++;
-          placementResult.items.push({
-            deviceName: component.name,
-            instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
-            status: "failed",
-            reason: "Could not place patch panel (all racks at required quantity)"
-          });
-        }
-        continue;
-      }
-
-      // 3. Compute/controller/storage/ipmi/leafswitch: not in core racks/AZ!
+      // Rule 3: Compute/controller/storage/ipmi/leafswitch: not in core racks/AZ!
       if (isComputeLike(component)) {
         // Which AZs can this cluster go in? If cluster assignment is provided, use it!
         let allowedAZs: string[] = allAZs.filter(id => id !== coreAZId);
@@ -251,7 +310,7 @@ export class AutomatedPlacementService {
           const racksInAZ = azRacks.filter(r => r.availabilityZoneId === az);
           const count = racksInAZ.reduce((acc, r) =>
             acc + r.devices.filter(d =>
-              getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel
+              getTypeKey(components.find(c => c.id === d.deviceId)) === typeKeyLabel
             ).length, 0
           );
           if (count < minInAz) {
@@ -263,7 +322,7 @@ export class AutomatedPlacementService {
           failedDevices++;
           placementResult.items.push({
             deviceName: component.name,
-            instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
+            instanceName: `${typeKeyLabel}-${typeCounters[typeKeyLabel]++}`,
             status: "failed",
             reason: "No AZ/rack in which to place (non-core, AZ selection may be restricting placement)"
           });
@@ -275,7 +334,7 @@ export class AutomatedPlacementService {
           failedDevices++;
           placementResult.items.push({
             deviceName: component.name,
-            instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
+            instanceName: `${typeKeyLabel}-${typeCounters[typeKeyLabel]++}`,
             status: "failed",
             reason: "No racks in target AZ"
           });
@@ -285,7 +344,7 @@ export class AutomatedPlacementService {
         let rackToPlace = racksInAz[0], minCount = Infinity;
         for (const r of racksInAz) {
           const count = r.devices.filter(d =>
-            getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel
+            getTypeKey(components.find(c => c.id === d.deviceId)) === typeKeyLabel
           ).length;
           if (count < minCount) {
             rackToPlace = r;
@@ -299,7 +358,7 @@ export class AutomatedPlacementService {
           ruHeight,
           activeDesignState: state
         });
-        let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+        let instanceName = `${typeKeyLabel}-${typeCounters[typeKeyLabel]++}`;
         if (placement.success) {
           placedDevices++;
           placementResult.items.push({
@@ -339,24 +398,36 @@ export class AutomatedPlacementService {
           allowedAZs.includes(rk.availabilityZoneId || '')
       );
       // spread to racks with lowest device of this type
-      let minRack = eligibleRacks[0], minCount = Infinity;
-      for (const r of eligibleRacks) {
-        const count = r.devices.filter(d =>
-          getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel
-        ).length;
-        if (count < minCount) {
-          minRack = r;
-          minCount = count;
+      let minRack: RackProfile | undefined = eligibleRacks.length > 0 ? eligibleRacks[0] : undefined;
+      let minCount = Infinity;
+      if (minRack) {
+        for (const r of eligibleRacks) {
+          const count = r.devices.filter(d =>
+            getTypeKey(components.find(c => c.id === d.deviceId)) === typeKeyLabel
+          ).length;
+          if (count < minCount) {
+            minRack = r;
+            minCount = count;
+          }
         }
+      } else {
+          failedDevices++;
+          placementResult.items.push({
+            deviceName: component.name,
+            instanceName,
+            status: "failed",
+            reason: "No eligible racks found for general placement after AZ filtering."
+          });
+          continue;
       }
+
       const ruHeight = component.ruSize || component.ruHeight || 1;
       const placement = tryPlaceDeviceInRacksWithConstraints({
-        racks: [minRack],
+        racks: minRack ? [minRack] : [], // Pass empty array if minRack is somehow undefined
         device: component,
         ruHeight,
         activeDesignState: state
       });
-      let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
       if (placement.success) {
         placedDevices++;
         placementResult.items.push({
