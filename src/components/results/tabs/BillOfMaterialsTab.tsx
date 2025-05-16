@@ -38,18 +38,27 @@ export const BillOfMaterialsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const components = activeDesign?.components || [];
 
-  // --- Modified grouping: use storage node subgroup key logic for storage nodes ---
-  const summarizedComponentsByCategory = useMemo(() => {
+  // Build a lookup for Disk costs associated with specific clusters/configurations:
+  const diskLineItems: Record<string, {
+    disk: InfrastructureComponent;
+    summarizedQuantity: number;
+    clusterName: string;
+    clusterId: string;
+    configKey: string;
+    totalDiskCost: number;
+  }> = {};
+
+  // Updated grouping: Key storage nodes by template, cluster, and attachedDisks
+  const summarizedComponentsByCategory = React.useMemo(() => {
     if (!components.length) return {};
 
-    // NEW: Track seen storage node rows by custom group key
     const groupedByTemplate: Record<string, InfrastructureComponent & { summarizedQuantity: number }> = {};
 
     components.forEach(instance => {
-      // Use custom grouping for storage nodes
-      let key = instance.role === 'storageNode'
-        ? getStorageNodeGroupKey(instance)
-        : getBomGroupKey(instance);
+      let key =
+        instance.role === 'storageNode'
+          ? getStorageNodeGroupKey(instance)
+          : getBomGroupKey(instance);
 
       if (!groupedByTemplate[key]) {
         groupedByTemplate[key] = {
@@ -57,27 +66,61 @@ export const BillOfMaterialsTab: React.FC = () => {
           summarizedQuantity: 0,
         };
       }
-      groupedByTemplate[key].summarizedQuantity += (instance.quantity || 1);
+      groupedByTemplate[key].summarizedQuantity += instance.quantity || 1;
+
+      // If this is a storage node, also add disk line items with correct cluster assignment
+      if (instance.role === 'storageNode' && (instance as any).attachedDisks) {
+        const clusterInfo = (instance as any).clusterInfo || {};
+        const attachedDisks = (instance as any).attachedDisks || [];
+        attachedDisks.forEach((disk: any) => {
+          if (!disk) return;
+          // Keyed by disk id+model+size+cluster
+          const diskKey =
+            'disk-' +
+            (disk.templateId || disk.id || disk.model) +
+            '-' +
+            (disk.capacityTB || '') +
+            '-' +
+            (clusterInfo.clusterId || '');
+          if (!diskLineItems[diskKey]) {
+            diskLineItems[diskKey] = {
+              disk,
+              summarizedQuantity: 0,
+              clusterName: clusterInfo.clusterName || clusterInfo.clusterId || '-',
+              clusterId: clusterInfo.clusterId || '-',
+              configKey: key,
+              totalDiskCost: 0,
+            };
+          }
+          // Each storage node instance can have a disk attached; quantity = disk.quantity * node.quantity
+          diskLineItems[diskKey].summarizedQuantity += (disk.quantity || 1) * (instance.quantity || 1);
+          diskLineItems[diskKey].totalDiskCost += (disk.cost || 0) * (disk.quantity || 1) * (instance.quantity || 1);
+        });
+      }
     });
 
-    // Now, assign to each summary's category
+    // Assign to category ('Compute', 'Storage', etc.)
     const result: Record<string, (InfrastructureComponent & { summarizedQuantity: number })[]> = {};
     Object.values(groupedByTemplate).forEach(summarizedComponent => {
-      const categoryName = summarizedComponent.type ? 
-        componentTypeToCategory[summarizedComponent.type as ComponentType] :
-        'Other';
+      const categoryName = summarizedComponent.type
+        ? componentTypeToCategory[summarizedComponent.type as ComponentType]
+        : 'Other';
       if (!result[categoryName]) {
         result[categoryName] = [];
       }
       result[categoryName].push(summarizedComponent);
     });
+
     return result;
   }, [components]);
-  
-  const grandTotalCost = useMemo(() => {
-    return components.reduce((sum, comp) => sum + comp.cost, 0);
-  }, [components]);
-  
+
+  const grandTotalCost = React.useMemo(() => {
+    let componentSum = components.reduce((sum, comp) => sum + comp.cost, 0);
+    let diskSum = Object.values(diskLineItems).reduce((sum, o) => sum + o.totalDiskCost, 0);
+    // Avoid double-counting disk costs if disks are included in main components as line items
+    return componentSum + diskSum;
+  }, [components, diskLineItems]);
+
   const formatCategoryName = (name: string) => name.replace(/([A-Z])/g, ' $1').trim();
 
   const [activeTab, setActiveTab] = useState('compute');
@@ -167,7 +210,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Compute Node Summary */}
+                  {/* Compute Node Summary (unchanged) */}
                   {summarizedComponentsByCategory['Compute']?.map((component) => {
                     const quantity = component.summarizedQuantity;
                     const totalCost = component.cost * quantity;
@@ -208,9 +251,11 @@ export const BillOfMaterialsTab: React.FC = () => {
                     // Render attached disks as a short string
                     const attachedDisks = (server as any).attachedDisks || [];
                     const disksSummary = attachedDisks.length > 0
-                      ? attachedDisks.map((disk: any) =>
-                        `${disk.model} (${disk.quantity} × ${disk.capacityTB}TB)`
-                      ).join(', ')
+                      ? attachedDisks
+                          .map((disk: any) =>
+                            `${disk.model} (${disk.quantity} × ${disk.capacityTB}TB)`
+                          )
+                          .join(', ')
                       : '-';
                     return (
                       <TableRow key={`storage-node-${getStorageNodeGroupKey(server)}`}>
@@ -233,39 +278,26 @@ export const BillOfMaterialsTab: React.FC = () => {
                       </TableRow>
                     );
                   })}
-                  {/* Disks physically, independently listed */}
-                  {summarizedComponentsByCategory['Storage']?.filter(
-                    c => c.type === ComponentType.Disk
-                  ).map((disk) => {
-                     const quantity = disk.summarizedQuantity;
-                     const totalCost = disk.cost * quantity;
-                     // Attempt to associate disk with cluster (based on placement on nodes)
-                     // Since disk instances may be duplicated, try to list needed info
-                     const parentNode = components.find(
-                       comp =>
-                         comp.role === 'storageNode' &&
-                         Array.isArray((comp as any).attachedDisks) &&
-                         (comp as any).attachedDisks.some((d: any) => d.model === disk.model && d.capacityTB == (disk as any).capacityTB)
-                     );
-                     const clusterName =
-                       (parentNode as any)?.clusterInfo?.clusterName ||
-                       (parentNode as any)?.clusterInfo?.clusterId ||
-                       '-';
-                     return (
-                       <TableRow key={`disk-${disk.id || disk.model}`}>
-                         <TableCell className="pl-4">Disk</TableCell>
-                         <TableCell>{(disk as any).diskType || '-'}</TableCell>
-                         <TableCell>{clusterName}</TableCell>
-                         <TableCell>{disk.manufacturer}</TableCell>
-                         <TableCell>{disk.model}</TableCell>
-                         <TableCell>-</TableCell>
-                         <TableCell className="text-right">{(disk as any).capacityTB} TB</TableCell>
-                         <TableCell className="text-right">-</TableCell>
-                         <TableCell className="text-right">{quantity}</TableCell>
-                         <TableCell className="text-right">€{disk.cost.toLocaleString()}</TableCell>
-                         <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-                       </TableRow>
-                     );
+                  {/* Disks: Line items, grouped by disk/cluster */}
+                  {Object.values(diskLineItems).map((diskItem, idx) => {
+                    const disk = diskItem.disk;
+                    const quantity = diskItem.summarizedQuantity;
+                    const totalCost = diskItem.totalDiskCost;
+                    return (
+                      <TableRow key={`disk-lineitem-${diskItem.configKey}-${disk.model}-${disk.capacityTB}-${diskItem.clusterId}-${idx}`}>
+                        <TableCell className="pl-4">Disk</TableCell>
+                        <TableCell>{disk.diskType || '-'}</TableCell>
+                        <TableCell>{diskItem.clusterName}</TableCell>
+                        <TableCell>{disk.manufacturer}</TableCell>
+                        <TableCell>{disk.model}</TableCell>
+                        <TableCell>-</TableCell>
+                        <TableCell className="text-right">{disk.capacityTB} TB</TableCell>
+                        <TableCell className="text-right">-</TableCell>
+                        <TableCell className="text-right">{quantity}</TableCell>
+                        <TableCell className="text-right">€{(disk.cost ?? 0).toLocaleString()}</TableCell>
+                        <TableCell className="text-right">€{(totalCost ?? 0).toLocaleString()}</TableCell>
+                      </TableRow>
+                    );
                   })}
                   {/* Acceleration hardware as before */}
                   {summarizedComponentsByCategory['Acceleration']?.map((component) => {

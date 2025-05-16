@@ -17,41 +17,59 @@ export const recalculateDesign = () => {
     state.calculateComponentRoles();
     
     if (state.activeDesign) {
-      const existingAssignments = {};
-      
+      // --- Assignment fix: Use BOTH roleId AND clusterInfo for matching! ---
+      const existingAssignments: Record<string, string> = {};
       if (state.componentRoles && state.componentRoles.length > 0) {
         state.componentRoles.forEach(role => {
           if (role.assignedComponentId) {
-            existingAssignments[role.role] = role.assignedComponentId;
-            console.log(`Preserving assignment for ${role.role}: ${role.assignedComponentId}`);
+            const clusterKey = role.role === 'storageNode' && (role.clusterInfo?.clusterId)
+              ? `${role.role}-${role.clusterInfo.clusterId}`
+              : role.role;
+            existingAssignments[clusterKey] = role.assignedComponentId;
+            console.log(`Preserving assignment for ${clusterKey}: ${role.assignedComponentId}`);
           }
         });
       }
-      
       if (state.activeDesign.componentRoles && state.activeDesign.componentRoles.length > 0) {
         state.activeDesign.componentRoles.forEach(role => {
           if (role.assignedComponentId) {
-            existingAssignments[role.role] = role.assignedComponentId;
-            console.log(`Found assignment in design for ${role.role}: ${role.assignedComponentId}`);
+            const clusterKey = role.role === 'storageNode' && (role.clusterInfo?.clusterId)
+              ? `${role.role}-${role.clusterInfo.clusterId}`
+              : role.role;
+            existingAssignments[clusterKey] = role.assignedComponentId;
+            console.log(`Found assignment in design for ${clusterKey}: ${role.assignedComponentId}`);
           }
         });
       }
-
       console.log("Preserved component assignments:", existingAssignments);
-      
+
+      // --- When restoring, match using combined key so clusters stay independent
       const updatedRoles = state.componentRoles.map(role => {
-        if (existingAssignments[role.role]) {
-          console.log(`Restoring assignment for ${role.role}: ${existingAssignments[role.role]}`);
-          return {
-            ...role,
-            assignedComponentId: existingAssignments[role.role]
-          };
+        if (role.role === 'storageNode' && role.clusterInfo?.clusterId) {
+          const clusterKey = `storageNode-${role.clusterInfo.clusterId}`;
+          if (existingAssignments[clusterKey]) {
+            console.log(`Restoring assignment for ${clusterKey}: ${existingAssignments[clusterKey]}`);
+            return {
+              ...role,
+              assignedComponentId: existingAssignments[clusterKey]
+            };
+          }
+        } else {
+          if (existingAssignments[role.role]) {
+            console.log(`Restoring assignment for ${role.role}: ${existingAssignments[role.role]}`);
+            return {
+              ...role,
+              assignedComponentId: existingAssignments[role.role]
+            };
+          }
         }
         return role;
       });
       
       useDesignStore.setState({ componentRoles: updatedRoles });
-      console.log(`Restored assignments to ${updatedRoles.filter(r => r.assignedComponentId).length} roles`);
+      console.log(
+        `Restored assignments to ${updatedRoles.filter(r => r.assignedComponentId).length} roles`
+      );
       
       if (state.activeDesign.selectedDisksByRole) {
         state.selectedDisksByRole = state.activeDesign.selectedDisksByRole;
