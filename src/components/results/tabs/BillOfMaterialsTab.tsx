@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,17 +20,37 @@ const useComponentRoleId = (component: InfrastructureComponent & { summarizedQua
   return foundRole?.id || null;
 };
 
+// Helper: generate a unique key that includes template, cluster assignment, and attachedDisks config
+const getStorageNodeGroupKey = (component: InfrastructureComponent): string => {
+  if (component.role === 'storageNode') {
+    const clusterId = (component as any).clusterInfo?.clusterId || 'no-cluster';
+    const attachedDisks = ((component as any).attachedDisks || [])
+      .map((disk: any) => `${disk.templateId || disk.id || disk.model}-${disk.quantity}`)
+      .sort()
+      .join('|');
+    return `storageNode:${component.templateId}-${clusterId}-[${attachedDisks}]`;
+  }
+  // Fallback to normal grouping for non-storage nodes
+  return getBomGroupKey(component);
+};
+
 export const BillOfMaterialsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const components = activeDesign?.components || [];
 
+  // --- Modified grouping: use storage node subgroup key logic for storage nodes ---
   const summarizedComponentsByCategory = useMemo(() => {
     if (!components.length) return {};
 
+    // NEW: Track seen storage node rows by custom group key
     const groupedByTemplate: Record<string, InfrastructureComponent & { summarizedQuantity: number }> = {};
 
     components.forEach(instance => {
-      const key = getBomGroupKey(instance);
+      // Use custom grouping for storage nodes
+      let key = instance.role === 'storageNode'
+        ? getStorageNodeGroupKey(instance)
+        : getBomGroupKey(instance);
+
       if (!groupedByTemplate[key]) {
         groupedByTemplate[key] = {
           ...instance,
@@ -41,6 +60,7 @@ export const BillOfMaterialsTab: React.FC = () => {
       groupedByTemplate[key].summarizedQuantity += (instance.quantity || 1);
     });
 
+    // Now, assign to each summary's category
     const result: Record<string, (InfrastructureComponent & { summarizedQuantity: number })[]> = {};
     Object.values(groupedByTemplate).forEach(summarizedComponent => {
       const categoryName = summarizedComponent.type ? 
@@ -135,16 +155,19 @@ export const BillOfMaterialsTab: React.FC = () => {
                   <TableRow>
                     <TableHead>Type</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Cluster</TableHead>
                     <TableHead>Manufacturer</TableHead>
                     <TableHead>Model</TableHead>
                     <TableHead>CPU Model</TableHead>
                     <TableHead className="text-right">Memory (GB)</TableHead>
+                    <TableHead className="text-right">Disks</TableHead>
                     <TableHead className="text-right">Quantity</TableHead>
                     <TableHead className="text-right">Unit Cost (€)</TableHead>
                     <TableHead className="text-right">Total Cost (€)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {/* Compute Node Summary */}
                   {summarizedComponentsByCategory['Compute']?.map((component) => {
                     const quantity = component.summarizedQuantity;
                     const totalCost = component.cost * quantity;
@@ -153,10 +176,12 @@ export const BillOfMaterialsTab: React.FC = () => {
                       <TableRow key={`compute-${getBomGroupKey(component)}`}>
                         <TableCell>{component.type}</TableCell>
                         <TableCell>{component.role || 'Unassigned'}</TableCell>
+                        <TableCell>-</TableCell>
                         <TableCell>{component.manufacturer}</TableCell>
                         <TableCell>{component.model}</TableCell>
                         <TableCell>{(component as any).cpuModel || '-'}</TableCell>
                         <TableCell className="text-right">{(component as any).memoryCapacity || (component as any).memoryGB || '-'}</TableCell>
+                        <TableCell className="text-right">-</TableCell>
                         <TableCell className="text-right flex items-center gap-1 justify-end">
                           {quantity}
                           {roleId && (
@@ -168,49 +193,81 @@ export const BillOfMaterialsTab: React.FC = () => {
                       </TableRow>
                     );
                   })}
-                  {summarizedComponentsByCategory['Storage']?.filter(c => c.type === ComponentType.Server && c.role === 'storageNode').map((server) => {
+                  {/* Storage Node Summary By Cluster/Disk config */}
+                  {summarizedComponentsByCategory['Storage']?.filter(
+                    c => c.type === ComponentType.Server && c.role === 'storageNode'
+                  ).map((server) => {
                     const quantity = server.summarizedQuantity;
                     const totalCost = server.cost * quantity;
                     const roleId = useComponentRoleId(server);
+                    // Show cluster or assignment
+                    const clusterName =
+                      (server as any).clusterInfo?.clusterName ||
+                      (server as any).clusterInfo?.clusterId ||
+                      'Unassigned';
+                    // Render attached disks as a short string
+                    const attachedDisks = (server as any).attachedDisks || [];
+                    const disksSummary = attachedDisks.length > 0
+                      ? attachedDisks.map((disk: any) =>
+                        `${disk.model} (${disk.quantity} × ${disk.capacityTB}TB)`
+                      ).join(', ')
+                      : '-';
                     return (
-                      <React.Fragment key={`storage-node-${getBomGroupKey(server)}`}>
-                        <TableRow>
-                          <TableCell className="font-medium">Storage Node</TableCell>
-                          <TableCell>{server.role || 'Unassigned'}</TableCell>
-                          <TableCell>{server.manufacturer}</TableCell>
-                          <TableCell>{server.model}</TableCell>
-                          <TableCell>{(server as any).cpuModel || '-'}</TableCell>
-                          <TableCell className="text-right">{(server as any).memoryCapacity || (server as any).memoryGB || '-'}</TableCell>
-                          <TableCell className="text-right flex items-center gap-1 justify-end">
-                            {quantity}
-                            {roleId && (
-                              <CalculationBreakdownDialog roleId={roleId} roleName={server.role || ''} />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">€{server.cost.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-                        </TableRow>
-                      </React.Fragment>
+                      <TableRow key={`storage-node-${getStorageNodeGroupKey(server)}`}>
+                        <TableCell className="font-medium">Storage Node</TableCell>
+                        <TableCell>{server.role || 'Unassigned'}</TableCell>
+                        <TableCell>{clusterName}</TableCell>
+                        <TableCell>{server.manufacturer}</TableCell>
+                        <TableCell>{server.model}</TableCell>
+                        <TableCell>{(server as any).cpuModel || '-'}</TableCell>
+                        <TableCell className="text-right">{(server as any).memoryCapacity || (server as any).memoryGB || '-'}</TableCell>
+                        <TableCell className="text-right">{disksSummary}</TableCell>
+                        <TableCell className="text-right flex items-center gap-1 justify-end">
+                          {quantity}
+                          {roleId && (
+                            <CalculationBreakdownDialog roleId={roleId} roleName={server.role || ''} />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">€{server.cost.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+                      </TableRow>
                     );
                   })}
-                  {summarizedComponentsByCategory['Storage']?.filter(c => c.type === ComponentType.Disk).map((disk) => {
+                  {/* Disks physically, independently listed */}
+                  {summarizedComponentsByCategory['Storage']?.filter(
+                    c => c.type === ComponentType.Disk
+                  ).map((disk) => {
                      const quantity = disk.summarizedQuantity;
                      const totalCost = disk.cost * quantity;
-                     // Disks do not have roles/role id, so no calculation breakdown 
+                     // Attempt to associate disk with cluster (based on placement on nodes)
+                     // Since disk instances may be duplicated, try to list needed info
+                     const parentNode = components.find(
+                       comp =>
+                         comp.role === 'storageNode' &&
+                         Array.isArray((comp as any).attachedDisks) &&
+                         (comp as any).attachedDisks.some((d: any) => d.model === disk.model && d.capacityTB == (disk as any).capacityTB)
+                     );
+                     const clusterName =
+                       (parentNode as any)?.clusterInfo?.clusterName ||
+                       (parentNode as any)?.clusterInfo?.clusterId ||
+                       '-';
                      return (
-                       <TableRow key={`disk-${getBomGroupKey(disk)}`}>
+                       <TableRow key={`disk-${disk.id || disk.model}`}>
                          <TableCell className="pl-4">Disk</TableCell>
                          <TableCell>{(disk as any).diskType || '-'}</TableCell>
+                         <TableCell>{clusterName}</TableCell>
                          <TableCell>{disk.manufacturer}</TableCell>
                          <TableCell>{disk.model}</TableCell>
                          <TableCell>-</TableCell>
                          <TableCell className="text-right">{(disk as any).capacityTB} TB</TableCell>
+                         <TableCell className="text-right">-</TableCell>
                          <TableCell className="text-right">{quantity}</TableCell>
                          <TableCell className="text-right">€{disk.cost.toLocaleString()}</TableCell>
                          <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
                        </TableRow>
                      );
                   })}
+                  {/* Acceleration hardware as before */}
                   {summarizedComponentsByCategory['Acceleration']?.map((component) => {
                     const quantity = component.summarizedQuantity;
                     const totalCost = component.cost * quantity;
@@ -219,9 +276,11 @@ export const BillOfMaterialsTab: React.FC = () => {
                       <TableRow key={`gpu-${getBomGroupKey(component)}`}>
                         <TableCell>{component.type}</TableCell>
                         <TableCell>{component.role || 'Unassigned'}</TableCell>
+                        <TableCell>-</TableCell>
                         <TableCell>{component.manufacturer}</TableCell>
                         <TableCell>{component.model}</TableCell>
                         <TableCell>-</TableCell>
+                        <TableCell className="text-right">-</TableCell>
                         <TableCell className="text-right">-</TableCell>
                         <TableCell className="text-right flex items-center gap-1 justify-end">
                           {quantity}
@@ -429,4 +488,3 @@ export const BillOfMaterialsTab: React.FC = () => {
     </div>
   );
 };
-
