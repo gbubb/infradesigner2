@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { ComponentType } from '@/types/infrastructure';
@@ -23,9 +22,7 @@ export const useHardwareTotals = () => {
     let computeMemoryGB = 0;
     let totalStorageTB = 0;
     
-    console.log('Calculating hardware totals from components:', activeDesign.components.length);
-    
-    // First separate compute cluster nodes from other nodes
+    // Compute nodes filter -- no log
     const computeClusterNodes = activeDesign.components.filter(component => 
       (component.role === 'computeNode' || component.role === 'gpuNode') && 
       component.type === ComponentType.Server &&
@@ -35,33 +32,25 @@ export const useHardwareTotals = () => {
     // Calculate compute cluster totals separately
     computeClusterNodes.forEach(component => {
       const quantity = component.quantity || 1;
-      
-      // Calculate vCPUs - use consistent naming and log details
       let coresPerServer = 0;
       let overcommitRatio = 1;
       
-      // Expanded property check patterns for CPU cores
       if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
         coresPerServer = (component.cpuSockets || 0) * (component.cpuCoresPerSocket || 0);
-        console.log(`Compute Server ${component.name} has ${component.cpuSockets} sockets × ${component.cpuCoresPerSocket} cores = ${coresPerServer} cores`);
       } else if ('cpuCount' in component && 'coreCount' in component) {
         coresPerServer = (component.cpuCount || 0) * (component.coreCount || 0);
-        console.log(`Compute Server ${component.name} has ${component.cpuCount} CPUs × ${component.coreCount} cores = ${coresPerServer} cores`);
       } else if ('cores' in component) {
         coresPerServer = component.cores || 0;
-        console.log(`Compute Server ${component.name} has ${coresPerServer} cores (from cores property)`);
       } else if ('totalCores' in component) {
         coresPerServer = component.totalCores || 0;
-        console.log(`Compute Server ${component.name} has ${coresPerServer} cores (from totalCores property)`);
       }
       
-      // Get overcommit ratio from individual compute clusters if available
+      // Get overcommit ratio from cluster if available
       if ((component as any).clusterInfo) {
         const clusterId = (component as any).clusterInfo.clusterId;
         const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
         if (matchingCluster) {
           overcommitRatio = matchingCluster.overcommitRatio || 1;
-          console.log(`${component.role} in cluster ${(component as any).clusterInfo.clusterName}, coresPerServer: ${coresPerServer}, overcommit: ${overcommitRatio}`);
         }
       }
       
@@ -69,39 +58,28 @@ export const useHardwareTotals = () => {
       const totalServerVCPUs = serverVCPUs * quantity;
       totalVCPUs += totalServerVCPUs;
       
-      console.log(`Server ${component.name} has ${serverVCPUs} vCPUs per server × ${quantity} servers = ${totalServerVCPUs} total vCPUs`);
-      
-      // SIMPLIFIED MEMORY CALCULATION - Use memoryCapacity as the primary source of truth
+      // Memory calculation
       let componentMemoryGB = 0;
-      
-      // First check for memoryCapacity which is our primary field from the UI
       if ('memoryCapacity' in component && component.memoryCapacity > 0) {
         componentMemoryGB = component.memoryCapacity;
-        console.log(`Compute Server ${component.name} has ${componentMemoryGB}GB of memory (memoryCapacity property)`);
-      }
-      // Then fall back to other possible memory fields only if necessary
-      else if ('memoryGB' in component && component.memoryGB > 0) {
+      } else if ('memoryGB' in component && component.memoryGB > 0) {
         componentMemoryGB = component.memoryGB;
-        console.log(`Compute Server ${component.name} has ${componentMemoryGB}GB of memory (memoryGB property)`);
       }
       else if ('memoryTB' in component && (component as any).memoryTB > 0) {
         componentMemoryGB = (component as any).memoryTB * 1024;
-        console.log(`Compute Server ${component.name} has ${(component as any).memoryTB}TB (${componentMemoryGB}GB) of memory (memoryTB property)`);
       }
-      
       if (componentMemoryGB === 0) {
+        // Keep this warn for missing configuration
         console.warn(`Compute Server ${component.name} has no valid memory configuration!`);
       }
       
       const totalServerMemoryGB = componentMemoryGB * quantity;
       computeMemoryGB += totalServerMemoryGB;
-      console.log(`Server ${component.name} has ${componentMemoryGB}GB per server × ${quantity} servers = ${totalServerMemoryGB}GB total memory`);
     });
     
-    // Calculate storage capacity from storage clusters
+    // Storage clusters capacity
     const storageClusters = requirements.storageRequirements.storageClusters || [];
     
-    // Group storage nodes by cluster
     const storageNodesByCluster = activeDesign.components
       .filter(component => component.role === 'storageNode' && component.type === ComponentType.Server)
       .reduce((acc: Record<string, any[]>, node) => {
@@ -113,7 +91,6 @@ export const useHardwareTotals = () => {
         return acc;
       }, {});
     
-    // Calculate usable storage for each cluster
     Object.entries(storageNodesByCluster).forEach(([clusterId, nodes]) => {
       const cluster = storageClusters.find(c => c.id === clusterId);
       if (!cluster) return;
@@ -126,8 +103,6 @@ export const useHardwareTotals = () => {
       
       nodes.forEach(node => {
         const quantity = node.quantity || 1;
-        
-        // Add attached disks capacity if available
         if ('attachedDisks' in node && Array.isArray(node.attachedDisks)) {
           node.attachedDisks.forEach((disk: any) => {
             if (disk && 'capacityTB' in disk) {
@@ -136,18 +111,11 @@ export const useHardwareTotals = () => {
           });
         }
       });
-      
-      // Calculate usable capacity using pool type efficiency factor
       const usableCapacityTB = clusterRawCapacityTB * poolEfficiencyFactor;
       const usableCapacityTiB = usableCapacityTB * TB_TO_TIB_FACTOR;
-      
-      // Add to total storage (we use usable capacity, not including fill factor)
       totalStorageTB += usableCapacityTiB;
-      
-      console.log(`Storage cluster ${cluster.name}: Raw capacity: ${clusterRawCapacityTB.toFixed(2)} TB, Usable: ${usableCapacityTiB.toFixed(2)} TiB (using pool efficiency ${poolEfficiencyFactor})`);
     });
     
-    // Calculate other memory (non-compute cluster memory) for totals
     let otherMemoryGB = 0;
     activeDesign.components
       .filter(component => 
@@ -157,7 +125,6 @@ export const useHardwareTotals = () => {
       .forEach(component => {
         const quantity = component.quantity || 1;
         let componentMemoryGB = 0;
-        
         if ('memoryCapacity' in component && component.memoryCapacity > 0) {
           componentMemoryGB = component.memoryCapacity;
         } else if ('memoryGB' in component && component.memoryGB > 0) {
@@ -165,7 +132,6 @@ export const useHardwareTotals = () => {
         } else if ('memoryTB' in component && (component as any).memoryTB > 0) {
           componentMemoryGB = (component as any).memoryTB * 1024;
         }
-        
         otherMemoryGB += componentMemoryGB * quantity;
       });
     
@@ -173,13 +139,6 @@ export const useHardwareTotals = () => {
     
     const totalMemoryTB = totalMemoryGB / 1024;
     const computeMemoryTB = computeMemoryGB / 1024;
-    
-    console.log('Final hardware totals calculated:', {
-      totalVCPUs,  // Only includes compute cluster vCPUs
-      totalMemoryTB,
-      computeMemoryTB,
-      totalStorageTB  // Usable storage in TiB
-    });
     
     return {
       totalVCPUs,
