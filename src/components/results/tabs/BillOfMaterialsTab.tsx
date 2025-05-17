@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
 import { TransceiverModel } from '@/types/infrastructure/transceiver-types';
 import { CableMediaType } from '@/types/infrastructure/port-types';
+import { summarizeCablesFromConnections, summarizeTransceiversFromConnections, createPortUtilizationRows } from '../bom/networkBomUtils';
 
 const getBomGroupKey = (component: InfrastructureComponent): string => {
   return component.templateId || `${component.manufacturer}-${component.model}-${component.type}-${component.role || ''}`;
@@ -36,15 +37,6 @@ const getStorageNodeGroupKey = (component: InfrastructureComponent): string => {
   return getBomGroupKey(component);
 };
 
-// --- NEW: Helper functions for BOM cables and transceivers --- //
-function getCableKey(templateId: string, lengthMeters: number) {
-  return `${templateId || 'unknown'}-${lengthMeters}m`;
-}
-
-function getTransceiverKey(model: TransceiverModel) {
-  return model;
-}
-
 export const BillOfMaterialsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const components = activeDesign?.components || [];
@@ -67,89 +59,9 @@ export const BillOfMaterialsTab: React.FC = () => {
     totalDiskCost: number;
   }> = {};
 
-  // --- NEW: Summarize cables and transceivers required by networkConnections --- //
-  // [1] CABLES
-  const cableLineItems: Record<
-    string,
-    {
-      cableTemplateId: string | undefined,
-      lengthMeters: number,
-      count: number,
-      type: string,
-      model: string,
-      details: string,
-      costPer: number,
-      total: number,
-      mediaType: string | undefined
-    }
-  > = {};
-  // [2] TRANSCEIVERS
-  const transceiverLineItems: Record<
-    string,
-    {
-      transceiverModel: TransceiverModel,
-      count: number,
-      model: string,
-      costPer: number,
-      total: number
-    }
-  > = {};
-
-  networkConnections.forEach(conn => {
-    // CABLES
-    if (conn.cableTemplateId) {
-      const cableTemplate = cableTemplates.find(c => c.id === conn.cableTemplateId);
-      const cableKey = getCableKey(conn.cableTemplateId, conn.lengthMeters || 0);
-
-      if (!cableLineItems[cableKey]) {
-        cableLineItems[cableKey] = {
-          cableTemplateId: conn.cableTemplateId,
-          lengthMeters: conn.lengthMeters || 0,
-          count: 0,
-          type: cableTemplate?.type || "Cable",
-          model: cableTemplate?.model || "-",
-          details: `${cableTemplate?.connectorA_Type || '-'} to ${cableTemplate?.connectorB_Type || '-'}, ${cableTemplate?.mediaType || '-'}, ${conn.lengthMeters || 0}m`,
-          costPer: cableTemplate?.cost ?? 0,
-          total: 0,
-          mediaType: cableTemplate?.mediaType
-        };
-      }
-      cableLineItems[cableKey].count += 1;
-      cableLineItems[cableKey].total += cableLineItems[cableKey].costPer;
-    }
-    // TRANSCEIVERS - Source
-    if (conn.transceiverSourceModel) {
-      const trans = transceiverTemplates.find(t => t.transceiverModel === conn.transceiverSourceModel);
-      const trxKey = getTransceiverKey(conn.transceiverSourceModel);
-      if (!transceiverLineItems[trxKey]) {
-        transceiverLineItems[trxKey] = {
-          transceiverModel: conn.transceiverSourceModel,
-          count: 0,
-          model: trans?.model || conn.transceiverSourceModel,
-          costPer: trans?.cost ?? 0,
-          total: 0,
-        };
-      }
-      transceiverLineItems[trxKey].count += 1;
-      transceiverLineItems[trxKey].total += transceiverLineItems[trxKey].costPer;
-    }
-    // TRANSCEIVERS - Destination
-    if (conn.transceiverDestinationModel) {
-      const trans = transceiverTemplates.find(t => t.transceiverModel === conn.transceiverDestinationModel);
-      const trxKey = getTransceiverKey(conn.transceiverDestinationModel);
-      if (!transceiverLineItems[trxKey]) {
-        transceiverLineItems[trxKey] = {
-          transceiverModel: conn.transceiverDestinationModel,
-          count: 0,
-          model: trans?.model || conn.transceiverDestinationModel,
-          costPer: trans?.cost ?? 0,
-          total: 0,
-        };
-      }
-      transceiverLineItems[trxKey].count += 1;
-      transceiverLineItems[trxKey].total += transceiverLineItems[trxKey].costPer;
-    }
-  });
+  // --- NEW: Use utility helpers for BOM cable/transceiver line items --- //
+  const cableLineItems = summarizeCablesFromConnections(networkConnections, components);
+  const transceiverLineItems = summarizeTransceiversFromConnections(networkConnections, components);
 
   // Updated grouping: Key storage nodes by template, cluster, and attachedDisks
   const summarizedComponentsByCategory = React.useMemo(() => {
@@ -293,50 +205,8 @@ export const BillOfMaterialsTab: React.FC = () => {
     );
   }
 
-  // --- NEW: Port Utilization/Map Tab --- //
-  const portUtilizationRows = useMemo(() => {
-    if (!devices) return [];
-    // Build port usage maps from networkConnections
-    const portStatusMap: Record<string, { status: 'Available' | 'Used', connId?: string, connectedTo?: string, transceiverModel?: string }> = {};
-    networkConnections.forEach(conn => {
-      // source
-      portStatusMap[`${conn.sourceDeviceId}:${conn.sourcePortId}`] = {
-        status: "Used",
-        connId: conn.id,
-        connectedTo: `${conn.destinationDeviceId}:${conn.destinationPortId}`,
-        transceiverModel: conn.transceiverSourceModel
-      };
-      // destination
-      portStatusMap[`${conn.destinationDeviceId}:${conn.destinationPortId}`] = {
-        status: "Used",
-        connId: conn.id,
-        connectedTo: `${conn.sourceDeviceId}:${conn.sourcePortId}`,
-        transceiverModel: conn.transceiverDestinationModel
-      };
-    });
-
-    // For each device, display port statuses
-    let rows: any[] = [];
-    devices.forEach(device => {
-      const ports: any[] = (device.ports ?? []);
-      ports.forEach(port => {
-        const pk = `${device.id}:${port.id}`;
-        const status = portStatusMap[pk]?.status ?? "Available";
-        rows.push({
-          deviceId: device.id,
-          deviceName: device.model,
-          portName: port.name || port.id,
-          portType: port.role,
-          speed: port.speed,
-          mediaType: port.mediaType,
-          status,
-          transceiver: portStatusMap[pk]?.transceiverModel || port.transceiverModel || "-",
-          connectedTo: portStatusMap[pk]?.connectedTo || "-",
-        });
-      });
-    });
-    return rows;
-  }, [devices, networkConnections]);
+  // --- Use helper for port utilization rows
+  const portUtilizationRows = React.useMemo(() => createPortUtilizationRows(devices, networkConnections), [devices, networkConnections]);
 
   return (
     <div className="space-y-6">
