@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -31,7 +30,7 @@ export const ComparePanel: React.FC = () => {
   const canCompare = designA && designB && designA !== designB;
   
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="w-full p-6">
       <h2 className="text-2xl font-semibold mb-6">Compare Designs</h2>
       
       {savedDesigns.length < 2 ? (

@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback } from 'react';
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ComputeRequirementsForm } from './ComputeRequirementsForm';
@@ -53,7 +52,7 @@ export const RequirementsPanel: React.FC = () => {
   }, [updateRequirements]);
 
   return (
-    <div className={sectionClass}>
+    <div className="w-full p-6">
       <h2 className="text-2xl font-semibold mb-6">Design Requirements</h2>
       <Tabs defaultValue="compute" value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid grid-cols-4 mb-8">
@@ -118,3 +117,5 @@ export const RequirementsPanel: React.FC = () => {
     </div>
   );
 };
+
+export default RequirementsPanel;
