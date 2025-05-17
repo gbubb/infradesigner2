@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Header } from "@/components/layout/header";
 import { useDesignStore } from "@/store/designStore";
@@ -7,7 +6,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Outlet } from "react-router-dom";
 
 // Sidebar width and header height should match sidebar styling
-const SIDEBAR_WIDTH = 108; // must match AppSidebar
+const SIDEBAR_WIDTH = 140; // must match AppSidebar
 const HEADER_HEIGHT = 54; // compacted header
 
 export const AppLayout: React.FC = () => {
@@ -61,4 +60,3 @@ export const AppLayout: React.FC = () => {
     </div>
   );
 };
-

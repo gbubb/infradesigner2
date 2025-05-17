@@ -3,7 +3,8 @@ import React from "react";
 import { useLocation, Link } from "react-router-dom";
 import { LayoutDashboard, Wrench, Folder, FolderOpen, ArrowRight, Settings } from "lucide-react";
 
-const SIDEBAR_WIDTH = 108; // widened width
+// Increased sidebar width and button min-width to fit all labels
+const SIDEBAR_WIDTH = 140;
 
 const sidebarSections = [
   { label: "Requirements", path: "/", icon: LayoutDashboard, color: "bg-[#3e78b2]" },
@@ -21,10 +22,12 @@ export const AppSidebar: React.FC = () => {
     <nav
       className={`flex flex-col items-center h-full w-full px-2 py-4`}
       style={{
-        background: "#1A3A5F"
+        background: "#1A3A5F",
+        minWidth: SIDEBAR_WIDTH, // ensure enough width for label
+        width: SIDEBAR_WIDTH
       }}
     >
-      {/* Center sidebar items with even spacing */}
+      {/* Center sidebar items vertically */}
       <div className="flex flex-1 flex-col justify-center gap-4 w-full">
         {sidebarSections.map((section) => {
           const isActive =
@@ -47,18 +50,20 @@ export const AppSidebar: React.FC = () => {
                 hover:shadow-md
               `}
               style={{
-                width: "100%",
-                height: "58px",
-                borderRadius: "12px",
+                width: "100%", // button fills sidebar width
+                minWidth: "120px", // ensures label never wraps
+                height: "56px",
+                borderRadius: "14px",
                 boxSizing: "border-box"
               }}
             >
-              <div className="flex items-center justify-center h-full px-4">
-                <section.icon size={28} strokeWidth={2.2} className="mr-2" />
+              <div className="flex items-center h-full pl-4 pr-2 w-full">
+                <section.icon size={28} strokeWidth={2.2} className="mr-2 flex-shrink-0" />
                 <span
                   className={`
-                    font-semibold text-md tracking-tight text-white text-left leading-tight
+                    font-semibold text-[15px] tracking-tight text-white text-left leading-tight
                     pointer-events-none select-none
+                    whitespace-nowrap
                   `}
                   style={{
                     transition: "none"
