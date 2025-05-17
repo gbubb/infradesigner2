@@ -9,8 +9,27 @@ import { Input } from "@/components/ui/input";
 import { Save, Trash2, Plus, Network } from "lucide-react";
 import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent } from "@/types/infrastructure";
 
+// Table display row type for formatted data
+type NetworkConnectionTableRow = {
+  id: string;
+  sourceDeviceId: string;
+  sourcePortId: string;
+  srcRack: string;
+  srcRU: string | number;
+  destinationDeviceId: string;
+  destinationPortId: string;
+  dstRack: string;
+  dstRU: string | number;
+  cableType: string;
+  lengthMeters: string | number;
+  transceiverSourceModel: string;
+  transceiverDestinationModel: string;
+  status: string;
+  notes?: string;
+};
+
 // Utility for searching/filtering table rows
-function filterConnections(rows: NetworkConnection[], q: string) {
+function filterConnections(rows: NetworkConnectionTableRow[], q: string) {
   if (!q) return rows;
   const lowerQ = q.toLowerCase();
   return rows.filter(row =>
@@ -55,49 +74,56 @@ const formatConnectionRow = (
   row: NetworkConnection,
   components: InfrastructureComponent[],
   racks: RackProfile[] | undefined
-) => {
+): NetworkConnectionTableRow => {
   const srcName = getDeviceName(components, row.sourceDeviceId);
   const dstName = getDeviceName(components, row.destinationDeviceId);
   const srcRackObj = getRackAndRU(racks, row.sourceDeviceId);
   const dstRackObj = getRackAndRU(racks, row.destinationDeviceId);
   return {
-    ...row,
+    id: row.id,
     sourceDeviceId: srcName,
+    sourcePortId: row.sourcePortId,
     srcRack: srcRackObj.rack,
     srcRU: srcRackObj.ru,
     destinationDeviceId: dstName,
+    destinationPortId: row.destinationPortId,
     dstRack: dstRackObj.rack,
     dstRU: dstRackObj.ru,
     cableType: row.mediaType || "-",
-    lengthMeters: row.lengthMeters?.toFixed ? row.lengthMeters.toFixed(1) : row.lengthMeters || "-",
+    lengthMeters: typeof row.lengthMeters === "number" && !isNaN(row.lengthMeters) ? row.lengthMeters.toFixed(1) : "-",
     transceiverSourceModel: row.transceiverSourceModel || "-",
-    transceiverDestinationModel: row.transceiverDestinationModel || "-"
+    transceiverDestinationModel: row.transceiverDestinationModel || "-",
+    status: row.status,
+    notes: row.notes,
   };
 };
 
 const NetworkConnectionsTab: React.FC = () => {
   const { activeDesign, updateDesign } = useDesignStore();
   const [generating, setGenerating] = useState(false);
+  // Only `NetworkConnection[]` (not table row formatting)
   const [networkConnections, setNetworkConnections] = useState<NetworkConnection[]>(activeDesign?.networkConnections || []);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortCol, setSortCol] = useState<string>("sourceDeviceId");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
 
-  // Memoized filtered and sorted rows
+  // Memoized filtered and sorted table rows
   const displayedRows = useMemo(() => {
-    let rows = (networkConnections || []).map(r => formatConnectionRow(r, activeDesign?.components || [], activeDesign?.rackprofiles));
-    rows = filterConnections(rows, searchQuery);
+    const rows: NetworkConnectionTableRow[] = (networkConnections || []).map(r =>
+      formatConnectionRow(r, activeDesign?.components || [], activeDesign?.rackprofiles)
+    );
+    let filtered = filterConnections(rows, searchQuery);
 
     if (sortCol) {
-      rows.sort((a, b) => {
-        const aval = a[sortCol] ?? "";
-        const bval = b[sortCol] ?? "";
+      filtered.sort((a, b) => {
+        const aval = a[sortCol as keyof NetworkConnectionTableRow] ?? "";
+        const bval = b[sortCol as keyof NetworkConnectionTableRow] ?? "";
         if (aval === bval) return 0;
         if (sortDir === "asc") return aval < bval ? -1 : 1;
         return aval > bval ? -1 : 1;
       });
     }
-    return rows;
+    return filtered;
   }, [networkConnections, searchQuery, sortCol, sortDir, activeDesign]);
 
   // Generate connections
@@ -197,7 +223,7 @@ const NetworkConnectionsTab: React.FC = () => {
               displayedRows.map((row, idx) => (
                 <TableRow key={row.id + "-" + idx}>
                   {columns.map(col => (
-                    <TableCell key={col.key}>{row[col.key]}</TableCell>
+                    <TableCell key={col.key}>{row[col.key as keyof NetworkConnectionTableRow]}</TableCell>
                   ))}
                 </TableRow>
               ))
