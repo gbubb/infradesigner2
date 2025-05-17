@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Wrench, Folder, FolderOpen, ArrowRight } from "lucide-react";
+import { LayoutDashboard, Wrench, Folder, FolderOpen, ArrowRight, Settings } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
 
 const sidebarSections = [

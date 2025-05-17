@@ -1,11 +1,12 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
+import { Index } from "./pages/Index";
+import { Auth } from "./pages/Auth";
+import { NotFound } from "./pages/NotFound";
 import { useEffect } from "react";
 import { initializeStore } from "./store/designStore";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
@@ -13,13 +14,13 @@ import { AuthProvider, useAuth } from "./hooks/useAuth";
 import "@/utils/purgeDesigns";
 import { ThemeProvider } from "./components/theme/theme-provider";
 import { DndProvider } from './components/providers/DndProvider';
-import AppLayout from "@/components/layout/AppLayout";
-import RequirementsPanel from "@/components/requirements/RequirementsPanel";
-import ComponentLibrary from "@/components/sidebar/ComponentLibrary";
-import DesignPanel from "@/components/design/DesignPanel";
-import ConfigurePanel from "@/components/configure/ConfigurePanel";
-import ResultsPanel from "@/components/results/ResultsPanel";
-import ComparePanel from "@/components/compare/ComparePanel";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { RequirementsPanel } from "@/components/requirements/RequirementsPanel";
+import { ComponentLibrary } from "@/components/sidebar/ComponentLibrary";
+import { DesignPanel } from "@/components/design/DesignPanel";
+import { ConfigurePanel } from "@/components/configure/ConfigurePanel";
+import { ResultsPanel } from "@/components/results/ResultsPanel";
+import { ComparePanel } from "@/components/compare/ComparePanel";
 
 const queryClient = new QueryClient();
 
