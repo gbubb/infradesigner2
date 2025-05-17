@@ -2,11 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Download, FileSpreadsheet, Server, Network, Cable } from 'lucide-react';
-import { ComponentCategory, ComponentType, InfrastructureComponent, componentTypeToCategory } from '@/types/infrastructure/component-types';
+import { Download, FileSpreadsheet, Server, Network, Cable as CableIcon } from 'lucide-react';
+import { ComponentCategory, ComponentType, InfrastructureComponent, componentTypeToCategory } from '@/types/infrastructure';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
+import { TransceiverModel } from '@/types/infrastructure/transceiver-types';
+import { CableMediaType } from '@/types/infrastructure/port-types';
 
 const getBomGroupKey = (component: InfrastructureComponent): string => {
   return component.templateId || `${component.manufacturer}-${component.model}-${component.type}-${component.role || ''}`;
@@ -34,9 +36,26 @@ const getStorageNodeGroupKey = (component: InfrastructureComponent): string => {
   return getBomGroupKey(component);
 };
 
+// --- NEW: Helper functions for BOM cables and transceivers --- //
+function getCableKey(templateId: string, lengthMeters: number) {
+  return `${templateId || 'unknown'}-${lengthMeters}m`;
+}
+
+function getTransceiverKey(model: TransceiverModel) {
+  return model;
+}
+
 export const BillOfMaterialsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const components = activeDesign?.components || [];
+  const networkConnections = activeDesign?.networkConnections || [];
+  
+  // Build lookup dictionaries for cost and details:
+  const cableTemplates = useMemo(() => components.filter(c => c.type === ComponentType.Cable), [components]);
+  const transceiverTemplates = useMemo(() => components.filter(c => c.type === ComponentType.Transceiver), [components]);
+  const devices = components.filter(c =>
+    [ComponentType.Switch, ComponentType.Router, ComponentType.Firewall, ComponentType.Server].includes(c.type as any)
+  );
 
   // Build a lookup for Disk costs associated with specific clusters/configurations:
   const diskLineItems: Record<string, {
@@ -47,6 +66,90 @@ export const BillOfMaterialsTab: React.FC = () => {
     configKey: string;
     totalDiskCost: number;
   }> = {};
+
+  // --- NEW: Summarize cables and transceivers required by networkConnections --- //
+  // [1] CABLES
+  const cableLineItems: Record<
+    string,
+    {
+      cableTemplateId: string | undefined,
+      lengthMeters: number,
+      count: number,
+      type: string,
+      model: string,
+      details: string,
+      costPer: number,
+      total: number,
+      mediaType: string | undefined
+    }
+  > = {};
+  // [2] TRANSCEIVERS
+  const transceiverLineItems: Record<
+    string,
+    {
+      transceiverModel: TransceiverModel,
+      count: number,
+      model: string,
+      costPer: number,
+      total: number
+    }
+  > = {};
+
+  networkConnections.forEach(conn => {
+    // CABLES
+    if (conn.cableTemplateId) {
+      const cableTemplate = cableTemplates.find(c => c.id === conn.cableTemplateId);
+      const cableKey = getCableKey(conn.cableTemplateId, conn.lengthMeters || 0);
+
+      if (!cableLineItems[cableKey]) {
+        cableLineItems[cableKey] = {
+          cableTemplateId: conn.cableTemplateId,
+          lengthMeters: conn.lengthMeters || 0,
+          count: 0,
+          type: cableTemplate?.type || "Cable",
+          model: cableTemplate?.model || "-",
+          details: `${cableTemplate?.connectorA_Type || '-'} to ${cableTemplate?.connectorB_Type || '-'}, ${cableTemplate?.mediaType || '-'}, ${conn.lengthMeters || 0}m`,
+          costPer: cableTemplate?.cost ?? 0,
+          total: 0,
+          mediaType: cableTemplate?.mediaType
+        };
+      }
+      cableLineItems[cableKey].count += 1;
+      cableLineItems[cableKey].total += cableLineItems[cableKey].costPer;
+    }
+    // TRANSCEIVERS - Source
+    if (conn.transceiverSourceModel) {
+      const trans = transceiverTemplates.find(t => t.transceiverModel === conn.transceiverSourceModel);
+      const trxKey = getTransceiverKey(conn.transceiverSourceModel);
+      if (!transceiverLineItems[trxKey]) {
+        transceiverLineItems[trxKey] = {
+          transceiverModel: conn.transceiverSourceModel,
+          count: 0,
+          model: trans?.model || conn.transceiverSourceModel,
+          costPer: trans?.cost ?? 0,
+          total: 0,
+        };
+      }
+      transceiverLineItems[trxKey].count += 1;
+      transceiverLineItems[trxKey].total += transceiverLineItems[trxKey].costPer;
+    }
+    // TRANSCEIVERS - Destination
+    if (conn.transceiverDestinationModel) {
+      const trans = transceiverTemplates.find(t => t.transceiverModel === conn.transceiverDestinationModel);
+      const trxKey = getTransceiverKey(conn.transceiverDestinationModel);
+      if (!transceiverLineItems[trxKey]) {
+        transceiverLineItems[trxKey] = {
+          transceiverModel: conn.transceiverDestinationModel,
+          count: 0,
+          model: trans?.model || conn.transceiverDestinationModel,
+          costPer: trans?.cost ?? 0,
+          total: 0,
+        };
+      }
+      transceiverLineItems[trxKey].count += 1;
+      transceiverLineItems[trxKey].total += transceiverLineItems[trxKey].costPer;
+    }
+  });
 
   // Updated grouping: Key storage nodes by template, cluster, and attachedDisks
   const summarizedComponentsByCategory = React.useMemo(() => {
@@ -117,30 +220,54 @@ export const BillOfMaterialsTab: React.FC = () => {
   const grandTotalCost = React.useMemo(() => {
     let componentSum = components.reduce((sum, comp) => sum + comp.cost, 0);
     let diskSum = Object.values(diskLineItems).reduce((sum, o) => sum + o.totalDiskCost, 0);
+    let cableSum = Object.values(cableLineItems).reduce((sum, o) => sum + o.total, 0);
+    let trxSum = Object.values(transceiverLineItems).reduce((sum, o) => sum + o.total, 0);
     // Avoid double-counting disk costs if disks are included in main components as line items
-    return componentSum + diskSum;
-  }, [components, diskLineItems]);
+    return componentSum + diskSum + cableSum + trxSum;
+  }, [components, diskLineItems, cableLineItems, transceiverLineItems]);
 
   const formatCategoryName = (name: string) => name.replace(/([A-Z])/g, ' $1').trim();
 
   const [activeTab, setActiveTab] = useState('compute');
   
+  // --- ENHANCED CSV Export logic including cables and transceivers --- //
   const generateCSVData = (category?: string) => {
-    const dataToExport = category ? summarizedComponentsByCategory[category] || [] : Object.values(summarizedComponentsByCategory).flat();
-    let csvContent = "data:text/csv;charset=utf-8,Category,Type,Role,Manufacturer,Model,Details,Quantity,Unit Cost,Total Cost\r\n";
+    let csvContent = "data:text/csv;charset=utf-8,Category,Type,Role/Model,Manufacturer,Model,Details,Quantity,Unit Cost,Total Cost\r\n";
+    let dataToExport: any[] = [];
+    // --- Standard hardware/export
+    if (!category || ["Compute", "Storage", "Acceleration", "Network", "Cabling", "Cables"].includes(category)) {
+      Object.values(summarizedComponentsByCategory).forEach(componentsArr => dataToExport.push(...componentsArr));
+      // Disks
+      dataToExport.push(...Object.values(diskLineItems));
+    }
+    // --- Cables/Transceivers always included in All/summary
+    if (!category || category === "Cabling") {
+      dataToExport.push(...Object.values(cableLineItems).map(item => ({
+        ...item,
+        type: "Cable",
+      })));
+    }
+    if (!category || category === "Network") {
+      dataToExport.push(...Object.values(transceiverLineItems).map(item => ({
+        ...item,
+        type: "Transceiver",
+      })));
+    }
     dataToExport.forEach(component => {
-      const categoryName = component.type ? componentTypeToCategory[component.type as ComponentType] : 'Other';
-      const quantity = component.summarizedQuantity;
-      const totalCost = component.cost * quantity;
-      let details = '-';
-      if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${component.cassetteCapacity} cassettes`;
+      // Support both original and our virtual lineitems
+      const categoryName = component.type
+        ? componentTypeToCategory[component.type as ComponentType] || component.type
+        : "Other";
+      const quantity = component.summarizedQuantity ?? component.quantity ?? component.count ?? 1;
+      const totalCost = component.totalDiskCost ?? component.total ?? component.cost * quantity;
+      let details = component.details ?? '-';
+      if (component.type === ComponentType.Cable || component.type === "Cable") details = component.details;
+      else if (component.type === "Transceiver") details = component.model;
+      else if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${component.cassetteCapacity} cassettes`;
       else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${component.portQuantity} ports`;
       else if (component.type === ComponentType.Cassette) details = `${component.portType}, ${component.portQuantity} ports`;
-      else if (component.type === ComponentType.Cable) details = `${component.length}m, ${component.connectorA_Type} to ${component.connectorB_Type}, ${component.mediaType}`;
-      else if (component.type === ComponentType.Server) details = `${component.cpuModel || '-'}, ${component.memoryCapacity || component.memoryGB || '-'}GB`;
-        
-      csvContent += `${categoryName},${component.type},${component.role || 'N/A'},${component.manufacturer},${component.model},"${details}",${quantity},${component.cost},${totalCost}\r\n`;
-      });
+      csvContent += `${categoryName},${component.type},${component.role || component.transceiverModel || "-"},${component.manufacturer || "-"},${component.model || "-"},"${details}",${quantity},${component.costPer ?? component.cost},${totalCost}\r\n`;
+    });
     return encodeURI(csvContent);
   };
 
@@ -166,6 +293,51 @@ export const BillOfMaterialsTab: React.FC = () => {
     );
   }
 
+  // --- NEW: Port Utilization/Map Tab --- //
+  const portUtilizationRows = useMemo(() => {
+    if (!devices) return [];
+    // Build port usage maps from networkConnections
+    const portStatusMap: Record<string, { status: 'Available' | 'Used', connId?: string, connectedTo?: string, transceiverModel?: string }> = {};
+    networkConnections.forEach(conn => {
+      // source
+      portStatusMap[`${conn.sourceDeviceId}:${conn.sourcePortId}`] = {
+        status: "Used",
+        connId: conn.id,
+        connectedTo: `${conn.destinationDeviceId}:${conn.destinationPortId}`,
+        transceiverModel: conn.transceiverSourceModel
+      };
+      // destination
+      portStatusMap[`${conn.destinationDeviceId}:${conn.destinationPortId}`] = {
+        status: "Used",
+        connId: conn.id,
+        connectedTo: `${conn.sourceDeviceId}:${conn.sourcePortId}`,
+        transceiverModel: conn.transceiverDestinationModel
+      };
+    });
+
+    // For each device, display port statuses
+    let rows: any[] = [];
+    devices.forEach(device => {
+      const ports: any[] = (device.ports ?? []);
+      ports.forEach(port => {
+        const pk = `${device.id}:${port.id}`;
+        const status = portStatusMap[pk]?.status ?? "Available";
+        rows.push({
+          deviceId: device.id,
+          deviceName: device.model,
+          portName: port.name || port.id,
+          portType: port.role,
+          speed: port.speed,
+          mediaType: port.mediaType,
+          status,
+          transceiver: portStatusMap[pk]?.transceiverModel || port.transceiverModel || "-",
+          connectedTo: portStatusMap[pk]?.connectedTo || "-",
+        });
+      });
+    });
+    return rows;
+  }, [devices, networkConnections]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -176,12 +348,13 @@ export const BillOfMaterialsTab: React.FC = () => {
       </div>
       
       <Tabs defaultValue="compute" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="compute">Compute & Storage</TabsTrigger>
           <TabsTrigger value="network">Network</TabsTrigger>
           <TabsTrigger value="cabling">Cabling</TabsTrigger>
           <TabsTrigger value="all">All Components</TabsTrigger>
           <TabsTrigger value="summary">Cost Summary</TabsTrigger>
+          <TabsTrigger value="ports">Port Map</TabsTrigger>
         </TabsList>
         
         <TabsContent value="compute">
@@ -378,6 +551,20 @@ export const BillOfMaterialsTab: React.FC = () => {
                       </TableRow>
                     );
                   })}
+                  {/* --- NEW: Transceiver Line Items --- */}
+                  {Object.values(transceiverLineItems).map((item, idx) => (
+                    <TableRow key={`trxline-${item.transceiverModel}-${idx}`}>
+                      <TableCell>Transceiver</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>{item.model}</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>{item.transceiverModel}</TableCell>
+                      <TableCell className="text-right">{item.count}</TableCell>
+                      <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>
@@ -427,6 +614,21 @@ export const BillOfMaterialsTab: React.FC = () => {
                       </TableRow>
                     );
                   })}
+                  {/* --- NEW: Cable Line Items --- */}
+                  {Object.values(cableLineItems).map((item, idx) => (
+                    <TableRow key={`cableline-${item.cableTemplateId}-${item.lengthMeters}-${idx}`}>
+                      <TableCell>
+                        <CableIcon className="inline-block mr-1" size={16}/>
+                        Cable
+                      </TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>{item.model}</TableCell>
+                      <TableCell>{item.details}</TableCell>
+                      <TableCell className="text-right">{item.count}</TableCell>
+                      <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>
@@ -494,6 +696,58 @@ export const BillOfMaterialsTab: React.FC = () => {
                       </TableRow>
                     </React.Fragment>
                   ))}
+                  {/* --- NEW: Cable Line Items --- */}
+                  <TableRow className="bg-muted/50">
+                    <TableCell colSpan={8} className="font-medium">
+                      Cables (from Connections)
+                    </TableCell>
+                  </TableRow>
+                  {Object.values(cableLineItems).map((item, idx) => (
+                    <TableRow key={`all-cableline-${item.cableTemplateId}-${item.lengthMeters}-${idx}`}>
+                      <TableCell></TableCell>
+                      <TableCell>Cable</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>{item.model}</TableCell>
+                      <TableCell className="text-right">{item.count}</TableCell>
+                      <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="border-t">
+                    <TableCell colSpan={6} className="text-right font-medium">Cables Subtotal:</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className="text-right font-medium">
+                      €{Object.values(cableLineItems).reduce((sum, item) => sum + item.total, 0).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                  
+                  {/* --- NEW: Transceiver Line Items --- */}
+                  <TableRow className="bg-muted/50">
+                    <TableCell colSpan={8} className="font-medium">
+                      Transceivers (from Connections)
+                    </TableCell>
+                  </TableRow>
+                  {Object.values(transceiverLineItems).map((item, idx) => (
+                    <TableRow key={`all-trxline-${item.transceiverModel}-${idx}`}>
+                      <TableCell></TableCell>
+                      <TableCell>Transceiver</TableCell>
+                      <TableCell>{item.transceiverModel}</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>{item.model}</TableCell>
+                      <TableCell className="text-right">{item.count}</TableCell>
+                      <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="border-t">
+                    <TableCell colSpan={6} className="text-right font-medium">Transceivers Subtotal:</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className="text-right font-medium">
+                      €{Object.values(transceiverLineItems).reduce((sum, item) => sum + item.total, 0).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                  
                   <TableRow className="bg-muted font-medium">
                     <TableCell colSpan={6} className="text-right">Grand Total:</TableCell>
                     <TableCell></TableCell>
@@ -513,6 +767,51 @@ export const BillOfMaterialsTab: React.FC = () => {
                 <CardContent>
                     <p>Detailed cost summary and TCO analysis would go here, leveraging data from <code>useCostAnalysis</code>.</p>
                     <p className="font-bold mt-4">Grand Total (from BOM): €{grandTotalCost.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* --- NEW: Port Map (Utilization) Tab --- */}
+        <TabsContent value="ports">
+          <Card>
+            <CardHeader>
+              <CardTitle>Port Utilization Map</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Device</TableHead>
+                    <TableHead>Port</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Speed</TableHead>
+                    <TableHead>Media</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Transceiver</TableHead>
+                    <TableHead>Connected To</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {portUtilizationRows.map((row, idx) => (
+                    <TableRow key={`port-row-${row.deviceId}-${row.portName}-${idx}`}>
+                      <TableCell>{row.deviceName}</TableCell>
+                      <TableCell>{row.portName}</TableCell>
+                      <TableCell>{row.portType}</TableCell>
+                      <TableCell>{row.speed}</TableCell>
+                      <TableCell>{row.mediaType}</TableCell>
+                      <TableCell>
+                        {row.status === "Used" ? (
+                          <span className="text-green-700 font-medium">Used</span>
+                        ) : (
+                          <span className="text-gray-500">Free</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{row.transceiver}</TableCell>
+                      <TableCell>{row.connectedTo}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
