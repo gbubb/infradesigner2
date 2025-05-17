@@ -6,9 +6,9 @@ import ConnectionRulesTab from "./ConnectionRulesTab";
 
 export const ConfigurePanel: React.FC = () => {
   return (
-    <div className="w-full max-w-4xl mx-auto px-8 pt-10 pb-8"> {/* Added more px/pt for better spacing */}
+    <div className="w-full px-8 pt-8 pb-8"> {/* Removed max-w-4xl; more top/bottom spacing */}
       <Tabs defaultValue="racks" className="w-full">
-        <TabsList className="grid grid-cols-2 mb-6">
+        <TabsList className="grid grid-cols-2 mb-6 max-w-2xl mx-auto">
           <TabsTrigger value="racks">Rack Layouts</TabsTrigger>
           <TabsTrigger value="connections">Connection Rules</TabsTrigger>
         </TabsList>
@@ -22,6 +22,4 @@ export const ConfigurePanel: React.FC = () => {
     </div>
   );
 };
-
 export default ConfigurePanel;
-

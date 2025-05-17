@@ -31,8 +31,9 @@ export const RackDetailView: React.FC<RackDetailViewProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
       {/* Rack visualization - takes 7 columns */}
-      <div className="md:col-span-7">
-        <div className="flex justify-center">
+      <div className="md:col-span-7 flex justify-center items-center h-full">
+        {/* Ensure rack view is always centered in its column with margin auto */}
+        <div className="flex justify-center mx-auto w-full">
           <RackView 
             rackProfileId={rackProfileId}
             height={700}
@@ -47,13 +48,11 @@ export const RackDetailView: React.FC<RackDetailViewProps> = ({
           />
         </div>
       </div>
-      
-      {/* Rack info - takes 5 columns - DevicePalette removed from here */}
+      {/* Rack info - takes 5 columns */}
       <div className="md:col-span-5">
         <div className="space-y-6">
           {/* Rack Utilization Card */}
           <RackUtilizationCard rackStats={rackStats} />
-          
           {/* Rack Properties */}
           <RackPropertiesCard rack={selectedRack} />
         </div>

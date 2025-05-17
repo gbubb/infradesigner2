@@ -19,7 +19,7 @@ export const AppSidebar: React.FC = () => {
 
   return (
     <nav
-      className={`flex flex-col items-center h-full w-full px-2 pt-4 pb-4`} // remove vertical centering from parent
+      className={`flex flex-col items-center h-full w-full px-2 pt-4 pb-4`}
       style={{
         background: "#1A3A5F",
         minWidth: SIDEBAR_WIDTH,
@@ -48,18 +48,18 @@ export const AppSidebar: React.FC = () => {
                 hover:shadow-md
               `}
               style={{
-                width: "94%", // button fills most of sidebar width but leaves a little space
+                width: "94%",
                 minWidth: "98px",
-                height: "84px", // taller for icon/label layout
+                height: "68px", // reduced height from 84px to 68px
                 borderRadius: "14px",
                 boxSizing: "border-box"
               }}
             >
-              <div className="flex flex-col items-center justify-center pt-3 flex-1 w-full">
-                <section.icon size={28} strokeWidth={2.2} className="mb-1 flex-shrink-0 text-white" />
+              <div className="flex flex-col items-center justify-center pt-2 flex-1 w-full">
+                <section.icon size={26} strokeWidth={2.2} className="mb-1 flex-shrink-0 text-white" />
                 <span
                   className={`
-                    font-semibold text-[15px] tracking-tight text-white text-center leading-tight
+                    font-semibold text-[14px] tracking-tight text-white text-center leading-tight
                     pointer-events-none select-none
                     whitespace-nowrap
                   `}
