@@ -25,7 +25,7 @@ import { AutomatedPlacementService, PlacementReport } from '@/services/automated
 import { ClusterAZAssignmentDialog } from './rack-layouts/ClusterAZAssignmentDialog';
 import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
 import { LayoutPersistenceService } from '@/services/layoutPersistenceService';
-import { PlacementReportDialog } from './rack-layouts/PlacementReportDialog';
+import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
 
 export const RackLayoutsTab: React.FC = () => {
   const { rackProfiles, availabilityZones } = useRackInitialization();
