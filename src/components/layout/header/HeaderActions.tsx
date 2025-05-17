@@ -29,6 +29,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
+// Create a new form factor for actions: compact, boxy, shadow, neutral bg, minimal border radius, similar to sidebar, but gray
+const actionButtonNeutralStyle =
+  "bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] shadow rounded-md border border-gray-300 px-2.5 py-1.5 min-w-[44px] min-h-[39px] flex flex-row gap-1.5 items-center text-[0.97rem] font-medium transition-all focus:outline-none";
+
+// NOTE: For sidebar buttons use color, for top action buttons use neutral style only
+
 export const HeaderActions = () => {
   const { activeDesign, deleteDesign, saveDesign, exportDesign, importDesign, togglePublicAccess } = useDesignStore();
   const [newDialogOpen, setNewDialogOpen] = useState(false);
@@ -87,90 +93,82 @@ export const HeaderActions = () => {
   return (
     <div className="flex items-center gap-2">
       <ThemeToggle />
-      
-      <Button
-        variant="outline"
-        size="sm"
+
+      <button
+        className={actionButtonNeutralStyle}
         onClick={() => setNewDialogOpen(true)}
       >
-        <PlusCircle className="mr-2 h-4 w-4" />
+        <PlusCircle className="h-4 w-4 mr-1.5" />
         New
-      </Button>
+      </button>
       
-      <Button
-        variant="outline"
-        size="sm"
+      <button
+        className={actionButtonNeutralStyle}
         onClick={() => setLoadDialogOpen(true)}
       >
-        <Download className="mr-2 h-4 w-4" />
+        <Download className="h-4 w-4 mr-1.5" />
         Load
-      </Button>
+      </button>
       
       {activeDesign && (
         <>
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            className={actionButtonNeutralStyle}
             onClick={() => saveDesign()}
           >
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="h-4 w-4 mr-1.5" />
             Save
-          </Button>
+          </button>
           
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            className={actionButtonNeutralStyle}
             onClick={() => exportDesign()}
           >
-            <Upload className="mr-2 h-4 w-4" />
+            <Upload className="h-4 w-4 mr-1.5" />
             Export
-          </Button>
+          </button>
           
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            className={actionButtonNeutralStyle}
             onClick={handleImport}
           >
-            <Import className="mr-2 h-4 w-4" />
+            <Import className="h-4 w-4 mr-1.5" />
             Import
-          </Button>
+          </button>
           
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            className={actionButtonNeutralStyle}
             onClick={handleShareDesign}
           >
-            <Share2 className="mr-2 h-4 w-4" />
+            <Share2 className="h-4 w-4 mr-1.5" />
             Share
-          </Button>
+          </button>
           
-          <Button
-            variant={activeDesign.is_public ? "default" : "outline"}
-            size="sm"
+          <button
+            className={actionButtonNeutralStyle + (activeDesign.is_public ? " opacity-70" : "")}
             onClick={handleTogglePublicAccess}
           >
-            <Globe className="mr-2 h-4 w-4" />
+            <Globe className="h-4 w-4 mr-1.5" />
             {activeDesign.is_public ? "Public" : "Private"}
-          </Button>
+          </button>
           
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            className={actionButtonNeutralStyle}
             onClick={() => setDeleteDialogOpen(true)}
           >
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 className="h-4 w-4 mr-1.5" />
             Delete
-          </Button>
+          </button>
         </>
       )}
       
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <Avatar className="h-8 w-8">
+          <button className="rounded-full bg-[#e9eaf3] w-9 h-9 flex items-center justify-center shadow border border-gray-300 hover:bg-gray-200">
+            <Avatar className="h-7 w-7">
               <AvatarFallback>{getUserInitials()}</AvatarFallback>
             </Avatar>
-          </Button>
+          </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem disabled>{user?.email}</DropdownMenuItem>

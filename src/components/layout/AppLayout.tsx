@@ -6,7 +6,7 @@ import { ComponentProvider } from "@/context/ComponentContext";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Outlet } from "react-router-dom";
 
-// The structure is: Header (sticky, full width) -> Sidebar (vertical, starts beneath header) -> Content
+// The structure is: Header (sticky, full width) -> Sidebar (fixed vertical, beneath header, does NOT scroll with content) -> Scrollable Main Content
 export const AppLayout: React.FC = () => {
   const { activeDesign } = useDesignStore();
 
@@ -16,11 +16,15 @@ export const AppLayout: React.FC = () => {
       <div className="sticky top-0 z-50 w-full">
         <Header />
       </div>
-      {/* Sidebar beneath header */}
-      <div className="w-full bg-transparent flex flex-row">
-        <AppSidebar />
+      {/* Main area: sidebar as fixed vertical, content scrolls beside */}
+      <div className="flex flex-1 min-h-0">
+        {/* Fixed Sidebar Frame */}
+        <div className="relative z-40">
+          <AppSidebar />
+        </div>
+        {/* Scrollable Content */}
         <ComponentProvider>
-          <div className="flex-1 flex flex-col overflow-hidden relative bg-background">
+          <div className="flex-1 flex flex-col overflow-auto bg-background relative">
             {!activeDesign && (
               <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center z-50 p-8">
                 <div className="bg-white rounded-lg p-6 max-w-lg text-center opacity-75 pointer-events-none">
