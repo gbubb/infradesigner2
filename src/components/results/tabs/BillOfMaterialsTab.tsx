@@ -10,6 +10,9 @@ import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
 import { TransceiverModel } from '@/types/infrastructure/transceiver-types';
 import { CableMediaType } from '@/types/infrastructure/port-types';
 import { summarizeCablesFromConnections, summarizeTransceiversFromConnections, createPortUtilizationRows } from '../bom/networkBomUtils';
+import ComputeStorageTable from '../bom/ComputeStorageTable';
+import NetworkTable from '../bom/NetworkTable';
+import CablingTable from '../bom/CablingTable';
 
 const getBomGroupKey = (component: InfrastructureComponent): string => {
   return component.templateId || `${component.manufacturer}-${component.model}-${component.type}-${component.role || ''}`;
@@ -231,145 +234,16 @@ export const BillOfMaterialsTab: React.FC = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Compute & Storage Components</CardTitle>
-              <Button onClick={() => handleExport('Compute')} variant="ghost" size="sm">
-                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Compute
-              </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Cluster</TableHead>
-                    <TableHead>Manufacturer</TableHead>
-                    <TableHead>Model</TableHead>
-                    <TableHead>CPU Model</TableHead>
-                    <TableHead className="text-right">Memory (GB)</TableHead>
-                    <TableHead className="text-right">Disks</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Unit Cost (€)</TableHead>
-                    <TableHead className="text-right">Total Cost (€)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {/* Compute Node Summary (unchanged) */}
-                  {summarizedComponentsByCategory['Compute']?.map((component) => {
-                    const quantity = component.summarizedQuantity;
-                    const totalCost = component.cost * quantity;
-                    const roleId = useComponentRoleId(component);
-                    return (
-                      <TableRow key={`compute-${getBomGroupKey(component)}`}>
-                        <TableCell>{component.type}</TableCell>
-                        <TableCell>{component.role || 'Unassigned'}</TableCell>
-                        <TableCell>-</TableCell>
-                        <TableCell>{component.manufacturer}</TableCell>
-                        <TableCell>{component.model}</TableCell>
-                        <TableCell>{(component as any).cpuModel || '-'}</TableCell>
-                        <TableCell className="text-right">{(component as any).memoryCapacity || (component as any).memoryGB || '-'}</TableCell>
-                        <TableCell className="text-right">-</TableCell>
-                        <TableCell className="text-right flex items-center gap-1 justify-end">
-                          {quantity}
-                          {roleId && (
-                            <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {/* Storage Node Summary By Cluster/Disk config */}
-                  {summarizedComponentsByCategory['Storage']?.filter(
-                    c => c.type === ComponentType.Server && c.role === 'storageNode'
-                  ).map((server) => {
-                    const quantity = server.summarizedQuantity;
-                    const totalCost = server.cost * quantity;
-                    const roleId = useComponentRoleId(server);
-                    // Show cluster or assignment
-                    const clusterName =
-                      (server as any).clusterInfo?.clusterName ||
-                      (server as any).clusterInfo?.clusterId ||
-                      'Unassigned';
-                    // Render attached disks as a short string
-                    const attachedDisks = (server as any).attachedDisks || [];
-                    const disksSummary = attachedDisks.length > 0
-                      ? attachedDisks
-                          .map((disk: any) =>
-                            `${disk.model} (${disk.quantity} × ${disk.capacityTB}TB)`
-                          )
-                          .join(', ')
-                      : '-';
-                    return (
-                      <TableRow key={`storage-node-${getStorageNodeGroupKey(server)}`}>
-                        <TableCell className="font-medium">Storage Node</TableCell>
-                        <TableCell>{server.role || 'Unassigned'}</TableCell>
-                        <TableCell>{clusterName}</TableCell>
-                        <TableCell>{server.manufacturer}</TableCell>
-                        <TableCell>{server.model}</TableCell>
-                        <TableCell>{(server as any).cpuModel || '-'}</TableCell>
-                        <TableCell className="text-right">{(server as any).memoryCapacity || (server as any).memoryGB || '-'}</TableCell>
-                        <TableCell className="text-right">{disksSummary}</TableCell>
-                        <TableCell className="text-right flex items-center gap-1 justify-end">
-                          {quantity}
-                          {roleId && (
-                            <CalculationBreakdownDialog roleId={roleId} roleName={server.role || ''} />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">€{server.cost.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {/* Disks: Line items, grouped by disk/cluster */}
-                  {Object.values(diskLineItems).map((diskItem, idx) => {
-                    const disk = diskItem.disk;
-                    const quantity = diskItem.summarizedQuantity;
-                    const totalCost = diskItem.totalDiskCost;
-                    return (
-                      <TableRow key={`disk-lineitem-${diskItem.configKey}-${disk.model}-${disk.capacityTB}-${diskItem.clusterId}-${idx}`}>
-                        <TableCell className="pl-4">Disk</TableCell>
-                        <TableCell>{disk.diskType || '-'}</TableCell>
-                        <TableCell>{diskItem.clusterName}</TableCell>
-                        <TableCell>{disk.manufacturer}</TableCell>
-                        <TableCell>{disk.model}</TableCell>
-                        <TableCell>-</TableCell>
-                        <TableCell className="text-right">{disk.capacityTB} TB</TableCell>
-                        <TableCell className="text-right">-</TableCell>
-                        <TableCell className="text-right">{quantity}</TableCell>
-                        <TableCell className="text-right">€{(disk.cost ?? 0).toLocaleString()}</TableCell>
-                        <TableCell className="text-right">€{(totalCost ?? 0).toLocaleString()}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {/* Acceleration hardware as before */}
-                  {summarizedComponentsByCategory['Acceleration']?.map((component) => {
-                    const quantity = component.summarizedQuantity;
-                    const totalCost = component.cost * quantity;
-                    const roleId = useComponentRoleId(component);
-                    return (
-                      <TableRow key={`gpu-${getBomGroupKey(component)}`}>
-                        <TableCell>{component.type}</TableCell>
-                        <TableCell>{component.role || 'Unassigned'}</TableCell>
-                        <TableCell>-</TableCell>
-                        <TableCell>{component.manufacturer}</TableCell>
-                        <TableCell>{component.model}</TableCell>
-                        <TableCell>-</TableCell>
-                        <TableCell className="text-right">-</TableCell>
-                        <TableCell className="text-right">-</TableCell>
-                        <TableCell className="text-right flex items-center gap-1 justify-end">
-                          {quantity}
-                          {roleId && (
-                            <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <ComputeStorageTable
+                summarizedComponentsByCategory={summarizedComponentsByCategory}
+                diskLineItems={diskLineItems}
+                getBomGroupKey={getBomGroupKey}
+                getStorageNodeGroupKey={getStorageNodeGroupKey}
+                useComponentRoleId={useComponentRoleId}
+                onExport={handleExport}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -378,65 +252,15 @@ export const BillOfMaterialsTab: React.FC = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Network Components</CardTitle>
-              <Button onClick={() => handleExport('Network')} variant="ghost" size="sm">
-                 <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Network
-              </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Manufacturer</TableHead>
-                    <TableHead>Model</TableHead>
-                    <TableHead>Port Count</TableHead>
-                    <TableHead>Port Speed</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Unit Cost (€)</TableHead>
-                    <TableHead className="text-right">Total Cost (€)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[...(summarizedComponentsByCategory['Network'] || []), ...(summarizedComponentsByCategory['Security'] || [])].map((component) => {
-                    const quantity = component.summarizedQuantity;
-                    const totalCost = component.cost * quantity;
-                    const roleId = useComponentRoleId(component);
-                    return (
-                      <TableRow key={`network-${getBomGroupKey(component)}`}>
-                        <TableCell>{component.type}</TableCell>
-                        <TableCell>{component.role || component.switchRole || 'Unassigned'}</TableCell>
-                        <TableCell>{component.manufacturer}</TableCell>
-                        <TableCell>{component.model}</TableCell>
-                        <TableCell>{(component as any).portCount || (component as any).portsProvidedQuantity || '-'}</TableCell>
-                        <TableCell>{(component as any).portSpeed || (component as any).portSpeedType || '-'}</TableCell>
-                        <TableCell className="text-right flex items-center gap-1 justify-end">
-                          {quantity}
-                          {roleId && (
-                            <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {/* --- NEW: Transceiver Line Items --- */}
-                  {Object.values(transceiverLineItems).map((item, idx) => (
-                    <TableRow key={`trxline-${item.transceiverModel}-${idx}`}>
-                      <TableCell>Transceiver</TableCell>
-                      <TableCell>-</TableCell>
-                      <TableCell>-</TableCell>
-                      <TableCell>{item.model}</TableCell>
-                      <TableCell>-</TableCell>
-                      <TableCell>{item.transceiverModel}</TableCell>
-                      <TableCell className="text-right">{item.count}</TableCell>
-                      <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <NetworkTable
+                summarizedComponentsByCategory={summarizedComponentsByCategory}
+                transceiverLineItems={transceiverLineItems}
+                getBomGroupKey={getBomGroupKey}
+                useComponentRoleId={useComponentRoleId}
+                onExport={handleExport}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -445,62 +269,14 @@ export const BillOfMaterialsTab: React.FC = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Cabling Components</CardTitle>
-              <Button onClick={() => handleExport('Cabling')} variant="ghost" size="sm">
-                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Cabling
-              </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Manufacturer</TableHead>
-                    <TableHead>Model</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Unit Cost (€)</TableHead>
-                    <TableHead className="text-right">Total Cost (€)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[...(summarizedComponentsByCategory['Cabling'] || []), ...(summarizedComponentsByCategory['Cables'] || [])].map((component) => {
-                    const quantity = component.summarizedQuantity;
-                    const totalCost = component.cost * quantity;
-                    let details = '-';
-                    if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${(component as any).cassetteCapacity} cassettes`;
-                    else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${(component as any).portQuantity} ports`;
-                    else if (component.type === ComponentType.Cassette) details = `${(component as any).portType}, ${(component as any).portQuantity} ports`;
-                    else if (component.type === ComponentType.Cable) details = `${(component as any).length}m, ${(component as any).connectorA_Type} to ${(component as any).connectorB_Type}, ${(component as any).mediaType}`;
-                    // Cabling inventory does not have calculation breakdowns
-                    return (
-                      <TableRow key={`cabling-${getBomGroupKey(component)}`}>
-                        <TableCell>{component.type}</TableCell>
-                        <TableCell>{component.manufacturer}</TableCell>
-                        <TableCell>{component.model}</TableCell>
-                        <TableCell>{details}</TableCell>
-                        <TableCell className="text-right">{quantity}</TableCell>
-                        <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {/* --- NEW: Cable Line Items --- */}
-                  {Object.values(cableLineItems).map((item, idx) => (
-                    <TableRow key={`cableline-${item.cableTemplateId}-${item.lengthMeters}-${idx}`}>
-                      <TableCell>
-                        <CableIcon className="inline-block mr-1" size={16}/>
-                        Cable
-                      </TableCell>
-                      <TableCell>-</TableCell>
-                      <TableCell>{item.model}</TableCell>
-                      <TableCell>{item.details}</TableCell>
-                      <TableCell className="text-right">{item.count}</TableCell>
-                      <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <CablingTable
+                summarizedComponentsByCategory={summarizedComponentsByCategory}
+                cableLineItems={cableLineItems}
+                getBomGroupKey={getBomGroupKey}
+                onExport={handleExport}
+              />
             </CardContent>
           </Card>
         </TabsContent>
