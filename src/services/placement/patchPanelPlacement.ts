@@ -39,13 +39,10 @@ export function placePatchPanel({
   const isCopperPatchPanel = typeLabel.includes('copperpatchpanel');
   const isFiberPatchPanel = typeLabel.includes('fiberpatchpanel');
 
-  // Extensive debug logs to trace patch panel count enforcement
-  console.log("=== PATCH PANEL DEBUG: Begin placement attempt ===");
-  console.log(`[DEBUG] Component: ${component.name} (id: ${component.id}), typeLabel: ${typeLabel}`);
-  console.log(`[DEBUG] Placement vars: copperPatchPanelsPerAZ=${copperPatchPanelsPerAZ}, fiberPatchPanelsPerAZ=${fiberPatchPanelsPerAZ}, copperPatchPanelsPerCoreRack=${copperPatchPanelsPerCoreRack}, fiberPatchPanelsPerCoreRack=${fiberPatchPanelsPerCoreRack}`);
+  // Remove debug log
+  const perCoreRackQty = isCopperPatchPanel ? copperPatchPanelsPerCoreRack : fiberPatchPanelsPerCoreRack;
 
   // 1. Place in Core racks with their specific perCoreRackQty (separate for copper/fiber, only applies to core)
-  const perCoreRackQty = isCopperPatchPanel ? copperPatchPanelsPerCoreRack : fiberPatchPanelsPerCoreRack;
   if (perCoreRackQty > 0 && coreRacks.length > 0) {
     coreRacks.forEach((r, idx) => {
       // For this *type* only
@@ -55,7 +52,6 @@ export function placePatchPanel({
         const lbl = getTypeKey(dev);
         return isCopperPatchPanel ? lbl.includes('copperpatchpanel') : lbl.includes('fiberpatchpanel');
       }).length;
-      console.log(`[DEBUG][CORE][${typeLabel}] Rack ${r.name} (${r.id}) has ${countOfThisType}/${perCoreRackQty}`);
     });
     for (const r of coreRacks) {
       const countOfThisType = r.devices.filter(d => {
@@ -83,13 +79,10 @@ export function placePatchPanel({
             rackId: r.id,
             ruPosition: placement.ruPosition,
           };
-          console.log(`[DEBUG][CORE][${typeLabel}] Placed in rack ${r.name} (${r.id}) at RU pos ${placement.ruPosition}, now count: ${countOfThisType+1}/${perCoreRackQty}`);
           return { placed, reportItem };
         } else {
-          console.log(`[DEBUG][CORE][${typeLabel}] Could not place in rack ${r.name} (${r.id}) - no available RU`);
         }
       } else {
-        console.log(`[DEBUG][CORE][${typeLabel}] Rack ${r.name} (${r.id}) already at or over limit (${countOfThisType}/${perCoreRackQty})`);
       }
     }
   }
@@ -179,7 +172,6 @@ export function placePatchPanel({
       status: "failed",
       reason: "Could not place patch panel of this type (all racks/AZs at capacity for this TYPE)",
     };
-    console.log(`[FAIL][${typeLabel}] Could not place anywhere: all racks/AZs at capacity for this type`);
   }
 
   return { placed, reportItem };

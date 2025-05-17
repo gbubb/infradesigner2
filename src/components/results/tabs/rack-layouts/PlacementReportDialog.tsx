@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -18,33 +18,26 @@ interface PlacementReportDialogProps {
   rackNameMap: Record<string, string>;
 }
 
-export const PlacementReportDialog: React.FC<PlacementReportDialogProps> = ({
+const PlacementReportDialog: React.FC<PlacementReportDialogProps> = ({
   open,
   onOpenChange,
   placementReport,
   azNameMap,
   rackNameMap,
 }) => {
-  // Diagnostic logs at the start of the component function
-  console.log('[PlacementReportDialog] Received props:', { open, placementReport, azNameMap, rackNameMap });
+  const [isOpen, setIsOpen] = useState(open);
 
-  if (placementReport) {
-    console.log('[PlacementReportDialog] placementReport.items?.length:', placementReport.items?.length);
-  } else {
-    console.log('[PlacementReportDialog] placementReport is null or undefined at start');
+  useEffect(() => {
+    setIsOpen(open);
+  }, [open]);
+
+  if (!placementReport) {
+    return null;
   }
 
-  // Diagnostic log for AlertDialogDescription content decision
-  console.log('[PlacementReportDialog] Preparing AlertDialogDescription, placementReport:', placementReport);
-
-  // Diagnostic log for main content conditional decision
-  console.log('[PlacementReportDialog] Before main content conditional, placementReport:', placementReport);
-
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent 
-        className="sm:max-w-[1100px] w-full max-h-[80vh] overflow-y-auto"
-      >
+    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+      <AlertDialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <button
           className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 z-[10000] text-2xl bg-white p-1 rounded"
           style={{ lineHeight: 1, border: "none", cursor: "pointer" }}
@@ -131,3 +124,5 @@ export const PlacementReportDialog: React.FC<PlacementReportDialogProps> = ({
     </AlertDialog>
   );
 };
+
+export default PlacementReportDialog;

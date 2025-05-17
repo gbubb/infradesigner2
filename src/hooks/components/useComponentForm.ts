@@ -130,6 +130,7 @@ export const useComponentForm = () => {
       
       toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`);
       return false;
+
     }
     
     // Validate RU range
@@ -206,3 +207,4 @@ export const useComponentForm = () => {
     processFormForSubmission
   };
 };
+
