@@ -1,3 +1,4 @@
+
 import { ComponentType, componentTypeToCategory, InfrastructureComponent } from '@/types/infrastructure';
 
 // Accepts all BOM objects from the tab.
@@ -28,16 +29,18 @@ export function generateBomCsvContent({
     ...Object.values(diskLineItems).filter(isPlainObject)
   );
 
-  // Only spread over plain objects and add type as needed
+  // Use .reduce to guarantee only plain objects are spread, TS-safe
   dataToExport.push(
-    ...Object.values(cableLineItems)
-      .filter(isPlainObject)
-      .map(item => ({ ...item, type: "Cable" }))
+    ...Object.values(cableLineItems).reduce<any[]>((acc, item) => {
+      if (isPlainObject(item)) acc.push({ ...item, type: "Cable" });
+      return acc;
+    }, [])
   );
   dataToExport.push(
-    ...Object.values(transceiverLineItems)
-      .filter(isPlainObject)
-      .map(item => ({ ...item, type: "Transceiver" }))
+    ...Object.values(transceiverLineItems).reduce<any[]>((acc, item) => {
+      if (isPlainObject(item)) acc.push({ ...item, type: "Transceiver" });
+      return acc;
+    }, [])
   );
 
   dataToExport.forEach(component => {
@@ -56,3 +59,4 @@ export function generateBomCsvContent({
   });
   return encodeURI(csvContent);
 }
+
