@@ -9,7 +9,8 @@ export enum ComponentType {
   FiberPatchPanel = 'FiberPatchPanel',
   CopperPatchPanel = 'CopperPatchPanel',
   Cassette = 'Cassette',
-  Cable = 'Cable'
+  Cable = 'Cable',
+  Transceiver = 'Transceiver' // NEW
 }
 
 export enum ComponentCategory {
@@ -19,7 +20,8 @@ export enum ComponentCategory {
   Security = 'Security',
   Acceleration = 'Acceleration',
   Cabling = 'Cabling',
-  Cables = 'Cables'
+  Cables = 'Cables',
+  Optics = 'Optics' // NEW: for transceivers
 }
 
 export const componentTypeToCategory: Record<ComponentType, ComponentCategory> = {
@@ -32,7 +34,8 @@ export const componentTypeToCategory: Record<ComponentType, ComponentCategory> =
   [ComponentType.FiberPatchPanel]: ComponentCategory.Cabling,
   [ComponentType.CopperPatchPanel]: ComponentCategory.Cabling,
   [ComponentType.Cassette]: ComponentCategory.Cabling,
-  [ComponentType.Cable]: ComponentCategory.Cables
+  [ComponentType.Cable]: ComponentCategory.Cables,
+  [ComponentType.Transceiver]: ComponentCategory.Optics // NEW
 };
 
 // Define ConnectorType here to avoid circular imports

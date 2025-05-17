@@ -3,6 +3,7 @@ import { DesignRequirements } from './requirements-types';
 import { ComponentRole } from './roles-types';
 import { RackProfile } from './rack-types';
 import { ConnectionRule } from './connection-rule-types';
+import { NetworkConnection } from './connection-types';
 
 // Infrastructure Design interface
 export interface InfrastructureDesign {
@@ -27,6 +28,8 @@ export interface InfrastructureDesign {
   connections?: Connection[];
   // Connection rules
   connectionRules?: ConnectionRule[];
+  // Physical network connections
+  networkConnections?: NetworkConnection[]; // NEW
 }
 
 // Workspace types for component positioning

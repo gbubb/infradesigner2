@@ -1,4 +1,3 @@
-
 // Re-export all types from their respective files
 export * from './component-types';
 export * from './server-types';
@@ -12,3 +11,5 @@ export * from './design-types';
 export * from './port-types';
 export * from './rack-types';
 export * from './connection-rule-types';
+export * from './transceiver-types';
+export * from './connection-types';
