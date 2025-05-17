@@ -24,13 +24,13 @@ export const AppLayout: React.FC = () => {
         <div
           className="fixed left-0"
           style={{
-            top: HEADER_HEIGHT + 8,
-            height: `calc(100vh - ${HEADER_HEIGHT + 8}px)`,
+            top: HEADER_HEIGHT,
+            height: `calc(100vh - ${HEADER_HEIGHT}px)`, // aligns sidebar to header, removes the offset gap
             width: SIDEBAR_WIDTH,
             zIndex: 40,
             background: "#1A3A5F",
             borderRight: "1px solid #1A3A5F",
-            paddingTop: 0 // No extra padding needed inside; handled in sidebar
+            paddingTop: 0
           }}
         >
           <AppSidebar />

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   PlusCircle, 
@@ -32,13 +31,13 @@ const actionButtonsConfig = [
   {
     key: 'new',
     icon: <PlusCircle size={26} />,
-    label: "New Design",
+    label: "New",
     onClick: 'setNewDialogOpen'
   },
   {
     key: 'load',
     icon: <Download size={26} />,
-    label: "Load Design",
+    label: "Load",
     onClick: 'setLoadDialogOpen'
   },
 ];
@@ -105,8 +104,8 @@ export const HeaderActions = () => {
       type="button"
       className={`${buttonBase} ${hoveredButton === buttonKey ? buttonExpanded : buttonCompact} ${disabled ? "opacity-60" : ""}`}
       style={{
-        minWidth: hoveredButton === buttonKey ? 110 : 40,
-        maxWidth: 220,
+        minWidth: hoveredButton === buttonKey ? 80 : 40,
+        maxWidth: 200,
         transition: "all 0.16s cubic-bezier(.4,1,.3,1)",
       }}
       onClick={onClick}
@@ -133,13 +132,13 @@ export const HeaderActions = () => {
       {/* Always show topbar actions including new/load, others conditionally */}
       <TopbarButton
         icon={<PlusCircle size={26} />}
-        label="New Design"
+        label="New"
         onClick={() => setNewDialogOpen(true)}
         buttonKey="new"
       />
       <TopbarButton
         icon={<Download size={26} />}
-        label="Load Design"
+        label="Load"
         onClick={() => setLoadDialogOpen(true)}
         buttonKey="load"
       />
@@ -147,25 +146,25 @@ export const HeaderActions = () => {
         <>
           <TopbarButton
             icon={<Save size={26} />}
-            label="Save Design"
+            label="Save"
             onClick={() => saveDesign()}
             buttonKey="save"
           />
           <TopbarButton
             icon={<Upload size={26} />}
-            label="Export Design"
+            label="Export"
             onClick={() => exportDesign()}
             buttonKey="export"
           />
           <TopbarButton
             icon={<Import size={26} />}
-            label="Import Design"
+            label="Import"
             onClick={handleImport}
             buttonKey="import"
           />
           <TopbarButton
             icon={<Share2 size={26} />}
-            label="Share Design"
+            label="Share"
             onClick={() => setShareDialogOpen(true)}
             buttonKey="share"
           />
@@ -182,7 +181,7 @@ export const HeaderActions = () => {
           />
           <TopbarButton
             icon={<Trash2 size={26} />}
-            label="Delete Design"
+            label="Delete"
             onClick={() => setDeleteDialogOpen(true)}
             buttonKey="delete"
           />
