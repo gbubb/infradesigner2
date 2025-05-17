@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Header } from "@/components/layout/header";
 import { useDesignStore } from "@/store/designStore";
@@ -13,6 +12,10 @@ const HEADER_HEIGHT = 60;
 export const AppLayout: React.FC = () => {
   const { activeDesign } = useDesignStore();
 
+  // Increase sidebar top offset for clear button spacing under header.
+  const HEADER_GAP = 16; // px (adjusted up from 8px)
+  const SIDEBAR_TOP = HEADER_HEIGHT + HEADER_GAP;
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Sticky Top Bar */}
@@ -21,17 +24,17 @@ export const AppLayout: React.FC = () => {
       </div>
       {/* Main area layout: sidebar fixed under header, main scrollable content */}
       <div className="flex flex-1 min-h-0 relative">
-        {/* Sidebar: fixed, below header */}
+        {/* Sidebar: fixed, below header. Add proper top padding. */}
         <div
           className="fixed left-0"
           style={{
-            top: HEADER_HEIGHT + 8, // 8px gap ensures full separation from header (adjust if needed)
-            height: `calc(100vh - ${HEADER_HEIGHT + 8}px)`,
+            top: SIDEBAR_TOP,
+            height: `calc(100vh - ${SIDEBAR_TOP}px)`,
             width: SIDEBAR_WIDTH,
             zIndex: 40,
             background: "#1A3A5F",
             borderRight: "1px solid #1A3A5F",
-            paddingTop: 0 // No extra padding needed inside; handled in sidebar
+            paddingTop: 0
           }}
         >
           <AppSidebar />
