@@ -24,18 +24,22 @@ export function generateBomCsvContent({
   // Safe: summarizedComponentsByCategory values should be arrays of objects.
   Object.values(summarizedComponentsByCategory).forEach(arr => dataToExport.push(...arr));
   // Safe: diskLineItems should be objects.
-  dataToExport.push(...Object.values(diskLineItems));
+  dataToExport.push(
+    ...Object.values(diskLineItems).filter(isPlainObject)
+  );
 
-  // Only spread over plain objects
+  // Only spread over plain objects and explicitly check before spreading
   dataToExport.push(
     ...Object.values(cableLineItems)
       .filter(isPlainObject)
-      .map(item => ({ ...item, type: "Cable" }))
+      .map(item => isPlainObject(item) ? { ...item, type: "Cable" } : undefined)
+      .filter(Boolean)
   );
   dataToExport.push(
     ...Object.values(transceiverLineItems)
       .filter(isPlainObject)
-      .map(item => ({ ...item, type: "Transceiver" }))
+      .map(item => isPlainObject(item) ? { ...item, type: "Transceiver" } : undefined)
+      .filter(Boolean)
   );
 
   dataToExport.forEach(component => {
