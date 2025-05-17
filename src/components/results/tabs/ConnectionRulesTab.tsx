@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Button } from '@/components/ui/button';
@@ -263,17 +262,19 @@ export const ConnectionRulesTab: React.FC = () => {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {currentRule ? 'Edit Connection Rule' : 'New Connection Rule'}
             </DialogTitle>
           </DialogHeader>
-          <ConnectionRuleForm
-            initialValues={currentRule}
-            onSave={handleSaveRule}
-            onCancel={() => setIsDialogOpen(false)}
-          />
+          <div className="overflow-y-auto max-h-[75vh] px-2">
+            <ConnectionRuleForm
+              initialValues={currentRule}
+              onSave={handleSaveRule}
+              onCancel={() => setIsDialogOpen(false)}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
