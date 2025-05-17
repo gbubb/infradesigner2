@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useDesignStore } from "@/store/designStore";
@@ -8,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Save, Trash2, Plus, Network } from "lucide-react";
 import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent } from "@/types/infrastructure";
+import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
+import ConnectionReportModal from "./ConnectionReportModal";
 
 // Table display row type for formatted data
 type NetworkConnectionTableRow = {
@@ -106,6 +107,9 @@ const NetworkConnectionsTab: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortCol, setSortCol] = useState<string>("sourceDeviceId");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
+  // NEW: For the generation report modal
+  const [generationReport, setGenerationReport] = useState<ConnectionAttempt[] | null>(null);
+  const [showReport, setShowReport] = useState(false);
 
   // Memoized filtered and sorted table rows
   const displayedRows = useMemo(() => {
@@ -131,9 +135,18 @@ const NetworkConnectionsTab: React.FC = () => {
     if (!activeDesign) return;
     setGenerating(true);
     try {
-      const connections = generateConnections(activeDesign, activeDesign.connectionRules || []);
-      setNetworkConnections(connections);
-      toast.success(`Generated ${connections.length} network connections`);
+      // Generate full report
+      const attempts = generateConnections(activeDesign, activeDesign.connectionRules || []);
+      setGenerationReport(attempts);
+      setShowReport(true);
+      // Only those with status "Success"
+      const successfulConnections = attempts.filter(a => a.status === "Success" && a.connection).map(a => a.connection!);
+      setNetworkConnections(successfulConnections);
+      if (successfulConnections.length > 0) {
+        toast.success(`Successful network connections: ${successfulConnections.length}. See report for details.`);
+      } else {
+        toast.info("No successful connections established — see report for details.");
+      }
     } catch (err) {
       toast.error("Error generating network connections");
     } finally {
@@ -231,6 +244,14 @@ const NetworkConnectionsTab: React.FC = () => {
           </TableBody>
         </Table>
       </div>
+      {/* NEW: Modal for connection generation report */}
+      {generationReport && (
+        <ConnectionReportModal
+          open={showReport}
+          onClose={() => setShowReport(false)}
+          report={generationReport}
+        />
+      )}
     </div>
   );
 };

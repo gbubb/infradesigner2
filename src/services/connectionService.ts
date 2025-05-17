@@ -1,7 +1,23 @@
-import { InfrastructureDesign, ConnectionRule, NetworkConnection, PlacedDevice, RackProfile } from '@/types/infrastructure';
-import { InfrastructureComponent, ComponentType, Port, PortRole, MediaType, PortSpeed, DeviceOrientation } from '@/types/infrastructure';
-import { Cable, Transceiver, TransceiverModel } from '@/types/infrastructure';
-import { CableMediaType, ConnectorType } from '@/types/infrastructure';
+import {
+  InfrastructureDesign,
+  ConnectionRule,
+  NetworkConnection,
+  PlacedDevice,
+  RackProfile,
+  // ... keep existing code (other Infrastructure types) ...
+} from "@/types/infrastructure";
+import {
+  InfrastructureComponent,
+  ComponentType,
+  Port,
+  PortRole,
+  MediaType,
+  PortSpeed,
+  DeviceOrientation,
+} from "@/types/infrastructure";
+// ... keep existing code (Cable and Transceiver imports) ...
+import { CableMediaType, ConnectorType } from "@/types/infrastructure";
+import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
 
 // Constants for estimation (can be adjusted or exposed)
 const RU_HEIGHT_CM = 4.45; // 1 RU height in cm
@@ -29,19 +45,31 @@ function filterDevicesByCriteria(
   });
 }
 
+// NEW: Helper for port role matching (array support)
+function matchesPortRole(portRole: PortRole | undefined, criteria: PortRole[] | undefined): boolean {
+  if (!criteria?.length) return true;
+  if (!portRole) return false;
+  return criteria.includes(portRole);
+}
+
 // Returns ports matching port criteria from a device
 function filterPorts(
   device: InfrastructureComponent,
-  role?: PortRole,
+  roleArr?: PortRole[],
   speed?: PortSpeed,
   media?: MediaType
 ): Port[] {
   if (!device.ports) return [];
-  return device.ports.filter(p => 
-    (!role || p.role === role) &&
+  return device.ports.filter((p) =>
+    (!roleArr?.length || matchesPortRole(p.role, roleArr)) &&
     (!speed || p.speed === speed) &&
     (!media || p.mediaType === media)
   );
+}
+
+// Returns device name from id
+function getDeviceName(components: InfrastructureComponent[], id: string) {
+  return components.find(d => d.id === id)?.name || id?.substring(0, 6);
 }
 
 // Try to find a compatible cable (template) from the library
@@ -89,20 +117,30 @@ function estimateCableLength(
   }
 }
 
+// --- KEY UPDATE: generateConnections now returns ConnectionAttempt[] ---
 export function generateConnections(
-  design: InfrastructureDesign, 
+  design: InfrastructureDesign,
   rules: ConnectionRule[]
-): NetworkConnection[] {
+): ConnectionAttempt[] {
   const { components, rackprofiles } = design;
-  if (!components) return [];
-  const cables = components.filter(c => c.type === ComponentType.Cable) as Cable[];
-  const transceivers = components.filter(c => c.type === ComponentType.Transceiver) as Transceiver[];
-  const allDevices = components.filter(c => 
+  const connectionAttempts: ConnectionAttempt[] = [];
+  if (!components || !components.length) {
+    connectionAttempts.push({
+      status: "Info",
+      reason: "No components in active design.",
+    });
+    return connectionAttempts;
+  }
+  const cables = components.filter((c) => c.type === ComponentType.Cable) as Cable[];
+  const transceivers = components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[];
+  const allDevices = components.filter((c) =>
     [ComponentType.Server, ComponentType.Switch, ComponentType.Router, ComponentType.Firewall].includes(c.type)
   );
-
+  // Internal mapping for in-flight connection state
+  const usedSrcPorts = new Set<string>();
+  const usedDstPorts = new Set<string>();
   // Map deviceId to rack and ru
-  const rackPlacement: Record<string, { rackId?: string, ruPosition?: number }> = {};
+  const rackPlacement: Record<string, { rackId?: string; ruPosition?: number }> = {};
   if (rackprofiles && Array.isArray(rackprofiles)) {
     for (const rack of rackprofiles as RackProfile[]) {
       for (const placed of rack.devices) {
@@ -110,68 +148,184 @@ export function generateConnections(
       }
     }
   }
-
-  const networkConnections: NetworkConnection[] = [];
-
-  rules.filter(r => r.enabled).forEach(rule => {
+  rules.filter((r) => r.enabled).forEach((rule) => {
     // 1. Find sources and targets
-    const sources = filterDevicesByCriteria(allDevices, rule.sourceDeviceCriteria.role, rule.sourceDeviceCriteria.componentType);
-    const targets = filterDevicesByCriteria(allDevices, rule.targetDeviceCriteria.role, rule.targetDeviceCriteria.componentType);
-
-    sources.forEach(srcDevice => {
+    const sources = filterDevicesByCriteria(
+      allDevices,
+      rule.sourceDeviceCriteria.role,
+      rule.sourceDeviceCriteria.componentType
+    );
+    const targets = filterDevicesByCriteria(
+      allDevices,
+      rule.targetDeviceCriteria.role,
+      rule.targetDeviceCriteria.componentType
+    );
+    if (!sources.length) {
+      connectionAttempts.push({
+        ruleId: rule.id,
+        ruleName: rule.name,
+        status: "Info",
+        reason: "No source devices match rule criteria.",
+      });
+      return;
+    }
+    if (!targets.length) {
+      connectionAttempts.push({
+        ruleId: rule.id,
+        ruleName: rule.name,
+        status: "Info",
+        reason: "No target devices match rule criteria.",
+      });
+      return;
+    }
+    sources.forEach((srcDevice) => {
       const srcPorts = filterPorts(
-        srcDevice, 
-        rule.sourcePortCriteria?.portRole?.[0], // Only first? (could generalize)
+        srcDevice,
+        rule.sourcePortCriteria?.portRole,
         rule.sourcePortCriteria?.speed,
         rule.sourcePortCriteria?.mediaType
       );
-      // For each port: find matching dst port on a suitable target
+      if (!srcPorts.length) {
+        connectionAttempts.push({
+          ruleId: rule.id,
+          ruleName: rule.name,
+          sourceDeviceName: srcDevice.name,
+          sourceDeviceId: srcDevice.id,
+          status: "Skipped",
+          reason: "No source ports on device match rule criteria.",
+        });
+        return;
+      }
       for (const srcPort of srcPorts) {
-        // Skip if already connected
-        if (srcPort.connectedToDeviceId) continue;
-
+        // Skip if port already in use (checked in-memory only)
+        if (usedSrcPorts.has(srcDevice.id + ":" + srcPort.id) || srcPort.connectedToDeviceId) {
+          connectionAttempts.push({
+            ruleId: rule.id,
+            ruleName: rule.name,
+            sourceDeviceName: srcDevice.name,
+            sourceDeviceId: srcDevice.id,
+            sourcePortId: srcPort.id,
+            status: "Skipped",
+            reason: "Source port already in use.",
+          });
+          continue;
+        }
+        let connectionMade = false;
         for (const target of targets) {
           if (srcDevice.id === target.id) continue;
           const dstPorts = filterPorts(
-            target, 
-            rule.targetPortCriteria?.portRole?.[0],
+            target,
+            rule.targetPortCriteria?.portRole,
             rule.targetPortCriteria?.speed,
             rule.targetPortCriteria?.mediaType
           );
-          let paired = false;
+          if (!dstPorts.length) {
+            connectionAttempts.push({
+              ruleId: rule.id,
+              ruleName: rule.name,
+              sourceDeviceName: srcDevice.name,
+              sourceDeviceId: srcDevice.id,
+              sourcePortId: srcPort.id,
+              targetDeviceName: target.name,
+              targetDeviceId: target.id,
+              status: "Skipped",
+              reason: "No target ports on device match rule criteria.",
+            });
+            continue;
+          }
           for (const dstPort of dstPorts) {
-            if (dstPort.connectedToDeviceId) continue;
-
-            // At this point, proceed to cable/transceiver selection
-
+            // Skip if port already in use (checked in-memory only)
+            if (
+              usedDstPorts.has(target.id + ":" + dstPort.id) ||
+              dstPort.connectedToDeviceId
+            ) {
+              connectionAttempts.push({
+                ruleId: rule.id,
+                ruleName: rule.name,
+                sourceDeviceName: srcDevice.name,
+                sourceDeviceId: srcDevice.id,
+                sourcePortId: srcPort.id,
+                targetDeviceName: target.name,
+                targetDeviceId: target.id,
+                targetPortId: dstPort.id,
+                status: "Skipped",
+                reason: "Target port already in use.",
+              });
+              continue;
+            }
             // Find rack/ru info for cable length estimation
             const srcPlace = rackPlacement[srcDevice.id] || {};
             const dstPlace = rackPlacement[target.id] || {};
-            const srcRack = (rackprofiles || []).find(r => r.id === srcPlace.rackId) as RackProfile | undefined;
-            const dstRack = (rackprofiles || []).find(r => r.id === dstPlace.rackId) as RackProfile | undefined;
-
+            const srcRack = (rackprofiles || []).find((r) => r.id === srcPlace.rackId) as RackProfile | undefined;
+            const dstRack = (rackprofiles || []).find((r) => r.id === dstPlace.rackId) as RackProfile | undefined;
             const lengthMeters = estimateCableLength(
               { deviceId: srcDevice.id, ruPosition: srcPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
               srcRack,
               { deviceId: target.id, ruPosition: dstPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
               dstRack
             );
-
-            // Find Cable template
+            // Find Cable
             const cable = findCableForPorts(cables, srcPort, dstPort);
+            if (!cable) {
+              connectionAttempts.push({
+                ruleId: rule.id,
+                ruleName: rule.name,
+                sourceDeviceName: srcDevice.name,
+                sourceDeviceId: srcDevice.id,
+                sourcePortId: srcPort.id,
+                targetDeviceName: target.name,
+                targetDeviceId: target.id,
+                targetPortId: dstPort.id,
+                status: "Failed",
+                reason: "No compatible cable component found in library.",
+              });
+              continue;
+            }
             // Find transceivers if needed
             let transceiverSourceModel: TransceiverModel | undefined;
             let transceiverDestinationModel: TransceiverModel | undefined;
+            let srcTrans: Transceiver | undefined;
+            let dstTrans: Transceiver | undefined;
             if (
               [MediaType.FiberSM, MediaType.FiberMM].includes(srcPort.mediaType) ||
               [MediaType.FiberSM, MediaType.FiberMM].includes(dstPort.mediaType)
             ) {
-              const srcTrans = findTransceiverForPort(transceivers, srcPort, lengthMeters);
-              const dstTrans = findTransceiverForPort(transceivers, dstPort, lengthMeters);
+              srcTrans = findTransceiverForPort(transceivers, srcPort, lengthMeters);
+              dstTrans = findTransceiverForPort(transceivers, dstPort, lengthMeters);
               transceiverSourceModel = srcTrans?.transceiverModel;
               transceiverDestinationModel = dstTrans?.transceiverModel;
+              if (!srcTrans) {
+                connectionAttempts.push({
+                  ruleId: rule.id,
+                  ruleName: rule.name,
+                  sourceDeviceName: srcDevice.name,
+                  sourceDeviceId: srcDevice.id,
+                  sourcePortId: srcPort.id,
+                  targetDeviceName: target.name,
+                  targetDeviceId: target.id,
+                  targetPortId: dstPort.id,
+                  status: "Failed",
+                  reason: "No compatible transceiver for source port.",
+                });
+                continue;
+              }
+              if (!dstTrans) {
+                connectionAttempts.push({
+                  ruleId: rule.id,
+                  ruleName: rule.name,
+                  sourceDeviceName: srcDevice.name,
+                  sourceDeviceId: srcDevice.id,
+                  sourcePortId: srcPort.id,
+                  targetDeviceName: target.name,
+                  targetDeviceId: target.id,
+                  targetPortId: dstPort.id,
+                  status: "Failed",
+                  reason: "No compatible transceiver for target port.",
+                });
+                continue;
+              }
             }
-            // Construct NetworkConnection object
+            // Connection succeeded!
             const connection: NetworkConnection = {
               id: `${srcDevice.id}-${srcPort.id}__${target.id}-${dstPort.id}`,
               sourceDeviceId: srcDevice.id,
@@ -184,18 +338,34 @@ export function generateConnections(
               speed: srcPort.speed,
               transceiverSourceModel,
               transceiverDestinationModel,
-              status: 'planned',
+              status: "planned",
             };
-            networkConnections.push(connection);
-
-            paired = true;
-            break; // Only connect each src port to one dst port by default
+            connectionAttempts.push({
+              ruleId: rule.id,
+              ruleName: rule.name,
+              sourceDeviceName: srcDevice.name,
+              sourceDeviceId: srcDevice.id,
+              sourcePortId: srcPort.id,
+              targetDeviceName: target.name,
+              targetDeviceId: target.id,
+              targetPortId: dstPort.id,
+              status: "Success",
+              reason: "Connection established.",
+              connection,
+            });
+            usedSrcPorts.add(srcDevice.id + ":" + srcPort.id);
+            usedDstPorts.add(target.id + ":" + dstPort.id);
+            connectionMade = true;
+            break;
           }
-          if (paired) break; // Move to next srcPort after making one connection
+          if (connectionMade) break;
+        }
+        if (!connectionMade) {
+          // No connection could be established from this srcPort after all
+          // (Skip, already accounted for most failure reasons above)
         }
       }
     });
   });
-
-  return networkConnections;
+  return connectionAttempts;
 }
