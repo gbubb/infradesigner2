@@ -6,33 +6,41 @@ import { ComponentProvider } from "@/context/ComponentContext";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Outlet } from "react-router-dom";
 
-// The structure is: Header (sticky, full width) -> Sidebar (fixed vertical and does NOT scroll with content, begins under header) -> Scrollable Main Content
+// Sidebar width and header height should match sidebar styling
+const SIDEBAR_WIDTH = 92;
+const HEADER_HEIGHT = 60;
+
 export const AppLayout: React.FC = () => {
   const { activeDesign } = useDesignStore();
 
-  // Sidebar height matches viewport minus header height (60px), adjusts on small screens.
   return (
     <div className="min-h-screen flex flex-col">
       {/* Sticky Top Bar */}
       <div className="sticky top-0 z-50 w-full">
         <Header />
       </div>
-      {/* Main area: sidebar as fixed vertical beneath header, content scrolls beside */}
+      {/* Main area layout: sidebar fixed under header, main scrollable content */}
       <div className="flex flex-1 min-h-0 relative">
-        {/* Fixed Sidebar Frame: top offset for header */}
+        {/* Sidebar: fixed, below header */}
         <div
-          className="fixed left-0 top-[60px] h-[calc(100vh-60px)] w-[92px] z-40 flex-shrink-0"
+          className="fixed left-0"
           style={{
+            top: HEADER_HEIGHT + 8, // 8px gap ensures full separation from header (adjust if needed)
+            height: `calc(100vh - ${HEADER_HEIGHT + 8}px)`,
+            width: SIDEBAR_WIDTH,
+            zIndex: 40,
             background: "#1A3A5F",
             borderRight: "1px solid #1A3A5F",
+            paddingTop: 0 // No extra padding needed inside; handled in sidebar
           }}
         >
           <AppSidebar />
         </div>
-        {/* Scrollable Main Content: padding-left to avoid underlapping sidebar */}
+        {/* Main Content: padding-left for sidebar */}
         <ComponentProvider>
-          <div className="flex-1 flex flex-col overflow-auto bg-background relative"
-            style={{ paddingLeft: 92 }}
+          <div
+            className="flex-1 flex flex-col overflow-auto bg-background relative"
+            style={{ paddingLeft: SIDEBAR_WIDTH }}
           >
             {!activeDesign && (
               <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center z-50 p-8">
@@ -53,4 +61,3 @@ export const AppLayout: React.FC = () => {
     </div>
   );
 };
-

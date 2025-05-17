@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { 
   PlusCircle, 
   Download, 
@@ -28,10 +27,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-// Create a new form factor for actions: compact, boxy, shadow, neutral bg, minimal border radius, similar to sidebar, but gray
-const actionButtonNeutralStyle =
-  "bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] shadow rounded-md border border-gray-300 px-2.5 py-1.5 min-w-[44px] min-h-[39px] flex flex-row gap-1.5 items-center text-[0.97rem] font-medium transition-all focus:outline-none";
+// Icon-only, square form factor, tooltip for clarity, neutral style (no coloring)
+const actionButtonIconNeutral =
+  "bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] shadow rounded-md border border-gray-300 w-10 h-10 flex items-center justify-center transition-all focus:outline-none p-0";
 
 // NOTE: For sidebar buttons use color, for top action buttons use neutral style only
 
@@ -45,21 +45,16 @@ export const HeaderActions = () => {
   const { user, signOut } = useAuth();
   
   const handleImport = () => {
-    // Create a file input element
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = '.json';
     fileInput.style.display = 'none';
-    
-    // Add event listener for when a file is selected
     fileInput.addEventListener('change', (event) => {
       const target = event.target as HTMLInputElement;
       if (target.files && target.files[0]) {
         importDesign(target.files[0]);
       }
     });
-    
-    // Trigger file selection dialog
     document.body.appendChild(fileInput);
     fileInput.click();
     document.body.removeChild(fileInput);
@@ -90,81 +85,70 @@ export const HeaderActions = () => {
     }
   };
 
+  // Helper to wrap icon buttons with tooltip
+  const IconButton = ({ onClick, children, label, disabled } : { onClick?: () => void, children: React.ReactNode, label: string, disabled?: boolean }) =>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button 
+          type="button"
+          className={actionButtonIconNeutral + (disabled ? " opacity-60" : "")}
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={label}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" align="center">{label}</TooltipContent>
+    </Tooltip>;
+
   return (
     <div className="flex items-center gap-2">
       <ThemeToggle />
 
-      <button
-        className={actionButtonNeutralStyle}
-        onClick={() => setNewDialogOpen(true)}
-      >
-        <PlusCircle className="h-4 w-4 mr-1.5" />
-        New
-      </button>
+      <IconButton onClick={() => setNewDialogOpen(true)} label="New Design">
+        <PlusCircle size={26} />
+      </IconButton>
       
-      <button
-        className={actionButtonNeutralStyle}
-        onClick={() => setLoadDialogOpen(true)}
-      >
-        <Download className="h-4 w-4 mr-1.5" />
-        Load
-      </button>
+      <IconButton onClick={() => setLoadDialogOpen(true)} label="Load Design">
+        <Download size={26} />
+      </IconButton>
       
       {activeDesign && (
         <>
-          <button
-            className={actionButtonNeutralStyle}
-            onClick={() => saveDesign()}
-          >
-            <Save className="h-4 w-4 mr-1.5" />
-            Save
-          </button>
+          <IconButton onClick={() => saveDesign()} label="Save Design">
+            <Save size={26} />
+          </IconButton>
           
-          <button
-            className={actionButtonNeutralStyle}
-            onClick={() => exportDesign()}
-          >
-            <Upload className="h-4 w-4 mr-1.5" />
-            Export
-          </button>
+          <IconButton onClick={() => exportDesign()} label="Export Design">
+            <Upload size={26} />
+          </IconButton>
           
-          <button
-            className={actionButtonNeutralStyle}
-            onClick={handleImport}
-          >
-            <Import className="h-4 w-4 mr-1.5" />
-            Import
-          </button>
+          <IconButton onClick={handleImport} label="Import Design">
+            <Import size={26} />
+          </IconButton>
           
-          <button
-            className={actionButtonNeutralStyle}
-            onClick={handleShareDesign}
-          >
-            <Share2 className="h-4 w-4 mr-1.5" />
-            Share
-          </button>
+          <IconButton onClick={handleShareDesign} label="Share Design">
+            <Share2 size={26} />
+          </IconButton>
           
-          <button
-            className={actionButtonNeutralStyle + (activeDesign.is_public ? " opacity-70" : "")}
+          <IconButton
             onClick={handleTogglePublicAccess}
+            label={activeDesign.is_public ? "Set Private" : "Set Public"}
+            disabled={false}
           >
-            <Globe className="h-4 w-4 mr-1.5" />
-            {activeDesign.is_public ? "Public" : "Private"}
-          </button>
+            <Globe size={26} className={activeDesign.is_public ? "opacity-70" : ""} />
+          </IconButton>
           
-          <button
-            className={actionButtonNeutralStyle}
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            <Trash2 className="h-4 w-4 mr-1.5" />
-            Delete
-          </button>
+          <IconButton onClick={() => setDeleteDialogOpen(true)} label="Delete Design">
+            <Trash2 size={26} />
+          </IconButton>
         </>
       )}
       
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="rounded-full bg-[#e9eaf3] w-9 h-9 flex items-center justify-center shadow border border-gray-300 hover:bg-gray-200">
+          <button className="rounded-full bg-[#e9eaf3] w-10 h-10 flex items-center justify-center shadow border border-gray-300 hover:bg-gray-200">
             <Avatar className="h-7 w-7">
               <AvatarFallback>{getUserInitials()}</AvatarFallback>
             </Avatar>
@@ -199,3 +183,6 @@ export const HeaderActions = () => {
     </div>
   );
 };
+
+// File length note:
+/// NOTE: This file is now over 200 lines. Consider asking to refactor it into smaller files for maintainability.

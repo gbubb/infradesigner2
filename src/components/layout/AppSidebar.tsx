@@ -12,30 +12,22 @@ const sidebarSections = [
   { label: 'Compare', path: '/compare', icon: ArrowRight, color: 'bg-[#FF6392]' },
 ];
 
-// Uniform button/card size, grid look, minimal rounded corners, solid color, square/rectangular appearance
+// Uniform grid: all buttons same size, minimal radius (almost square), grid spacing
 export const AppSidebar: React.FC = () => {
   const location = useLocation();
-
-  // Sidebar background matches header.
-  const sidebarBg = "bg-infra-blue";
-
   return (
     <nav
-      className={`flex flex-col items-center gap-3 px-1.5 py-4 min-w-[88px] w-[92px] h-full ${sidebarBg} shadow-lg`}
+      className="flex flex-col items-center gap-2 w-full h-full px-1.5 py-2"
       style={{
-        // uniform frame with padding to avoid edge crowding
-        borderRight: "1px solid #1A3A5F",
-        boxSizing: 'border-box'
+        background: "#1A3A5F"
       }}
     >
-      {/* Sidebar button grid, no vertical scroll */}
       <div className="flex flex-col gap-2 w-full">
         {sidebarSections.map(section => {
           const isActive =
             section.path === "/"
               ? location.pathname === "/"
               : location.pathname.startsWith(section.path);
-
           return (
             <Link
               key={section.label}
@@ -53,13 +45,13 @@ export const AppSidebar: React.FC = () => {
               `}
               style={{
                 width: "74px",
-                height: "76px",
+                height: "74px",
                 margin: "0 auto",
-                borderRadius: "7px", // Sharper corners, not pill/rounded, but a little soft.
+                borderRadius: "7px", // Less rounding: subtle, nearly square
                 boxSizing: "border-box",
               }}
             >
-              <section.icon className="mb-1" size={24} strokeWidth={2.2} />
+              <section.icon size={26} strokeWidth={2.2} className="mb-1" />
               <span className="font-semibold text-[0.85rem] tracking-tight text-white text-center leading-tight">
                 {section.label}
               </span>
