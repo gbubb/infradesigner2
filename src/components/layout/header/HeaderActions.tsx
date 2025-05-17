@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   PlusCircle, 
@@ -41,6 +40,7 @@ export const HeaderActions = () => {
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [hovered, setHovered] = useState<string | null>(null);
   
   const { user, signOut } = useAuth();
   
@@ -85,22 +85,55 @@ export const HeaderActions = () => {
     }
   };
 
-  // Helper to wrap icon buttons with tooltip
-  const IconButton = ({ onClick, children, label, disabled } : { onClick?: () => void, children: React.ReactNode, label: string, disabled?: boolean }) =>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button 
-          type="button"
-          className={actionButtonIconNeutral + (disabled ? " opacity-60" : "")}
-          onClick={onClick}
-          disabled={disabled}
-          aria-label={label}
-        >
-          {children}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" align="center">{label}</TooltipContent>
-    </Tooltip>;
+  // Helper to wrap icon buttons
+  // Show label text when hovered (desktop), only icon otherwise
+  const IconButton = ({
+    onClick,
+    children,
+    label,
+    disabled
+  }: {
+    onClick?: () => void,
+    children: React.ReactNode,
+    label: string,
+    disabled?: boolean
+  }) => (
+    <button
+      type="button"
+      className={
+        "group bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] shadow rounded-md border border-gray-300 w-10 h-10 flex items-center justify-center transition-all focus:outline-none p-0 relative overflow-visible" +
+        (disabled ? " opacity-60" : "")
+      }
+      onClick={onClick}
+      onMouseEnter={() => setHovered(label)}
+      onMouseLeave={() => setHovered(null)}
+      disabled={disabled}
+      aria-label={label}
+      style={{ minWidth: 40, minHeight: 40 }}
+    >
+      <span className="flex items-center justify-center">
+        {children}
+      </span>
+      {/* Show label on hover, position to the right with fade, only on non-touch screens */}
+      <span
+        className={`
+          hidden lg:flex
+          absolute left-full ml-2 px-2 py-1 rounded bg-white text-sm font-semibold text-[#1A3A5F] shadow border border-gray-200
+          items-center pointer-events-none
+          transition-opacity duration-150
+          ${hovered === label ? "opacity-100" : "opacity-0"}
+          z-50
+        `}
+        style={{
+          top: "50%",
+          transform: "translateY(-50%)",
+          whiteSpace: "nowrap"
+        }}
+      >
+        {label}
+      </span>
+    </button>
+  );
 
   return (
     <div className="flex items-center gap-2">
