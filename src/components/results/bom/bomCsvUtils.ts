@@ -15,10 +15,24 @@ export function generateBomCsvContent({
 }) {
   let csvContent = "data:text/csv;charset=utf-8,Category,Type,Role/Model,Manufacturer,Model,Details,Quantity,Unit Cost,Total Cost\r\n";
   let dataToExport: any[] = [];
+
+  // Safe: summarizedComponentsByCategory values should be arrays of objects.
   Object.values(summarizedComponentsByCategory).forEach(arr => dataToExport.push(...arr));
+  // Safe: diskLineItems should be objects.
   dataToExport.push(...Object.values(diskLineItems));
-  dataToExport.push(...Object.values(cableLineItems).map(item => ({ ...item, type: "Cable" })));
-  dataToExport.push(...Object.values(transceiverLineItems).map(item => ({ ...item, type: "Transceiver" })));
+
+  // Only spread over plain objects
+  dataToExport.push(
+    ...Object.values(cableLineItems)
+      .filter(item => item && typeof item === "object")
+      .map(item => ({ ...item, type: "Cable" }))
+  );
+  dataToExport.push(
+    ...Object.values(transceiverLineItems)
+      .filter(item => item && typeof item === "object")
+      .map(item => ({ ...item, type: "Transceiver" }))
+  );
+
   dataToExport.forEach(component => {
     const categoryName = component.type
       ? componentTypeToCategory[component.type as ComponentType] || component.type
@@ -35,3 +49,4 @@ export function generateBomCsvContent({
   });
   return encodeURI(csvContent);
 }
+
