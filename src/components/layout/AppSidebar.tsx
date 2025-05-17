@@ -14,18 +14,21 @@ const sidebarSections = [
 
 export const AppSidebar: React.FC = () => {
   const location = useLocation();
-  // Center grid buttons vertically, preserve spacing
+
+  // Center grid buttons vertically in the available sidebar space
   return (
     <nav
       className="flex flex-col items-center justify-center h-full w-full px-1.5 py-2"
       style={{
         background: "#1A3A5F",
-        minHeight: 0 // allows for flex centering
+        minHeight: 0
       }}
     >
-      {/* Use container with full height & min-h-0, center grid */}
       <div className="flex-1 flex flex-col justify-center">
-        <div className="grid gap-3" style={{ gridTemplateRows: `repeat(${sidebarSections.length}, 74px)` }}>
+        <div 
+          className="grid gap-3"
+          style={{ gridTemplateRows: `repeat(${sidebarSections.length}, 74px)` }}
+        >
           {sidebarSections.map(section => {
             const isActive =
               section.path === "/"
@@ -57,13 +60,10 @@ export const AppSidebar: React.FC = () => {
                 <span
                   className={`
                     font-semibold text-[0.85rem] tracking-tight text-white text-center leading-tight
-                    transition-all 
-                    opacity-0 group-hover:opacity-100 group-focus:opacity-100
                     pointer-events-none select-none
                   `}
                   style={{
-                    // Appears only on hover/focus
-                    transition: "opacity 0.15s"
+                    transition: "none"
                   }}
                 >
                   {section.label}

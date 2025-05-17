@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   PlusCircle, 
@@ -26,13 +27,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-// Icon-only, square form factor, tooltip for clarity, neutral style (no coloring)
-const actionButtonIconNeutral =
-  "bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] shadow rounded-md border border-gray-300 w-10 h-10 flex items-center justify-center transition-all focus:outline-none p-0";
-
-// NOTE: For sidebar buttons use color, for top action buttons use neutral style only
+const actionButtonsConfig = [
+  {
+    key: 'new',
+    icon: <PlusCircle size={26} />,
+    label: "New Design",
+    onClick: 'setNewDialogOpen'
+  },
+  {
+    key: 'load',
+    icon: <Download size={26} />,
+    label: "Load Design",
+    onClick: 'setLoadDialogOpen'
+  },
+];
 
 export const HeaderActions = () => {
   const { activeDesign, deleteDesign, saveDesign, exportDesign, importDesign, togglePublicAccess } = useDesignStore();
@@ -40,10 +49,9 @@ export const HeaderActions = () => {
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [hovered, setHovered] = useState<string | null>(null);
-  
+  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
   const { user, signOut } = useAuth();
-  
+
   const handleImport = () => {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -75,59 +83,43 @@ export const HeaderActions = () => {
     return email.substring(0, 2).toUpperCase();
   };
 
-  const handleShareDesign = () => {
-    setShareDialogOpen(true);
-  };
+  const buttonBase =
+    "flex items-center gap-2 bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] shadow rounded-md border border-gray-300 transition-all focus:outline-none p-0 relative overflow-visible";
+  const buttonCompact = "w-10 h-10 px-0 justify-center";
+  const buttonExpanded = "px-4 h-10";
 
-  const handleTogglePublicAccess = () => {
-    if (activeDesign) {
-      togglePublicAccess(activeDesign.id);
-    }
-  };
-
-  // Helper to wrap icon buttons
-  // Show label text when hovered (desktop), only icon otherwise
-  const IconButton = ({
-    onClick,
-    children,
+  const TopbarButton = ({
+    icon,
     label,
-    disabled
+    onClick,
+    buttonKey,
+    disabled = false,
   }: {
-    onClick?: () => void,
-    children: React.ReactNode,
-    label: string,
-    disabled?: boolean
+    icon: React.ReactNode;
+    label: string;
+    onClick?: () => void;
+    buttonKey: string;
+    disabled?: boolean;
   }) => (
     <button
       type="button"
-      className={
-        "group bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] shadow rounded-md border border-gray-300 w-10 h-10 flex items-center justify-center transition-all focus:outline-none p-0 relative overflow-visible" +
-        (disabled ? " opacity-60" : "")
-      }
+      className={`${buttonBase} ${hoveredButton === buttonKey ? buttonExpanded : buttonCompact} ${disabled ? "opacity-60" : ""}`}
+      style={{
+        minWidth: hoveredButton === buttonKey ? 110 : 40,
+        maxWidth: 220,
+        transition: "all 0.16s cubic-bezier(.4,1,.3,1)",
+      }}
       onClick={onClick}
-      onMouseEnter={() => setHovered(label)}
-      onMouseLeave={() => setHovered(null)}
+      onMouseEnter={() => setHoveredButton(buttonKey)}
+      onMouseLeave={() => setHoveredButton(null)}
       disabled={disabled}
       aria-label={label}
-      style={{ minWidth: 40, minHeight: 40 }}
     >
-      <span className="flex items-center justify-center">
-        {children}
-      </span>
-      {/* Show label on hover, position to the right with fade, only on non-touch screens */}
+      {icon}
       <span
-        className={`
-          hidden lg:flex
-          absolute left-full ml-2 px-2 py-1 rounded bg-white text-sm font-semibold text-[#1A3A5F] shadow border border-gray-200
-          items-center pointer-events-none
-          transition-opacity duration-150
-          ${hovered === label ? "opacity-100" : "opacity-0"}
-          z-50
-        `}
+        className={`${hoveredButton === buttonKey ? "inline" : "hidden"} whitespace-nowrap font-medium text-sm pl-1`}
         style={{
-          top: "50%",
-          transform: "translateY(-50%)",
-          whiteSpace: "nowrap"
+          transition: "opacity 0.15s cubic-bezier(.4,1,.3,1)",
         }}
       >
         {label}
@@ -138,47 +130,64 @@ export const HeaderActions = () => {
   return (
     <div className="flex items-center gap-2">
       <ThemeToggle />
-
-      <IconButton onClick={() => setNewDialogOpen(true)} label="New Design">
-        <PlusCircle size={26} />
-      </IconButton>
-      
-      <IconButton onClick={() => setLoadDialogOpen(true)} label="Load Design">
-        <Download size={26} />
-      </IconButton>
-      
+      {/* Always show topbar actions including new/load, others conditionally */}
+      <TopbarButton
+        icon={<PlusCircle size={26} />}
+        label="New Design"
+        onClick={() => setNewDialogOpen(true)}
+        buttonKey="new"
+      />
+      <TopbarButton
+        icon={<Download size={26} />}
+        label="Load Design"
+        onClick={() => setLoadDialogOpen(true)}
+        buttonKey="load"
+      />
       {activeDesign && (
         <>
-          <IconButton onClick={() => saveDesign()} label="Save Design">
-            <Save size={26} />
-          </IconButton>
-          
-          <IconButton onClick={() => exportDesign()} label="Export Design">
-            <Upload size={26} />
-          </IconButton>
-          
-          <IconButton onClick={handleImport} label="Import Design">
-            <Import size={26} />
-          </IconButton>
-          
-          <IconButton onClick={handleShareDesign} label="Share Design">
-            <Share2 size={26} />
-          </IconButton>
-          
-          <IconButton
-            onClick={handleTogglePublicAccess}
+          <TopbarButton
+            icon={<Save size={26} />}
+            label="Save Design"
+            onClick={() => saveDesign()}
+            buttonKey="save"
+          />
+          <TopbarButton
+            icon={<Upload size={26} />}
+            label="Export Design"
+            onClick={() => exportDesign()}
+            buttonKey="export"
+          />
+          <TopbarButton
+            icon={<Import size={26} />}
+            label="Import Design"
+            onClick={handleImport}
+            buttonKey="import"
+          />
+          <TopbarButton
+            icon={<Share2 size={26} />}
+            label="Share Design"
+            onClick={() => setShareDialogOpen(true)}
+            buttonKey="share"
+          />
+          <TopbarButton
+            icon={<Globe size={26} className={activeDesign.is_public ? "opacity-70" : ""} />}
             label={activeDesign.is_public ? "Set Private" : "Set Public"}
+            onClick={() => {
+              if (activeDesign) {
+                togglePublicAccess(activeDesign.id);
+              }
+            }}
+            buttonKey="public"
             disabled={false}
-          >
-            <Globe size={26} className={activeDesign.is_public ? "opacity-70" : ""} />
-          </IconButton>
-          
-          <IconButton onClick={() => setDeleteDialogOpen(true)} label="Delete Design">
-            <Trash2 size={26} />
-          </IconButton>
+          />
+          <TopbarButton
+            icon={<Trash2 size={26} />}
+            label="Delete Design"
+            onClick={() => setDeleteDialogOpen(true)}
+            buttonKey="delete"
+          />
         </>
       )}
-      
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="rounded-full bg-[#e9eaf3] w-10 h-10 flex items-center justify-center shadow border border-gray-300 hover:bg-gray-200">
@@ -196,7 +205,6 @@ export const HeaderActions = () => {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      
       <NewDesignDialog isOpen={newDialogOpen} onOpenChange={setNewDialogOpen} />
       <LoadDesignDialog isOpen={loadDialogOpen} onOpenChange={setLoadDialogOpen} />
       <DeleteConfirmationDialog 
@@ -216,6 +224,5 @@ export const HeaderActions = () => {
     </div>
   );
 };
-
 // File length note:
 /// NOTE: This file is now over 200 lines. Consider asking to refactor it into smaller files for maintainability.
