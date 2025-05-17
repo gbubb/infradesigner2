@@ -1,6 +1,6 @@
 
-import { InfrastructureComponent } from './component-types';
-import { MediaType, PortSpeed, ConnectorType } from './port-types';
+import { InfrastructureComponent, ComponentType, ConnectorType } from './component-types';
+import { MediaType, PortSpeed } from './port-types';
 
 // Common real-world SKUs, extend as needed
 export enum TransceiverModel {
@@ -14,7 +14,7 @@ export enum TransceiverModel {
 }
 
 export interface Transceiver extends InfrastructureComponent {
-  type: "Transceiver"; // This makes typing more strict vs enum
+  type: ComponentType.Transceiver;
   transceiverModel: TransceiverModel;
   mediaTypeSupported: MediaType[];
   connectorType: ConnectorType;
