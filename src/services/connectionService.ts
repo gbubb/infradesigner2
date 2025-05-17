@@ -1,6 +1,5 @@
-
 import { InfrastructureDesign, ConnectionRule, NetworkConnection, PlacedDevice, RackProfile } from '@/types/infrastructure';
-import { InfrastructureComponent, ComponentType, Port, PortRole, MediaType, PortSpeed } from '@/types/infrastructure';
+import { InfrastructureComponent, ComponentType, Port, PortRole, MediaType, PortSpeed, DeviceOrientation } from '@/types/infrastructure';
 import { Cable, Transceiver, TransceiverModel } from '@/types/infrastructure';
 import { CableMediaType, ConnectorType } from '@/types/infrastructure';
 
@@ -152,9 +151,9 @@ export function generateConnections(
             const dstRack = (rackprofiles || []).find(r => r.id === dstPlace.rackId) as RackProfile | undefined;
 
             const lengthMeters = estimateCableLength(
-              { deviceId: srcDevice.id, ruPosition: srcPlace.ruPosition || 0, orientation: "Front" },
+              { deviceId: srcDevice.id, ruPosition: srcPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
               srcRack,
-              { deviceId: target.id, ruPosition: dstPlace.ruPosition || 0, orientation: "Front" },
+              { deviceId: target.id, ruPosition: dstPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
               dstRack
             );
 
@@ -181,16 +180,13 @@ export function generateConnections(
               destinationPortId: dstPort.id,
               cableTemplateId: cable?.id,
               lengthMeters,
-              mediaType: cable?.mediaType ?? srcPort.mediaType,
+              mediaType: cable?.mediaType,
               speed: srcPort.speed,
               transceiverSourceModel,
               transceiverDestinationModel,
               status: 'planned',
             };
             networkConnections.push(connection);
-
-            // [Optional] Mark ports as 'connected' (would need to mutate in design, or return a list of updates)
-            // Could also return a `portUpdates` structure with required changes for consuming code to apply.
 
             paired = true;
             break; // Only connect each src port to one dst port by default
