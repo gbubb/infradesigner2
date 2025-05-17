@@ -1,4 +1,3 @@
-
 import { ComponentType, componentTypeToCategory, InfrastructureComponent } from '@/types/infrastructure';
 
 // Accepts all BOM objects from the tab.
@@ -16,6 +15,12 @@ export function generateBomCsvContent({
   let csvContent = "data:text/csv;charset=utf-8,Category,Type,Role/Model,Manufacturer,Model,Details,Quantity,Unit Cost,Total Cost\r\n";
   let dataToExport: any[] = [];
 
+  // Helper to check for plain object
+  const isPlainObject = (obj: any) =>
+    obj !== null &&
+    typeof obj === "object" &&
+    !Array.isArray(obj);
+
   // Safe: summarizedComponentsByCategory values should be arrays of objects.
   Object.values(summarizedComponentsByCategory).forEach(arr => dataToExport.push(...arr));
   // Safe: diskLineItems should be objects.
@@ -24,12 +29,12 @@ export function generateBomCsvContent({
   // Only spread over plain objects
   dataToExport.push(
     ...Object.values(cableLineItems)
-      .filter(item => item && typeof item === "object")
+      .filter(isPlainObject)
       .map(item => ({ ...item, type: "Cable" }))
   );
   dataToExport.push(
     ...Object.values(transceiverLineItems)
-      .filter(item => item && typeof item === "object")
+      .filter(isPlainObject)
       .map(item => ({ ...item, type: "Transceiver" }))
   );
 
@@ -49,4 +54,3 @@ export function generateBomCsvContent({
   });
   return encodeURI(csvContent);
 }
-
