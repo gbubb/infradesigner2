@@ -13,6 +13,13 @@ import { AuthProvider, useAuth } from "./hooks/useAuth";
 import "@/utils/purgeDesigns";
 import { ThemeProvider } from "./components/theme/theme-provider";
 import { DndProvider } from './components/providers/DndProvider';
+import AppLayout from "@/components/layout/AppLayout";
+import RequirementsPanel from "@/components/requirements/RequirementsPanel";
+import ComponentLibrary from "@/components/sidebar/ComponentLibrary";
+import DesignPanel from "@/components/design/DesignPanel";
+import ConfigurePanel from "@/components/configure/ConfigurePanel";
+import ResultsPanel from "@/components/results/ResultsPanel";
+import ComparePanel from "@/components/compare/ComparePanel";
 
 const queryClient = new QueryClient();
 
@@ -40,7 +47,15 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
-      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+      {/* Use AppLayout for main pages */}
+      <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+        <Route index element={<RequirementsPanel />} />
+        <Route path="components" element={<ComponentLibrary />} />
+        <Route path="design" element={<DesignPanel />} />
+        <Route path="configure/*" element={<ConfigurePanel />} />
+        <Route path="results" element={<ResultsPanel />} />
+        <Route path="compare" element={<ComparePanel />} />
+      </Route>
       <Route path="/designs/:sharingId" element={<Index />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
