@@ -9,7 +9,6 @@ import { PhysicalConstraintsForm } from './PhysicalConstraintsForm';
 import { useDesignStore } from '@/store/designStore';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { DesignRequirements } from '@/types/infrastructure';
 
 export const RequirementsPanel: React.FC = () => {
   const { requirements, updateRequirements, calculateComponentRoles } = useDesignStore();
@@ -25,7 +24,9 @@ export const RequirementsPanel: React.FC = () => {
     requirements.physicalConstraints.totalAvailabilityZones
   ]);
 
-  // Use callbacks to avoid recreation of functions on each render
+  // UI consistency: shared width and padding
+  const sectionClass = "max-w-3xl mx-auto px-4 sm:px-6 py-2 w-full";
+
   const handleSaveRequirements = useCallback(() => {
     calculateComponentRoles();
     toast.success('Requirements saved and component roles calculated');
@@ -52,9 +53,8 @@ export const RequirementsPanel: React.FC = () => {
   }, [updateRequirements]);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className={sectionClass}>
       <h2 className="text-2xl font-semibold mb-6">Design Requirements</h2>
-      
       <Tabs defaultValue="compute" value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid grid-cols-4 mb-8">
           <TabsTrigger value="compute">Compute</TabsTrigger>
@@ -62,35 +62,37 @@ export const RequirementsPanel: React.FC = () => {
           <TabsTrigger value="network">Network</TabsTrigger>
           <TabsTrigger value="physical">Physical</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="compute">
-          <ComputeRequirementsForm 
-            requirements={requirements.computeRequirements}
-            onUpdate={handleUpdateComputeRequirements}
-          />
+          <div className={sectionClass}>
+            <ComputeRequirementsForm
+              requirements={requirements.computeRequirements}
+              onUpdate={handleUpdateComputeRequirements}
+            />
+          </div>
         </TabsContent>
-        
         <TabsContent value="storage">
-          <StorageRequirementsForm 
-            requirements={requirements.storageRequirements}
-            onUpdate={handleUpdateStorageRequirements}
-          />
+          <div className={sectionClass}>
+            <StorageRequirementsForm
+              requirements={requirements.storageRequirements}
+              onUpdate={handleUpdateStorageRequirements}
+            />
+          </div>
         </TabsContent>
-        
         <TabsContent value="network">
-          <NetworkRequirementsForm 
-            requirements={requirements.networkRequirements}
-            onUpdate={handleUpdateNetworkRequirements}
-          />
+          <div className={sectionClass}>
+            <NetworkRequirementsForm
+              requirements={requirements.networkRequirements}
+              onUpdate={handleUpdateNetworkRequirements}
+            />
+          </div>
         </TabsContent>
-        
         <TabsContent value="physical">
-          <div className="space-y-6">
-            <PhysicalConstraintsForm 
+          <div className={sectionClass + " space-y-6"}>
+            <PhysicalConstraintsForm
               requirements={requirements.physicalConstraints}
               onUpdate={handleUpdatePhysicalConstraints}
             />
-            
             {/* Derived values card */}
             <Card>
               <CardHeader>
@@ -108,7 +110,6 @@ export const RequirementsPanel: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
-      
       <div className="mt-8 flex justify-end">
         <Button onClick={handleSaveRequirements}>
           Save Requirements

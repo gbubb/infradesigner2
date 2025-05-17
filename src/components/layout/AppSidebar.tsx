@@ -3,6 +3,8 @@ import React from "react";
 import { useLocation, Link } from "react-router-dom";
 import { LayoutDashboard, Wrench, Folder, FolderOpen, ArrowRight, Settings } from "lucide-react";
 
+const SIDEBAR_WIDTH = 108; // widened width
+
 const sidebarSections = [
   { label: "Requirements", path: "/", icon: LayoutDashboard, color: "bg-[#3e78b2]" },
   { label: "Component Library", path: "/components", icon: Folder, color: "bg-[#FFB703]" },
@@ -15,51 +17,47 @@ const sidebarSections = [
 export const AppSidebar: React.FC = () => {
   const location = useLocation();
 
-  // Center grid buttons vertically in the available sidebar space
   return (
     <nav
-      className="flex flex-col items-center justify-center h-full w-full px-1.5 py-2"
+      className={`flex flex-col items-center h-full w-full px-2 py-4`}
       style={{
-        background: "#1A3A5F",
-        minHeight: 0
+        background: "#1A3A5F"
       }}
     >
-      <div className="flex-1 flex flex-col justify-center">
-        <div 
-          className="grid gap-3"
-          style={{ gridTemplateRows: `repeat(${sidebarSections.length}, 74px)` }}
-        >
-          {sidebarSections.map(section => {
-            const isActive =
-              section.path === "/"
-                ? location.pathname === "/"
-                : location.pathname.startsWith(section.path);
-            return (
-              <Link
-                key={section.label}
-                to={section.path}
-                className={`
-                  group flex flex-col items-center justify-center
-                  ${section.color}
-                  ${isActive ? "ring-2 ring-white scale-[1.04]" : ""}
-                  cursor-pointer shadow
-                  transition duration-150
-                  opacity-100
-                  focus:outline-none
-                  border border-infra-blue
-                  hover:shadow-md
-                `}
-                style={{
-                  width: "74px",
-                  height: "74px",
-                  borderRadius: "8px",
-                  boxSizing: "border-box"
-                }}
-              >
-                <section.icon size={26} strokeWidth={2.2} className="mb-1" />
+      {/* Center sidebar items with even spacing */}
+      <div className="flex flex-1 flex-col justify-center gap-4 w-full">
+        {sidebarSections.map((section) => {
+          const isActive =
+            section.path === "/"
+              ? location.pathname === "/"
+              : location.pathname.startsWith(section.path);
+          return (
+            <Link
+              key={section.label}
+              to={section.path}
+              className={`
+                group flex flex-row items-center
+                ${section.color}
+                ${isActive ? "ring-2 ring-white scale-[1.04]" : ""}
+                cursor-pointer shadow
+                transition duration-150
+                opacity-100
+                focus:outline-none
+                border border-infra-blue
+                hover:shadow-md
+              `}
+              style={{
+                width: "100%",
+                height: "58px",
+                borderRadius: "12px",
+                boxSizing: "border-box"
+              }}
+            >
+              <div className="flex items-center justify-center h-full px-4">
+                <section.icon size={28} strokeWidth={2.2} className="mr-2" />
                 <span
                   className={`
-                    font-semibold text-[0.85rem] tracking-tight text-white text-center leading-tight
+                    font-semibold text-md tracking-tight text-white text-left leading-tight
                     pointer-events-none select-none
                   `}
                   style={{
@@ -68,11 +66,12 @@ export const AppSidebar: React.FC = () => {
                 >
                   {section.label}
                 </span>
-              </Link>
-            );
-          })}
-        </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );
 };
+

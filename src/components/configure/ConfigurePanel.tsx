@@ -6,7 +6,7 @@ import ConnectionRulesTab from "./ConnectionRulesTab";
 
 export const ConfigurePanel: React.FC = () => {
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full max-w-4xl mx-auto px-6 pt-7 pb-4">
       <Tabs defaultValue="racks" className="w-full">
         <TabsList className="grid grid-cols-2 mb-6">
           <TabsTrigger value="racks">Rack Layouts</TabsTrigger>

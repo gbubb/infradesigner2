@@ -7,8 +7,8 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Outlet } from "react-router-dom";
 
 // Sidebar width and header height should match sidebar styling
-const SIDEBAR_WIDTH = 92;
-const HEADER_HEIGHT = 60;
+const SIDEBAR_WIDTH = 108; // must match AppSidebar
+const HEADER_HEIGHT = 54; // compacted header
 
 export const AppLayout: React.FC = () => {
   const { activeDesign } = useDesignStore();
@@ -25,7 +25,7 @@ export const AppLayout: React.FC = () => {
         <div
           className="fixed left-0"
           style={{
-            top: HEADER_HEIGHT + 8, // 8px gap ensures full separation from header (adjust if needed)
+            top: HEADER_HEIGHT + 8,
             height: `calc(100vh - ${HEADER_HEIGHT + 8}px)`,
             width: SIDEBAR_WIDTH,
             zIndex: 40,
@@ -61,3 +61,4 @@ export const AppLayout: React.FC = () => {
     </div>
   );
 };
+
