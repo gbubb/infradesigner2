@@ -15,7 +15,7 @@ export function generateBomCsvContent({
   let csvContent = "data:text/csv;charset=utf-8,Category,Type,Role/Model,Manufacturer,Model,Details,Quantity,Unit Cost,Total Cost\r\n";
   let dataToExport: any[] = [];
 
-  // Helper to check for plain object
+  // Helper to check for plain object (not array, not null, type object)
   const isPlainObject = (obj: any) =>
     obj !== null &&
     typeof obj === "object" &&
@@ -28,18 +28,16 @@ export function generateBomCsvContent({
     ...Object.values(diskLineItems).filter(isPlainObject)
   );
 
-  // Only spread over plain objects and explicitly check before spreading
+  // Only spread over plain objects and add type as needed
   dataToExport.push(
     ...Object.values(cableLineItems)
       .filter(isPlainObject)
-      .map(item => isPlainObject(item) ? { ...item, type: "Cable" } : undefined)
-      .filter(Boolean)
+      .map(item => ({ ...item, type: "Cable" }))
   );
   dataToExport.push(
     ...Object.values(transceiverLineItems)
       .filter(isPlainObject)
-      .map(item => isPlainObject(item) ? { ...item, type: "Transceiver" } : undefined)
-      .filter(Boolean)
+      .map(item => ({ ...item, type: "Transceiver" }))
   );
 
   dataToExport.forEach(component => {
