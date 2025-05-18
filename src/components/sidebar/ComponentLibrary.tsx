@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useComponents } from '@/context/ComponentContext';
 import { useComponentForm } from '@/hooks/components/useComponentForm';
@@ -44,7 +43,10 @@ export const ComponentLibrary: React.FC = () => {
     handleSelectChange,
     handleTypeChange,
     validateForm,
-    processFormForSubmission
+    processFormForSubmission,
+    addPort,
+    removePort,
+    updatePort
   } = useComponentForm();
 
   const filteredComponents = componentTemplates.filter(component => {
@@ -184,6 +186,9 @@ export const ComponentLibrary: React.FC = () => {
         }}
         onSubmit={handleAddComponent}
         isEditing={false}
+        addPort={addPort}
+        removePort={removePort}
+        updatePort={updatePort}
       />
       
       <ComponentFormDialog 
@@ -211,6 +216,9 @@ export const ComponentLibrary: React.FC = () => {
         }}
         onSubmit={handleAddComponent}
         isEditing={true}
+        addPort={addPort}
+        removePort={removePort}
+        updatePort={updatePort}
       />
       
       <DeleteConfirmationDialog 
