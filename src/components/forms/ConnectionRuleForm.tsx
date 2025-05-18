@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { AZScope, ConnectionPattern, ConnectionRule } from '@/types/infrastructure/connection-rule-types';
 import { ComponentType } from '@/types/infrastructure/component-types';
 import { PortRole, PortSpeed } from '@/types/infrastructure/port-types';
+import { DeviceCriteriaFields } from './DeviceCriteriaFields';
+import { PortCriteriaFields } from './PortCriteriaFields';
 
 interface ConnectionRuleFormProps {
   rule?: ConnectionRule;
@@ -44,7 +46,6 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
           speed: rule.sourcePortCriteria.speed,
           portNamePattern: rule.sourcePortCriteria.portNamePattern,
           excludePorts: rule.sourcePortCriteria.excludePorts,
-          // mediaType, connectorType, minPorts, maxPorts, requireUnused are all removed
         }
       : {
           portRole: [],
@@ -86,7 +87,6 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
     enabled: rule?.enabled ?? true,
     maxConnections: rule?.maxConnections,
     connectionStrategy: rule?.connectionStrategy || 'all',
-    // bidirectional, priority removed
     tags: rule?.tags || [],
   });
 
@@ -113,157 +113,6 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
       tags: prev.tags?.filter(tag => tag !== tagToRemove) || [],
     }));
   };
-
-  // --- DEVICE CRITERIA FIELDS (NO minPorts/maxPorts) ---
-  const renderDeviceCriteriaFields = (
-    prefix: 'source' | 'target',
-    criteria: ConnectionRule['sourceDeviceCriteria' | 'targetDeviceCriteria']
-  ) => (
-    <div className="space-y-4 border rounded-md p-4">
-      <h3 className="font-medium text-lg mb-2">
-        {prefix === 'source' ? 'Source' : 'Target'} Device Criteria
-      </h3>
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor={`${prefix}-componentType`}>Component Type</Label>
-          <select
-            className="mt-1 block w-full border rounded px-3 py-2 bg-background"
-            id={`${prefix}-componentType`}
-            value={criteria.componentType || ''}
-            onChange={(e) => {
-              const value = e.target.value ? (e.target.value as ComponentType) : undefined;
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}DeviceCriteria`]: {
-                  ...prev[`${prefix}DeviceCriteria`],
-                  componentType: value,
-                },
-              }));
-            }}
-          >
-            <option value="">Any</option>
-            {Object.values(ComponentType).map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor={`${prefix}-role`}>Role</Label>
-          <Input
-            id={`${prefix}-role`}
-            value={criteria.role || ''}
-            placeholder="e.g., switch, server"
-            onChange={(e) =>
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}DeviceCriteria`]: {
-                  ...prev[`${prefix}DeviceCriteria`],
-                  role: e.target.value,
-                },
-              }))
-            }
-          />
-        </div>
-        <div className="md:col-span-2">
-          <Label htmlFor={`${prefix}-deviceNamePattern`}>Device Name Pattern</Label>
-          <Input
-            id={`${prefix}-deviceNamePattern`}
-            value={criteria.deviceNamePattern || ''}
-            placeholder="Regex pattern for device names"
-            onChange={e =>
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}DeviceCriteria`]: {
-                  ...prev[`${prefix}DeviceCriteria`],
-                  deviceNamePattern: e.target.value,
-                },
-              }))
-            }
-          />
-          <p className="text-xs text-muted-foreground">Use regex pattern to match device names</p>
-        </div>
-      </div>
-    </div>
-  );
-
-  // --- PORT CRITERIA FIELDS (No mediaType, connectorType, min/max/requireUnused) ---
-  const renderPortCriteriaFields = (
-    prefix: 'source' | 'target',
-    criteria: ConnectionRule['sourcePortCriteria' | 'targetPortCriteria']
-  ) => (
-    <div className="space-y-4 border rounded-md p-4">
-      <h3 className="font-medium text-lg mb-2">
-        {prefix === 'source' ? 'Source' : 'Target'} Port Criteria
-      </h3>
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor={`${prefix}-portRole`}>Port Role</Label>
-          <select
-            className="mt-1 block w-full border rounded px-3 py-2 bg-background"
-            id={`${prefix}-portRole`}
-            value={criteria.portRole?.[0] || ''}
-            onChange={e => {
-              const value = e.target.value ? [e.target.value as PortRole] : [];
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}PortCriteria`]: {
-                  ...prev[`${prefix}PortCriteria`],
-                  portRole: value,
-                },
-              }));
-            }}
-          >
-            <option value="">Any</option>
-            {Object.values(PortRole).map(role => (
-              <option key={role} value={role}>{role}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor={`${prefix}-speed`}>Speed</Label>
-          <select
-            className="mt-1 block w-full border rounded px-3 py-2 bg-background"
-            id={`${prefix}-speed`}
-            value={criteria.speed || ''}
-            onChange={e => {
-              const value = e.target.value ? (e.target.value as PortSpeed) : undefined;
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}PortCriteria`]: {
-                  ...prev[`${prefix}PortCriteria`],
-                  speed: value,
-                },
-              }));
-            }}
-          >
-            <option value="">Any</option>
-            {Object.values(PortSpeed).map(speed => (
-              <option key={speed} value={speed}>{speed}</option>
-            ))}
-          </select>
-        </div>
-        <div className="md:col-span-2">
-          <Label htmlFor={`${prefix}-portNamePattern`}>Port Name Pattern</Label>
-          <Input
-            id={`${prefix}-portNamePattern`}
-            value={criteria.portNamePattern || ''}
-            placeholder="Regex pattern for port names"
-            onChange={e =>
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}PortCriteria`]: {
-                  ...prev[`${prefix}PortCriteria`],
-                  portNamePattern: e.target.value,
-                },
-              }))
-            }
-          />
-          <p className="text-xs text-muted-foreground">Use regex pattern to match port names</p>
-        </div>
-        {/* excludePorts is still present in the type but not exposed as user input (typically hidden for user) */}
-      </div>
-    </div>
-  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -293,13 +142,13 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
         </div>
       </div>
 
-      {renderDeviceCriteriaFields('source', formData.sourceDeviceCriteria)}
-      {renderPortCriteriaFields('source', formData.sourcePortCriteria)}
+      <DeviceCriteriaFields prefix="source" criteria={formData.sourceDeviceCriteria} setFormData={setFormData} />
+      <PortCriteriaFields prefix="source" criteria={formData.sourcePortCriteria} setFormData={setFormData} />
 
       <div className="border-t my-4" />
 
-      {renderDeviceCriteriaFields('target', formData.targetDeviceCriteria)}
-      {renderPortCriteriaFields('target', formData.targetPortCriteria)}
+      <DeviceCriteriaFields prefix="target" criteria={formData.targetDeviceCriteria} setFormData={setFormData} />
+      <PortCriteriaFields prefix="target" criteria={formData.targetPortCriteria} setFormData={setFormData} />
 
       <div className="grid md:grid-cols-2 gap-6">
         <div>
