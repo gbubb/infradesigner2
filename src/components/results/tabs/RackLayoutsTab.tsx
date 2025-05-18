@@ -26,6 +26,7 @@ import { ClusterAZAssignmentDialog } from './rack-layouts/ClusterAZAssignmentDia
 import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
 import { LayoutPersistenceService } from '@/services/layoutPersistenceService';
 import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
+import { useDesignStore } from '@/store/designStore';
 
 export const RackLayoutsTab: React.FC = () => {
   const { rackProfiles, availabilityZones } = useRackInitialization();
@@ -52,7 +53,25 @@ export const RackLayoutsTab: React.FC = () => {
   const [readyToOpenReportDialog, setReadyToOpenReportDialog] = useState(false);
   const [snapshotAzNameMap, setSnapshotAzNameMap] = useState<Record<string, string>>({});
   const [snapshotRackNameMap, setSnapshotRackNameMap] = useState<Record<string, string>>({});
+  const activeDesign = useDesignStore(state => state.activeDesign);
+  const updateDesign = useDesignStore(state => state.updateDesign);
   
+  // --- NEW EFFECT TO LOAD SAVED RACK LAYOUTS ON INITIAL MOUNT OR DESIGN CHANGE
+  useEffect(() => {
+    async function initializeLayout() {
+      if (!activeDesign) return;
+      const data = await LayoutPersistenceService.loadLayoutForDesign();
+      if (data && data.rackprofiles && Array.isArray(data.rackprofiles) && data.rackprofiles.length > 0) {
+        // Update the active design's rackprofiles with saved layout
+        updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
+        // Optionally, you could set a toast here: toast.success('Loaded saved rack layout');
+      }
+    }
+    initializeLayout();
+    // Only run on initial mount and design change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDesign?.id]);
+
   // Map of AZ/rackId to friendly names (live maps)
   const azNameMap = React.useMemo(() => {
     const m: Record<string, string> = {};
@@ -145,19 +164,6 @@ export const RackLayoutsTab: React.FC = () => {
       setReadyToOpenReportDialog(false); // Reset the trigger
     }
   }, [readyToOpenReportDialog, placementReport]);
-
-  // Loading saved layout
-  useEffect(() => {
-    async function loadLayout() {
-      if (!selectedRackId) return;
-      const data = await LayoutPersistenceService.loadLayoutForDesign();
-      if (data?.rackprofiles) {
-        // Overwrite racks/devices with loaded layout
-        // (could replace rackprofile state or trigger reload with newly loaded data)
-      }
-    }
-    loadLayout();
-  }, [selectedRackId]);
 
   // Save Layout
   const handleSaveLayout = async () => {
