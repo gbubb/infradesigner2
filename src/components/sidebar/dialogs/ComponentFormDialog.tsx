@@ -110,6 +110,9 @@ interface ComponentFormDialogProps {
   onCancel: () => void;
   onSubmit: () => void;
   isEditing: boolean;
+  addPort: () => void;
+  removePort: (index: number) => void;
+  updatePort: (index: number, field: keyof import('@/types/infrastructure/port-types').Port, value: any) => void;
 }
 
 // NEW — import sub components for modularization
@@ -128,7 +131,10 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   onSwitchChange,
   onCancel,
   onSubmit,
-  isEditing
+  isEditing,
+  addPort,
+  removePort,
+  updatePort
 }) => {
   const physicalConstraints = useDesignStore((state) => 
     state.activeDesign?.requirements?.physicalConstraints);
@@ -212,13 +218,6 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   };
 
   const { control } = form;
-
-  const {
-    addPort,
-    removePort,
-    updatePort,
-    componentForm
-  } = require('@/hooks/components/useComponentForm')();
 
   const handlePortChange = (index: number, field: keyof import('@/types/infrastructure/port-types').Port, value: any) => {
     updatePort(index, field, value);
