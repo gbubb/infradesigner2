@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { Port, PortRole, PortSpeed, MediaType, ConnectorType } from '@/types/infrastructure/port-types';
 import { useDesignStore } from '@/store/designStore';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface ComponentFormValues {
   id?: string;
@@ -30,6 +32,8 @@ export interface ComponentFormValues {
   validRUEnd?: number;
   preferredRU?: number;
   preferredRack?: number;
+  // Detailed port array
+  ports: Port[];
   [key: string]: any;
 }
 
@@ -61,9 +65,11 @@ export const useComponentForm = () => {
     layer: 2,
     // Disk-specific fields
     capacityTB: 1,
-    formFactor: '',  // Will use common values in the dialog/form.
-    interface: '',   // Will use common values in the dialog/form.
+    formFactor: '',
+    interface: '',
     diskType: '',
+    // New: detailed network ports
+    ports: [],
   };
   
   const [componentForm, setComponentForm] = useState<ComponentFormValues>({...defaultFormState});
@@ -72,6 +78,38 @@ export const useComponentForm = () => {
     console.log('Resetting form to default state');
     setComponentForm({...defaultFormState});
     setEditingComponentId(null);
+  };
+
+  // --- PORT HANDLING LOGIC ---
+  const addPort = () => {
+    const newPort: Port = {
+      id: uuidv4(),
+      name: '',
+      speed: PortSpeed.Speed1G,
+      mediaType: MediaType.Copper,
+      connectorType: ConnectorType.RJ45,
+      role: undefined,
+    };
+    setComponentForm(prev => ({
+      ...prev,
+      ports: [...(prev.ports || []), newPort]
+    }));
+  };
+
+  const removePort = (index: number) => {
+    setComponentForm(prev => ({
+      ...prev,
+      ports: prev.ports.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updatePort = (index: number, field: keyof Port, value: any) => {
+    setComponentForm(prev => ({
+      ...prev,
+      ports: prev.ports.map((port, i) =>
+        i === index ? { ...port, [field]: value } : port
+      ),
+    }));
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,6 +211,9 @@ export const useComponentForm = () => {
     delete component.preferredRU;
     delete component.preferredRack;
     
+    // --- Add detailed ports ---
+    const ports = form.ports || [];
+    
     console.log('Processed component:', component);
     return component;
   };
@@ -204,7 +245,10 @@ export const useComponentForm = () => {
     handleSelectChange,
     handleTypeChange,
     validateForm,
-    processFormForSubmission
+    processFormForSubmission,
+    // Port handling:
+    addPort,
+    removePort,
+    updatePort,
   };
 };
-

@@ -59,13 +59,16 @@ function filterPorts(
   device: InfrastructureComponent,
   roleArr?: PortRole[],
   speed?: PortSpeed,
-  media?: MediaType
+  media?: MediaType,
+  connectorType?: ConnectorType // Add connectorType as filter criteria if present
 ): Port[] {
   if (!device.ports) return [];
   return device.ports.filter((p) =>
-    (!roleArr?.length || matchesPortRole(p.role, roleArr)) &&
+    // Fix port role array matching logic:
+    (!roleArr?.length || (p.role && roleArr.includes(p.role))) &&
     (!speed || p.speed === speed) &&
-    (!media || p.mediaType === media)
+    (!media || p.mediaType === media) &&
+    (!connectorType || p.connectorType === connectorType)
   );
 }
 
@@ -185,7 +188,8 @@ export function generateConnections(
         srcDevice,
         rule.sourcePortCriteria?.portRole,
         rule.sourcePortCriteria?.speed,
-        rule.sourcePortCriteria?.mediaType
+        rule.sourcePortCriteria?.mediaType,
+        rule.sourcePortCriteria?.connectorType
       );
       if (!srcPorts.length) {
         connectionAttempts.push({
@@ -219,7 +223,8 @@ export function generateConnections(
             target,
             rule.targetPortCriteria?.portRole,
             rule.targetPortCriteria?.speed,
-            rule.targetPortCriteria?.mediaType
+            rule.targetPortCriteria?.mediaType,
+            rule.targetPortCriteria?.connectorType
           );
           if (!dstPorts.length) {
             connectionAttempts.push({

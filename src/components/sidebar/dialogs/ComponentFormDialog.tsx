@@ -26,7 +26,7 @@ import {
   DiskType,
   ConnectorType
 } from '@/types/infrastructure';
-import { PortSpeed } from '@/types/infrastructure/port-types';
+import { PortSpeed, PortRole, MediaType } from '@/types/infrastructure/port-types';
 import { RouterFirewallFormFields } from '../forms/RouterFirewallFormFields';
 import { CablingFormFields } from '../forms/CablingFormFields';
 import { useDesignStore } from '@/store/designStore';
@@ -213,6 +213,17 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
 
   const { control } = form;
 
+  const {
+    addPort,
+    removePort,
+    updatePort,
+    componentForm
+  } = require('@/hooks/components/useComponentForm')();
+
+  const handlePortChange = (index: number, field: keyof import('@/types/infrastructure/port-types').Port, value: any) => {
+    updatePort(index, field, value);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0">
@@ -387,6 +398,76 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* ---- PORTS SECTION ---- */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <div className="font-semibold">Ports</div>
+                  <Button type="button" size="sm" onClick={addPort} data-testid="add-port">Add Port</Button>
+                </div>
+                {(formValues.ports && formValues.ports.length > 0) ? (
+                  <div className="space-y-2">
+                    {formValues.ports.map((port: any, idx: number) => (
+                      <div key={port.id || idx} className="border rounded p-3 flex flex-col sm:flex-row gap-2 items-center">
+                        <Input
+                          type="text"
+                          placeholder="Name (e.g. eth0)"
+                          value={port.name || ''}
+                          onChange={e => handlePortChange(idx, 'name', e.target.value)}
+                          className="w-32"
+                        />
+                        <select
+                          value={port.role || ''}
+                          className="border rounded px-2 py-1"
+                          onChange={e => handlePortChange(idx, 'role', e.target.value)}
+                        >
+                          <option value="">Role</option>
+                          {Object.values(PortRole).map(r => (
+                            <option value={r} key={r}>{r}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={port.speed || PortSpeed.Speed1G}
+                          className="border rounded px-2 py-1"
+                          onChange={e => handlePortChange(idx, 'speed', e.target.value)}
+                        >
+                          {Object.values(PortSpeed).map(s => (
+                            <option value={s} key={s}>{s}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={port.mediaType || MediaType.Copper}
+                          className="border rounded px-2 py-1"
+                          onChange={e => handlePortChange(idx, 'mediaType', e.target.value)}
+                        >
+                          {Object.values(MediaType).map(mt => (
+                            <option value={mt} key={mt}>{mt}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={port.connectorType || ConnectorType.RJ45}
+                          className="border rounded px-2 py-1"
+                          onChange={e => handlePortChange(idx, 'connectorType', e.target.value)}
+                        >
+                          {Object.values(ConnectorType).map(ct => (
+                            <option value={ct} key={ct}>{ct}</option>
+                          ))}
+                        </select>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removePort(idx)}
+                          data-testid={`remove-port-${idx}`}
+                        >Remove</Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 my-2">No ports defined. Add at least one port for network rules.</div>
+                )}
+              </div>
+              {/* ---- END PORTS SECTION ---- */}
 
             </form>
           </Form>
