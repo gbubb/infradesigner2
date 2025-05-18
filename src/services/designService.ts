@@ -1,4 +1,3 @@
-
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureDesign } from '@/types/infrastructure';
 import { toast } from 'sonner';
@@ -10,7 +9,6 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
       .from(TABLES.DESIGNS)
       .select('*');
       
-    // If userId is provided, filter designs by user_id
     if (userId) {
       query = query.eq('user_id', userId);
     }
@@ -23,33 +21,27 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
     
     // Convert database format to application format
     const designs = (data?.map(design => {
-      // Make sure we're only processing design rows by checking for required properties
       if ('createdat' in design && 'name' in design) {
         try {
-          // Parse JSON fields - use null coalescing to prevent parsing errors
           const parsedComponents = design.components ? JSON.parse(String(design.components) || '[]') : [];
           const parsedRequirements = design.requirements ? JSON.parse(String(design.requirements) || '{}') : {};
-          
-          // Parse additional data fields - use optional chaining to safely access properties
           const parsedComponentRoles = design.component_roles ? JSON.parse(String(design.component_roles) || '[]') : [];
           const parsedDisksByRole = design.selected_disks_by_role ? JSON.parse(String(design.selected_disks_by_role) || '{}') : {};
           const parsedGPUsByRole = design.selected_gpus_by_role ? JSON.parse(String(design.selected_gpus_by_role) || '{}') : {};
-          
-          // Create a complete design object with all properties
+          const parsedConnectionRules = design.connection_rules ? JSON.parse(String(design.connection_rules) || '[]') : [];
+
           return {
             id: design.id,
             name: design.name,
             description: design.description || '',
             components: parsedComponents,
             requirements: parsedRequirements,
-            // Add additional properties
             componentRoles: parsedComponentRoles,
             selectedDisksByRole: parsedDisksByRole,
             selectedGPUsByRole: parsedGPUsByRole,
-            // Convert dates
+            connectionRules: parsedConnectionRules,
             createdAt: new Date(design.createdat),
             updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat),
-            // Add user and sharing data
             user_id: design.user_id || null,
             is_public: design.is_public || false,
             sharing_id: design.sharing_id || null
@@ -59,7 +51,6 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
           return null;
         }
       }
-      // This should never happen if database is properly set up
       console.error('Invalid design data:', design);
       return null;
     }).filter(Boolean) || []);
@@ -92,30 +83,25 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
     }
     
     try {
-      // Parse JSON fields - use null coalescing to prevent parsing errors
       const parsedComponents = data.components ? JSON.parse(String(data.components) || '[]') : [];
       const parsedRequirements = data.requirements ? JSON.parse(String(data.requirements) || '{}') : {};
-      
-      // Parse additional data fields - use optional chaining to safely access properties
       const parsedComponentRoles = data.component_roles ? JSON.parse(String(data.component_roles) || '[]') : [];
       const parsedDisksByRole = data.selected_disks_by_role ? JSON.parse(String(data.selected_disks_by_role) || '{}') : {};
       const parsedGPUsByRole = data.selected_gpus_by_role ? JSON.parse(String(data.selected_gpus_by_role) || '{}') : {};
-      
-      // Create a complete design object with all properties
+      const parsedConnectionRules = data.connection_rules ? JSON.parse(String(data.connection_rules) || '[]') : [];
+
       return {
         id: data.id,
         name: data.name,
         description: data.description || '',
         components: parsedComponents,
         requirements: parsedRequirements,
-        // Add additional properties
         componentRoles: parsedComponentRoles,
         selectedDisksByRole: parsedDisksByRole,
         selectedGPUsByRole: parsedGPUsByRole,
-        // Convert dates
+        connectionRules: parsedConnectionRules,
         createdAt: new Date(data.createdat),
         updatedAt: data.updatedat ? new Date(data.updatedat) : new Date(data.createdat),
-        // Add user and sharing data
         user_id: data.user_id || null,
         is_public: data.is_public || false,
         sharing_id: data.sharing_id || null
@@ -134,23 +120,18 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
 // Save a design to Supabase
 export const saveDesign = async (design: InfrastructureDesign, userId?: string): Promise<boolean> => {
   try {
-    // Format data for Supabase - convert complex objects to JSON strings
-    // We need to ensure these are serializable for the database
     const designToSave = {
       id: design.id,
       name: design.name,
       description: design.description,
-      // Convert objects to JSON strings
       requirements: JSON.stringify(design.requirements || {}),
       components: JSON.stringify(design.components || []),
-      // Add additional configuration data as JSON strings
       component_roles: JSON.stringify(design.componentRoles || []),
       selected_disks_by_role: JSON.stringify(design.selectedDisksByRole || {}),
       selected_gpus_by_role: JSON.stringify(design.selectedGPUsByRole || {}),
-      // Dates
+      connection_rules: JSON.stringify(design.connectionRules || []),
       createdat: design.createdAt.toISOString(),
       updatedat: new Date().toISOString(),
-      // User and sharing data
       user_id: userId || design.user_id,
       is_public: design.is_public || false
     };
@@ -235,21 +216,17 @@ export const purgeAllDesigns = async (): Promise<boolean> => {
 // Export a design to a JSON file
 export const exportDesign = (design: InfrastructureDesign): void => {
   try {
-    // Create a JSON blob from the design object
     const designJson = JSON.stringify(design, null, 2);
     const blob = new Blob([designJson], { type: 'application/json' });
     
-    // Create a temporary download link
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `${design.name.replace(/\s+/g, '_')}_design.json`;
     
-    // Trigger the download
     document.body.appendChild(link);
     link.click();
     
-    // Clean up
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
@@ -271,36 +248,18 @@ export const importDesign = async (file: File): Promise<InfrastructureDesign | n
           const fileContent = event.target?.result as string;
           const importedDesign = JSON.parse(fileContent) as InfrastructureDesign;
           
-          // Validate the imported design has the required properties
           if (!importedDesign.id || !importedDesign.name) {
             toast.error('Invalid design file format');
             resolve(null);
             return;
           }
-          
-          // Ensure components array exists
-          if (!importedDesign.components) {
-            importedDesign.components = [];
-          }
-          
-          // Ensure configuration data exists
-          if (!importedDesign.componentRoles) {
-            importedDesign.componentRoles = [];
-          }
-          
-          if (!importedDesign.selectedDisksByRole) {
-            importedDesign.selectedDisksByRole = {};
-          }
-          
-          if (!importedDesign.selectedGPUsByRole) {
-            importedDesign.selectedGPUsByRole = {};
-          }
-          
-          // Convert date strings back to Date objects
+          if (!importedDesign.components) importedDesign.components = [];
+          if (!importedDesign.componentRoles) importedDesign.componentRoles = [];
+          if (!importedDesign.selectedDisksByRole) importedDesign.selectedDisksByRole = {};
+          if (!importedDesign.selectedGPUsByRole) importedDesign.selectedGPUsByRole = {};
+          if (!importedDesign.connectionRules) importedDesign.connectionRules = [];
           importedDesign.createdAt = new Date(importedDesign.createdAt);
-          importedDesign.updatedAt = importedDesign.updatedAt 
-            ? new Date(importedDesign.updatedAt) 
-            : new Date();
+          importedDesign.updatedAt = importedDesign.updatedAt ? new Date(importedDesign.updatedAt) : new Date();
           
           toast.success(`Design "${importedDesign.name}" imported successfully`);
           resolve(importedDesign);
