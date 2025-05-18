@@ -219,6 +219,57 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
 
   const { control } = form;
 
+  // --------- BULK PORT ADDITION UI/LOGIC BEGIN ---------
+  const [bulkPort, setBulkPort] = useState({
+    prefix: "",
+    role: "",
+    speed: "",
+    mediaType: "",
+    connectorType: "",
+    quantity: 1,
+  });
+
+  const handleBulkPortChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setBulkPort((prev) => ({
+      ...prev,
+      [name]: name === "quantity" ? Number(value) : value,
+    }));
+  };
+
+  const handleBulkAddPorts = () => {
+    const { prefix, role, speed, mediaType, connectorType, quantity } = bulkPort;
+    if (!prefix || !speed || !mediaType || !connectorType || !quantity || quantity < 1) {
+      alert("Please fill all fields for bulk port creation and use quantity >= 1.");
+      return;
+    }
+    const startNum = (formValues.ports?.length || 0) + 1;
+    const portsToAdd = Array.from({ length: quantity }).map((_, i) => ({
+      id: crypto.randomUUID(),
+      name: `${prefix}${startNum + i}`,
+      role: role || undefined,
+      speed,
+      mediaType,
+      connectorType,
+    }));
+    // Append new ports to current list
+    if (portsToAdd.length > 0) {
+      // Append with updatePort logic to trigger re-render
+      let updatedPorts = [...(formValues.ports || []), ...portsToAdd];
+      onInputChange({
+        target: {
+          name: "ports",
+          value: updatedPorts,
+        },
+      } as any);
+    }
+    // Reset only quantity, keep other values for quick repeated addition
+    setBulkPort((prev) => ({ ...prev, quantity: 1 }));
+  };
+  // --------- BULK PORT ADDITION UI/LOGIC END ---------
+
   const handlePortChange = (index: number, field: keyof import('@/types/infrastructure/port-types').Port, value: any) => {
     updatePort(index, field, value);
   };
@@ -398,7 +449,103 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                 </div>
               )}
 
-              {/* ---- PORTS SECTION ---- */}
+              {/* ---- BULK PORTS SECTION ---- */}
+              <div className="mb-4 border p-3 rounded-lg">
+                <div className="font-semibold mb-1">Add Multiple Ports</div>
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
+                  <div>
+                    <label className="block text-xs font-medium mb-1" htmlFor="prefix">Prefix</label>
+                    <input
+                      type="text"
+                      name="prefix"
+                      id="bulk-port-prefix"
+                      value={bulkPort.prefix}
+                      onChange={handleBulkPortChange}
+                      placeholder="eth"
+                      className="border px-2 py-1 rounded w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" htmlFor="role">Role</label>
+                    <select
+                      name="role"
+                      value={bulkPort.role}
+                      onChange={handleBulkPortChange}
+                      className="border px-2 py-1 rounded w-full"
+                    >
+                      <option value="">--</option>
+                      {Object.values(PortRole).map(r => (
+                        <option value={r} key={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" htmlFor="speed">Speed</label>
+                    <select
+                      name="speed"
+                      value={bulkPort.speed}
+                      onChange={handleBulkPortChange}
+                      className="border px-2 py-1 rounded w-full"
+                    >
+                      <option value="">--</option>
+                      {Object.values(PortSpeed).map(s => (
+                        <option value={s} key={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" htmlFor="mediaType">Media</label>
+                    <select
+                      name="mediaType"
+                      value={bulkPort.mediaType}
+                      onChange={handleBulkPortChange}
+                      className="border px-2 py-1 rounded w-full"
+                    >
+                      <option value="">--</option>
+                      {Object.values(MediaType).map(m => (
+                        <option value={m} key={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" htmlFor="connectorType">Connector</label>
+                    <select
+                      name="connectorType"
+                      value={bulkPort.connectorType}
+                      onChange={handleBulkPortChange}
+                      className="border px-2 py-1 rounded w-full"
+                    >
+                      <option value="">--</option>
+                      {Object.values(ConnectorType).map(ct => (
+                        <option value={ct} key={ct}>{ct}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" htmlFor="quantity">Qty</label>
+                    <input
+                      type="number"
+                      min={1}
+                      name="quantity"
+                      value={bulkPort.quantity}
+                      onChange={handleBulkPortChange}
+                      className="border px-2 py-1 rounded w-full"
+                    />
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    className="bg-blue-600 text-white py-1 px-3 rounded hover:bg-blue-700"
+                    onClick={handleBulkAddPorts}
+                  >
+                    Add Ports
+                  </button>
+                </div>
+              </div>
+              {/* ---- END BULK PORTS SECTION ---- */}
+
+              {/* ---- SINGLE PORTS SECTION ---- */}
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <div className="font-semibold">Ports</div>
