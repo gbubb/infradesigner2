@@ -55,63 +55,24 @@ function matchesPortRole(portRole: PortRole | undefined, criteria: PortRole[] | 
   return criteria.includes(portRole);
 }
 
-// Returns ports matching port criteria from a device
+// Adapt filterPorts for removed fields
 function filterPorts(
   device: InfrastructureComponent,
   criteria?: PortCriteria
 ): Port[] {
   if (!device.ports || !criteria) return device.ports || [];
-  
-  // Add detailed logging for port filtering
-  console.log(`[ConnectionService] Filtering ports for device ${device.name || device.id}:`, {
-    deviceType: device.type,
-    deviceRole: device.role,
-    availablePorts: device.ports.map(p => ({
-      id: p.id,
-      name: p.name,
-      role: p.role,
-      speed: p.speed,
-      mediaType: p.mediaType,
-      connectorType: p.connectorType,
-      connectedToDeviceId: p.connectedToDeviceId
-    })),
-    filterCriteria: criteria
-  });
 
+  // Only check role, speed, portNamePattern, excludePorts as per new simplified types
   let filteredPorts = device.ports.filter((p) => {
-    // Basic criteria matching
     const matchesRole = !criteria.portRole?.length || (p.role && criteria.portRole.includes(p.role));
     const matchesSpeed = !criteria.speed || p.speed === criteria.speed;
-    const matchesMedia = !criteria.mediaType || p.mediaType === criteria.mediaType;
-    const matchesConnector = !criteria.connectorType || p.connectorType === criteria.connectorType;
-    
-    // Additional criteria matching
     const matchesName = !criteria.portNamePattern || new RegExp(criteria.portNamePattern).test(p.name || '');
     const notExcluded = !criteria.excludePorts?.includes(p.id);
-    const matchesUnused = !criteria.requireUnused || !p.connectedToDeviceId;
-
-    return matchesRole && matchesSpeed && matchesMedia && matchesConnector && 
-           matchesName && notExcluded && matchesUnused;
+    // mediaType, connectorType, minPorts, maxPorts, requireUnused removed
+    return matchesRole && matchesSpeed && matchesName && notExcluded;
   });
 
-  // Apply min/max port limits if specified
-  if (criteria.maxPorts && filteredPorts.length > criteria.maxPorts) {
-    filteredPorts = filteredPorts.slice(0, criteria.maxPorts);
-  }
-
-  // Log filtering results
-  console.log(`[ConnectionService] Port filtering results for ${device.name || device.id}:`, {
-    totalPorts: device.ports.length,
-    filteredPorts: filteredPorts.length,
-    matchedPorts: filteredPorts.map(p => ({
-      id: p.id,
-      name: p.name,
-      role: p.role,
-      speed: p.speed,
-      mediaType: p.mediaType,
-      connectorType: p.connectorType
-    }))
-  });
+  // Removed minPorts/maxPorts logic -- not part of new requirements.
 
   return filteredPorts;
 }

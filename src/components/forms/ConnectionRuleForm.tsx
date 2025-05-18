@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,8 +8,7 @@ import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { AZScope, ConnectionPattern, ConnectionRule } from '@/types/infrastructure/connection-rule-types';
 import { ComponentType } from '@/types/infrastructure/component-types';
-import { PortRole, PortSpeed, MediaType } from '@/types/infrastructure/port-types';
-import { ConnectorType } from '@/types/infrastructure';
+import { PortRole, PortSpeed } from '@/types/infrastructure/port-types';
 
 interface ConnectionRuleFormProps {
   rule?: ConnectionRule;
@@ -27,44 +25,59 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
     id: rule?.id || crypto.randomUUID(),
     name: rule?.name || '',
     description: rule?.description || '',
-    sourceDeviceCriteria: rule?.sourceDeviceCriteria || {
-      componentType: undefined,
-      role: '',
-      minPorts: undefined,
-      maxPorts: undefined,
-      deviceNamePattern: '',
-      excludeDevices: [],
-    },
-    sourcePortCriteria: rule?.sourcePortCriteria || {
-      portRole: [],
-      speed: undefined,
-      mediaType: undefined,
-      connectorType: undefined,
-      minPorts: undefined,
-      maxPorts: undefined,
-      portNamePattern: '',
-      excludePorts: [],
-      requireUnused: false,
-    },
-    targetDeviceCriteria: rule?.targetDeviceCriteria || {
-      componentType: undefined,
-      role: '',
-      minPorts: undefined,
-      maxPorts: undefined,
-      deviceNamePattern: '',
-      excludeDevices: [],
-    },
-    targetPortCriteria: rule?.targetPortCriteria || {
-      portRole: [],
-      speed: undefined,
-      mediaType: undefined,
-      connectorType: undefined,
-      minPorts: undefined,
-      maxPorts: undefined,
-      portNamePattern: '',
-      excludePorts: [],
-      requireUnused: false,
-    },
+    sourceDeviceCriteria: rule?.sourceDeviceCriteria
+      ? {
+          componentType: rule.sourceDeviceCriteria.componentType,
+          role: rule.sourceDeviceCriteria.role,
+          deviceNamePattern: rule.sourceDeviceCriteria.deviceNamePattern,
+          excludeDevices: rule.sourceDeviceCriteria.excludeDevices,
+        }
+      : {
+          componentType: undefined,
+          role: '',
+          deviceNamePattern: '',
+          excludeDevices: [],
+        },
+    sourcePortCriteria: rule?.sourcePortCriteria
+      ? {
+          portRole: rule.sourcePortCriteria.portRole,
+          speed: rule.sourcePortCriteria.speed,
+          portNamePattern: rule.sourcePortCriteria.portNamePattern,
+          excludePorts: rule.sourcePortCriteria.excludePorts,
+          // mediaType, connectorType, minPorts, maxPorts, requireUnused are all removed
+        }
+      : {
+          portRole: [],
+          speed: undefined,
+          portNamePattern: '',
+          excludePorts: [],
+        },
+    targetDeviceCriteria: rule?.targetDeviceCriteria
+      ? {
+          componentType: rule.targetDeviceCriteria.componentType,
+          role: rule.targetDeviceCriteria.role,
+          deviceNamePattern: rule.targetDeviceCriteria.deviceNamePattern,
+          excludeDevices: rule.targetDeviceCriteria.excludeDevices,
+        }
+      : {
+          componentType: undefined,
+          role: '',
+          deviceNamePattern: '',
+          excludeDevices: [],
+        },
+    targetPortCriteria: rule?.targetPortCriteria
+      ? {
+          portRole: rule.targetPortCriteria.portRole,
+          speed: rule.targetPortCriteria.speed,
+          portNamePattern: rule.targetPortCriteria.portNamePattern,
+          excludePorts: rule.targetPortCriteria.excludePorts,
+        }
+      : {
+          portRole: [],
+          speed: undefined,
+          portNamePattern: '',
+          excludePorts: [],
+        },
     azScope: rule?.azScope || AZScope.AnyAZ,
     targetAZId: rule?.targetAZId || '',
     connectionPattern: rule?.connectionPattern || ConnectionPattern.ConnectToEachTarget,
@@ -73,8 +86,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
     enabled: rule?.enabled ?? true,
     maxConnections: rule?.maxConnections,
     connectionStrategy: rule?.connectionStrategy || 'all',
-    bidirectional: rule?.bidirectional || false,
-    priority: rule?.priority || 0,
+    // bidirectional, priority removed
     tags: rule?.tags || [],
   });
 
@@ -102,6 +114,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
     }));
   };
 
+  // --- DEVICE CRITERIA FIELDS (NO minPorts/maxPorts) ---
   const renderDeviceCriteriaFields = (
     prefix: 'source' | 'target',
     criteria: ConnectionRule['sourceDeviceCriteria' | 'targetDeviceCriteria']
@@ -151,42 +164,6 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
             }
           />
         </div>
-        <div>
-          <Label htmlFor={`${prefix}-minPorts`}>Min Ports</Label>
-          <Input
-            id={`${prefix}-minPorts`}
-            type="number"
-            min={0}
-            value={criteria.minPorts ?? ''}
-            onChange={e =>
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}DeviceCriteria`]: {
-                  ...prev[`${prefix}DeviceCriteria`],
-                  minPorts: e.target.value !== '' ? Number(e.target.value) : undefined,
-                },
-              }))
-            }
-          />
-        </div>
-        <div>
-          <Label htmlFor={`${prefix}-maxPorts`}>Max Ports</Label>
-          <Input
-            id={`${prefix}-maxPorts`}
-            type="number"
-            min={0}
-            value={criteria.maxPorts ?? ''}
-            onChange={e =>
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}DeviceCriteria`]: {
-                  ...prev[`${prefix}DeviceCriteria`],
-                  maxPorts: e.target.value !== '' ? Number(e.target.value) : undefined,
-                },
-              }))
-            }
-          />
-        </div>
         <div className="md:col-span-2">
           <Label htmlFor={`${prefix}-deviceNamePattern`}>Device Name Pattern</Label>
           <Input
@@ -209,6 +186,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
     </div>
   );
 
+  // --- PORT CRITERIA FIELDS (No mediaType, connectorType, min/max/requireUnused) ---
   const renderPortCriteriaFields = (
     prefix: 'source' | 'target',
     criteria: ConnectionRule['sourcePortCriteria' | 'targetPortCriteria']
@@ -264,88 +242,6 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
             ))}
           </select>
         </div>
-        <div>
-          <Label htmlFor={`${prefix}-mediaType`}>Media Type</Label>
-          <select
-            className="mt-1 block w-full border rounded px-3 py-2 bg-background"
-            id={`${prefix}-mediaType`}
-            value={criteria.mediaType || ''}
-            onChange={e => {
-              const value = e.target.value ? (e.target.value as MediaType) : undefined;
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}PortCriteria`]: {
-                  ...prev[`${prefix}PortCriteria`],
-                  mediaType: value,
-                },
-              }));
-            }}
-          >
-            <option value="">Any</option>
-            {Object.values(MediaType).map(media => (
-              <option key={media} value={media}>{media}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor={`${prefix}-connectorType`}>Connector Type</Label>
-          <select
-            className="mt-1 block w-full border rounded px-3 py-2 bg-background"
-            id={`${prefix}-connectorType`}
-            value={criteria.connectorType || ''}
-            onChange={e => {
-              const value = e.target.value ? (e.target.value as ConnectorType) : undefined;
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}PortCriteria`]: {
-                  ...prev[`${prefix}PortCriteria`],
-                  connectorType: value,
-                },
-              }));
-            }}
-          >
-            <option value="">Any</option>
-            {Object.values(ConnectorType).map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor={`${prefix}-minPorts-port`}>Min Ports</Label>
-          <Input
-            id={`${prefix}-minPorts-port`}
-            type="number"
-            min={0}
-            value={criteria.minPorts ?? ''}
-            onChange={e =>
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}PortCriteria`]: {
-                  ...prev[`${prefix}PortCriteria`],
-                  minPorts: e.target.value !== '' ? Number(e.target.value) : undefined,
-                },
-              }))
-            }
-          />
-        </div>
-        <div>
-          <Label htmlFor={`${prefix}-maxPorts-port`}>Max Ports</Label>
-          <Input
-            id={`${prefix}-maxPorts-port`}
-            type="number"
-            min={0}
-            value={criteria.maxPorts ?? ''}
-            onChange={e =>
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}PortCriteria`]: {
-                  ...prev[`${prefix}PortCriteria`],
-                  maxPorts: e.target.value !== '' ? Number(e.target.value) : undefined,
-                },
-              }))
-            }
-          />
-        </div>
         <div className="md:col-span-2">
           <Label htmlFor={`${prefix}-portNamePattern`}>Port Name Pattern</Label>
           <Input
@@ -364,22 +260,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
           />
           <p className="text-xs text-muted-foreground">Use regex pattern to match port names</p>
         </div>
-        <div className="md:col-span-2 flex items-center gap-2">
-          <Switch
-            checked={criteria.requireUnused}
-            onCheckedChange={checked =>
-              setFormData(prev => ({
-                ...prev,
-                [`${prefix}PortCriteria`]: {
-                  ...prev[`${prefix}PortCriteria`],
-                  requireUnused: checked,
-                },
-              }))
-            }
-            id={`${prefix}-requireUnused`}
-          />
-          <Label htmlFor={`${prefix}-requireUnused`} className="cursor-pointer">Require Unused Ports</Label>
-        </div>
+        {/* excludePorts is still present in the type but not exposed as user input (typically hidden for user) */}
       </div>
     </div>
   );
@@ -521,39 +402,8 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
           />
           <p className="text-xs text-muted-foreground">0 means unlimited</p>
         </div>
-        <div className="flex items-center gap-2 mt-8">
-          <Switch
-            checked={formData.bidirectional}
-            onCheckedChange={checked =>
-              setFormData(prev => ({
-                ...prev,
-                bidirectional: checked,
-              }))
-            }
-            id="bidirectional"
-          />
-          <Label htmlFor="bidirectional" className="cursor-pointer">
-            Bidirectional
-          </Label>
-        </div>
-        <div>
-          <Label htmlFor="priority">Priority</Label>
-          <Input
-            id="priority"
-            type="number"
-            min={0}
-            value={formData.priority || 0}
-            onChange={e =>
-              setFormData(prev => ({
-                ...prev,
-                priority: Number(e.target.value) || 0,
-              }))
-            }
-          />
-          <p className="text-xs text-muted-foreground">Higher priority rules are processed first</p>
-        </div>
       </div>
-      {/* Tags */}
+      {/* Tags UI stays unchanged */}
       <div>
         <Label>Tags</Label>
         <div className="flex items-center gap-2 mt-1">
