@@ -61,6 +61,7 @@ export type Database = {
         Row: {
           component_roles: Json | null
           components: Json | null
+          connection_rules: Json | null
           createdat: string | null
           description: string | null
           id: string
@@ -77,6 +78,7 @@ export type Database = {
         Insert: {
           component_roles?: Json | null
           components?: Json | null
+          connection_rules?: Json | null
           createdat?: string | null
           description?: string | null
           id?: string
@@ -93,6 +95,7 @@ export type Database = {
         Update: {
           component_roles?: Json | null
           components?: Json | null
+          connection_rules?: Json | null
           createdat?: string | null
           description?: string | null
           id?: string

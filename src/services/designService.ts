@@ -28,7 +28,10 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
           const parsedComponentRoles = design.component_roles ? JSON.parse(String(design.component_roles) || '[]') : [];
           const parsedDisksByRole = design.selected_disks_by_role ? JSON.parse(String(design.selected_disks_by_role) || '{}') : {};
           const parsedGPUsByRole = design.selected_gpus_by_role ? JSON.parse(String(design.selected_gpus_by_role) || '{}') : {};
-          const parsedConnectionRules = design.connection_rules ? JSON.parse(String(design.connection_rules) || '[]') : [];
+          // Fix: Use bracket notation and default to []
+          const parsedConnectionRules = ('connection_rules' in design && design['connection_rules'])
+            ? JSON.parse(String(design['connection_rules']) || '[]')
+            : [];
 
           return {
             id: design.id,
@@ -88,7 +91,10 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
       const parsedComponentRoles = data.component_roles ? JSON.parse(String(data.component_roles) || '[]') : [];
       const parsedDisksByRole = data.selected_disks_by_role ? JSON.parse(String(data.selected_disks_by_role) || '{}') : {};
       const parsedGPUsByRole = data.selected_gpus_by_role ? JSON.parse(String(data.selected_gpus_by_role) || '{}') : {};
-      const parsedConnectionRules = data.connection_rules ? JSON.parse(String(data.connection_rules) || '[]') : [];
+      // Fix: Use bracket notation and default to []
+      const parsedConnectionRules = ('connection_rules' in data && data['connection_rules'])
+        ? JSON.parse(String(data['connection_rules']) || '[]')
+        : [];
 
       return {
         id: data.id,
