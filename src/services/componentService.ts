@@ -1,4 +1,3 @@
-
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureComponent, ComponentType, Server, Switch, Disk, FiberPatchPanel, CopperPatchPanel, Cassette, Cable, ConnectorType } from '@/types/infrastructure';
 import { CableMediaType } from '@/types/infrastructure';
@@ -53,9 +52,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
     
     // Convert database format to application format with proper type assertion
     const components = (data?.map((component: ComponentRow) => {
-      // Make sure we're only processing component rows by checking for required properties
       if ('type' in component) {
-        // Get base component fields
         const baseComponent = {
           id: component.id,
           name: component.name,
@@ -67,26 +64,21 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
           powerRequired: Number(component.powerrequired) || 0,
           isDefault: component.isdefault || false,
         };
-        
-        // Get specialized fields from the 'details' column if available
+
         const details = component.details ? 
           (typeof component.details === 'string' ? 
             JSON.parse(component.details) : component.details) : {};
         
-        // Construct the full component based on its type
+        // Ensure we correctly assign ports array where present
         switch (component.type) {
           case ComponentType.Server:
-            // Determine the memory value using memoryCapacity as the primary field
             const memoryCapacity = details.memoryCapacity || details.memoryGB || 
               (details.memoryTB ? details.memoryTB * 1024 : 0);
-                
-            // Calculate core count consistently
             const coreCount = details.cpuSockets && details.cpuCoresPerSocket ?
               details.cpuSockets * details.cpuCoresPerSocket :
               details.cpuCount && details.coreCount ?
                 details.cpuCount * details.coreCount :
                 details.cores || details.totalCores || 0;
-                
             return {
               ...baseComponent,
               serverRole: component.serverrole,
@@ -94,10 +86,10 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               cpuModel: details.cpuModel || '',
               cpuCount: details.cpuCount || 1,
               coreCount: coreCount,
-              memoryGB: memoryCapacity, // For backward compatibility
+              memoryGB: memoryCapacity,
               cpuSockets: details.cpuSockets || 1,
               cpuCoresPerSocket: details.cpuCoresPerSocket || 1,
-              memoryCapacity: memoryCapacity, // Primary memory field
+              memoryCapacity: memoryCapacity,
               diskSlotType: details.diskSlotType || undefined,
               diskSlotQuantity: details.diskSlotQuantity || 0,
               ruSize: details.ruSize || details.rackUnitsConsumed || 1,
@@ -106,6 +98,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               storageCapacityTB: details.storageCapacityTB || 0,
               networkPorts: details.networkPorts || 0,
               networkPortSpeed: details.networkPortSpeed || 0,
+              ports: Array.isArray(details.ports) ? details.ports : [],
             } as Server;
             
           case ComponentType.Switch:
@@ -120,6 +113,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               portSpeedType: details.portSpeedType || undefined,
               portsProvidedQuantity: details.portsProvidedQuantity || details.portCount || 0,
               managementInterface: details.managementInterface || '',
+              ports: Array.isArray(details.ports) ? details.ports : [],
             } as Switch;
             
           case ComponentType.Disk:
@@ -262,6 +256,11 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
         specializedFields.connectorB_Type = cable.connectorB_Type || ConnectorType.RJ45;
         specializedFields.mediaType = cable.mediaType || CableMediaType.CopperCat6a;
         break;
+    }
+    
+    // Ensure ports field is always saved if present
+    if (Array.isArray(componentWithValidID.ports)) {
+      specializedFields.ports = componentWithValidID.ports;
     }
     
     // Combine into the final object to save
