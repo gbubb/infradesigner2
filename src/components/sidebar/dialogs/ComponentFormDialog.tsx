@@ -219,12 +219,11 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
 
   const { control } = form;
 
-  // --------- BULK PORT ADDITION UI/LOGIC BEGIN ---------
+  // --- BULK PORT ADDITION UI/LOGIC
   const [bulkPort, setBulkPort] = useState({
     prefix: "",
     role: "",
     speed: "",
-    mediaType: "",
     connectorType: "",
     quantity: 1,
   });
@@ -240,8 +239,8 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   };
 
   const handleBulkAddPorts = () => {
-    const { prefix, role, speed, mediaType, connectorType, quantity } = bulkPort;
-    if (!prefix || !speed || !mediaType || !connectorType || !quantity || quantity < 1) {
+    const { prefix, role, speed, connectorType, quantity } = bulkPort;
+    if (!prefix || !speed || !connectorType || !quantity || quantity < 1) {
       alert("Please fill all fields for bulk port creation and use quantity >= 1.");
       return;
     }
@@ -251,12 +250,10 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       name: `${prefix}${startNum + i}`,
       role: role || undefined,
       speed,
-      mediaType,
       connectorType,
     }));
     // Append new ports to current list
     if (portsToAdd.length > 0) {
-      // Append with updatePort logic to trigger re-render
       let updatedPorts = [...(formValues.ports || []), ...portsToAdd];
       onInputChange({
         target: {
@@ -265,10 +262,8 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
         },
       } as any);
     }
-    // Reset only quantity, keep other values for quick repeated addition
     setBulkPort((prev) => ({ ...prev, quantity: 1 }));
   };
-  // --------- BULK PORT ADDITION UI/LOGIC END ---------
 
   const handlePortChange = (index: number, field: keyof import('@/types/infrastructure/port-types').Port, value: any) => {
     updatePort(index, field, value);
@@ -452,7 +447,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
               {/* ---- BULK PORTS SECTION ---- */}
               <div className="mb-4 border p-3 rounded-lg">
                 <div className="font-semibold mb-1">Add Multiple Ports</div>
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
                   <div>
                     <label className="block text-xs font-medium mb-1" htmlFor="prefix">Prefix</label>
                     <input
@@ -490,20 +485,6 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                       <option value="">--</option>
                       {Object.values(PortSpeed).map(s => (
                         <option value={s} key={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1" htmlFor="mediaType">Media</label>
-                    <select
-                      name="mediaType"
-                      value={bulkPort.mediaType}
-                      onChange={handleBulkPortChange}
-                      className="border px-2 py-1 rounded w-full"
-                    >
-                      <option value="">--</option>
-                      {Object.values(MediaType).map(m => (
-                        <option value={m} key={m}>{m}</option>
                       ))}
                     </select>
                   </div>
@@ -579,15 +560,6 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                         >
                           {Object.values(PortSpeed).map(s => (
                             <option value={s} key={s}>{s}</option>
-                          ))}
-                        </select>
-                        <select
-                          value={port.mediaType || MediaType.Copper}
-                          className="border rounded px-2 py-1"
-                          onChange={e => handlePortChange(idx, 'mediaType', e.target.value)}
-                        >
-                          {Object.values(MediaType).map(mt => (
-                            <option value={mt} key={mt}>{mt}</option>
                           ))}
                         </select>
                         <select
