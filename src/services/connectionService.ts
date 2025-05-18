@@ -4,6 +4,7 @@ import {
   NetworkConnection,
   PlacedDevice,
   RackProfile,
+  PortCriteria,
   // ... keep existing code (other Infrastructure types) ...
 } from "@/types/infrastructure";
 import {
@@ -57,19 +58,62 @@ function matchesPortRole(portRole: PortRole | undefined, criteria: PortRole[] | 
 // Returns ports matching port criteria from a device
 function filterPorts(
   device: InfrastructureComponent,
-  roleArr?: PortRole[],
-  speed?: PortSpeed,
-  media?: MediaType,
-  connectorType?: ConnectorType // Add connectorType as filter criteria if present
+  criteria?: PortCriteria
 ): Port[] {
-  if (!device.ports) return [];
-  return device.ports.filter((p) =>
-    // Fix port role array matching logic:
-    (!roleArr?.length || (p.role && roleArr.includes(p.role))) &&
-    (!speed || p.speed === speed) &&
-    (!media || p.mediaType === media) &&
-    (!connectorType || p.connectorType === connectorType)
-  );
+  if (!device.ports || !criteria) return device.ports || [];
+  
+  // Add detailed logging for port filtering
+  console.log(`[ConnectionService] Filtering ports for device ${device.name || device.id}:`, {
+    deviceType: device.type,
+    deviceRole: device.role,
+    availablePorts: device.ports.map(p => ({
+      id: p.id,
+      name: p.name,
+      role: p.role,
+      speed: p.speed,
+      mediaType: p.mediaType,
+      connectorType: p.connectorType,
+      connectedToDeviceId: p.connectedToDeviceId
+    })),
+    filterCriteria: criteria
+  });
+
+  let filteredPorts = device.ports.filter((p) => {
+    // Basic criteria matching
+    const matchesRole = !criteria.portRole?.length || (p.role && criteria.portRole.includes(p.role));
+    const matchesSpeed = !criteria.speed || p.speed === criteria.speed;
+    const matchesMedia = !criteria.mediaType || p.mediaType === criteria.mediaType;
+    const matchesConnector = !criteria.connectorType || p.connectorType === criteria.connectorType;
+    
+    // Additional criteria matching
+    const matchesName = !criteria.portNamePattern || new RegExp(criteria.portNamePattern).test(p.name || '');
+    const notExcluded = !criteria.excludePorts?.includes(p.id);
+    const matchesUnused = !criteria.requireUnused || !p.connectedToDeviceId;
+
+    return matchesRole && matchesSpeed && matchesMedia && matchesConnector && 
+           matchesName && notExcluded && matchesUnused;
+  });
+
+  // Apply min/max port limits if specified
+  if (criteria.maxPorts && filteredPorts.length > criteria.maxPorts) {
+    filteredPorts = filteredPorts.slice(0, criteria.maxPorts);
+  }
+
+  // Log filtering results
+  console.log(`[ConnectionService] Port filtering results for ${device.name || device.id}:`, {
+    totalPorts: device.ports.length,
+    filteredPorts: filteredPorts.length,
+    matchedPorts: filteredPorts.map(p => ({
+      id: p.id,
+      name: p.name,
+      role: p.role,
+      speed: p.speed,
+      mediaType: p.mediaType,
+      connectorType: p.connectorType
+    }))
+  });
+
+  return filteredPorts;
 }
 
 // Returns device name from id
@@ -127,6 +171,12 @@ export function generateConnections(
   design: InfrastructureDesign,
   rules: ConnectionRule[]
 ): ConnectionAttempt[] {
+  console.log('[ConnectionService] Starting connection generation with:', {
+    totalComponents: design.components?.length,
+    totalRules: rules.length,
+    enabledRules: rules.filter(r => r.enabled).length
+  });
+
   const { components, rackprofiles } = design;
   const connectionAttempts: ConnectionAttempt[] = [];
   if (!components || !components.length) {
@@ -153,7 +203,22 @@ export function generateConnections(
       }
     }
   }
-  rules.filter((r) => r.enabled).forEach((rule) => {
+  rules.filter((r) => r.enabled).forEach((rule, ruleIndex) => {
+    console.log(`[ConnectionService] Processing Rule ${ruleIndex + 1}:`, {
+      ruleId: rule.id,
+      ruleName: rule.name,
+      sourceCriteria: {
+        deviceRole: rule.sourceDeviceCriteria.role,
+        deviceType: rule.sourceDeviceCriteria.componentType,
+        portCriteria: rule.sourcePortCriteria
+      },
+      targetCriteria: {
+        deviceRole: rule.targetDeviceCriteria.role,
+        deviceType: rule.targetDeviceCriteria.componentType,
+        portCriteria: rule.targetPortCriteria
+      }
+    });
+
     // 1. Find sources and targets
     const sources = filterDevicesByCriteria(
       allDevices,
@@ -186,10 +251,7 @@ export function generateConnections(
     sources.forEach((srcDevice) => {
       const srcPorts = filterPorts(
         srcDevice,
-        rule.sourcePortCriteria?.portRole,
-        rule.sourcePortCriteria?.speed,
-        rule.sourcePortCriteria?.mediaType,
-        rule.sourcePortCriteria?.connectorType
+        rule.sourcePortCriteria
       );
       if (!srcPorts.length) {
         connectionAttempts.push({
@@ -221,10 +283,7 @@ export function generateConnections(
           if (srcDevice.id === target.id) continue;
           const dstPorts = filterPorts(
             target,
-            rule.targetPortCriteria?.portRole,
-            rule.targetPortCriteria?.speed,
-            rule.targetPortCriteria?.mediaType,
-            rule.targetPortCriteria?.connectorType
+            rule.targetPortCriteria
           );
           if (!dstPorts.length) {
             connectionAttempts.push({

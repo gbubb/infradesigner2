@@ -1,4 +1,3 @@
-
 import { ComponentType, ConnectorType } from './component-types';
 import { PortRole, PortSpeed, MediaType } from './port-types';
 
@@ -6,6 +5,10 @@ export interface DeviceCriteria {
   componentType?: ComponentType;
   role?: string; // Refers to InfrastructureComponent.role
   // Add other criteria as needed, e.g., namingPrefix, custom tags
+  minPorts?: number;  // Minimum number of ports required on device
+  maxPorts?: number;  // Maximum number of ports allowed on device
+  deviceNamePattern?: string;  // Regex pattern for device names
+  excludeDevices?: string[];  // List of device IDs to exclude
 }
 
 export interface PortCriteria {
@@ -14,6 +17,11 @@ export interface PortCriteria {
   speed?: PortSpeed;
   mediaType?: MediaType;
   quantityRequired?: number; // How many ports matching these criteria are needed per source device
+  minPorts?: number;  // Minimum number of ports required
+  maxPorts?: number;  // Maximum number of ports to use
+  portNamePattern?: string;  // Regex pattern for port names
+  excludePorts?: string[];  // List of port IDs to exclude
+  requireUnused?: boolean;  // Whether to only match unused ports
 }
 
 export enum AZScope {
@@ -44,4 +52,9 @@ export interface ConnectionRule {
   numberOfTargets?: number; // Used if connectionPattern is ConnectToNTargets
   cableId?: string; // Optional: ID of a default Cable component to use
   enabled: boolean;
+  maxConnections?: number;  // Maximum number of connections to create
+  connectionStrategy?: 'all' | 'first' | 'random';  // How to handle multiple possible connections
+  bidirectional?: boolean;  // Whether to create connections in both directions
+  priority?: number;  // Higher priority rules are processed first
+  tags?: string[];  // Tags for categorizing rules
 }
