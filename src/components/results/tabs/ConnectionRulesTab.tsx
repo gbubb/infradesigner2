@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Edit, Trash, Plus, ArrowUp, ArrowDown } from 'lucide-react';
 import { ConnectionRule, AZScope, ConnectionPattern } from '@/types/infrastructure';
-import { ConnectionRuleForm } from './connection-rules/ConnectionRuleForm';
+import { ConnectionRuleForm } from '@/components/forms/ConnectionRuleForm';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 
@@ -262,7 +262,7 @@ export const ConnectionRulesTab: React.FC = () => {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[95vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {currentRule ? 'Edit Connection Rule' : 'New Connection Rule'}
@@ -270,8 +270,8 @@ export const ConnectionRulesTab: React.FC = () => {
           </DialogHeader>
           <div className="overflow-y-auto max-h-[75vh] px-2">
             <ConnectionRuleForm
-              initialValues={currentRule}
-              onSave={handleSaveRule}
+              rule={currentRule || undefined}
+              onSubmit={handleSaveRule}
               onCancel={() => setIsDialogOpen(false)}
             />
           </div>
