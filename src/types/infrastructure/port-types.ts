@@ -1,4 +1,3 @@
-
 import { ConnectorType } from './component-types';
 
 // Port and connection type definitions
@@ -53,3 +52,5 @@ export interface Port {
   transceiverModel?: import('./transceiver-types').TransceiverModel; // NEW: model-type of installed optics
   name?: string; // NEW: user-friendly port identifier
 }
+
+export { ConnectorType };

@@ -83,7 +83,8 @@ export const ComponentLibrary: React.FC = () => {
       validRUStart: component.placement?.validRUStart || 1,
       validRUEnd: component.placement?.validRUEnd || 42,
       preferredRU: component.placement?.preferredRU || 1,
-      preferredRack: component.placement?.preferredRack || 1
+      preferredRack: component.placement?.preferredRack || 1,
+      ports: component.ports ?? [], // Ensure ports is always set for type safety
     };
     
     // Log form values being set
