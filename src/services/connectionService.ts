@@ -101,6 +101,31 @@ function findCableForPorts(
   srcPort: Port,
   dstPort: Port,
 ): Cable | undefined {
+  // NEW: Extra cable presence and type logging
+  if (!Array.isArray(cables) || cables.length === 0) {
+    console.log('[ConnectionService] No cables in cables array passed to findCableForPorts:', cables);
+    return undefined;
+  }
+
+  // Also check for missing fields or mis-named fields
+  for (const cable of cables) {
+    if (
+      typeof (cable as any).connectorA_Type === 'undefined' ||
+      typeof (cable as any).connectorB_Type === 'undefined'
+    ) {
+      console.warn('[ConnectionService] Cable missing connector fields:', {
+        id: cable.id,
+        name: cable.name,
+        connectorA_Type: (cable as any).connectorA_Type,
+        connectorB_Type: (cable as any).connectorB_Type,
+        cable
+      });
+    }
+    if (cable.type !== ComponentType.Cable) {
+      console.warn('[ConnectionService] Cable object has wrong type:', cable.type, cable);
+    }
+  }
+
   console.log('[ConnectionService] Checking cable compatibility:', {
     sourcePort: {
       id: srcPort.id,
@@ -207,8 +232,18 @@ export function generateConnections(
     return connectionAttempts;
   }
 
-  // Log component breakdown
+  // --- Add this code to LOG cables and their connector fields ---
   const cables = components.filter((c) => c.type === ComponentType.Cable) as Cable[];
+  console.log('[ConnectionService] cables extracted for network generation:', cables.map(c => ({
+    id: c.id,
+    name: c.name,
+    type: c.type,
+    connectorA_Type: (c as any).connectorA_Type,
+    connectorB_Type: (c as any).connectorB_Type,
+    mediaType: (c as any).mediaType
+  })));
+
+  // Log component breakdown
   const transceivers = components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[];
   const allDevices = components.filter((c) =>
     [ComponentType.Server, ComponentType.Switch, ComponentType.Router, ComponentType.Firewall].includes(c.type)
