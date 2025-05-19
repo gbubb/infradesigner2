@@ -147,11 +147,24 @@ export function generateConnections(
     });
     return connectionAttempts;
   }
+
+  // Log component breakdown
   const cables = components.filter((c) => c.type === ComponentType.Cable) as Cable[];
   const transceivers = components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[];
   const allDevices = components.filter((c) =>
     [ComponentType.Server, ComponentType.Switch, ComponentType.Router, ComponentType.Firewall].includes(c.type)
   );
+
+  console.log('[ConnectionService] Component breakdown:', {
+    totalDevices: allDevices.length,
+    totalCables: cables.length,
+    totalTransceivers: transceivers.length,
+    deviceTypes: allDevices.reduce((acc, device) => {
+      acc[device.type] = (acc[device.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  });
+
   // Internal mapping for in-flight connection state
   const usedSrcPorts = new Set<string>();
   const usedDstPorts = new Set<string>();
@@ -164,6 +177,12 @@ export function generateConnections(
       }
     }
   }
+
+  console.log('[ConnectionService] Rack placement info:', {
+    totalRacks: rackprofiles?.length || 0,
+    placedDevices: Object.keys(rackPlacement).length
+  });
+
   rules.filter((r) => r.enabled).forEach((rule, ruleIndex) => {
     console.log(`[ConnectionService] Processing Rule ${ruleIndex + 1}:`, {
       ruleId: rule.id,
@@ -191,6 +210,14 @@ export function generateConnections(
       rule.targetDeviceCriteria.role,
       rule.targetDeviceCriteria.componentType
     );
+
+    console.log(`[ConnectionService] Rule ${ruleIndex + 1} device matches:`, {
+      sourceMatches: sources.length,
+      targetMatches: targets.length,
+      sourceDevices: sources.map(s => ({ id: s.id, name: s.name, type: s.type, role: s.role })),
+      targetDevices: targets.map(t => ({ id: t.id, name: t.name, type: t.type, role: t.role }))
+    });
+
     if (!sources.length) {
       connectionAttempts.push({
         ruleId: rule.id,
@@ -209,11 +236,25 @@ export function generateConnections(
       });
       return;
     }
+
     sources.forEach((srcDevice) => {
       const srcPorts = filterPorts(
         srcDevice,
         rule.sourcePortCriteria
       );
+
+      console.log(`[ConnectionService] Source device ${srcDevice.name} ports:`, {
+        totalPorts: srcDevice.ports?.length || 0,
+        matchingPorts: srcPorts.length,
+        portDetails: srcPorts.map(p => ({
+          id: p.id,
+          name: p.name,
+          role: p.role,
+          speed: p.speed,
+          mediaType: p.mediaType
+        }))
+      });
+
       if (!srcPorts.length) {
         connectionAttempts.push({
           ruleId: rule.id,
