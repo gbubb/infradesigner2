@@ -195,10 +195,28 @@ export const useComponentForm = () => {
 
   // Process form values before submission
   const processFormForSubmission = (form: ComponentFormValues) => {
-    // ... keep placement logic the same ...
+    // Create placement object only if validRUStart and validRUEnd are both defined and type is not Cable
+    let placement;
+    if (
+      form.type !== "Cable" &&
+      form.validRUStart !== undefined &&
+      form.validRUEnd !== undefined
+    ) {
+      placement = {
+        validRUStart: form.validRUStart,
+        validRUEnd: form.validRUEnd,
+      };
+      if (form.preferredRU !== undefined) {
+        placement.preferredRU = form.preferredRU;
+      }
+      if (form.preferredRack !== undefined) {
+        placement.preferredRack = form.preferredRack;
+      }
+    }
+
     const component = {
       ...form,
-      placement
+      ...(placement ? { placement } : {}), // Only add placement if it exists
     };
 
     // Remove irrelevant port fields for Cable type:
