@@ -148,7 +148,15 @@ const NetworkConnectionsTab: React.FC = () => {
         toast.info("No successful connections established — see report for details.");
       }
     } catch (err) {
-      toast.error("Error generating network connections");
+      console.error("Error generating connections:", err);
+      // Create a failed attempt entry
+      const errorAttempt: ConnectionAttempt = {
+        status: "Failed",
+        reason: err instanceof Error ? err.message : "Unknown error occurred during connection generation",
+      };
+      setGenerationReport([errorAttempt]);
+      setShowReport(true);
+      toast.error("Error generating network connections. See report for details.");
     } finally {
       setGenerating(false);
     }
