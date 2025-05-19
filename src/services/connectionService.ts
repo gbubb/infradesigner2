@@ -101,10 +101,57 @@ function findCableForPorts(
   srcPort: Port,
   dstPort: Port,
 ): Cable | undefined {
-  return cables.find(cable =>
-    (cable.connectorA_Type === srcPort.connectorType && cable.connectorB_Type === dstPort.connectorType) &&
-    cable.mediaType === (srcPort.mediaType === dstPort.mediaType ? srcPort.mediaType : cable.mediaType)
-  );
+  console.log('[ConnectionService] Checking cable compatibility:', {
+    sourcePort: {
+      id: srcPort.id,
+      name: srcPort.name,
+      connectorType: srcPort.connectorType,
+      mediaType: srcPort.mediaType
+    },
+    targetPort: {
+      id: dstPort.id,
+      name: dstPort.name,
+      connectorType: dstPort.connectorType,
+      mediaType: dstPort.mediaType
+    },
+    availableCables: cables.map(c => ({
+      id: c.id,
+      name: c.name,
+      connectorA_Type: c.connectorA_Type,
+      connectorB_Type: c.connectorB_Type,
+      mediaType: c.mediaType
+    }))
+  });
+
+  const compatibleCable = cables.find(cable => {
+    const connectorMatch = (cable.connectorA_Type === srcPort.connectorType && cable.connectorB_Type === dstPort.connectorType) ||
+                          (cable.connectorA_Type === dstPort.connectorType && cable.connectorB_Type === srcPort.connectorType);
+    const mediaMatch = cable.mediaType === (srcPort.mediaType === dstPort.mediaType ? srcPort.mediaType : cable.mediaType);
+    
+    console.log('[ConnectionService] Cable compatibility check:', {
+      cableId: cable.id,
+      cableName: cable.name,
+      connectorMatch,
+      mediaMatch,
+      details: {
+        cableConnectors: [cable.connectorA_Type, cable.connectorB_Type],
+        portConnectors: [srcPort.connectorType, dstPort.connectorType],
+        cableMedia: cable.mediaType,
+        portMedia: [srcPort.mediaType, dstPort.mediaType]
+      }
+    });
+
+    return connectorMatch && mediaMatch;
+  });
+
+  if (!compatibleCable) {
+    console.log('[ConnectionService] No compatible cable found. Requirements:', {
+      requiredConnectors: [srcPort.connectorType, dstPort.connectorType],
+      requiredMedia: srcPort.mediaType === dstPort.mediaType ? srcPort.mediaType : 'any'
+    });
+  }
+
+  return compatibleCable;
 }
 
 // If needed, find transceivers for a port (for fiber, etc.)
