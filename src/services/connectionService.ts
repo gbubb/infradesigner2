@@ -123,10 +123,18 @@ function findCableForPorts(
     }))
   });
 
+  if (cables.length === 0) {
+    console.log('[ConnectionService] No cables available in library. Please check that cables are properly configured and included in the design.');
+    return undefined;
+  }
+
   const compatibleCable = cables.find(cable => {
     const connectorMatch = (cable.connectorA_Type === srcPort.connectorType && cable.connectorB_Type === dstPort.connectorType) ||
                           (cable.connectorA_Type === dstPort.connectorType && cable.connectorB_Type === srcPort.connectorType);
-    const mediaMatch = cable.mediaType === (srcPort.mediaType === dstPort.mediaType ? srcPort.mediaType : cable.mediaType);
+    
+    // If either port has undefined media type, only check connector compatibility
+    const mediaMatch = !srcPort.mediaType || !dstPort.mediaType ? true :
+                      cable.mediaType === (srcPort.mediaType === dstPort.mediaType ? srcPort.mediaType : cable.mediaType);
     
     console.log('[ConnectionService] Cable compatibility check:', {
       cableId: cable.id,
