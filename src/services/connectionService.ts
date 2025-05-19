@@ -62,6 +62,14 @@ function filterPorts(
 ): Port[] {
   if (!device.ports || !criteria) return device.ports || [];
 
+  // Log target port criteria and device ports for debugging
+  console.log('[ConnectionService] Filtering ports for device:', {
+    deviceName: device.name,
+    deviceId: device.id,
+    criteria,
+    ports: device.ports
+  });
+
   // Only check role, speed, portNamePattern, excludePorts as per new simplified types
   let filteredPorts = device.ports.filter((p) => {
     const matchesRole = !criteria.portRole?.length || (p.role && criteria.portRole.includes(p.role));
@@ -72,7 +80,12 @@ function filterPorts(
     return matchesRole && matchesSpeed && matchesName && notExcluded;
   });
 
-  // Removed minPorts/maxPorts logic -- not part of new requirements.
+  // Log filtered ports for debugging
+  console.log('[ConnectionService] Filtered ports:', {
+    deviceName: device.name,
+    deviceId: device.id,
+    filteredPorts
+  });
 
   return filteredPorts;
 }
