@@ -198,20 +198,49 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
           
           <FormField
             control={register.control}
-            name="connectorType"
+            name="connectorA_Type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Connector Type</FormLabel>
+                <FormLabel>Connector A Type</FormLabel>
                 <Select 
                   onValueChange={(value) => {
                     field.onChange(value);
-                    onSelectChange('connectorType', value);
+                    onSelectChange('connectorA_Type', value);
                   }}
                   value={field.value || ''}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a connector type" />
+                      <SelectValue placeholder="Select connector A type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={ConnectorType.RJ45}>RJ45</SelectItem>
+                    <SelectItem value={ConnectorType.MPO12}>MPO-12</SelectItem>
+                    <SelectItem value={ConnectorType.LC}>LC</SelectItem>
+                    <SelectItem value={ConnectorType.SFP}>SFP</SelectItem>
+                    <SelectItem value={ConnectorType.QSFP}>QSFP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={register.control}
+            name="connectorB_Type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Connector B Type</FormLabel>
+                <Select 
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    onSelectChange('connectorB_Type', value);
+                  }}
+                  value={field.value || ''}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select connector B type" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>

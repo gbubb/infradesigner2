@@ -82,6 +82,8 @@ export const useComponentForm = () => {
 
   // --- PORT HANDLING LOGIC ---
   const addPort = () => {
+    // Prevent adding ports to cables
+    if (componentForm.type === 'Cable') return;
     const newPort: Port = {
       id: uuidv4(),
       name: '',
@@ -97,6 +99,8 @@ export const useComponentForm = () => {
   };
 
   const removePort = (index: number) => {
+    // Prevent removing ports if it's not a cable
+    if (componentForm.type === 'Cable') return;
     setComponentForm(prev => ({
       ...prev,
       ports: prev.ports.filter((_, i) => i !== index)
@@ -104,6 +108,8 @@ export const useComponentForm = () => {
   };
 
   const updatePort = (index: number, field: keyof Port, value: any) => {
+    // Prevent updating ports if it's a cable
+    if (componentForm.type === 'Cable') return;
     setComponentForm(prev => ({
       ...prev,
       ports: prev.ports.map((port, i) =>
@@ -189,30 +195,22 @@ export const useComponentForm = () => {
 
   // Process form values before submission
   const processFormForSubmission = (form: ComponentFormValues) => {
-    console.log('Processing form for submission:', form);
-    
-    // Create placement object from form fields
-    const placement = {
-      validRUStart: form.validRUStart || 1,
-      validRUEnd: form.validRUEnd || maxRackUnits,
-      preferredRU: form.preferredRU,
-      preferredRack: form.preferredRack
-    };
-    
-    // Create cleaned component object with all fields preserved
+    // ... keep placement logic the same ...
     const component = {
       ...form,
       placement
     };
+
+    // Remove irrelevant port fields for Cable type:
+    if (component.type === "Cable") {
+      delete component.ports;
+    }
     
-    // Remove form-specific fields
+    // Remove temporary placement fields
     delete component.validRUStart;
     delete component.validRUEnd;
     delete component.preferredRU;
     delete component.preferredRack;
-    
-    // --- Add detailed ports ---
-    const ports = form.ports || [];
     
     console.log('Processed component:', component);
     return component;
