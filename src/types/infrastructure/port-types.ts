@@ -43,7 +43,7 @@ export interface Port {
   id: string;
   connectorType: ConnectorType;
   speed: PortSpeed;
-  mediaType: MediaType;
+  mediaType?: MediaType;
   role?: PortRole;
   connectedToPortId?: string;
   connectedToDeviceId?: string;
