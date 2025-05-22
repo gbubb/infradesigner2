@@ -62,14 +62,6 @@ function filterPorts(
 ): Port[] {
   if (!device.ports || !criteria) return device.ports || [];
 
-  // Log target port criteria and device ports for debugging
-  console.log('[ConnectionService] Filtering ports for device:', {
-    deviceName: device.name,
-    deviceId: device.id,
-    criteria,
-    ports: device.ports
-  });
-
   // Only check role, speed, portNamePattern, excludePorts as per new simplified types
   let filteredPorts = device.ports.filter((p) => {
     const matchesRole = !criteria.portRole?.length || (p.role && criteria.portRole.includes(p.role));
@@ -78,13 +70,6 @@ function filterPorts(
     const notExcluded = !criteria.excludePorts?.includes(p.id);
     // mediaType, connectorType, minPorts, maxPorts, requireUnused removed
     return matchesRole && matchesSpeed && matchesName && notExcluded;
-  });
-
-  // Log filtered ports for debugging
-  console.log('[ConnectionService] Filtered ports:', {
-    deviceName: device.name,
-    deviceId: device.id,
-    filteredPorts
   });
 
   return filteredPorts;
@@ -103,7 +88,6 @@ function findCableForPorts(
 ): Cable | undefined {
   // NEW: Extra cable presence and type logging
   if (!Array.isArray(cables) || cables.length === 0) {
-    console.log('[ConnectionService] No cables in cables array passed to findCableForPorts:', cables);
     return undefined;
   }
 
@@ -126,28 +110,7 @@ function findCableForPorts(
     }
   }
 
-  console.log('[ConnectionService] Checking cable compatibility:', {
-    sourcePort: {
-      id: srcPort.id,
-      name: srcPort.name,
-      connectorType: srcPort.connectorType
-    },
-    targetPort: {
-      id: dstPort.id,
-      name: dstPort.name,
-      connectorType: dstPort.connectorType
-    },
-    availableCables: cables.map(c => ({
-      id: c.id,
-      name: c.name,
-      connectorA_Type: c.connectorA_Type,
-      connectorB_Type: c.connectorB_Type,
-      mediaType: c.mediaType
-    }))
-  });
-
   if (cables.length === 0) {
-    console.log('[ConnectionService] No cables available in library. Please check that cables are properly configured and included in the design.');
     return undefined;
   }
 
@@ -156,16 +119,6 @@ function findCableForPorts(
     const connectorMatch = (cable.connectorA_Type === srcPort.connectorType && cable.connectorB_Type === dstPort.connectorType) ||
                           (cable.connectorA_Type === dstPort.connectorType && cable.connectorB_Type === srcPort.connectorType);
     
-    console.log('[ConnectionService] Cable compatibility check:', {
-      cableId: cable.id,
-      cableName: cable.name,
-      connectorMatch,
-      details: {
-        cableConnectors: [cable.connectorA_Type, cable.connectorB_Type],
-        portConnectors: [srcPort.connectorType, dstPort.connectorType]
-      }
-    });
-
     return connectorMatch;
   });
 
@@ -216,12 +169,6 @@ export function generateConnections(
   design: InfrastructureDesign,
   rules: ConnectionRule[]
 ): ConnectionAttempt[] {
-  console.log('[ConnectionService] Starting connection generation with:', {
-    totalComponents: design.components?.length,
-    totalRules: rules.length,
-    enabledRules: rules.filter(r => r.enabled).length
-  });
-
   const { components, rackprofiles } = design;
   const connectionAttempts: ConnectionAttempt[] = [];
   if (!components || !components.length) {
@@ -234,30 +181,12 @@ export function generateConnections(
 
   // --- Add this code to LOG cables and their connector fields ---
   const cables = components.filter((c) => c.type === ComponentType.Cable) as Cable[];
-  console.log('[ConnectionService] cables extracted for network generation:', cables.map(c => ({
-    id: c.id,
-    name: c.name,
-    type: c.type,
-    connectorA_Type: (c as any).connectorA_Type,
-    connectorB_Type: (c as any).connectorB_Type,
-    mediaType: (c as any).mediaType
-  })));
 
   // Log component breakdown
   const transceivers = components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[];
   const allDevices = components.filter((c) =>
     [ComponentType.Server, ComponentType.Switch, ComponentType.Router, ComponentType.Firewall].includes(c.type)
   );
-
-  console.log('[ConnectionService] Component breakdown:', {
-    totalDevices: allDevices.length,
-    totalCables: cables.length,
-    totalTransceivers: transceivers.length,
-    deviceTypes: allDevices.reduce((acc, device) => {
-      acc[device.type] = (acc[device.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>)
-  });
 
   // Internal mapping for in-flight connection state
   const usedSrcPorts = new Set<string>();
@@ -272,27 +201,7 @@ export function generateConnections(
     }
   }
 
-  console.log('[ConnectionService] Rack placement info:', {
-    totalRacks: rackprofiles?.length || 0,
-    placedDevices: Object.keys(rackPlacement).length
-  });
-
   rules.filter((r) => r.enabled).forEach((rule, ruleIndex) => {
-    console.log(`[ConnectionService] Processing Rule ${ruleIndex + 1}:`, {
-      ruleId: rule.id,
-      ruleName: rule.name,
-      sourceCriteria: {
-        deviceRole: rule.sourceDeviceCriteria.role,
-        deviceType: rule.sourceDeviceCriteria.componentType,
-        portCriteria: rule.sourcePortCriteria
-      },
-      targetCriteria: {
-        deviceRole: rule.targetDeviceCriteria.role,
-        deviceType: rule.targetDeviceCriteria.componentType,
-        portCriteria: rule.targetPortCriteria
-      }
-    });
-
     // 1. Find sources and targets
     const sources = filterDevicesByCriteria(
       allDevices,
@@ -304,13 +213,6 @@ export function generateConnections(
       rule.targetDeviceCriteria.role,
       rule.targetDeviceCriteria.componentType
     );
-
-    console.log(`[ConnectionService] Rule ${ruleIndex + 1} device matches:`, {
-      sourceMatches: sources.length,
-      targetMatches: targets.length,
-      sourceDevices: sources.map(s => ({ id: s.id, name: s.name, type: s.type, role: s.role })),
-      targetDevices: targets.map(t => ({ id: t.id, name: t.name, type: t.type, role: t.role }))
-    });
 
     if (!sources.length) {
       connectionAttempts.push({
@@ -336,18 +238,6 @@ export function generateConnections(
         srcDevice,
         rule.sourcePortCriteria
       );
-
-      console.log(`[ConnectionService] Source device ${srcDevice.name} ports:`, {
-        totalPorts: srcDevice.ports?.length || 0,
-        matchingPorts: srcPorts.length,
-        portDetails: srcPorts.map(p => ({
-          id: p.id,
-          name: p.name,
-          role: p.role,
-          speed: p.speed,
-          mediaType: p.mediaType
-        }))
-      });
 
       if (!srcPorts.length) {
         connectionAttempts.push({
