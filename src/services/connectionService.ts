@@ -81,54 +81,34 @@ function getDeviceName(components: InfrastructureComponent[], id: string) {
 }
 
 // Try to find a compatible cable (template) from the library
-function findCableForPorts(
-  cables: Cable[],
+function findCableForPorts_optimized(
+  cableLookup: Map<string, Cable>,
   srcPort: Port,
   dstPort: Port,
 ): Cable | undefined {
-  // NEW: Extra cable presence and type logging
-  if (!Array.isArray(cables) || cables.length === 0) {
+  if (!srcPort.connectorType || !dstPort.connectorType) {
+    // This case should ideally not happen if ports are well-defined
+    // but good to log if it does, as it would prevent any match.
+    console.warn('[ConnectionService] Source or Destination port missing connectorType:', {
+      srcPortId: srcPort.id,
+      srcConnectorType: srcPort.connectorType,
+      dstPortId: dstPort.id,
+      dstConnectorType: dstPort.connectorType,
+    });
     return undefined;
   }
+  const key = [srcPort.connectorType, dstPort.connectorType].sort().join(':');
+  const cable = cableLookup.get(key);
 
-  // Also check for missing fields or mis-named fields
-  for (const cable of cables) {
-    if (
-      typeof (cable as any).connectorA_Type === 'undefined' ||
-      typeof (cable as any).connectorB_Type === 'undefined'
-    ) {
-      console.warn('[ConnectionService] Cable missing connector fields:', {
-        id: cable.id,
-        name: cable.name,
-        connectorA_Type: (cable as any).connectorA_Type,
-        connectorB_Type: (cable as any).connectorB_Type,
-        cable
-      });
-    }
-    if (cable.type !== ComponentType.Cable) {
-      console.warn('[ConnectionService] Cable object has wrong type:', cable.type, cable);
-    }
-  }
-
-  if (cables.length === 0) {
-    return undefined;
-  }
-
-  const compatibleCable = cables.find(cable => {
-    // Only check connector compatibility, media type is determined by the cable
-    const connectorMatch = (cable.connectorA_Type === srcPort.connectorType && cable.connectorB_Type === dstPort.connectorType) ||
-                          (cable.connectorA_Type === dstPort.connectorType && cable.connectorB_Type === srcPort.connectorType);
-    
-    return connectorMatch;
-  });
-
-  if (!compatibleCable) {
-    console.log('[ConnectionService] No compatible cable found. Requirements:', {
-      requiredConnectors: [srcPort.connectorType, dstPort.connectorType]
+  if (!cable) {
+    // This is the critical log for debugging cable data.
+    console.log('[ConnectionService] No compatible cable found in lookup. Requirements:', {
+      requiredConnectorsKey: key,
+      srcPortConnector: srcPort.connectorType,
+      dstPortConnector: dstPort.connectorType
     });
   }
-
-  return compatibleCable;
+  return cable;
 }
 
 // If needed, find transceivers for a port (for fiber, etc.)
@@ -179,11 +159,56 @@ export function generateConnections(
     return connectionAttempts;
   }
 
-  // --- Add this code to LOG cables and their connector fields ---
-  const cables = components.filter((c) => c.type === ComponentType.Cable) as Cable[];
+  const allCablesFromComponents = components.filter((c) => c.type === ComponentType.Cable) as Cable[];
+
+  // Pre-build cable lookup map for efficiency
+  const cableLookup = new Map<string, Cable>();
+  allCablesFromComponents.forEach(cable => {
+    // Warn about cable data issues during lookup construction
+    if (typeof (cable as any).connectorA_Type === 'undefined' || typeof (cable as any).connectorB_Type === 'undefined') {
+      console.warn('[ConnectionService] Cable missing connector fields during lookup construction:', {
+        id: cable.id,
+        name: cable.name,
+        connectorA_Type: (cable as any).connectorA_Type,
+        connectorB_Type: (cable as any).connectorB_Type,
+        cableType: cable.type,
+      });
+      return; // Skip this cable as it cannot form a valid key
+    }
+    if (cable.type !== ComponentType.Cable) {
+      console.warn('[ConnectionService] Non-cable component found in cable list during lookup construction:', {
+        id: cable.id,
+        name: cable.name,
+        actualType: cable.type,
+      });
+      return; // Skip this as it's not a cable
+    }
+
+    const typeA = cable.connectorA_Type;
+    const typeB = cable.connectorB_Type;
+    // Ensure both types are defined before creating a key
+    if (typeA && typeB) {
+      const key1 = [typeA, typeB].sort().join(':');
+      if (!cableLookup.has(key1)) { // Store the first cable found for a given connector pair
+        cableLookup.set(key1, cable);
+      }
+    } else {
+      console.warn('[ConnectionService] Cable with missing connectorA_Type or connectorB_Type encountered in allCablesFromComponents:', {
+        cableId: cable.id,
+        cableName: cable.name
+      });
+    }
+  });
+
+  if (cableLookup.size === 0 && allCablesFromComponents.length > 0) {
+    console.warn('[ConnectionService] Cable lookup map is empty, but cables were present in components. Check connector types on cable data.');
+  } else if (allCablesFromComponents.length === 0) {
+    console.info('[ConnectionService] No cable components found in the design to build lookup map.');
+  }
+
+  const transceivers = components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[];
 
   // Log component breakdown
-  const transceivers = components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[];
   const allDevices = components.filter((c) =>
     [ComponentType.Server, ComponentType.Switch, ComponentType.Router, ComponentType.Firewall].includes(c.type)
   );
@@ -316,8 +341,8 @@ export function generateConnections(
               { deviceId: target.id, ruPosition: dstPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
               dstRack
             );
-            // Find Cable
-            const cable = findCableForPorts(cables, srcPort, dstPort);
+            // Find Cable using the optimized function
+            const cable = findCableForPorts_optimized(cableLookup, srcPort, dstPort);
             if (!cable) {
               connectionAttempts.push({
                 ruleId: rule.id,
