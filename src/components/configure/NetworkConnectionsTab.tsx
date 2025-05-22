@@ -134,32 +134,51 @@ const NetworkConnectionsTab: React.FC = () => {
   const handleGenerate = () => {
     if (!activeDesign) return;
     setGenerating(true);
-    try {
-      // Generate full report
-      const attempts = generateConnections(activeDesign, activeDesign.connectionRules || []);
-      setGenerationReport(attempts);
-      setShowReport(true);
-      // Only those with status "Success"
-      const successfulConnections = attempts.filter(a => a.status === "Success" && a.connection).map(a => a.connection!);
-      setNetworkConnections(successfulConnections);
-      if (successfulConnections.length > 0) {
-        toast.success(`Successful network connections: ${successfulConnections.length}. See report for details.`);
-      } else {
-        toast.info("No successful connections established — see report for details.");
+
+    // Create a new worker
+    const worker = new Worker(new URL('@/workers/connectionWorker.ts', import.meta.url), { type: 'module' });
+
+    worker.onmessage = (event: MessageEvent<{ status: string, attempts?: ConnectionAttempt[], error?: string }>) => {
+      if (event.data.status === 'success' && event.data.attempts) {
+        const attempts = event.data.attempts;
+        setGenerationReport(attempts);
+        setShowReport(true);
+        const successfulConnections = attempts.filter(a => a.status === "Success" && a.connection).map(a => a.connection!);
+        setNetworkConnections(successfulConnections);
+        if (successfulConnections.length > 0) {
+          toast.success(`Successful network connections: ${successfulConnections.length}. See report for details.`);
+        } else {
+          toast.info("No successful connections established — see report for details.");
+        }
+      } else if (event.data.status === 'error') {
+        console.error("Error from connection worker:", event.data.error);
+        const errorAttempt: ConnectionAttempt = {
+          status: "Failed",
+          reason: event.data.error || "Unknown error occurred in worker",
+        };
+        setGenerationReport([errorAttempt]);
+        setShowReport(true);
+        toast.error("Error generating network connections. See report for details.");
       }
-    } catch (err) {
-      console.error("Error generating connections:", err);
-      // Create a failed attempt entry
+      setGenerating(false);
+      worker.terminate(); // Terminate worker after use
+    };
+
+    worker.onerror = (error) => {
+      console.error("Worker error:", error);
       const errorAttempt: ConnectionAttempt = {
         status: "Failed",
-        reason: err instanceof Error ? err.message : "Unknown error occurred during connection generation",
+        reason: error.message || "Worker initialisation failed.",
       };
       setGenerationReport([errorAttempt]);
       setShowReport(true);
-      toast.error("Error generating network connections. See report for details.");
-    } finally {
+      toast.error("Failed to start connection generation process.");
       setGenerating(false);
-    }
+      worker.terminate(); // Terminate worker on error
+    };
+
+    // Send data to the worker
+    worker.postMessage({ design: activeDesign, rules: activeDesign.connectionRules || [] });
   };
 
   // Save connections to the current design
