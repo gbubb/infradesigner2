@@ -161,6 +161,16 @@ export function generateConnections(
 
   const allCablesFromComponents = components.filter((c) => c.type === ComponentType.Cable) as Cable[];
 
+  console.log('[ConnectionService] Cables being processed for lookup map:', 
+    allCablesFromComponents.map(c => ({ 
+      id: c.id, 
+      name: c.name, 
+      connectorA: (c as any).connectorA_Type, 
+      connectorB: (c as any).connectorB_Type,
+      type: c.type 
+    }))
+  );
+
   // Pre-build cable lookup map for efficiency
   const cableLookup = new Map<string, Cable>();
   allCablesFromComponents.forEach(cable => {
@@ -205,6 +215,8 @@ export function generateConnections(
   } else if (allCablesFromComponents.length === 0) {
     console.info('[ConnectionService] No cable components found in the design to build lookup map.');
   }
+
+  console.log('[ConnectionService] Constructed cableLookup map keys:', Array.from(cableLookup.keys()));
 
   const transceivers = components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[];
 
