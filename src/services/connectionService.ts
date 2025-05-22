@@ -147,22 +147,25 @@ function estimateCableLength(
 // --- KEY UPDATE: generateConnections now returns ConnectionAttempt[] ---
 export function generateConnections(
   design: InfrastructureDesign,
-  rules: ConnectionRule[]
+  rules: ConnectionRule[],
+  allCableTemplates: Cable[] // Added new parameter for all cable templates
 ): ConnectionAttempt[] {
-  const { components, rackprofiles } = design;
+  const { components, rackprofiles } = design; // components here are the PLACED devices
   const connectionAttempts: ConnectionAttempt[] = [];
   if (!components || !components.length) {
+    // This checks for placed devices. If no devices, no connections can be made.
     connectionAttempts.push({
       status: "Info",
-      reason: "No components in active design.",
+      reason: "No placed devices in active design to connect.",
     });
     return connectionAttempts;
   }
 
-  const allCablesFromComponents = components.filter((c) => c.type === ComponentType.Cable) as Cable[];
+  // Use the passed-in allCableTemplates instead of filtering from design.components
+  const allCablesToProcess = allCableTemplates || [];
 
-  console.log('[ConnectionService] Cables being processed for lookup map:', 
-    allCablesFromComponents.map(c => ({ 
+  console.log('[ConnectionService] Cables being processed for lookup map (from allCableTemplates):', 
+    allCablesToProcess.map(c => ({ 
       id: c.id, 
       name: c.name, 
       connectorA: (c as any).connectorA_Type, 
@@ -173,7 +176,7 @@ export function generateConnections(
 
   // Pre-build cable lookup map for efficiency
   const cableLookup = new Map<string, Cable>();
-  allCablesFromComponents.forEach(cable => {
+  allCablesToProcess.forEach(cable => {
     // Warn about cable data issues during lookup construction
     if (typeof (cable as any).connectorA_Type === 'undefined' || typeof (cable as any).connectorB_Type === 'undefined') {
       console.warn('[ConnectionService] Cable missing connector fields during lookup construction:', {
@@ -210,15 +213,15 @@ export function generateConnections(
     }
   });
 
-  if (cableLookup.size === 0 && allCablesFromComponents.length > 0) {
-    console.warn('[ConnectionService] Cable lookup map is empty, but cables were present in components. Check connector types on cable data.');
-  } else if (allCablesFromComponents.length === 0) {
-    console.info('[ConnectionService] No cable components found in the design to build lookup map.');
+  if (cableLookup.size === 0 && allCablesToProcess.length > 0) {
+    console.warn('[ConnectionService] Cable lookup map is empty, but cable templates were provided. Check connector types on cable data.');
+  } else if (allCablesToProcess.length === 0) {
+    console.info('[ConnectionService] No cable templates provided to build lookup map.');
   }
 
   console.log('[ConnectionService] Constructed cableLookup map keys:', Array.from(cableLookup.keys()));
 
-  const transceivers = components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[];
+  const transceivers = design.components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[]; // Transceivers can still be part of the design components
 
   // Log component breakdown
   const allDevices = components.filter((c) =>

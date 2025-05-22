@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Save, Trash2, Plus, Network } from "lucide-react";
-import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent } from "@/types/infrastructure";
+import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable } from "@/types/infrastructure";
 import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
 import ConnectionReportModal from "./ConnectionReportModal";
 
@@ -100,7 +100,7 @@ const formatConnectionRow = (
 };
 
 const NetworkConnectionsTab: React.FC = () => {
-  const { activeDesign, updateDesign } = useDesignStore();
+  const { activeDesign, updateDesign, componentTemplates } = useDesignStore();
   const [generating, setGenerating] = useState(false);
   // Only `NetworkConnection[]` (not table row formatting)
   const [networkConnections, setNetworkConnections] = useState<NetworkConnection[]>(activeDesign?.networkConnections || []);
@@ -134,6 +134,29 @@ const NetworkConnectionsTab: React.FC = () => {
   const handleGenerate = () => {
     if (!activeDesign) return;
     setGenerating(true);
+
+    // Get all cable templates from the component library store
+    const allCableTemplates = componentTemplates.filter(
+      (c): c is Cable => c.type === ComponentType.Cable
+    );
+
+    console.log('[NetworkConnectionsTab] All cable templates from store being sent to worker:', 
+      allCableTemplates.map(c => ({ 
+        id: c.id, 
+        name: c.name, 
+        type: c.type, 
+        connectorA: (c as any).connectorA_Type,
+        connectorB: (c as any).connectorB_Type
+      }))
+    );
+
+    if (allCableTemplates.length === 0) {
+      console.warn("[NetworkConnectionsTab] No cable templates found in the component library. Connection generation will likely fail to find cables.");
+      // Optionally, you could even prevent the worker from starting if no cables are available.
+      // toast.warn("No cable templates available in the library. Cannot generate connections.");
+      // setGenerating(false);
+      // return;
+    }
 
     // Create a new worker
     const worker = new Worker(new URL('@/workers/connectionWorker.ts', import.meta.url), { type: 'module' });
@@ -178,7 +201,11 @@ const NetworkConnectionsTab: React.FC = () => {
     };
 
     // Send data to the worker
-    worker.postMessage({ design: activeDesign, rules: activeDesign.connectionRules || [] });
+    worker.postMessage({ 
+      design: activeDesign, 
+      rules: activeDesign.connectionRules || [],
+      allCableTemplates: allCableTemplates // Pass cable templates to worker
+    });
   };
 
   // Save connections to the current design
