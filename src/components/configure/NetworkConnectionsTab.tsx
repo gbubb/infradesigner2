@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Save, Trash2, Plus, Network } from "lucide-react";
-import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable } from "@/types/infrastructure";
+import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable, Port } from "@/types/infrastructure";
 import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
 import ConnectionReportModal from "./ConnectionReportModal";
 
@@ -40,8 +40,21 @@ function filterConnections(rows: NetworkConnectionTableRow[], q: string) {
   );
 }
 
-const getDeviceName = (list: InfrastructureComponent[], id: string) => {
+const getDeviceName = (list: InfrastructureComponent[], id: string): string => {
   return list.find(d => d.id === id)?.name || id.substring(0, 6);
+};
+
+const getPortName = (
+  deviceId: string, 
+  portId: string, 
+  allDesignComponents: InfrastructureComponent[]
+): string => {
+  const device = allDesignComponents.find(c => c.id === deviceId);
+  if (device && device.ports) {
+    const port = device.ports.find(p => p.id === portId);
+    return port?.name || portId.substring(0, 6);
+  }
+  return portId.substring(0, 6);
 };
 
 const getRackAndRU = (rackprofiles: RackProfile[] | undefined, deviceId: string) => {
@@ -73,21 +86,25 @@ const columns = [
 
 const formatConnectionRow = (
   row: NetworkConnection,
-  components: InfrastructureComponent[],
+  allDesignComponents: InfrastructureComponent[],
   racks: RackProfile[] | undefined
 ): NetworkConnectionTableRow => {
-  const srcName = getDeviceName(components, row.sourceDeviceId);
-  const dstName = getDeviceName(components, row.destinationDeviceId);
+  const srcDeviceName = getDeviceName(allDesignComponents, row.sourceDeviceId);
+  const dstDeviceName = getDeviceName(allDesignComponents, row.destinationDeviceId);
+  
+  const srcPortName = getPortName(row.sourceDeviceId, row.sourcePortId, allDesignComponents);
+  const dstPortName = getPortName(row.destinationDeviceId, row.destinationPortId, allDesignComponents);
+
   const srcRackObj = getRackAndRU(racks, row.sourceDeviceId);
   const dstRackObj = getRackAndRU(racks, row.destinationDeviceId);
   return {
     id: row.id,
-    sourceDeviceId: srcName,
-    sourcePortId: row.sourcePortId,
+    sourceDeviceId: srcDeviceName,
+    sourcePortId: srcPortName,
     srcRack: srcRackObj.rack,
     srcRU: srcRackObj.ru,
-    destinationDeviceId: dstName,
-    destinationPortId: row.destinationPortId,
+    destinationDeviceId: dstDeviceName,
+    destinationPortId: dstPortName,
     dstRack: dstRackObj.rack,
     dstRU: dstRackObj.ru,
     cableType: row.mediaType || "-",
@@ -102,19 +119,17 @@ const formatConnectionRow = (
 const NetworkConnectionsTab: React.FC = () => {
   const { activeDesign, updateDesign, componentTemplates } = useDesignStore();
   const [generating, setGenerating] = useState(false);
-  // Only `NetworkConnection[]` (not table row formatting)
   const [networkConnections, setNetworkConnections] = useState<NetworkConnection[]>(activeDesign?.networkConnections || []);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortCol, setSortCol] = useState<string>("sourceDeviceId");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
-  // NEW: For the generation report modal
   const [generationReport, setGenerationReport] = useState<ConnectionAttempt[] | null>(null);
   const [showReport, setShowReport] = useState(false);
 
-  // Memoized filtered and sorted table rows
   const displayedRows = useMemo(() => {
+    const designComponents = activeDesign?.components || [];
     const rows: NetworkConnectionTableRow[] = (networkConnections || []).map(r =>
-      formatConnectionRow(r, activeDesign?.components || [], activeDesign?.rackprofiles)
+      formatConnectionRow(r, designComponents, activeDesign?.rackprofiles)
     );
     let filtered = filterConnections(rows, searchQuery);
 
@@ -130,7 +145,6 @@ const NetworkConnectionsTab: React.FC = () => {
     return filtered;
   }, [networkConnections, searchQuery, sortCol, sortDir, activeDesign]);
 
-  // Generate connections
   const handleGenerate = () => {
     if (!activeDesign) return;
     setGenerating(true);
