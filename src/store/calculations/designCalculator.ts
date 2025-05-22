@@ -98,6 +98,9 @@ export const recalculateDesign = () => {
           );
           if (!componentTemplate) return [];
 
+          // Keep a count for each template to generate unique names
+          const templateInstanceCounts: { [key: string]: number } = {};
+
           // -- STORAGE NODE ROLES --
           if (role.role === 'storageNode') {
             // Gather disks assigned to this cluster's storage role
@@ -105,10 +108,15 @@ export const recalculateDesign = () => {
             const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
             const instances: InfrastructureComponent[] = [];
             for (let i = 0; i < requiredQuantity; i++) {
+              const templateIdForCount = componentTemplate.id;
+              templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
+              const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
+              
               const attachedDisks: any[] = [];
               let instanceComponent: InfrastructureComponent = {
                 ...componentTemplate,
                 id: uuidv4(),
+                name: instanceName,
                 templateId: componentTemplate.id,
                 quantity: 1,
                 role: role.role,
@@ -139,9 +147,14 @@ export const recalculateDesign = () => {
             const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
             const instances: InfrastructureComponent[] = [];
             for (let i = 0; i < requiredQuantity; i++) {
+              const templateIdForCount = componentTemplate.id;
+              templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
+              const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
+              
               let instanceComponent: InfrastructureComponent = {
                 ...componentTemplate,
                 id: uuidv4(),
+                name: instanceName,
                 templateId: componentTemplate.id,
                 quantity: 1,
                 role: role.role,
@@ -170,9 +183,14 @@ export const recalculateDesign = () => {
           const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
           const instances: InfrastructureComponent[] = [];
           for (let i = 0; i < requiredQuantity; i++) {
+            const templateIdForCount = componentTemplate.id;
+            templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
+            const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
+
             const instanceComponent: InfrastructureComponent = {
               ...componentTemplate,
               id: uuidv4(),
+              name: instanceName,
               templateId: componentTemplate.id,
               quantity: 1,
               role: role.role,

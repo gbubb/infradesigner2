@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
@@ -106,7 +105,7 @@ export const useRackInitialization = () => {
     setRackProfiles(newRacks);
     setAvailabilityZones(newAvailabilityZones);
     
-    // distributeComponentsAcrossRacks(newRacks);
+    distributeComponentsAcrossRacks(newRacks);
     
     initializedRef.current = true;
     console.log("Rack initialization complete with sequential names.");
