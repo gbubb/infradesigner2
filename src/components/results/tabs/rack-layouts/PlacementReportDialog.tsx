@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from "react";
+
+import React from 'react';
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-} from "@/components/ui/alert-dialog";
-import { PlacementReport } from "@/services/automatedPlacementService";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { PlacementReport } from '@/services/automatedPlacementService';
+import { CheckCircle, XCircle, Info } from 'lucide-react';
 
 interface PlacementReportDialogProps {
   open: boolean;
@@ -25,103 +26,120 @@ const PlacementReportDialog: React.FC<PlacementReportDialogProps> = ({
   azNameMap,
   rackNameMap,
 }) => {
-  const [isOpen, setIsOpen] = useState(open);
+  if (!placementReport) return null;
 
-  useEffect(() => {
-    setIsOpen(open);
-  }, [open]);
-
-  if (!placementReport) {
-    return null;
-  }
+  const successItems = placementReport.items.filter(item => item.status === 'placed');
+  const failedItems = placementReport.items.filter(item => item.status === 'failed');
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-      <AlertDialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-        <button
-          className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 z-[10000] text-2xl bg-white p-1 rounded"
-          style={{ lineHeight: 1, border: "none", cursor: "pointer" }}
-          onClick={() => onOpenChange(false)}
-          aria-label="Close"
-        >
-          ×
-        </button>
-        <AlertDialogHeader className="px-6">
-          <AlertDialogTitle>Device Placement Report</AlertDialogTitle>
-          <AlertDialogDescription>
-            {!placementReport && (
-              <span className="text-sm text-muted-foreground">Generating placement report...</span>
-            )}
-            {placementReport && (
-              <span>
-                Total devices processed:{" "}
-                <span className="font-bold">{placementReport.totalDevices}</span>
-                {" | "}
-                Successfully placed:{" "}
-                <span className="text-green-600 font-bold">{placementReport.placedDevices}</span>
-                {" | "}
-                Failed to place:{" "}
-                <span className="text-red-600 font-bold">{placementReport.failedDevices}</span>
-              </span>
-            )}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        
-        {!placementReport ? (
-          <div className="flex items-center justify-center min-h-[180px] pb-6">
-            <svg className="animate-spin h-8 w-8 mr-2 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-            </svg>
-            <span className="text-lg text-muted-foreground">Processing auto-placement...</span>
-          </div>
-        ) : (
-          <div className="space-y-4 px-6 pb-3">
-            <div className="border rounded-md overflow-hidden w-full">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Component Name</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Generated Name</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {placementReport.items.map((item, index) => (
-                    <tr key={index} className={item.status === "failed" ? "bg-red-50" : ""}>
-                      <td className="px-4 py-2 text-sm">{item.deviceName}</td>
-                      <td className="px-4 py-2 text-sm">{item.instanceName}</td>
-                      <td className="px-4 py-2 text-sm">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            item.status === "placed" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {item.status === "placed" ? "Placed" : "Failed"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-sm">
-                        {item.status === "placed" ? (
-                          <span>
-                            AZ: {azNameMap[item.azId ?? ""] || item.azId} | Rack: {rackNameMap[item.rackId ?? ""] || item.rackId} | Position: {item.ruPosition}
-                          </span>
-                        ) : (
-                          <span className="text-red-600">{item.reason}</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Info className="h-5 w-5" />
+            Device Placement Report
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Summary */}
+          <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+            <div className="text-center">
+              <div className="text-2xl font-bold">{placementReport.totalDevices}</div>
+              <div className="text-sm text-muted-foreground">Total Devices</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{placementReport.placedDevices}</div>
+              <div className="text-sm text-muted-foreground">Successfully Placed</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600">{placementReport.failedDevices}</div>
+              <div className="text-sm text-muted-foreground">Failed to Place</div>
             </div>
           </div>
-        )}
-        <AlertDialogFooter className="px-6">
-          <AlertDialogCancel>Close</AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-4">
+              {/* Successfully Placed Devices */}
+              {successItems.length > 0 && (
+                <div>
+                  <h3 className="font-medium text-green-600 mb-2 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    Successfully Placed ({successItems.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {successItems.map((item, index) => (
+                      <div key={index} className="p-3 border border-green-200 rounded-lg bg-green-50">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-medium">{item.deviceName}</div>
+                            {item.instanceName && (
+                              <div className="text-sm text-muted-foreground">Instance: {item.instanceName}</div>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="text-green-600 border-green-600">
+                            Placed
+                          </Badge>
+                        </div>
+                        <div className="mt-2 text-sm space-y-1">
+                          {item.azId && (
+                            <div>
+                              <span className="font-medium">AZ:</span> {azNameMap[item.azId] || item.azId}
+                            </div>
+                          )}
+                          {item.rackId && (
+                            <div>
+                              <span className="font-medium">Rack:</span> {rackNameMap[item.rackId] || item.rackId}
+                            </div>
+                          )}
+                          {item.ruPosition && (
+                            <div>
+                              <span className="font-medium">Position:</span> RU {item.ruPosition}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Failed Devices */}
+              {failedItems.length > 0 && (
+                <div>
+                  <h3 className="font-medium text-red-600 mb-2 flex items-center gap-2">
+                    <XCircle className="h-4 w-4" />
+                    Failed to Place ({failedItems.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {failedItems.map((item, index) => (
+                      <div key={index} className="p-3 border border-red-200 rounded-lg bg-red-50">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-medium">{item.deviceName}</div>
+                            {item.instanceName && (
+                              <div className="text-sm text-muted-foreground">Instance: {item.instanceName}</div>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="text-red-600 border-red-600">
+                            Failed
+                          </Badge>
+                        </div>
+                        {item.reason && (
+                          <div className="mt-2 text-sm text-red-600">
+                            <span className="font-medium">Reason:</span> {item.reason}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

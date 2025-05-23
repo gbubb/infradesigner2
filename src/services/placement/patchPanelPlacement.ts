@@ -1,3 +1,4 @@
+
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
@@ -68,7 +69,11 @@ export function placePatchPanel({
           ruHeight,
           activeDesignState: state,
         });
-        let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+        
+        // Safe instance name generation with fallback
+        const namingPrefix = component.namingPrefix || component.name || typeLabel;
+        let instanceName = `${namingPrefix}-${typeCounters[typeLabel]++}`;
+        
         if (placement.success) {
           placed = true;
           reportItem = {
@@ -80,9 +85,7 @@ export function placePatchPanel({
             ruPosition: placement.ruPosition,
           };
           return { placed, reportItem };
-        } else {
         }
-      } else {
       }
     }
   }
@@ -146,7 +149,11 @@ export function placePatchPanel({
             ruHeight,
             activeDesignState: state,
           });
-          let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+          
+          // Safe instance name generation with fallback
+          const namingPrefix = component.namingPrefix || component.name || typeLabel;
+          let instanceName = `${namingPrefix}-${typeCounters[typeLabel]++}`;
+          
           if (placement.success) {
             placed = true;
             reportItem = {
@@ -166,9 +173,11 @@ export function placePatchPanel({
 
   // If not placed, fail with a report
   if (!placed) {
+    // Safe instance name generation with fallback
+    const namingPrefix = component.namingPrefix || component.name || typeLabel;
     reportItem = {
       deviceName: component.name,
-      instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
+      instanceName: `${namingPrefix}-${typeCounters[typeLabel]++}`,
       status: "failed",
       reason: "Could not place patch panel of this type (all racks/AZs at capacity for this TYPE)",
     };
