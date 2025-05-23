@@ -1,6 +1,9 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { useDesignStore } from "@/store/designStore";
 import { InfrastructureDesign } from "@/types/infrastructure/design-types";
+import { RackService } from "@/services/rackService";
+import { v4 as uuidv4 } from "uuid";
 
 export class LayoutPersistenceService {
   static async saveCurrentLayout() {
@@ -30,36 +33,20 @@ export class LayoutPersistenceService {
   }
 
   /**
-   * Instead of deleting racks, just clear the devices arrays in each rack.
-   * The new implementation resets device placement but preserves the rack objects themselves.
+   * Instead of deleting racks, this function completely resets the layout by clearing the rack profiles
+   * and triggering a regeneration through the rack initialization process.
    */
   static async resetLayoutToLastSaved() {
-    const data = await this.loadLayoutForDesign();
-
-    // NEW LOGIC: Keep the racks, just clear devices.
-    if (data && data.rackprofiles && Array.isArray(data.rackprofiles)) {
-      // Remove all devices from each rack, but keep racks themselves
-      const unplacedRacks = data.rackprofiles.map(rack => ({
-        ...rack,
-        devices: [], // Remove assigned devices!
-      }));
-
-      // Replace the design's rackprofiles with these "emptied" versions
-      const state = useDesignStore.getState();
-      if (state.activeDesign && typeof state.updateDesign === "function") {
-        state.updateDesign(state.activeDesign.id, { rackprofiles: unplacedRacks });
-      }
-    } else {
-      // If saved rackprofiles are missing, also preserve existing racks but clear devices
-      const state = useDesignStore.getState();
-      const currentRacks = state.activeDesign?.rackprofiles ?? [];
-      const unplacedRacks = currentRacks.map(rack => ({
-        ...rack,
-        devices: [],
-      }));
-      if (state.activeDesign && typeof state.updateDesign === "function") {
-        state.updateDesign(state.activeDesign.id, { rackprofiles: unplacedRacks });
-      }
+    // Clear all racks to trigger regeneration
+    RackService.clearAllRackProfiles();
+    
+    // Update the design's rackprofiles to empty to ensure full regeneration
+    const state = useDesignStore.getState();
+    if (state.activeDesign && typeof state.updateDesign === "function") {
+      state.updateDesign(state.activeDesign.id, { rackprofiles: [] });
     }
+    
+    // Force react components to rerender by returning a timestamp
+    return { resetTimestamp: Date.now() };
   }
 }

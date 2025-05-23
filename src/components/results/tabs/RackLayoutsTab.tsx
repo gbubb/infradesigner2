@@ -53,24 +53,43 @@ export const RackLayoutsTab: React.FC = () => {
   const [readyToOpenReportDialog, setReadyToOpenReportDialog] = useState(false);
   const [snapshotAzNameMap, setSnapshotAzNameMap] = useState<Record<string, string>>({});
   const [snapshotRackNameMap, setSnapshotRackNameMap] = useState<Record<string, string>>({});
+  const [resetTrigger, setResetTrigger] = useState<number>(0);
   const activeDesign = useDesignStore(state => state.activeDesign);
   const updateDesign = useDesignStore(state => state.updateDesign);
   
-  // --- NEW EFFECT TO LOAD SAVED RACK LAYOUTS ON INITIAL MOUNT OR DESIGN CHANGE
+  // --- EFFECT TO LOAD SAVED RACK LAYOUTS ON INITIAL MOUNT OR DESIGN CHANGE OR RESET
   useEffect(() => {
     async function initializeLayout() {
       if (!activeDesign) return;
-      const data = await LayoutPersistenceService.loadLayoutForDesign();
-      if (data && data.rackprofiles && Array.isArray(data.rackprofiles) && data.rackprofiles.length > 0) {
-        // Update the active design's rackprofiles with saved layout
-        updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
-        // Optionally, you could set a toast here: toast.success('Loaded saved rack layout');
+      
+      try {
+        // Check if racks exist already (they may have just been created by useRackInitialization)
+        const existingRacks = activeDesign.rackprofiles || [];
+        
+        // If we already have racks and this is not caused by a reset, use them
+        if (existingRacks.length > 0 && resetTrigger === 0) {
+          console.log("Using existing rack layout from design");
+          return;
+        }
+
+        // Otherwise, try to load from database
+        const data = await LayoutPersistenceService.loadLayoutForDesign();
+        if (data && data.rackprofiles && Array.isArray(data.rackprofiles) && data.rackprofiles.length > 0) {
+          console.log("Loaded saved rack layout from database");
+          // Update the active design's rackprofiles with saved layout
+          updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
+        }
+        // If database has no racks, useRackInitialization will create new ones
+      } catch (error) {
+        console.error("Error loading rack layout:", error);
+        toast.error("Failed to load rack layout");
       }
     }
+    
     initializeLayout();
-    // Only run on initial mount and design change
+    // Include resetTrigger in dependencies to re-run on reset
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeDesign?.id]);
+  }, [activeDesign?.id, resetTrigger]);
 
   // Map of AZ/rackId to friendly names (live maps)
   const azNameMap = React.useMemo(() => {
@@ -84,6 +103,7 @@ export const RackLayoutsTab: React.FC = () => {
     });
     return m;
   }, [availabilityZones, rackProfiles]);
+  
   const rackNameMap = React.useMemo(() => {
     const m: Record<string, string> = {};
     rackProfiles.forEach(rp => { m[rp.id] = rp.name; });
@@ -94,6 +114,11 @@ export const RackLayoutsTab: React.FC = () => {
   useEffect(() => {
     if (rackProfiles.length > 0 && !selectedRackId) {
       setSelectedRackId(rackProfiles[0].id);
+    } else if (rackProfiles.length > 0 && selectedRackId) {
+      // Check if selected rack still exists
+      if (!rackProfiles.some(rack => rack.id === selectedRackId)) {
+        setSelectedRackId(rackProfiles[0].id);
+      }
     }
   }, [rackProfiles, selectedRackId]);
   
@@ -123,7 +148,7 @@ export const RackLayoutsTab: React.FC = () => {
   }, []);
   
   const filteredRacks = rackProfiles.filter(
-    rack => selectedAZ === 'all' || rack.availabilityZoneId === selectedAZ
+    rack => selectedAZ === 'all' || rack.azName === selectedAZ
   );
   
   const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
@@ -168,17 +193,34 @@ export const RackLayoutsTab: React.FC = () => {
   // Save Layout
   const handleSaveLayout = async () => {
     setIsSaving(true);
-    await LayoutPersistenceService.saveCurrentLayout();
-    toast.success('Rack layout saved!');
-    setIsSaving(false);
+    try {
+      await LayoutPersistenceService.saveCurrentLayout();
+      toast.success('Rack layout saved!');
+    } catch (error) {
+      console.error("Error saving rack layout:", error);
+      toast.error("Failed to save rack layout");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  // Reset Layout
+  // Reset Layout - completely regenerate racks
   const handleResetLayout = async () => {
     setIsResetting(true);
-    await LayoutPersistenceService.resetLayoutToLastSaved();
-    toast.success('Rack layout reset to last saved version!');
-    setIsResetting(false);
+    try {
+      await LayoutPersistenceService.resetLayoutToLastSaved();
+      // Force useRackInitialization to run again by triggering reset
+      setResetTrigger(Date.now());
+      toast.success('Rack layout reset!');
+      
+      // Clear selected rack since it might no longer exist
+      setSelectedRackId(null);
+    } catch (error) {
+      console.error("Error resetting rack layout:", error);
+      toast.error("Failed to reset rack layout");
+    } finally {
+      setIsResetting(false);
+    }
   }
 
   return (
