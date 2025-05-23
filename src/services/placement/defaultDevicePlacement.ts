@@ -50,8 +50,8 @@ export function placeDefaultDevice({
       deviceName: component.name,
       instanceName,
       status: 'placed',
-      azId: placement.rack?.availabilityZoneId,
-      rackId: placement.rack?.id,
+      azId: placement.azId,
+      rackId: placement.rackId,
       ruPosition: placement.ruPosition,
     };
     return { placed: true, reportItem };
