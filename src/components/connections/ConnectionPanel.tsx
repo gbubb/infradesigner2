@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useConnectionManager } from '@/hooks/design/useConnectionManager';
+import { useDesignStore } from '@/store/designStore';
 import { Badge } from '@/components/ui/badge';
 
 interface ConnectionPanelProps {
@@ -13,8 +13,21 @@ interface ConnectionPanelProps {
 export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onClose }) => {
   const { getDeviceConnections, getConnection } = useConnectionManager();
   const [activeTab, setActiveTab] = useState<'info' | 'connections'>('info');
+  const { activeDesign } = useDesignStore();
   
   const deviceConnections = getDeviceConnections(deviceId);
+  const rackProfiles = activeDesign?.rackprofiles || [];
+
+  // Helper to find device placement
+  const getDevicePlacementInfo = (devId: string) => {
+    for (const rack of rackProfiles) {
+      const deviceInRack = rack.devices.find(d => d.deviceId === devId);
+      if (deviceInRack) {
+        return `Rack: ${rack.name}, RU: ${deviceInRack.ruPosition}`;
+      }
+    }
+    return 'Unplaced';
+  };
   
   // Function to determine connection type badge color
   const getConnectionTypeBadge = (cableId: string | undefined) => {
@@ -51,6 +64,7 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
         {activeTab === 'info' && (
           <div className="space-y-2">
             <p className="font-medium">Device ID: {deviceId}</p>
+            <p className="text-sm text-muted-foreground">Placement: {getDevicePlacementInfo(deviceId)}</p>
             <div className="grid grid-cols-2 gap-2 mt-2">
               <div className="p-2 bg-muted rounded">
                 <p className="text-sm font-medium">Status</p>
@@ -83,6 +97,9 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
                         <p className="font-medium">Connected to: {connectedDeviceId}</p>
                         {getConnectionTypeBadge(conn.cableId)}
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Placement: {getDevicePlacementInfo(connectedDeviceId)}
+                      </p>
                       <div className="mt-1 text-xs text-muted-foreground">
                         <p>Connection ID: {conn.cableId || 'Direct Connection'}</p>
                         <p>Source: {conn.sourceDeviceId} → Destination: {conn.destinationDeviceId}</p>
