@@ -1,3 +1,4 @@
+
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
@@ -21,12 +22,9 @@ export function placeCoreDevice({
   let reportItem = null;
 
   if (coreRacks.length === 0) {
-    const prefix = component.namingPrefix || typeLabel;
-    let instanceName = `${prefix}-${typeCounters[prefix]??0}`;
-    typeCounters[prefix] = (typeCounters[prefix]??0)+1;
     reportItem = {
       deviceName: component.name,
-      instanceName,
+      instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
       status: 'failed',
       reason: "No core racks available for core device"
     };
@@ -50,9 +48,7 @@ export function placeCoreDevice({
     ruHeight,
     activeDesignState: state
   });
-  const prefix = component.namingPrefix || typeLabel;
-  let instanceName = `${prefix}-${typeCounters[prefix]??0}`;
-  typeCounters[prefix] = (typeCounters[prefix]??0)+1;
+  let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
   if (placement.success) {
     placed = true;
     reportItem = {

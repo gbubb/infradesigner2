@@ -1,3 +1,4 @@
+
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
@@ -49,11 +50,7 @@ export function placeDefaultDevice({
     ruHeight,
     activeDesignState: state
   });
-
-  const prefix = component.namingPrefix || typeLabel;
-  let instanceName = `${prefix}-${typeCounters[prefix]??0}`;
-  typeCounters[prefix] = (typeCounters[prefix]??0)+1;
-
+  let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
   if (placement.success) {
     placed = true;
     reportItem = {
