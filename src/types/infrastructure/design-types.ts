@@ -30,12 +30,6 @@ export interface InfrastructureDesign {
   connectionRules?: ConnectionRule[];
   // Physical network connections
   networkConnections?: NetworkConnection[]; // NEW
-  // Clusters for auto-placement
-  clusters?: Array<{
-    id: string;
-    name: string;
-    type: 'compute' | 'storage' | 'controller' | 'infrastructure';
-  }>;
 }
 
 // Workspace types for component positioning

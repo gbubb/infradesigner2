@@ -1,6 +1,7 @@
 
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
+import { getTypeKey } from './placementUtils';
 
 export function placeDefaultDevice({
   component,
@@ -9,7 +10,7 @@ export function placeDefaultDevice({
   components,
   state,
   typeLabel,
-  typeCounters
+  typeCounters,
 }: {
   component: any,
   allowedAZs: string[],
@@ -19,49 +20,54 @@ export function placeDefaultDevice({
   typeLabel: string,
   typeCounters: Record<string, number>
 }): { placed: boolean, reportItem: any } {
-  const targetRacks = rackProfiles.filter(r => allowedAZs.includes(r.availabilityZoneId || 'default'));
-  
-  if (targetRacks.length === 0) {
-    // Safe instance name generation with fallback
-    const namingPrefix = component.namingPrefix || component.name || typeLabel;
-    const reportItem = {
-      deviceName: component.name,
-      instanceName: `${namingPrefix}-${typeCounters[typeLabel]++}`,
-      status: "failed",
-      reason: `No racks available in allowed AZs: ${allowedAZs.join(', ')}`,
-    };
-    return { placed: false, reportItem };
-  }
+  let placed = false;
+  let reportItem = null;
 
+  let componentClusterAZs: string[] | undefined;
+  if (component.clusterId && allowedAZs) {
+    componentClusterAZs = allowedAZs;
+  } else if (component.clusterInfo?.clusterId && allowedAZs) {
+    componentClusterAZs = allowedAZs;
+  }
+  let eligibleRacks = rackProfiles.filter(rk =>
+    allowedAZs.includes(rk.availabilityZoneId || '')
+  );
+  // Find rack with least of this type
+  let minRack = eligibleRacks[0], minCount = Infinity;
+  for (const r of eligibleRacks) {
+    const count = r.devices.filter(d =>
+      getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel
+    ).length;
+    if (count < minCount) {
+      minRack = r;
+      minCount = count;
+    }
+  }
   const ruHeight = component.ruSize || component.ruHeight || 1;
   const placement = tryPlaceDeviceInRacksWithConstraints({
-    racks: targetRacks,
+    racks: [minRack],
     device: component,
     ruHeight,
-    activeDesignState: state,
+    activeDesignState: state
   });
-
-  // Safe instance name generation with fallback
-  const namingPrefix = component.namingPrefix || component.name || typeLabel;
-  const instanceName = `${namingPrefix}-${typeCounters[typeLabel]++}`;
-
+  let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
   if (placement.success) {
-    const reportItem = {
+    placed = true;
+    reportItem = {
       deviceName: component.name,
       instanceName,
       status: 'placed',
       azId: placement.azId,
       rackId: placement.rackId,
-      ruPosition: placement.ruPosition,
+      ruPosition: placement.ruPosition
     };
-    return { placed: true, reportItem };
   } else {
-    const reportItem = {
+    reportItem = {
       deviceName: component.name,
       instanceName,
       status: "failed",
-      reason: `Could not place in any of ${targetRacks.length} available racks`,
+      reason: placement.reason
     };
-    return { placed: false, reportItem };
   }
+  return { placed, reportItem };
 }

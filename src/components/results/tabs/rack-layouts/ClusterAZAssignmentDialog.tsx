@@ -1,29 +1,62 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { useDesignStore } from '@/store/designStore';
+import { Button } from '@/components/ui/button';
 import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useDesignStore } from '@/store/designStore';
 
 interface ClusterAZAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   availabilityZones: string[];
   clusterAssignments: ClusterAZAssignment[];
-  setClusterAssignments: React.Dispatch<React.SetStateAction<ClusterAZAssignment[]>>;
+  setClusterAssignments: (assignments: ClusterAZAssignment[]) => void;
   onConfirm: () => void;
 }
+
+// Helper to extract all unique cluster and standalone device lines
+const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[]): { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] => {
+  if (!activeDesign || !activeDesign.componentRoles) return [];
+
+  const coreAZ = availabilityZones.find(az => az.toLowerCase().includes('core')) || 'Core';
+  const nonCoreAZs = availabilityZones.filter(az => az !== coreAZ);
+
+  // Build array of roles/types for clusters and relevant device types
+  const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
+  for (const role of activeDesign.componentRoles) {
+    // Lowercase key for matching types.
+    const key = role.role?.toLowerCase() || '';
+
+    // Decide default zones
+    let autoDefaultTo: string[] = [];
+    if ([
+      'firewall', 'spineswitch', 'borderleafswitch', 'border-switch', 'spine-switch', 'router'
+    ].some(type => key.includes(type))) {
+      autoDefaultTo = coreAZ ? [coreAZ] : [];
+    } else if ([
+      'compute', 'controller', 'storage', 'ipmiswitch', 'managementswitch',
+      'leafswitch', 'copperpatchpanel', 'fiberpatchpanel'
+    ].some(type => key.includes(type))) {
+      autoDefaultTo = [...nonCoreAZs];
+    } else {
+      autoDefaultTo = [...nonCoreAZs];
+    }
+    lines.push({
+      id: role.id,
+      name: role.role,
+      clusterType: role.role, // Simplified
+      autoDefaultTo,
+    });
+  }
+  return lines;
+};
 
 export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps> = ({
   open,
@@ -34,197 +67,99 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
   onConfirm,
 }) => {
   const activeDesign = useDesignStore(state => state.activeDesign);
-  const requirements = useDesignStore(state => state.requirements);
   const [localAssignments, setLocalAssignments] = useState<ClusterAZAssignment[]>([]);
-  const [patchPanelCoreSettings, setPatchPanelCoreSettings] = useState({
-    copperPatchPanel: true, // Default to true
-    fiberPatchPanel: true,  // Default to true
-  });
 
-  // Initialize cluster assignments from design
   useEffect(() => {
-    if (!activeDesign || !open) return;
+    // Initialize local assignments from props
+    if (activeDesign) {
+      const allRoles = getAllConfigurableRoles(activeDesign, availabilityZones);
+      const initialAssignments = allRoles.map(role => {
+        const existingAssignment = clusterAssignments.find(ca => ca.clusterId === role.id);
+        return {
+          clusterId: role.id,
+          clusterName: role.name,
+          clusterType: role.clusterType as 'compute' | 'storage' | 'controller' | 'infrastructure',
+          selectedAZs: existingAssignment
+            ? existingAssignment.selectedAZs.length > 0
+              ? existingAssignment.selectedAZs
+              : role.autoDefaultTo
+            : role.autoDefaultTo,
+        };
+      });
+      setLocalAssignments(initialAssignments);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDesign, clusterAssignments, availabilityZones?.join('|')]);
 
-    const clusters = activeDesign.clusters || [];
-    const newAssignments: ClusterAZAssignment[] = clusters.map(cluster => {
-      const existing = clusterAssignments.find(a => a.clusterId === cluster.id);
-      return existing || {
-        clusterId: cluster.id,
-        clusterName: cluster.name,
-        clusterType: cluster.type,
-        selectedAZs: availabilityZones, // Default to all AZs
-      };
+  const handleAZSelection = (clusterId: string, az: string, checked: boolean) => {
+    setLocalAssignments(prevAssignments => {
+      return prevAssignments.map(assignment => {
+        if (assignment.clusterId === clusterId) {
+          const selectedAZs = checked
+            ? [...assignment.selectedAZs, az]
+            : assignment.selectedAZs.filter(selectedAZ => selectedAZ !== az);
+          return { ...assignment, selectedAZs };
+        }
+        return assignment;
+      });
     });
-
-    setLocalAssignments(newAssignments);
-  }, [activeDesign, open, availabilityZones, clusterAssignments]);
-
-  const handleAZToggle = (clusterId: string, azId: string, checked: boolean) => {
-    setLocalAssignments(prev => prev.map(assignment => {
-      if (assignment.clusterId === clusterId) {
-        const selectedAZs = checked
-          ? [...assignment.selectedAZs, azId]
-          : assignment.selectedAZs.filter(id => id !== azId);
-        return { ...assignment, selectedAZs };
-      }
-      return assignment;
-    }));
-  };
-
-  const handleSelectAll = (clusterId: string) => {
-    setLocalAssignments(prev => prev.map(assignment =>
-      assignment.clusterId === clusterId
-        ? { ...assignment, selectedAZs: [...availabilityZones] }
-        : assignment
-    ));
-  };
-
-  const handleSelectNone = (clusterId: string) => {
-    setLocalAssignments(prev => prev.map(assignment =>
-      assignment.clusterId === clusterId
-        ? { ...assignment, selectedAZs: [] }
-        : assignment
-    ));
   };
 
   const handleConfirm = () => {
     setClusterAssignments(localAssignments);
     onConfirm();
-  };
-
-  const handlePatchPanelSettingChange = (type: 'copperPatchPanel' | 'fiberPatchPanel', checked: boolean) => {
-    setPatchPanelCoreSettings(prev => ({
-      ...prev,
-      [type]: checked,
-    }));
+    // Do not close dialog here; parent will close after placement is done
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
+      <DialogContent className="sm:max-w-[1100px] w-full"> {/* wider dialog for grid */}
         <DialogHeader>
-          <DialogTitle>Configure Auto-Placement Settings</DialogTitle>
+          <DialogTitle>Select Availability Zones</DialogTitle>
+          <DialogDescription>
+            Choose the availability zones for each cluster/device line. (AZ selections for firewalls, spine, border, etc are limited to "Core" by default)
+          </DialogDescription>
         </DialogHeader>
-
-        <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="space-y-6">
-            {/* Patch Panel Core Settings */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Patch Panel Core Rack Placement</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="copper-patch-panel-core"
-                    checked={patchPanelCoreSettings.copperPatchPanel}
-                    onCheckedChange={(checked) => handlePatchPanelSettingChange('copperPatchPanel', checked as boolean)}
-                  />
-                  <Label htmlFor="copper-patch-panel-core">
-                    Place Copper Patch Panels in Core racks
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="fiber-patch-panel-core"
-                    checked={patchPanelCoreSettings.fiberPatchPanel}
-                    onCheckedChange={(checked) => handlePatchPanelSettingChange('fiberPatchPanel', checked as boolean)}
-                  />
-                  <Label htmlFor="fiber-patch-panel-core">
-                    Place Fiber Patch Panels in Core racks
-                  </Label>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Core racks: {requirements?.networkRequirements?.copperPatchPanelsPerCoreRack || 0} copper, {requirements?.networkRequirements?.fiberPatchPanelsPerCoreRack || 0} fiber per rack
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Cluster AZ Assignments */}
-            {localAssignments.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Cluster Availability Zone Assignments</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Select which availability zones each cluster can be placed in.
-                  </p>
-                  <div className="space-y-4">
-                    {localAssignments.map((assignment) => (
-                      <Card key={assignment.clusterId}>
-                        <CardHeader className="pb-3">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <CardTitle className="text-base">{assignment.clusterName}</CardTitle>
-                              <p className="text-sm text-muted-foreground capitalize">
-                                {assignment.clusterType} cluster
-                              </p>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleSelectAll(assignment.clusterId)}
-                              >
-                                All
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleSelectNone(assignment.clusterId)}
-                              >
-                                None
-                              </Button>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-2 gap-3">
-                            {availabilityZones.map((azId) => (
-                              <div key={azId} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`${assignment.clusterId}-${azId}`}
-                                  checked={assignment.selectedAZs.includes(azId)}
-                                  onCheckedChange={(checked) =>
-                                    handleAZToggle(assignment.clusterId, azId, checked as boolean)
-                                  }
-                                />
-                                <Label
-                                  htmlFor={`${assignment.clusterId}-${azId}`}
-                                  className="text-sm"
-                                >
-                                  {azId}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {localAssignments.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  No clusters found in the current design.
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Auto-placement will use default settings for all devices.
-                </p>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-
+        {/* Make grid-based layout */}
+        <div className="overflow-x-auto py-4">
+          <table className="min-w-full border border-muted rounded">
+            <thead>
+              <tr>
+                <th className="px-2 py-2 text-left font-medium bg-muted">Role / Cluster</th>
+                {availabilityZones.map(az => (
+                  <th
+                    key={az}
+                    className="px-2 py-2 text-center font-medium bg-muted"
+                  >
+                    {az}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {localAssignments.map(assignment => (
+                <tr key={assignment.clusterId} className="border-t">
+                  <td className="px-2 py-2 font-medium">{assignment.clusterName}</td>
+                  {availabilityZones.map(az => (
+                    <td key={az} className="px-2 py-2 text-center">
+                      <Checkbox
+                        id={`${assignment.clusterId}-${az}`}
+                        checked={assignment.selectedAZs.includes(az)}
+                        onCheckedChange={checked => handleAZSelection(assignment.clusterId, az, !!checked)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm}>
-            Confirm Auto-Placement
+          <Button type="button" onClick={handleConfirm}>
+            Confirm
           </Button>
         </DialogFooter>
       </DialogContent>

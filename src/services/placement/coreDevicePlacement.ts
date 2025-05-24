@@ -1,6 +1,7 @@
 
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
+import { getTypeKey } from './placementUtils';
 
 export function placeCoreDevice({
   component,
@@ -8,7 +9,7 @@ export function placeCoreDevice({
   components,
   state,
   typeLabel,
-  typeCounters
+  typeCounters,
 }: {
   component: any,
   coreRacks: RackProfile[],
@@ -18,42 +19,53 @@ export function placeCoreDevice({
   typeCounters: Record<string, number>
 }): { placed: boolean, reportItem: any } {
   let placed = false;
-  
-  if (coreRacks.length > 0) {
-    const ruHeight = component.ruSize || component.ruHeight || 1;
-    const placement = tryPlaceDeviceInRacksWithConstraints({
-      racks: coreRacks,
-      device: component,
-      ruHeight,
-      activeDesignState: state,
-    });
-    
-    // Safe instance name generation with fallback
-    const namingPrefix = component.namingPrefix || component.name || typeLabel;
-    const instanceName = `${namingPrefix}-${typeCounters[typeLabel]++}`;
-    
-    if (placement.success) {
-      placed = true;
-      const reportItem = {
-        deviceName: component.name,
-        instanceName,
-        status: 'placed',
-        azId: placement.azId,
-        rackId: placement.rackId,
-        ruPosition: placement.ruPosition,
-      };
-      return { placed, reportItem };
-    }
+  let reportItem = null;
+
+  if (coreRacks.length === 0) {
+    reportItem = {
+      deviceName: component.name,
+      instanceName: `${typeLabel}-${typeCounters[typeLabel]++}`,
+      status: 'failed',
+      reason: "No core racks available for core device"
+    };
+    return { placed: false, reportItem };
   }
 
-  // Safe instance name generation with fallback
-  const namingPrefix = component.namingPrefix || component.name || typeLabel;
-  const reportItem = {
-    deviceName: component.name,
-    instanceName: `${namingPrefix}-${typeCounters[typeLabel]++}`,
-    status: "failed",
-    reason: "No core racks available or insufficient space",
-  };
-
+  // Select core rack with least of this type
+  let minRack = coreRacks[0], minCount = Infinity;
+  for (const r of coreRacks) {
+    const count = r.devices.filter(d => getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel).length;
+    if (count < minCount) {
+      minRack = r;
+      minCount = count;
+    }
+  }
+  // Try placing in the minRack
+  const ruHeight = component.ruSize || component.ruHeight || 1;
+  const placement = tryPlaceDeviceInRacksWithConstraints({
+    racks: [minRack],
+    device: component,
+    ruHeight,
+    activeDesignState: state
+  });
+  let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+  if (placement.success) {
+    placed = true;
+    reportItem = {
+      deviceName: component.name,
+      instanceName,
+      status: 'placed',
+      azId: placement.azId,
+      rackId: placement.rackId,
+      ruPosition: placement.ruPosition
+    };
+  } else {
+    reportItem = {
+      deviceName: component.name,
+      instanceName,
+      status: "failed",
+      reason: placement.reason
+    };
+  }
   return { placed, reportItem };
 }
