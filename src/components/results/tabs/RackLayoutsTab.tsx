@@ -94,12 +94,15 @@ export const RackLayoutsTab: React.FC = () => {
   // Map of AZ/rackId to friendly names (live maps)
   const azNameMap = React.useMemo(() => {
     const m: Record<string, string> = {};
-    availabilityZones.forEach(name => {
-      m[name] = name; 
-    });
+    // Assume availabilityZones is an array of AZ UIDs; friendly names come from rackProfiles
     rackProfiles.forEach(rp => {
-      if (rp.availabilityZoneId && rp.azName)
+      if (rp.availabilityZoneId && rp.azName) {
         m[rp.availabilityZoneId] = rp.azName;
+      }
+    });
+    // Fallback: if an AZ has no resolved friendly name, use UID as-is
+    availabilityZones.forEach(uid => {
+      if (!m[uid]) m[uid] = uid;
     });
     return m;
   }, [availabilityZones, rackProfiles]);
@@ -148,7 +151,7 @@ export const RackLayoutsTab: React.FC = () => {
   }, []);
   
   const filteredRacks = rackProfiles.filter(
-    rack => selectedAZ === 'all' || rack.azName === selectedAZ
+    rack => selectedAZ === 'all' || (rack.azName === selectedAZ || azNameMap[rack.availabilityZoneId ?? ''] === selectedAZ)
   );
   
   const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
@@ -268,6 +271,7 @@ export const RackLayoutsTab: React.FC = () => {
           scrollPosition={scrollPosition}
           setScrollPosition={setScrollPosition}
           scrollStep={scrollStep}
+          azNameMap={azNameMap} // <-- new prop!
         />
         
         {/* Main content area with device palette and rack view/details */}

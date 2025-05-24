@@ -5,12 +5,13 @@ import { ChevronLeft, ChevronRight, HardDrive, Database } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface RackHorizontalScrollerProps {
-  racks: Array<{ id: string; name: string; azName: string }>;
+  racks: Array<{ id: string; name: string; azName?: string; availabilityZoneId?: string }>;
   selectedRackId: string | null;
   setSelectedRackId: (id: string) => void;
   scrollPosition: number;
   setScrollPosition: (position: number) => void;
   scrollStep: number;
+  azNameMap: Record<string,string>; // <-- new prop
 }
 
 export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
@@ -19,7 +20,8 @@ export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
   setSelectedRackId,
   scrollPosition,
   setScrollPosition,
-  scrollStep
+  scrollStep,
+  azNameMap
 }) => {
   const handleScrollLeft = () => {
     setScrollPosition(Math.max(0, scrollPosition - scrollStep));
@@ -66,16 +68,18 @@ export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
                 <CardContent className="p-2 flex flex-col items-center">
                   <div className="bg-muted w-full h-[220px] rounded relative">
                     <div className="absolute inset-0 flex items-center justify-center">
-                      {rack.azName === 'Core' ? (
-                        <Database className="h-10 w-10 text-muted-foreground" />
-                      ) : (
-                        <HardDrive className="h-10 w-10 text-muted-foreground" />
-                      )}
+                      { // use string match to compare
+                        (azNameMap[rack.availabilityZoneId ?? ''] || rack.azName) === 'Core'
+                        ? <Database className="h-10 w-10 text-muted-foreground" />
+                        : <HardDrive className="h-10 w-10 text-muted-foreground" />
+                      }
                     </div>
                   </div>
                   <div className="text-center mt-2">
                     <div className="font-medium text-xs truncate w-full">{getDisplayRackName(rack.name)}</div>
-                    <div className="text-xs text-muted-foreground">{rack.azName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {azNameMap[rack.availabilityZoneId ?? ''] || rack.azName || '—'}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
