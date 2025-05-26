@@ -38,16 +38,27 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
   const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
   for (const role of activeDesign.componentRoles) {
     const roleKey = role.role?.toLowerCase() || ''; 
-    const userDefinedName = role.name && typeof role.name === 'string' && role.name.trim() !== '' ? role.name.trim() : null;
-
     let finalDisplayName: string;
+    let userProvidedName: string | null = null;
 
-    if (['storage', 'storagenode'].some(type => roleKey.includes(type))) {
-      finalDisplayName = userDefinedName ? `Storage Cluster - ${userDefinedName}` : role.role; 
-    } else if (['compute', 'computenode', 'controller'].some(type => roleKey.includes(type))) {
-      finalDisplayName = userDefinedName ? `Compute Cluster - ${userDefinedName}` : role.role; 
+    // Check for cluster types first and try to get name from clusterInfo
+    if (['storage', 'storagenode', 'compute', 'computenode', 'controller', 'gpunode'].some(type => roleKey.includes(type))) {
+      if (role.clusterInfo && typeof role.clusterInfo.clusterName === 'string' && role.clusterInfo.clusterName.trim() !== '') {
+        userProvidedName = role.clusterInfo.clusterName.trim();
+      }
+      
+      if (['storage', 'storagenode'].some(type => roleKey.includes(type))) {
+        finalDisplayName = userProvidedName ? `Storage Cluster - ${userProvidedName}` : role.role; 
+      } else { // For compute, controller, gpunode
+        finalDisplayName = userProvidedName ? `Compute Cluster - ${userProvidedName}` : role.role; 
+      }
     } else {
-      finalDisplayName = userDefinedName || role.role; 
+      // For non-cluster types (firewalls, switches, etc.)
+      // Use role.name if available, otherwise role.role
+      userProvidedName = (role.name && typeof role.name === 'string' && role.name.trim() !== '') 
+        ? role.name.trim() 
+        : null;
+      finalDisplayName = userProvidedName || role.role; 
     }
 
     let autoDefaultTo: string[] = [];
