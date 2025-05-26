@@ -37,23 +37,17 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
 
   const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
   for (const role of activeDesign.componentRoles) {
-    const roleKey = role.role?.toLowerCase() || ''; // e.g., 'storagenode', 'computenode', 'firewall'
-    // role.name should be the user-defined name from requirements form, e.g., "Primary Storage", "West Compute"
+    const roleKey = role.role?.toLowerCase() || ''; 
     const userDefinedName = role.name && typeof role.name === 'string' && role.name.trim() !== '' ? role.name.trim() : null;
 
     let finalDisplayName: string;
 
-    // Check for storage cluster types
     if (['storage', 'storagenode'].some(type => roleKey.includes(type))) {
-      finalDisplayName = `Storage Cluster - ${userDefinedName || role.role}`;
-    } 
-    // Check for compute/controller cluster types
-    else if (['compute', 'computenode', 'controller'].some(type => roleKey.includes(type))) {
-      finalDisplayName = `Compute Cluster - ${userDefinedName || role.role}`;
-    } 
-    // For other types (firewalls, switches, etc.)
-    else {
-      finalDisplayName = userDefinedName || role.role; // Use user-defined name if available, else the role type
+      finalDisplayName = userDefinedName ? `Storage Cluster - ${userDefinedName}` : role.role; 
+    } else if (['compute', 'computenode', 'controller'].some(type => roleKey.includes(type))) {
+      finalDisplayName = userDefinedName ? `Compute Cluster - ${userDefinedName}` : role.role; 
+    } else {
+      finalDisplayName = userDefinedName || role.role; 
     }
 
     let autoDefaultTo: string[] = [];
@@ -76,14 +70,11 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
       if (nonCoreAZs.length > 0) {
         autoDefaultTo = [...nonCoreAZs];
       } else if (availabilityZones.length > 0 && explicitCoreAZ && nonCoreAZs.length === 0) {
-        // This covers the case where the *only* AZ is the Core AZ.
-        // Non-core devices should not default to the Core AZ in this scenario.
         autoDefaultTo = []; 
       } else if (availabilityZones.length > 0 && !explicitCoreAZ) {
-        // No explicit Core AZ defined, so non-core devices can default to any available AZ.
         autoDefaultTo = [...availabilityZones];
       } else {
-        autoDefaultTo = []; // No AZs at all, or only Core AZ exists and these are non-core devices.
+        autoDefaultTo = []; 
       }
     }
 

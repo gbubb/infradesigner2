@@ -1,7 +1,7 @@
-
 // Component role interfaces
 export interface ComponentRole {
   id: string;
+  name?: string;
   role: string;
   description: string;
   requiredCount: number;
