@@ -1,3 +1,4 @@
+
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { RackService } from './rackService';
 
@@ -10,7 +11,7 @@ export function tryPlaceDeviceInRacksWithConstraints({
 }: {
   racks: RackProfile[],
   device: any,
-  ruHeight: number,
+  ruHeight: number,    // incoming argument, make sure matches .ruSize
   activeDesignState: any
 }): {
   success: boolean,
@@ -22,6 +23,11 @@ export function tryPlaceDeviceInRacksWithConstraints({
   // Read device placement constraints from device.placement or default
   const placement = device.placement || {};
   const validRUStart = (placement.validRUStart ?? 1);
+
+  // Always prefer to use ruSize for all calculations
+  // (Some components may have ruHeight, standard is ruSize)
+  const trueRuSize = device.ruSize || device.ruHeight || ruHeight || 1;
+
   const validRUEnd = (placement.validRUEnd ?? (racks[0]?.uHeight || 42));
   const preferredRU = (placement.preferredRU ?? undefined);
 
@@ -36,10 +42,10 @@ export function tryPlaceDeviceInRacksWithConstraints({
     if (
       typeof preferredRU === "number"
       && preferredRU >= validRUStart
-      && preferredRU + ruHeight - 1 <= validRUEnd
-      && preferredRU + ruHeight - 1 <= rack.uHeight
+      && preferredRU + trueRuSize - 1 <= validRUEnd
+      && preferredRU + trueRuSize - 1 <= rack.uHeight
     ) {
-      const available = isRUAvailableWithComponentRU(rack, preferredRU, ruHeight, activeDesignState);
+      const available = isRUAvailableWithComponentRU(rack, preferredRU, trueRuSize, activeDesignState);
       if (available) {
         const result = RackService.placeDevice(rack.id, device.id, preferredRU);
         if (result.success) {
@@ -53,11 +59,11 @@ export function tryPlaceDeviceInRacksWithConstraints({
     // Try all in permitted range
     for (
       let ru = validRUStart; 
-      ru <= Math.min(rack.uHeight - ruHeight + 1, validRUEnd); 
+      ru <= Math.min(rack.uHeight - trueRuSize + 1, validRUEnd); 
       ru++
     ) {
       if (preferredRU && ru === preferredRU) continue;
-      const available = isRUAvailableWithComponentRU(rack, ru, ruHeight, activeDesignState);
+      const available = isRUAvailableWithComponentRU(rack, ru, trueRuSize, activeDesignState);
       if (available) {
         const result = RackService.placeDevice(rack.id, device.id, ru);
         if (result.success) {
@@ -72,7 +78,7 @@ export function tryPlaceDeviceInRacksWithConstraints({
   console.log(
     `No valid RU position for device ${device.name} in racks`, 
     racks.map(r => r.name),
-    `Checking RU range: ${validRUStart}-${validRUEnd}, ruHeight: ${ruHeight}`
+    `Checking RU range: ${validRUStart}-${validRUEnd}, ruHeight: ${trueRuSize}`
   );
   return {
     success: false,
@@ -89,15 +95,28 @@ function isRUAvailableWithComponentRU(
 ): boolean {
   const activeDesign = activeDesignState.activeDesign;
   if (!activeDesign) return false;
+  // Debug: print every check with all placed devices and their spans
+  // and show which (if any) overlap occurs for the candidate ruPosition
 
   for (const device of rack.devices) {
     const component = activeDesign.components.find((c: any) => c.id === device.deviceId);
-    const deviceHeight = component ? (component.ruSize || 1) : 1;
+    // Always use ruSize if present, fallback to ruHeight or 1
+    const deviceHeight = component ? (component.ruSize || component.ruHeight || 1) : 1;
+    const existingDeviceStart = device.ruPosition;
     const existingDeviceEnd = device.ruPosition + deviceHeight - 1;
-    // Overlap check
-    if (
-      (ruPosition <= existingDeviceEnd && ruPosition + ruHeight - 1 >= device.ruPosition)
-    ) {
+    const candidateStart = ruPosition;
+    const candidateEnd = ruPosition + ruHeight - 1;
+    const overlap = (
+      (candidateStart <= existingDeviceEnd && candidateEnd >= existingDeviceStart)
+    );
+
+    console.log(
+      `[RU availability check] Device ${component?.name || device.deviceId} occupies [${existingDeviceStart}, ${existingDeviceEnd}] (height=${deviceHeight}).`,
+      `Testing placement at [${candidateStart}, ${candidateEnd}] (height=${ruHeight}).`,
+      `Overlap: ${overlap ? "YES" : "no"}`
+    );
+
+    if (overlap) {
       return false;
     }
   }
