@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
 import { useDesignStore } from '@/store/designStore';
 
+// Props, using friendly AZ names only
 interface ClusterAZAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,10 +22,11 @@ interface ClusterAZAssignmentDialogProps {
   onConfirm: () => void;
 }
 
-// Helper to extract all unique cluster/device lines (unchanged, but now expects AZ names, not IDs)
+// Helper: Extract all unique cluster/device lines (shows friendly AZ names)
 const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[]) => {
   if (!activeDesign || !activeDesign.componentRoles) return [];
 
+  // Determine which AZ is "Core" by friendly name (case-insensitive)
   const coreAZ = availabilityZones.find(az => az.toLowerCase().includes('core')) || 'Core';
   const nonCoreAZs = availabilityZones.filter(az => az !== coreAZ);
 
@@ -74,21 +76,43 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
   const activeDesign = useDesignStore(state => state.activeDesign);
   const [localAssignments, setLocalAssignments] = useState<ClusterAZAssignment[]>([]);
 
-  // Show friendly AZ names (not IDs) in header and assignments
+  // Utility: Map any assigned AZ UIDs (from data) to their friendly name, if possible
+  const azNameFromUid = useCallback(
+    (azIdOrName: string): string => {
+      // If value is already a friendly name, return
+      if (availabilityZones.includes(azIdOrName)) return azIdOrName;
+      // Otherwise, try to map by ID (shouldn't be necessary if names only)
+      // For now, fallback to empty string if not found
+      return '';
+    },
+    [availabilityZones]
+  );
+
+  // Show only friendly AZ names in header and assignments
   useEffect(() => {
     if (activeDesign) {
       const allRoles = getAllConfigurableRoles(activeDesign, availabilityZones);
       const initialAssignments = allRoles.map(role => {
         const existingAssignment = clusterAssignments.find(ca => ca.clusterId === role.id);
+
+        // Map any UIDs in selectedAZs to friendly names; if missing, use autoDefaultTo
+        let selectedAZs: string[] = [];
+        if (existingAssignment && Array.isArray(existingAssignment.selectedAZs) && existingAssignment.selectedAZs.length > 0) {
+          selectedAZs = existingAssignment.selectedAZs
+            .map(val => azNameFromUid(val))
+            .filter(name => !!name || availabilityZones.includes(val));
+        } else {
+          selectedAZs = role.autoDefaultTo;
+        }
+
+        // Remove any values that are not in the allowed AZ friendly names
+        selectedAZs = selectedAZs.filter(az => availabilityZones.includes(az));
+
         return {
           clusterId: role.id,
           clusterName: role.name,
           clusterType: role.clusterType as 'compute' | 'storage' | 'controller' | 'infrastructure',
-          selectedAZs: existingAssignment
-            ? existingAssignment.selectedAZs.length > 0
-              ? existingAssignment.selectedAZs
-              : role.autoDefaultTo
-            : role.autoDefaultTo,
+          selectedAZs,
         };
       });
       setLocalAssignments(initialAssignments);
@@ -96,13 +120,20 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDesign, clusterAssignments, availabilityZones?.join('|')]);
 
+  // Handle selection, always storing friendly AZ names only
   const handleAZSelection = (clusterId: string, az: string, checked: boolean) => {
     setLocalAssignments(prevAssignments => {
       return prevAssignments.map(assignment => {
         if (assignment.clusterId === clusterId) {
-          const selectedAZs = checked
-            ? [...assignment.selectedAZs, az]
-            : assignment.selectedAZs.filter(selectedAZ => selectedAZ !== az);
+          let selectedAZs = assignment.selectedAZs || [];
+          if (checked) {
+            // Add if not present
+            if (!selectedAZs.includes(az)) selectedAZs = [...selectedAZs, az];
+          } else {
+            selectedAZs = selectedAZs.filter(selectedAZ => selectedAZ !== az);
+          }
+          // Always return only names known in the list
+          selectedAZs = selectedAZs.filter(name => availabilityZones.includes(name));
           return { ...assignment, selectedAZs };
         }
         return assignment;
@@ -111,7 +142,13 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
   };
 
   const handleConfirm = () => {
-    setClusterAssignments(localAssignments);
+    // Always clean localAssignments to store only friendly AZ names
+    setClusterAssignments(
+      localAssignments.map(a => ({
+        ...a,
+        selectedAZs: (a.selectedAZs || []).filter(val => availabilityZones.includes(val)),
+      }))
+    );
     onConfirm();
   };
 
