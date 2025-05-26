@@ -407,10 +407,11 @@ export const RackLayoutsTab: React.FC = () => {
         />
 
         {/* Cluster AZ Assignment Dialog */}
+        {/* USE friendlyAzNames, not raw availabilityZones */}
         <ClusterAZAssignmentDialog
           open={isAZAssignmentDialogOpen}
           onOpenChange={setIsAZAssignmentDialogOpen}
-          availabilityZones={friendlyAzNames} {/* <-- USE friendlyAzNames, not raw availabilityZones */}
+          availabilityZones={friendlyAzNames}
           clusterAssignments={clusterAZAssignments}
           setClusterAssignments={setClusterAZAssignments}
           onConfirm={handleConfirmAutoPlacement}
