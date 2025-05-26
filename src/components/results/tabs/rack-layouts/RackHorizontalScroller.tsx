@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -6,13 +5,12 @@ import { ChevronLeft, ChevronRight, HardDrive, Database } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface RackHorizontalScrollerProps {
-  racks: Array<{ id: string; name: string; azName?: string; availabilityZoneId?: string }>;
+  racks: Array<{ id: string; name: string; azName: string }>;
   selectedRackId: string | null;
   setSelectedRackId: (id: string) => void;
   scrollPosition: number;
   setScrollPosition: (position: number) => void;
   scrollStep: number;
-  azNameMap: Record<string, string>;
 }
 
 export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
@@ -21,8 +19,7 @@ export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
   setSelectedRackId,
   scrollPosition,
   setScrollPosition,
-  scrollStep,
-  azNameMap
+  scrollStep
 }) => {
   const handleScrollLeft = () => {
     setScrollPosition(Math.max(0, scrollPosition - scrollStep));
@@ -41,16 +38,6 @@ export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
       if (parts.length > 1 && parts[1]) return `Rack ${parts[1]}`;
     }
     return fullName; // Fallback
-  };
-
-  // Helper to get AZ display name
-  const getAZDisplayName = (azName: string | undefined, azId: string | undefined) => {
-    // Prefer azName as a key in map (if not a friendly name)
-    if (azId && azNameMap[azId]) return azNameMap[azId];
-    // Some legacy cases: azName might be a friendly name itself
-    if (azName && !azNameMap[azName]) return azName;
-    if (azName && azNameMap[azName]) return azNameMap[azName];
-    return azId || "Unknown AZ";
   };
 
   return (
@@ -88,9 +75,7 @@ export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
                   </div>
                   <div className="text-center mt-2">
                     <div className="font-medium text-xs truncate w-full">{getDisplayRackName(rack.name)}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {getAZDisplayName(rack.azName, rack.availabilityZoneId)}
-                    </div>
+                    <div className="text-xs text-muted-foreground">{rack.azName}</div>
                   </div>
                 </CardContent>
               </Card>
