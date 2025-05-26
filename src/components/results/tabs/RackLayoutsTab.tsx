@@ -29,7 +29,12 @@ import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
 import { useDesignStore } from '@/store/designStore';
 
 export const RackLayoutsTab: React.FC = () => {
-  const { rackProfiles, availabilityZones } = useRackInitialization();
+  // EXPLICITLY TYPE rackProfiles for type safety and error prevention
+  const { rackProfiles, availabilityZones } = useRackInitialization() as {
+    rackProfiles: { id: string; name: string; azName?: string; availabilityZoneId?: string }[];
+    availabilityZones: any; // keep as any for now, or string[] if known
+  };
+
   const [selectedRackId, setSelectedRackId] = useState<string | null>(null);
   const [rackStats, setRackStats] = useState<{
     totalRU: number;
