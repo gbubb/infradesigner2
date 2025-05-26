@@ -103,7 +103,6 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
     
     newRoles.push({
       id: uuidv4(),
-      name: cluster.name,
       role: roleType,
       description: roleDescription,
       requiredCount: totalComputeNodeCount,
@@ -115,7 +114,6 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   storageClusters.forEach((cluster, index) => {
     newRoles.push({
       id: cluster.id || uuidv4(),
-      name: cluster.name,
       role: 'storageNode',
       description: `Provides storage resources for ${cluster.name}`,
       requiredCount: cluster.availabilityZoneQuantity || 3,

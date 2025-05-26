@@ -377,6 +377,7 @@ export const RackLayoutsTab: React.FC = () => {
                 onDeviceClick={handleDeviceClick}
                 rackStats={rackStats}
                 selectedRack={selectedRack}
+                azNameMap={azNameMap}
               />
             )}
             {!selectedRackId && (

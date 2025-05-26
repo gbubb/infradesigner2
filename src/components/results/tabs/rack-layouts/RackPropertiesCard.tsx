@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Server } from 'lucide-react';
@@ -11,9 +10,22 @@ interface RackPropertiesCardProps {
     availabilityZoneId?: string;
     rackType?: string;
   } | undefined;
+  azNameMap: Record<string, string>;
 }
 
-export const RackPropertiesCard: React.FC<RackPropertiesCardProps> = ({ rack }) => {
+export const RackPropertiesCard: React.FC<RackPropertiesCardProps> = ({ rack, azNameMap }) => {
+  let displayAzName = 'N/A';
+
+  if (rack) {
+    if (rack.availabilityZoneId && azNameMap && azNameMap[rack.availabilityZoneId]) {
+      displayAzName = azNameMap[rack.availabilityZoneId];
+    } else if (rack.azName) {
+      displayAzName = rack.azName;
+    } else if (rack.availabilityZoneId) {
+      displayAzName = rack.availabilityZoneId;
+    }
+  }
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -31,7 +43,7 @@ export const RackPropertiesCard: React.FC<RackPropertiesCardProps> = ({ rack }) 
             <div className="font-medium truncate">{rack.id}</div>
             
             <div className="text-muted-foreground">Availability Zone:</div>
-            <div className="font-medium">{rack.azName || 'Default'}</div>
+            <div className="font-medium">{displayAzName}</div>
             
             <div className="text-muted-foreground">Rack Type:</div>
             <div className="font-medium">{rack.rackType || 'Standard'}</div>

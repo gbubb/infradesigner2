@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { RackView } from '@/components/visualization/RackView';
 import { RackUtilizationCard } from './RackUtilizationCard';
@@ -20,13 +19,15 @@ interface RackDetailViewProps {
     azName?: string;
     availabilityZoneId?: string;
   } | undefined;
+  azNameMap: Record<string, string>;
 }
 
 export const RackDetailView: React.FC<RackDetailViewProps> = ({
   rackProfileId,
   onDeviceClick,
   rackStats,
-  selectedRack
+  selectedRack,
+  azNameMap
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -54,7 +55,7 @@ export const RackDetailView: React.FC<RackDetailViewProps> = ({
           {/* Rack Utilization Card */}
           <RackUtilizationCard rackStats={rackStats} />
           {/* Rack Properties */}
-          <RackPropertiesCard rack={selectedRack} />
+          <RackPropertiesCard rack={selectedRack} azNameMap={azNameMap} />
         </div>
       </div>
     </div>
