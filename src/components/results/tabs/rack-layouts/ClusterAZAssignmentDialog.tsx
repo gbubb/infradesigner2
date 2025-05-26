@@ -100,7 +100,7 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
         if (existingAssignment && Array.isArray(existingAssignment.selectedAZs) && existingAssignment.selectedAZs.length > 0) {
           selectedAZs = existingAssignment.selectedAZs
             .map(val => azNameFromUid(val))
-            .filter(name => !!name || availabilityZones.includes(val));
+            .filter(name => !!name && availabilityZones.includes(name));
         } else {
           selectedAZs = role.autoDefaultTo;
         }
