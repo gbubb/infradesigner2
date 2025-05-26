@@ -156,36 +156,14 @@ export const RackLayoutsTab: React.FC = () => {
     return map;
   }, [activeDesign?.requirements?.physicalConstraints?.availabilityZones, rackProfiles]);
 
-  // Improved: Always include 'Core' AZ first (if defined), then user-defined AZs
+  // Get friendly AZ names (for filter dropdown & assignment dialogs)
   const friendlyAzNames = React.useMemo(() => {
-    // Gather AZ names from requirements if possible
-    let fromReqs: string[] =
-      activeDesign?.requirements?.physicalConstraints?.availabilityZones?.map(
-        (az: any) => az.name
-      ) ?? [];
-    // Fallback to names found from map
-    if (fromReqs.length === 0) {
-      fromReqs = Array.from(
-        new Set(rackProfiles.map(rp => rp.azName).filter(Boolean))
-      );
-    }
-
-    // Put "Core" first if present (case-insensitive), then the rest without duplicates
-    const hasCore = fromReqs.some(
-      n => typeof n === "string" && n.trim().toLowerCase() === "core"
-    );
-    let result: string[] = [];
-    if (hasCore) {
-      result = [
-        "Core",
-        ...fromReqs.filter(
-          n => typeof n === "string" && n.trim().toLowerCase() !== "core"
-        ),
-      ];
-    } else {
-      result = fromReqs;
-    }
-    return result;
+    // If requirements list availabilityZones, use those friendly names in order:
+    const fromReqs = activeDesign?.requirements?.physicalConstraints?.availabilityZones?.map((az: any) => az.name) ?? [];
+    // Fallback to names found from map, filter/uniqued:
+    return fromReqs.length > 0
+      ? fromReqs
+      : Array.from(new Set(rackProfiles.map(rp => rp.azName).filter(Boolean)));
   }, [activeDesign?.requirements?.physicalConstraints?.availabilityZones, rackProfiles]);
 
   // Set initial selected rack when rack profiles are loaded
@@ -429,11 +407,10 @@ export const RackLayoutsTab: React.FC = () => {
         />
 
         {/* Cluster AZ Assignment Dialog */}
-        {/* USE friendlyAzNames, not raw availabilityZones */}
         <ClusterAZAssignmentDialog
           open={isAZAssignmentDialogOpen}
           onOpenChange={setIsAZAssignmentDialogOpen}
-          availabilityZones={friendlyAzNames}
+          availabilityZones={availabilityZones}
           clusterAssignments={clusterAZAssignments}
           setClusterAssignments={setClusterAZAssignments}
           onConfirm={handleConfirmAutoPlacement}
