@@ -26,6 +26,12 @@ export function tryPlaceDeviceInRacksWithConstraints({
   const preferredRU = (placement.preferredRU ?? undefined);
 
   for (const rack of racks) {
+    // LOG rack state before placement
+    console.log(`Checking rack ${rack.name} - devices:`, rack.devices.map(d => ({
+      deviceId: d.deviceId,
+      ruPosition: d.ruPosition
+    })));
+
     // Try preferredRU first
     if (
       typeof preferredRU === "number"
@@ -37,7 +43,10 @@ export function tryPlaceDeviceInRacksWithConstraints({
       if (available) {
         const result = RackService.placeDevice(rack.id, device.id, preferredRU);
         if (result.success) {
+          console.log(`Placed device ${device.name} at preferredRU ${preferredRU} in rack ${rack.name}`);
           return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: preferredRU };
+        } else {
+          console.log(`Could not place device ${device.name} at preferredRU ${preferredRU} in rack ${rack.name}, reason:`, result.error);
         }
       }
     }
@@ -52,11 +61,19 @@ export function tryPlaceDeviceInRacksWithConstraints({
       if (available) {
         const result = RackService.placeDevice(rack.id, device.id, ru);
         if (result.success) {
+          console.log(`Placed device ${device.name} at RU ${ru} in rack ${rack.name}`);
           return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: ru };
+        } else {
+          console.log(`Could not place device ${device.name} at RU ${ru} in rack ${rack.name}, reason:`, result.error);
         }
       }
     }
   }
+  console.log(
+    `No valid RU position for device ${device.name} in racks`, 
+    racks.map(r => r.name),
+    `Checking RU range: ${validRUStart}-${validRUEnd}, ruHeight: ${ruHeight}`
+  );
   return {
     success: false,
     reason: `No valid RU position in permitted range (${validRUStart}-${validRUEnd}) for device ${device.name}`
