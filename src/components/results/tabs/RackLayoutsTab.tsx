@@ -29,7 +29,12 @@ import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
 import { useDesignStore } from '@/store/designStore';
 
 export const RackLayoutsTab: React.FC = () => {
-  const { rackProfiles, availabilityZones } = useRackInitialization();
+  // EXPLICITLY TYPE rackProfiles for type safety and error prevention
+  const { rackProfiles, availabilityZones } = useRackInitialization() as {
+    rackProfiles: { id: string; name: string; azName?: string; availabilityZoneId?: string }[];
+    availabilityZones: any; // keep as any for now, or string[] if known
+  };
+
   const [selectedRackId, setSelectedRackId] = useState<string | null>(null);
   const [rackStats, setRackStats] = useState<{
     totalRU: number;
@@ -92,18 +97,23 @@ export const RackLayoutsTab: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDesign?.id, resetTrigger]);
 
-  // Map of AZ/rackId to friendly names (live maps)
+  // Map of AZ id to friendly names -- always read directly from requirements.physicalConstraints
   const azNameMap = React.useMemo(() => {
-    const m: Record<string, string> = {};
-    availabilityZones.forEach(name => {
-      m[name] = name; 
-    });
+    // Use *requirements* for source of truth, so UI always matches the current user-visible AZ names.
+    const map: Record<string, string> = {};
+    if (activeDesign?.requirements?.physicalConstraints?.availabilityZones) {
+      activeDesign.requirements.physicalConstraints.availabilityZones.forEach((az: any) => {
+        if (az.id && az.name) map[az.id] = az.name;
+      });
+    }
+    // Handle legacy cases: fill from rackProfiles as fallback, only if not already in map.
     rackProfiles.forEach(rp => {
-      if (rp.availabilityZoneId && rp.azName)
-        m[rp.availabilityZoneId] = rp.azName;
+      if (rp.availabilityZoneId && rp.azName && !map[rp.availabilityZoneId]) {
+        map[rp.availabilityZoneId] = rp.azName;
+      }
     });
-    return m;
-  }, [availabilityZones, rackProfiles]);
+    return map;
+  }, [activeDesign?.requirements?.physicalConstraints?.availabilityZones, rackProfiles]);
   
   const rackNameMap = React.useMemo(() => {
     const m: Record<string, string> = {};
@@ -149,7 +159,7 @@ export const RackLayoutsTab: React.FC = () => {
   }, []);
   
   const filteredRacks = rackProfiles.filter(
-    rack => selectedAZ === 'all' || rack.azName === selectedAZ
+    rack => selectedAZ === 'all' || azNameMap[rack.availabilityZoneId ?? ""] === selectedAZ || rack.azName === selectedAZ
   );
   
   const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
@@ -329,12 +339,18 @@ export const RackLayoutsTab: React.FC = () => {
         
         {/* Horizontal Rack Layout with Scrolling */}
         <RackHorizontalScroller
-          racks={filteredRacks}
+          racks={filteredRacks.map(rack => ({
+            id: rack.id,
+            name: rack.name,
+            azName: rack.azName,
+            availabilityZoneId: rack.availabilityZoneId
+          }))}
           selectedRackId={selectedRackId}
           setSelectedRackId={setSelectedRackId}
           scrollPosition={scrollPosition}
           setScrollPosition={setScrollPosition}
           scrollStep={scrollStep}
+          azNameMap={azNameMap}
         />
         
         {/* Main content area with device palette and rack view/details */}
