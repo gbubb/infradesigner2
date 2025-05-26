@@ -27,6 +27,7 @@ import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
 import { LayoutPersistenceService } from '@/services/layoutPersistenceService';
 import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
 import { useDesignStore } from '@/store/designStore';
+import { RackService } from '@/services/rackService';
 
 export const RackLayoutsTab: React.FC = () => {
   // EXPLICITLY TYPE rackProfiles for type safety and error prevention
