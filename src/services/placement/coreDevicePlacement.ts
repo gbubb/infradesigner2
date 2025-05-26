@@ -1,4 +1,3 @@
-
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
@@ -34,7 +33,10 @@ export function placeCoreDevice({
   // Select core rack with least of this type
   let minRack = coreRacks[0], minCount = Infinity;
   for (const r of coreRacks) {
-    const count = r.devices.filter(d => getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel).length;
+    const count = r.devices.filter(d => {
+      const matched = components.find(c => c.id === d.deviceId);
+      return getTypeKey(matched) === typeLabel;
+    }).length;
     if (count < minCount) {
       minRack = r;
       minCount = count;

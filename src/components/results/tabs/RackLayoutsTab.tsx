@@ -173,6 +173,13 @@ export const RackLayoutsTab: React.FC = () => {
     setIsAZAssignmentDialogOpen(false);
     setReadyToOpenReportDialog(true); 
     
+    // Show toast if any failed placements
+    if (report.failedDevices > 0) {
+      toast.error(
+        `Auto-placement could not place ${report.failedDevices} device(s). See the Placement Report for details.`
+      );
+    }
+
     if (selectedRackId) {
       try {
         const updatedStats = analyzeRackLayout(selectedRackId);

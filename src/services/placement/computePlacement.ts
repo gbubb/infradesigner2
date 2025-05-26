@@ -1,4 +1,3 @@
-
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
@@ -44,9 +43,10 @@ export function placeComputeLike({
   for (const az of allowedAZs) {
     const racksInAZ = azRacks.filter(r => r.availabilityZoneId === az);
     const count = racksInAZ.reduce((acc, r) =>
-      acc + r.devices.filter(d =>
-        getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel
-      ).length, 0
+      acc + r.devices.filter(d => {
+        const matched = components.find(c => c.id === d.deviceId);
+        return getTypeKey(matched) === typeLabel;
+      }).length, 0
     );
     if (count < minInAz) {
       bestAz = az;
@@ -74,9 +74,10 @@ export function placeComputeLike({
   }
   let rackToPlace = racksInAz[0], minCount = Infinity;
   for (const r of racksInAz) {
-    const count = r.devices.filter(d =>
-      getTypeKey(components.find(c => c.id === d.deviceId)) === typeLabel
-    ).length;
+    const count = r.devices.filter(d => {
+      const matched = components.find(c => c.id === d.deviceId);
+      return getTypeKey(matched) === typeLabel;
+    }).length;
     if (count < minCount) {
       rackToPlace = r;
       minCount = count;

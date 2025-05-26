@@ -1,14 +1,14 @@
-
 import { RackProfile } from '@/types/infrastructure/rack-types';
 
 // Utility to normalize component type key
 export function getTypeKey(component: any): string {
+  if (!component) return "unknown";
   return (
     component.namingPrefix ||
     component.typePrefix ||
     component.type ||
     (component.role && component.role.toLowerCase())
-  ).toString().toLowerCase();
+  )?.toString().toLowerCase() || "unknown";
 }
 
 // Identify device as Core Network type
