@@ -158,13 +158,28 @@ export const RackLayoutsTab: React.FC = () => {
 
   // Get friendly AZ names (for filter dropdown & assignment dialogs)
   const friendlyAzNames = React.useMemo(() => {
-    // If requirements list availabilityZones, use those friendly names in order:
-    const fromReqs = activeDesign?.requirements?.physicalConstraints?.availabilityZones?.map((az: any) => az.name) ?? [];
-    // Fallback to names found from map, filter/uniqued:
-    return fromReqs.length > 0
-      ? fromReqs
-      : Array.from(new Set(rackProfiles.map(rp => rp.azName).filter(Boolean)));
-  }, [activeDesign?.requirements?.physicalConstraints?.availabilityZones, rackProfiles]);
+    let names: string[] = [];
+    const physicalAzs = activeDesign?.requirements?.physicalConstraints?.availabilityZones;
+
+    if (physicalAzs && Array.isArray(physicalAzs) && physicalAzs.length > 0) {
+      names = physicalAzs.map((az: any) => az.name).filter(Boolean) as string[];
+    } else {
+      // Fallback to names found from rack profiles if no AZs are defined in requirements
+      names = Array.from(new Set(rackProfiles.map(rp => rp.azName).filter(Boolean) as string[]));
+    }
+
+    // Ensure "Core" is present if dedicated core racks are configured in network requirements
+    const hasDedicatedCoreRacks = !!activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks;
+    const coreAzStandardName = "Core";
+    const coreAzExists = names.some(name => name.toLowerCase() === coreAzStandardName.toLowerCase());
+
+    if (hasDedicatedCoreRacks && !coreAzExists) {
+      names.push(coreAzStandardName); // Add "Core" if it's missing and should be there
+    }
+    
+    // Return unique names, especially if "Core" was added or if there were duplicates from sources
+    return Array.from(new Set(names));
+  }, [activeDesign?.requirements, rackProfiles]);
 
   // Set initial selected rack when rack profiles are loaded
   useEffect(() => {

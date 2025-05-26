@@ -25,11 +25,10 @@ interface ClusterAZAssignmentDialogProps {
 const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[]) => {
   if (!activeDesign || !activeDesign.componentRoles) return [];
 
-  // Identify the explicit "Core" AZ from the provided list
   const coreAzStandardName = "Core";
   const explicitCoreAZ = availabilityZones.find(az =>
     az.toLowerCase() === coreAzStandardName.toLowerCase() ||
-    az.toLowerCase().includes('core') // Broader check for variants
+    az.toLowerCase().includes('core')
   );
 
   const nonCoreAZs = explicitCoreAZ
@@ -38,28 +37,23 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
 
   const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
   for (const role of activeDesign.componentRoles) {
-    const roleKey = role.role?.toLowerCase() || '';
-    const clusterSpecificName = role.name && typeof role.name === 'string' && role.name.trim() !== '' ? role.name.trim() : null;
+    const roleKey = role.role?.toLowerCase() || ''; // e.g., 'storagenode', 'computenode', 'firewall'
+    // role.name should be the user-defined name from requirements form, e.g., "Primary Storage", "West Compute"
+    const userDefinedName = role.name && typeof role.name === 'string' && role.name.trim() !== '' ? role.name.trim() : null;
 
     let finalDisplayName: string;
 
-    if (clusterSpecificName) {
-      if (['storage'].some(type => roleKey.includes(type))) {
-        finalDisplayName = `Storage Cluster - ${clusterSpecificName}`;
-      } else if (['compute', 'controller'].some(type => roleKey.includes(type))) {
-        finalDisplayName = `Compute Cluster - ${clusterSpecificName}`;
-      } else {
-        finalDisplayName = clusterSpecificName; // Use specific name for other types like firewalls if provided
-      }
-    } else {
-      // Fallback if no specific name (role.name) is provided
-      if (['storage'].some(type => roleKey.includes(type))) {
-        finalDisplayName = `Storage Cluster - ${role.role}`; // e.g., "Storage Cluster - storagenode"
-      } else if (['compute', 'controller'].some(type => roleKey.includes(type))) {
-        finalDisplayName = `Compute Cluster - ${role.role}`; // e.g., "Compute Cluster - computenode"
-      } else {
-        finalDisplayName = role.role; // e.g., "firewall"
-      }
+    // Check for storage cluster types
+    if (['storage', 'storagenode'].some(type => roleKey.includes(type))) {
+      finalDisplayName = `Storage Cluster - ${userDefinedName || role.role}`;
+    } 
+    // Check for compute/controller cluster types
+    else if (['compute', 'computenode', 'controller'].some(type => roleKey.includes(type))) {
+      finalDisplayName = `Compute Cluster - ${userDefinedName || role.role}`;
+    } 
+    // For other types (firewalls, switches, etc.)
+    else {
+      finalDisplayName = userDefinedName || role.role; // Use user-defined name if available, else the role type
     }
 
     let autoDefaultTo: string[] = [];
@@ -76,28 +70,27 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
       if (explicitCoreAZ) {
         autoDefaultTo = [explicitCoreAZ];
       } else {
-        autoDefaultTo = []; // No "Core" column available, default to no AZs for core devices
+        autoDefaultTo = []; 
       }
-    } else { // Non-core devices
+    } else { 
       if (nonCoreAZs.length > 0) {
         autoDefaultTo = [...nonCoreAZs];
-      } else if (availabilityZones.length > 0) {
-        // This case means nonCoreAZs is empty.
-        // If explicitCoreAZ was found (e.g. "Core" is the *only* AZ), nonCoreAZs is empty.
-        // Non-core devices would then correctly default to no AZs here.
-        // If explicitCoreAZ was *not* found, nonCoreAZs would be a copy of all availabilityZones.
-        // So, this path (else if availabilityZones.length > 0) effectively means
-        // that nonCoreAZs was empty because only a Core AZ exists.
-        autoDefaultTo = []; // Default to no AZs if only Core AZ exists for non-core devices.
+      } else if (availabilityZones.length > 0 && explicitCoreAZ && nonCoreAZs.length === 0) {
+        // This covers the case where the *only* AZ is the Core AZ.
+        // Non-core devices should not default to the Core AZ in this scenario.
+        autoDefaultTo = []; 
+      } else if (availabilityZones.length > 0 && !explicitCoreAZ) {
+        // No explicit Core AZ defined, so non-core devices can default to any available AZ.
+        autoDefaultTo = [...availabilityZones];
       } else {
-        autoDefaultTo = []; // No AZs at all
+        autoDefaultTo = []; // No AZs at all, or only Core AZ exists and these are non-core devices.
       }
     }
 
     lines.push({
       id: role.id,
       name: finalDisplayName,
-      clusterType: role.role, // Functional type remains role.role
+      clusterType: role.role, 
       autoDefaultTo,
     });
   }
