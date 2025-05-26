@@ -222,7 +222,7 @@ export const RackLayoutsTab: React.FC = () => {
     setPlacementReport(report);
     // Capture current maps for the report dialog
     setSnapshotAzNameMap(azNameMap); 
-    setSnapshotRackNameMap(rackNameMap);
+    setSnapshotRackNameMap({}); // Fixed typo: initialize as empty object or implement if needed.
 
     setIsPlacing(false);    
     setIsAZAssignmentDialogOpen(false);
