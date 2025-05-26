@@ -97,23 +97,28 @@ export const RackLayoutsTab: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDesign?.id, resetTrigger]);
 
-  // Map of AZ id to friendly names -- always read directly from requirements.physicalConstraints
+  // Map of AZ id to friendly names (live maps)
   const azNameMap = React.useMemo(() => {
-    // Use *requirements* for source of truth, so UI always matches the current user-visible AZ names.
-    const map: Record<string, string> = {};
-    if (activeDesign?.requirements?.physicalConstraints?.availabilityZones) {
-      activeDesign.requirements.physicalConstraints.availabilityZones.forEach((az: any) => {
-        if (az.id && az.name) map[az.id] = az.name;
-      });
-    }
-    // Handle legacy cases: fill from rackProfiles as fallback, only if not already in map.
+    const m: Record<string, string> = {};
+    // Try using AZs from rackProfiles first (when available)
     rackProfiles.forEach(rp => {
-      if (rp.availabilityZoneId && rp.azName && !map[rp.availabilityZoneId]) {
-        map[rp.availabilityZoneId] = rp.azName;
+      if (rp.availabilityZoneId && rp.azName) {
+        m[rp.availabilityZoneId] = rp.azName;
       }
     });
-    return map;
-  }, [activeDesign?.requirements?.physicalConstraints?.availabilityZones, rackProfiles]);
+    // Add in any from requirements/availabilityZones, if not covered
+    availabilityZones.forEach(nameOrObj => {
+      // Support both if AZs are string or {id, name}
+      if (typeof nameOrObj === "string") {
+        if (!Object.values(m).includes(nameOrObj)) {
+          m[nameOrObj] = nameOrObj;
+        }
+      } else if (nameOrObj && nameOrObj.id && nameOrObj.name) {
+        m[nameOrObj.id] = nameOrObj.name;
+      }
+    });
+    return m;
+  }, [availabilityZones, rackProfiles]);
   
   const rackNameMap = React.useMemo(() => {
     const m: Record<string, string> = {};
