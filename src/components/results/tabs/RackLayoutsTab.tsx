@@ -27,9 +27,6 @@ import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
 import { LayoutPersistenceService } from '@/services/layoutPersistenceService';
 import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
 import { useDesignStore } from '@/store/designStore';
-import { RackActionsRow } from './rack-layouts/RackActionsRow';
-import { RackScrollerBlock } from './rack-layouts/RackScrollerBlock';
-import { RackMainContentBlock } from './rack-layouts/RackMainContentBlock';
 
 export const RackLayoutsTab: React.FC = () => {
   // EXPLICITLY TYPE rackProfiles for type safety and error prevention
@@ -297,59 +294,127 @@ export const RackLayoutsTab: React.FC = () => {
         </div>
         
         {/* Actions Row */}
-        <RackActionsRow
-          isPlacing={isPlacing}
-          handleAutoPlaceDevices={handleAutoPlaceDevices}
-          isSaving={isSaving}
-          handleSaveLayout={handleSaveLayout}
-          isResetting={isResetting}
-          handleResetLayout={handleResetLayout}
-          isLoadingLayout={isLoadingLayout}
-          handleLoadLayout={handleLoadLayout}
-        />
-
-        {/* Filters and horizontal rack scroller */}
-        <RackScrollerBlock
+        <div className="flex flex-wrap justify-between items-center gap-2">
+          <div className="flex gap-2">
+            <Button 
+              variant="default"
+              onClick={handleAutoPlaceDevices}
+              disabled={isPlacing}
+            >
+              {isPlacing ? "Placing Devices..." : "Auto-Place Devices"}
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={handleSaveLayout} 
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "Save Layout"}
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleResetLayout} 
+              disabled={isResetting}
+            >
+              {isResetting ? "Resetting..." : "Reset Layout"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleLoadLayout}
+              disabled={isLoadingLayout}
+            >
+              {isLoadingLayout ? "Loading..." : "Load Layout"}
+            </Button>
+          </div>
+        </div>
+        
+        {/* Filter controls */}
+        <RackFilterControls
           selectedAZ={selectedAZ}
           setSelectedAZ={setSelectedAZ}
           availabilityZones={availabilityZones}
           selectedRackId={selectedRackId}
           setSelectedRackId={setSelectedRackId}
           filteredRacks={filteredRacks}
+        />
+        
+        {/* Horizontal Rack Layout with Scrolling */}
+        <RackHorizontalScroller
+          racks={filteredRacks.map(rack => ({
+            id: rack.id,
+            name: rack.name,
+            azName: rack.azName,
+            availabilityZoneId: rack.availabilityZoneId
+          }))}
+          selectedRackId={selectedRackId}
+          setSelectedRackId={setSelectedRackId}
           scrollPosition={scrollPosition}
           setScrollPosition={setScrollPosition}
           scrollStep={scrollStep}
           azNameMap={azNameMap}
         />
-
-        {/* Main content with device palette and details */}
-        <RackMainContentBlock
-          selectedRackId={selectedRackId}
-          rackStats={rackStats}
-          selectedRack={selectedRack}
-          onDeviceClick={handleDeviceClick}
-          isConnectionDialogOpen={isConnectionDialogOpen}
-          selectedDeviceId={selectedDeviceId}
-          handleCloseConnectionDialog={handleCloseConnectionDialog}
-          onDevicePlaced={() => {
-            if (selectedRackId) {
-              try {
-                const updatedStats = analyzeRackLayout(selectedRackId);
-                setRackStats(updatedStats);
-              } catch (error) {
-                console.error("Error updating rack stats:", error);
+        
+        {/* Main content area with device palette and rack view/details */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* Device palette - takes 1/4 of the space (now on the left) */}
+          <div className="md:col-span-1">
+            <DevicePalette rackId={selectedRackId || undefined} onDevicePlaced={() => {
+              // Update rack stats after device placement
+              if (selectedRackId) {
+                try {
+                  const updatedStats = analyzeRackLayout(selectedRackId);
+                  setRackStats(updatedStats);
+                } catch (error) {
+                  console.error("Error updating rack stats:", error);
+                }
               }
-            }
-          }}
-        />
+            }} />
+          </div>
 
+          {/* Rack detail view - takes 3/4 of the space (now on the right) */}
+          <div className="md:col-span-3">
+            {selectedRackId && (
+              <RackDetailView
+                rackProfileId={selectedRackId}
+                onDeviceClick={handleDeviceClick}
+                rackStats={rackStats}
+                selectedRack={selectedRack}
+              />
+            )}
+            {!selectedRackId && (
+              <div className="flex items-center justify-center h-[700px] border rounded-md bg-muted/20">
+                <p className="text-muted-foreground">Select a rack to view details.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Connection Dialog */}
+        {isConnectionDialogOpen && selectedDeviceId && (
+          <Dialog 
+            open={isConnectionDialogOpen} 
+            onOpenChange={(open) => {
+              if (!open) handleCloseConnectionDialog();
+            }}
+          >
+            <DialogContent className="sm:max-w-[600px]">
+              <ConnectionPanel 
+                deviceId={selectedDeviceId}
+                onClose={handleCloseConnectionDialog}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+        
         {/* Placement Report Dialog */}
         <PlacementReportDialog
           open={isPlacementDialogOpen}
           onOpenChange={(open) => {
             setIsPlacementDialogOpen(open);
             if (!open) {
-              setPlacementReport(null);
+              setPlacementReport(null); // Clear report when dialog is closed
+              // Optionally clear snapshot maps too if they are large and not needed
+              // setSnapshotAzNameMap({}); 
+              // setSnapshotRackNameMap({});
             }
           }}
           placementReport={placementReport}

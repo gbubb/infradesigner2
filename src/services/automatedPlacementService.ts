@@ -46,8 +46,7 @@ export class AutomatedPlacementService {
     }
 
     const components = activeDesign.components;
-    // Important: Fetch racks fresh in every placement call to get new state!
-    let rackProfiles = RackService.getAllRackProfiles();
+    const rackProfiles = RackService.getAllRackProfiles();
     const allAZs = [...new Set(rackProfiles.map(r => r.availabilityZoneId).filter(Boolean))] as string[];
     const { coreRacks, computeRacks } = getCoreAndComputeRacks(rackProfiles);
     const coreAZId = rackProfiles.find(r => r.rackType === 'Core')?.availabilityZoneId || "core-az-id";
@@ -83,26 +82,11 @@ export class AutomatedPlacementService {
     const typeCounters: Record<string, number> = {};
 
     // Main placement loop: filter out devices already placed (user/manual placement protection)
-    const toPlaceComponents = components.filter(c => !RackService.isDevicePlacedInAnyRack(c.id));
+    const toPlaceComponents = components.filter(c => !placedDeviceIds.has(c.id));
     for (const component of toPlaceComponents) {
       totalDevices++;
       const typeLabel = getTypeKey(component);
       if (!typeCounters[typeLabel]) typeCounters[typeLabel] = 1;
-
-      // LOG before each device placement
-      rackProfiles = RackService.getAllRackProfiles(); // REFRESH racks after each mutation
-      console.log(`Attempting to place device ${component.name} (${typeLabel}), current rack profiles:`,
-        rackProfiles.map(r => ({
-          id: r.id,
-          name: r.name,
-          availabilityZoneId: r.availabilityZoneId,
-          rackType: r.rackType,
-          devices: r.devices.map(d => ({
-            deviceId: d.deviceId,
-            ruPosition: d.ruPosition
-          }))
-        }))
-      );
 
       // PATCH PANEL logic
       if (typeLabel.includes('copperpatchpanel') || typeLabel.includes('fiberpatchpanel')) {
