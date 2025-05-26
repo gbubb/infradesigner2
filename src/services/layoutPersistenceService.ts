@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useDesignStore } from "@/store/designStore";
 import { InfrastructureDesign } from "@/types/infrastructure/design-types";
@@ -33,20 +32,20 @@ export class LayoutPersistenceService {
   }
 
   /**
-   * Instead of deleting racks, this function completely resets the layout by clearing the rack profiles
-   * and triggering a regeneration through the rack initialization process.
+   * THIS NO LONGER LOADS FROM DATABASE!
+   * Instead, just clears all racks, so that fresh initialization from requirements
+   * will always occur after reset, never loading any cached or stale layouts.
    */
   static async resetLayoutToLastSaved() {
-    // Clear all racks to trigger regeneration
     RackService.clearAllRackProfiles();
-    
-    // Update the design's rackprofiles to empty to ensure full regeneration
+
+    // Also clear from design.rackprofiles
     const state = useDesignStore.getState();
     if (state.activeDesign && typeof state.updateDesign === "function") {
       state.updateDesign(state.activeDesign.id, { rackprofiles: [] });
     }
-    
-    // Force react components to rerender by returning a timestamp
+
+    // Return timestamp to allow tracking/force refresh (if necessary)
     return { resetTimestamp: Date.now() };
   }
 }

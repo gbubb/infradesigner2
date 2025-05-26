@@ -63,39 +63,80 @@ export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const updateDesign = useDesignStore(state => state.updateDesign);
   
-  // --- EFFECT TO LOAD SAVED RACK LAYOUTS ON INITIAL MOUNT OR DESIGN CHANGE OR RESET
+  // Listen for requirements changes (as in Results) for rack re-init
+  const requirementsHash = JSON.stringify(activeDesign?.requirements || {});
+  
+  // Effect: On requirements change or page mount, ALWAYS clear racks and regenerate
   useEffect(() => {
-    async function initializeLayout() {
-      if (!activeDesign) return;
-      
-      try {
-        // Check if racks exist already (they may have just been created by useRackInitialization)
-        const existingRacks = activeDesign.rackprofiles || [];
-        
-        // If we already have racks and this is not caused by a reset, use them
-        if (existingRacks.length > 0 && resetTrigger === 0) {
-          console.log("Using existing rack layout from design");
+    if (!activeDesign) return;
+    // Always CLEAR racks (from design & storage) and force regeneration by increasing resetTrigger
+    RackService.clearAllRackProfiles();
+    setResetTrigger(prev => prev + 1);
+    setSelectedRackId(null);
+  // Only run when requirements or design changes, never from rackProfiles or resetTrigger itself
+  }, [activeDesign?.id, requirementsHash]);
+
+  // --- EFFECT TO LOAD SAVED RACK LAYOUTS ONLY WHEN USER EXPLICITLY ASKS ---
+  const handleLoadLayout = async () => {
+    setIsLoadingLayout(true);
+    try {
+      const data = await LayoutPersistenceService.loadLayoutForDesign();
+      if (
+        data &&
+        Array.isArray(data.rackprofiles) &&
+        data.rackprofiles.length > 0
+      ) {
+        // Ensure only valid devices are restored
+        const validDeviceIds = new Set(
+          (activeDesign?.components ?? []).map((c) => c.id)
+        );
+        const isValid = data.rackprofiles.every((rack: any) =>
+          (rack.devices ?? []).every((dev: any) => validDeviceIds.has(dev.deviceId))
+        );
+        if (!isValid) {
+          toast.error(
+            "The saved rack layout could not be loaded: the state does not match the current configuration (device set has changed)."
+          );
+          setIsLoadingLayout(false);
           return;
         }
-
-        // Otherwise, try to load from database
-        const data = await LayoutPersistenceService.loadLayoutForDesign();
-        if (data && data.rackprofiles && Array.isArray(data.rackprofiles) && data.rackprofiles.length > 0) {
-          console.log("Loaded saved rack layout from database");
-          // Update the active design's rackprofiles with saved layout
+        // Only update the design after loading here
+        if (activeDesign) {
           updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
+          toast.success("Rack layout loaded from database!");
+          // Make sure to re-initialize to show loaded racks
+          setResetTrigger(prev => prev + 1);
+          setSelectedRackId(null);
         }
-        // If database has no racks, useRackInitialization will create new ones
-      } catch (error) {
-        console.error("Error loading rack layout:", error);
-        toast.error("Failed to load rack layout");
+      } else {
+        toast.error(
+          "No saved rack layout found in the database for this design."
+        );
       }
+    } catch (error) {
+      console.error("Error loading rack layout:", error);
+      toast.error("Failed to load rack layout: " + (error as Error).message);
+    } finally {
+      setIsLoadingLayout(false);
     }
-    
-    initializeLayout();
-    // Include resetTrigger in dependencies to re-run on reset
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeDesign?.id, resetTrigger]);
+  };
+
+  // --- RESET: Always clear and re-generate from requirements, never reload from DB
+  const handleResetLayout = async () => {
+    setIsResetting(true);
+    try {
+      // Just clear all racks and trigger re-init from requirements
+      RackService.clearAllRackProfiles();
+      setResetTrigger(prev => prev + 1); // will cause useRackInitialization to re-create the racks
+      toast.success('Rack layout reset!');
+      setSelectedRackId(null);
+    } catch (error) {
+      console.error("Error resetting rack layout:", error);
+      toast.error("Failed to reset rack layout");
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   // Map of AZ id to friendly names -- always read directly from requirements.physicalConstraints
   const azNameMap = React.useMemo(() => {
@@ -219,65 +260,6 @@ export const RackLayoutsTab: React.FC = () => {
       toast.error("Failed to save rack layout");
     } finally {
       setIsSaving(false);
-    }
-  }
-
-  // Reset Layout - completely regenerate racks
-  const handleResetLayout = async () => {
-    setIsResetting(true);
-    try {
-      await LayoutPersistenceService.resetLayoutToLastSaved();
-      setResetTrigger(prev => prev + 1); // Hard reload initialization
-      toast.success('Rack layout reset!');
-
-      setSelectedRackId(null);
-    } catch (error) {
-      console.error("Error resetting rack layout:", error);
-      toast.error("Failed to reset rack layout");
-    } finally {
-      setIsResetting(false);
-    }
-  }
-
-  // Load Layout - restore from database
-  const handleLoadLayout = async () => {
-    setIsLoadingLayout(true);
-    try {
-      const data = await LayoutPersistenceService.loadLayoutForDesign();
-      if (
-        data &&
-        Array.isArray(data.rackprofiles) &&
-        data.rackprofiles.length > 0
-      ) {
-        // Basic validation: check that loaded racks contain only devices from current active design
-        const validDeviceIds = new Set(
-          (activeDesign?.components ?? []).map((c) => c.id)
-        );
-        const isValid = data.rackprofiles.every((rack: any) =>
-          (rack.devices ?? []).every((dev: any) => validDeviceIds.has(dev.deviceId))
-        );
-        if (!isValid) {
-          toast.error(
-            "The saved rack layout could not be loaded: the state does not match the current configuration (device set has changed)."
-          );
-          setIsLoadingLayout(false);
-          return;
-        }
-        // Restore racks
-        if (activeDesign) {
-          updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
-          toast.success("Rack layout loaded from database!");
-        }
-      } else {
-        toast.error(
-          "No saved rack layout found in the database for this design."
-        );
-      }
-    } catch (error) {
-      console.error("Error loading rack layout:", error);
-      toast.error("Failed to load rack layout: " + (error as Error).message);
-    } finally {
-      setIsLoadingLayout(false);
     }
   }
 
