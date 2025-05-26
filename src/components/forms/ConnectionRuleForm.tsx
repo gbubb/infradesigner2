@@ -11,6 +11,7 @@ import { ComponentType } from '@/types/infrastructure/component-types';
 import { PortRole, PortSpeed } from '@/types/infrastructure/port-types';
 import { DeviceCriteriaFields } from './DeviceCriteriaFields';
 import { PortCriteriaFields } from './PortCriteriaFields';
+import { useDesignStore } from '@/store/designStore';
 
 interface ConnectionRuleFormProps {
   rule?: ConnectionRule;
@@ -23,6 +24,14 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
   onSubmit,
   onCancel,
 }) => {
+  const activeDesign = useDesignStore(state => state.activeDesign);
+  // Extract possible roles for dropdown (only unique, human-friendly roles)
+  const availableRoles: string[] = Array.from(
+    new Set(
+      activeDesign?.componentRoles?.map(r => r.role).filter(Boolean) ?? []
+    )
+  );
+
   const [formData, setFormData] = useState<ConnectionRule>({
     id: rule?.id || crypto.randomUUID(),
     name: rule?.name || '',
@@ -142,12 +151,22 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
         </div>
       </div>
 
-      <DeviceCriteriaFields prefix="source" criteria={formData.sourceDeviceCriteria} setFormData={setFormData} />
+      <DeviceCriteriaFields
+        prefix="source"
+        criteria={formData.sourceDeviceCriteria}
+        setFormData={setFormData}
+        availableRoles={availableRoles}
+      />
       <PortCriteriaFields prefix="source" criteria={formData.sourcePortCriteria} setFormData={setFormData} />
 
       <div className="border-t my-4" />
 
-      <DeviceCriteriaFields prefix="target" criteria={formData.targetDeviceCriteria} setFormData={setFormData} />
+      <DeviceCriteriaFields
+        prefix="target"
+        criteria={formData.targetDeviceCriteria}
+        setFormData={setFormData}
+        availableRoles={availableRoles}
+      />
       <PortCriteriaFields prefix="target" criteria={formData.targetPortCriteria} setFormData={setFormData} />
 
       <div className="grid md:grid-cols-2 gap-6">

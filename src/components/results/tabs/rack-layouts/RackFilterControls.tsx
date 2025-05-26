@@ -5,10 +5,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface RackFilterControlsProps {
   selectedAZ: string | 'all';
   setSelectedAZ: (value: string) => void;
-  availabilityZones: string[];
+  availabilityZones: string[]; // now expects array of friendly names, not IDs
   selectedRackId: string | null;
   setSelectedRackId: (value: string | null) => void;
-  filteredRacks: Array<{ id: string; name: string; availabilityZoneId?: string }>;
+  filteredRacks: Array<{ id: string; name: string; availabilityZoneId?: string; azName?: string }>;
 }
 
 export const RackFilterControls: React.FC<RackFilterControlsProps> = ({
@@ -31,7 +31,7 @@ export const RackFilterControls: React.FC<RackFilterControlsProps> = ({
         <SelectContent>
           <SelectItem key="all-az" value="all">All Availability Zones</SelectItem>
           {availabilityZones.map(az => (
-            <SelectItem key={`az-${az}`} value={az || "default-az"}>{az || "Default"}</SelectItem>
+            <SelectItem key={`az-${az}`} value={az || "Default"}>{az || "Default"}</SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -46,7 +46,10 @@ export const RackFilterControls: React.FC<RackFilterControlsProps> = ({
         <SelectContent>
           {filteredRacks.length > 0 ? (
             filteredRacks.map(rack => (
-              <SelectItem key={`rack-${rack.id}`} value={rack.id}>{rack.name}</SelectItem>
+              <SelectItem key={`rack-${rack.id}`} value={rack.id}>
+                {rack.name}
+                {rack.azName ? ` (${rack.azName})` : ""}
+              </SelectItem>
             ))
           ) : (
             <SelectItem key="no-racks" value="no-racks-available" disabled>No racks available</SelectItem>

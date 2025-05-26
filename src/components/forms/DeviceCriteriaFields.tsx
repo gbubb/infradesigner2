@@ -9,12 +9,14 @@ interface DeviceCriteriaFieldsProps {
   prefix: 'source' | 'target';
   criteria: ConnectionRule['sourceDeviceCriteria' | 'targetDeviceCriteria'];
   setFormData: React.Dispatch<React.SetStateAction<ConnectionRule>>;
+  availableRoles?: string[];
 }
 
 export const DeviceCriteriaFields: React.FC<DeviceCriteriaFieldsProps> = ({
   prefix,
   criteria,
   setFormData,
+  availableRoles = [],
 }) => (
   <div className="space-y-4 border rounded-md p-4">
     <h3 className="font-medium text-lg mb-2">
@@ -46,11 +48,11 @@ export const DeviceCriteriaFields: React.FC<DeviceCriteriaFieldsProps> = ({
       </div>
       <div>
         <Label htmlFor={`${prefix}-role`}>Role</Label>
-        <Input
+        <select
+          className="mt-1 block w-full border rounded px-3 py-2 bg-background"
           id={`${prefix}-role`}
           value={criteria.role || ''}
-          placeholder="e.g., switch, server"
-          onChange={(e) =>
+          onChange={e =>
             setFormData(prev => ({
               ...prev,
               [`${prefix}DeviceCriteria`]: {
@@ -59,7 +61,12 @@ export const DeviceCriteriaFields: React.FC<DeviceCriteriaFieldsProps> = ({
               },
             }))
           }
-        />
+        >
+          <option value="">Any</option>
+          {availableRoles.map(role => (
+            <option key={role} value={role}>{role}</option>
+          ))}
+        </select>
       </div>
       <div className="md:col-span-2">
         <Label htmlFor={`${prefix}-deviceNamePattern`}>Device Name Pattern</Label>
@@ -82,4 +89,3 @@ export const DeviceCriteriaFields: React.FC<DeviceCriteriaFieldsProps> = ({
     </div>
   </div>
 );
-

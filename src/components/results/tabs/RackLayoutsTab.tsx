@@ -141,27 +141,30 @@ export const RackLayoutsTab: React.FC = () => {
 
   // Map of AZ id to friendly names -- always read directly from requirements.physicalConstraints
   const azNameMap = React.useMemo(() => {
-    // Use *requirements* for source of truth, so UI always matches the current user-visible AZ names.
     const map: Record<string, string> = {};
     if (activeDesign?.requirements?.physicalConstraints?.availabilityZones) {
       activeDesign.requirements.physicalConstraints.availabilityZones.forEach((az: any) => {
         if (az.id && az.name) map[az.id] = az.name;
       });
     }
-    // Handle legacy cases: fill from rackProfiles as fallback, only if not already in map.
     rackProfiles.forEach(rp => {
+      // fallback for legacy; shouldn't overwrite existing names
       if (rp.availabilityZoneId && rp.azName && !map[rp.availabilityZoneId]) {
         map[rp.availabilityZoneId] = rp.azName;
       }
     });
     return map;
   }, [activeDesign?.requirements?.physicalConstraints?.availabilityZones, rackProfiles]);
-  
-  const rackNameMap = React.useMemo(() => {
-    const m: Record<string, string> = {};
-    rackProfiles.forEach(rp => { m[rp.id] = rp.name; });
-    return m;
-  }, [rackProfiles]);
+
+  // Get friendly AZ names (for filter dropdown & assignment dialogs)
+  const friendlyAzNames = React.useMemo(() => {
+    // If requirements list availabilityZones, use those friendly names in order:
+    const fromReqs = activeDesign?.requirements?.physicalConstraints?.availabilityZones?.map((az: any) => az.name) ?? [];
+    // Fallback to names found from map, filter/uniqued:
+    return fromReqs.length > 0
+      ? fromReqs
+      : Array.from(new Set(rackProfiles.map(rp => rp.azName).filter(Boolean)));
+  }, [activeDesign?.requirements?.physicalConstraints?.availabilityZones, rackProfiles]);
 
   // Set initial selected rack when rack profiles are loaded
   useEffect(() => {
@@ -312,7 +315,7 @@ export const RackLayoutsTab: React.FC = () => {
         <RackFilterControls
           selectedAZ={selectedAZ}
           setSelectedAZ={setSelectedAZ}
-          availabilityZones={availabilityZones}
+          availabilityZones={friendlyAzNames} // Pass array of friendly names, not IDs
           selectedRackId={selectedRackId}
           setSelectedRackId={setSelectedRackId}
           filteredRacks={filteredRacks}

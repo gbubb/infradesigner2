@@ -15,35 +15,40 @@ import { useDesignStore } from '@/store/designStore';
 interface ClusterAZAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  availabilityZones: string[];
+  availabilityZones: string[]; // expects array of friendly AZ names
   clusterAssignments: ClusterAZAssignment[];
   setClusterAssignments: (assignments: ClusterAZAssignment[]) => void;
   onConfirm: () => void;
 }
 
-// Helper to extract all unique cluster and standalone device lines
-const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[]): { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] => {
+// Helper to extract all unique cluster/device lines (unchanged, but now expects AZ names, not IDs)
+const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[]) => {
   if (!activeDesign || !activeDesign.componentRoles) return [];
 
   const coreAZ = availabilityZones.find(az => az.toLowerCase().includes('core')) || 'Core';
   const nonCoreAZs = availabilityZones.filter(az => az !== coreAZ);
 
-  // Build array of roles/types for clusters and relevant device types
   const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
   for (const role of activeDesign.componentRoles) {
-    // Lowercase key for matching types.
     const key = role.role?.toLowerCase() || '';
-
-    // Decide default zones
     let autoDefaultTo: string[] = [];
-    if ([
-      'firewall', 'spineswitch', 'borderleafswitch', 'border-switch', 'spine-switch', 'router'
-    ].some(type => key.includes(type))) {
+    if (
+      [
+        'firewall',
+        'spineswitch',
+        'borderleafswitch',
+        'border-switch',
+        'spine-switch',
+        'router'
+      ].some(type => key.includes(type))
+    ) {
       autoDefaultTo = coreAZ ? [coreAZ] : [];
-    } else if ([
-      'compute', 'controller', 'storage', 'ipmiswitch', 'managementswitch',
-      'leafswitch', 'copperpatchpanel', 'fiberpatchpanel'
-    ].some(type => key.includes(type))) {
+    } else if (
+      [
+        'compute', 'controller', 'storage', 'ipmiswitch', 'managementswitch',
+        'leafswitch', 'copperpatchpanel', 'fiberpatchpanel'
+      ].some(type => key.includes(type))
+    ) {
       autoDefaultTo = [...nonCoreAZs];
     } else {
       autoDefaultTo = [...nonCoreAZs];
@@ -69,8 +74,8 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
   const activeDesign = useDesignStore(state => state.activeDesign);
   const [localAssignments, setLocalAssignments] = useState<ClusterAZAssignment[]>([]);
 
+  // Show friendly AZ names (not IDs) in header and assignments
   useEffect(() => {
-    // Initialize local assignments from props
     if (activeDesign) {
       const allRoles = getAllConfigurableRoles(activeDesign, availabilityZones);
       const initialAssignments = allRoles.map(role => {
@@ -108,19 +113,17 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
   const handleConfirm = () => {
     setClusterAssignments(localAssignments);
     onConfirm();
-    // Do not close dialog here; parent will close after placement is done
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1100px] w-full"> {/* wider dialog for grid */}
+      <DialogContent className="sm:max-w-[1100px] w-full">
         <DialogHeader>
           <DialogTitle>Select Availability Zones</DialogTitle>
           <DialogDescription>
             Choose the availability zones for each cluster/device line. (AZ selections for firewalls, spine, border, etc are limited to "Core" by default)
           </DialogDescription>
         </DialogHeader>
-        {/* Make grid-based layout */}
         <div className="overflow-x-auto py-4">
           <table className="min-w-full border border-muted rounded">
             <thead>
