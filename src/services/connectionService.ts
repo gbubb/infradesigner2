@@ -319,6 +319,30 @@ export function generateConnections(
           if (srcDevice.id === targetDevice.id) continue; // Cannot connect to self
           if (connectedToTargetIdsForThisSrcDevice.has(targetDevice.id)) continue; // Already connected to this target by this source device
 
+          const srcPlace = rackPlacement[srcDevice.id] || {};
+          const dstPlace = rackPlacement[targetDevice.id] || {};
+          const srcRack = (rackprofiles || []).find((r) => r.id === srcPlace.rackId) as RackProfile | undefined;
+          const dstRack = (rackprofiles || []).find((r) => r.id === dstPlace.rackId) as RackProfile | undefined;
+
+          // AZ Scope Check
+          if (rule.azScope === 'SameAZ') {
+            if (!srcRack || !dstRack || srcRack.availabilityZoneId !== dstRack.availabilityZoneId) {
+              connectionAttempts.push({
+                ruleId: rule.id,
+                ruleName: rule.name,
+                sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
+                sourceDeviceId: srcDevice.id,
+                sourcePortId: srcPort.id,
+                targetDeviceName: getDeviceName(allDevices, targetDevice.id),
+                targetDeviceId: targetDevice.id,
+                status: "Skipped",
+                reason: `Target device in different AZ (Source AZ: ${srcRack?.availabilityZoneId || 'N/A'}, Target AZ: ${dstRack?.availabilityZoneId || 'N/A'}). Rule requires same AZ.`,
+              });
+              continue; // Skip to next targetDevice
+            }
+          }
+          // Add other scope checks here if necessary, e.g., 'DifferentAZ', 'SameRack'
+
           const availableDstPorts = filterPorts(targetDevice, rule.targetPortCriteria)
             .filter(p => !usedDstPorts.has(`${targetDevice.id}:${p.id}`) && !p.connectedToDeviceId);
 
@@ -333,10 +357,6 @@ export function generateConnections(
                 continue; // Should be redundant, but good practice
             }
 
-            const srcPlace = rackPlacement[srcDevice.id] || {};
-            const dstPlace = rackPlacement[targetDevice.id] || {};
-            const srcRack = (rackprofiles || []).find((r) => r.id === srcPlace.rackId) as RackProfile | undefined;
-            const dstRack = (rackprofiles || []).find((r) => r.id === dstPlace.rackId) as RackProfile | undefined;
             const lengthMeters = estimateCableLength(
               { deviceId: srcDevice.id, ruPosition: srcPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
               srcRack,
