@@ -227,11 +227,9 @@ export const RackLayoutsTab: React.FC = () => {
     setIsResetting(true);
     try {
       await LayoutPersistenceService.resetLayoutToLastSaved();
-      // Force useRackInitialization to run again by triggering reset
-      setResetTrigger(Date.now());
+      setResetTrigger(prev => prev + 1); // Hard reload initialization
       toast.success('Rack layout reset!');
-      
-      // Clear selected rack since it might no longer exist
+
       setSelectedRackId(null);
     } catch (error) {
       console.error("Error resetting rack layout:", error);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
@@ -14,7 +13,7 @@ export interface RackProfileInitializationData {
   rackType?: 'Core' | 'ComputeStorage';
 }
 
-export const useRackInitialization = () => {
+export const useRackInitialization = (resetTrigger: number = 0) => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const [rackProfiles, setRackProfiles] = useState<RackProfileInitializationData[]>([]);
   const [availabilityZones, setAvailabilityZones] = useState<string[]>([]);
@@ -33,10 +32,9 @@ export const useRackInitialization = () => {
     
     // Check if racks exist already for this design
     const existingRacks = RackService.getAllRackProfiles();
-    const shouldReinitialize = 
-      // Re-initialize if design changed
+    const shouldReinitialize =
+      resetTrigger !== 0 || // new dependency: any change to trigger
       prevDesignIdRef.current !== activeDesign.id ||
-      // Or if we have no racks
       existingRacks.length === 0;
     
     if (shouldReinitialize) {
@@ -132,7 +130,7 @@ export const useRackInitialization = () => {
       const uniqueAZs = [...new Set(existingRackProfiles.map(rack => rack.azName))];
       setAvailabilityZones(uniqueAZs);
     }
-  }, [activeDesign]);
+  }, [activeDesign, resetTrigger]);
 
   // Distribute components across racks based on role and AZ
   const distributeComponentsAcrossRacks = (racks: RackProfileInitializationData[]) => {
