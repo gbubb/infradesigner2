@@ -30,7 +30,7 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
 
   const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
   for (const role of activeDesign.componentRoles) {
-    const key = role.role?.toLowerCase() || '';
+    const roleKey = role.role?.toLowerCase() || '';
     let autoDefaultTo: string[] = [];
     if (
       [
@@ -40,23 +40,55 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
         'border-switch',
         'spine-switch',
         'router'
-      ].some(type => key.includes(type))
+      ].some(type => roleKey.includes(type))
     ) {
       autoDefaultTo = coreAZ ? [coreAZ] : [];
     } else if (
       [
         'compute', 'controller', 'storage', 'ipmiswitch', 'managementswitch',
         'leafswitch', 'copperpatchpanel', 'fiberpatchpanel'
-      ].some(type => key.includes(type))
+      ].some(type => roleKey.includes(type))
     ) {
       autoDefaultTo = [...nonCoreAZs];
     } else {
       autoDefaultTo = [...nonCoreAZs];
     }
+
+    let finalDisplayName = role.role; // Default to the functional role type
+
+    // If a specific name is provided (e.g., "Primary Storage", "West Compute Farm")
+    // and it's different from the role type itself.
+    if (role.name && typeof role.name === 'string' && role.name.trim() !== '' && role.name.trim().toLowerCase() !== roleKey) {
+      const specificName = role.name.trim();
+
+      if (
+        [
+          'storage'
+          // roleKey might be 'storagenode', 'storagecluster', etc.
+        ].some(type => roleKey.includes(type))
+      ) {
+        finalDisplayName = `Storage Cluster - ${specificName}`;
+      } else if (
+        [
+          'compute', 'controller'
+          // roleKey might be 'computenode', 'computecluster', etc.
+        ].some(type => roleKey.includes(type))
+      ) {
+        finalDisplayName = `Compute Cluster - ${specificName}`;
+      } else {
+        // For other types that have a distinct name, use that name.
+        finalDisplayName = specificName;
+      }
+    } else if (role.name && typeof role.name === 'string' && role.name.trim() !== '' && role.name.trim().toLowerCase() === roleKey) {
+      // If role.name is the same as role.role (e.g. role: "firewall", name: "Firewall"), just use it as is.
+      finalDisplayName = role.name.trim();
+    }
+    // else, finalDisplayName remains role.role (the generic type)
+
     lines.push({
       id: role.id,
-      name: role.role,
-      clusterType: role.role, // Simplified
+      name: finalDisplayName, // Use the new descriptive name
+      clusterType: role.role, // Functional type remains role.role
       autoDefaultTo,
     });
   }
