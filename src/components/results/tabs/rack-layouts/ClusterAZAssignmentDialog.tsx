@@ -22,15 +22,40 @@ interface ClusterAZAssignmentDialogProps {
   onConfirm: () => void;
 }
 
+// Helper function to nicely format the cluster/role name
+function formatClusterRoleDisplay(role: any): string {
+  // For clusters, show "Compute Cluster (ClusterName)"
+  if (
+    role.role &&
+    typeof role.role === "string" &&
+    role.clusterInfo &&
+    typeof role.clusterInfo === "object" &&
+    typeof role.clusterInfo.clusterName === "string"
+  ) {
+    if (role.role.toLowerCase().includes("compute")) {
+      return `Compute Cluster (${role.clusterInfo.clusterName})`;
+    }
+    if (role.role.toLowerCase().includes("storage")) {
+      return `Storage Cluster (${role.clusterInfo.clusterName})`;
+    }
+    if (role.role.toLowerCase().includes("controller")) {
+      return `Controller Cluster (${role.clusterInfo.clusterName})`;
+    }
+    // future: add other cluster types here
+  }
+  // fallback: just show the role name
+  return role.role || "";
+}
+
 // Helper: Extract all unique cluster/device lines (shows friendly AZ names)
 const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[]) => {
   if (!activeDesign || !activeDesign.componentRoles) return [];
 
   // Determine which AZ is "Core" by friendly name (case-insensitive)
-  const coreAZ = availabilityZones.find(az => az.toLowerCase().includes('core')) || 'Core';
+  const coreAZ = availabilityZones.find(az => az.toLowerCase() === "core") || "Core";
   const nonCoreAZs = availabilityZones.filter(az => az !== coreAZ);
 
-  const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
+  const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[]; clusterInfo?: any }[] = [];
   for (const role of activeDesign.componentRoles) {
     const key = role.role?.toLowerCase() || '';
     let autoDefaultTo: string[] = [];
@@ -60,6 +85,7 @@ const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[])
       name: role.role,
       clusterType: role.role, // Simplified
       autoDefaultTo,
+      clusterInfo: role.clusterInfo, // pass through for display
     });
   }
   return lines;
@@ -82,7 +108,6 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
       // If value is already a friendly name, return
       if (availabilityZones.includes(azIdOrName)) return azIdOrName;
       // Otherwise, try to map by ID (shouldn't be necessary if names only)
-      // For now, fallback to empty string if not found
       return '';
     },
     [availabilityZones]
@@ -110,7 +135,7 @@ export const ClusterAZAssignmentDialog: React.FC<ClusterAZAssignmentDialogProps>
 
         return {
           clusterId: role.id,
-          clusterName: role.name,
+          clusterName: formatClusterRoleDisplay(role), // << Improved display
           clusterType: role.clusterType as 'compute' | 'storage' | 'controller' | 'infrastructure',
           selectedAZs,
         };
