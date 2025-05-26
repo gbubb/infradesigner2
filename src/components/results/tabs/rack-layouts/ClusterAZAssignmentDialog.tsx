@@ -25,69 +25,78 @@ interface ClusterAZAssignmentDialogProps {
 const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[]) => {
   if (!activeDesign || !activeDesign.componentRoles) return [];
 
-  const coreAZ = availabilityZones.find(az => az.toLowerCase().includes('core')) || 'Core';
-  const nonCoreAZs = availabilityZones.filter(az => az !== coreAZ);
+  // Identify the explicit "Core" AZ from the provided list
+  const coreAzStandardName = "Core";
+  const explicitCoreAZ = availabilityZones.find(az =>
+    az.toLowerCase() === coreAzStandardName.toLowerCase() ||
+    az.toLowerCase().includes('core') // Broader check for variants
+  );
+
+  const nonCoreAZs = explicitCoreAZ
+    ? availabilityZones.filter(az => az !== explicitCoreAZ)
+    : [...availabilityZones];
 
   const lines: { id: string; name: string; clusterType: string; autoDefaultTo: string[] }[] = [];
   for (const role of activeDesign.componentRoles) {
     const roleKey = role.role?.toLowerCase() || '';
-    let autoDefaultTo: string[] = [];
-    if (
-      [
-        'firewall',
-        'spineswitch',
-        'borderleafswitch',
-        'border-switch',
-        'spine-switch',
-        'router'
-      ].some(type => roleKey.includes(type))
-    ) {
-      autoDefaultTo = coreAZ ? [coreAZ] : [];
-    } else if (
-      [
-        'compute', 'controller', 'storage', 'ipmiswitch', 'managementswitch',
-        'leafswitch', 'copperpatchpanel', 'fiberpatchpanel'
-      ].some(type => roleKey.includes(type))
-    ) {
-      autoDefaultTo = [...nonCoreAZs];
-    } else {
-      autoDefaultTo = [...nonCoreAZs];
-    }
+    const clusterSpecificName = role.name && typeof role.name === 'string' && role.name.trim() !== '' ? role.name.trim() : null;
 
-    let finalDisplayName = role.role; // Default to the functional role type
+    let finalDisplayName: string;
 
-    // If a specific name is provided (e.g., "Primary Storage", "West Compute Farm")
-    // and it's different from the role type itself.
-    if (role.name && typeof role.name === 'string' && role.name.trim() !== '' && role.name.trim().toLowerCase() !== roleKey) {
-      const specificName = role.name.trim();
-
-      if (
-        [
-          'storage'
-          // roleKey might be 'storagenode', 'storagecluster', etc.
-        ].some(type => roleKey.includes(type))
-      ) {
-        finalDisplayName = `Storage Cluster - ${specificName}`;
-      } else if (
-        [
-          'compute', 'controller'
-          // roleKey might be 'computenode', 'computecluster', etc.
-        ].some(type => roleKey.includes(type))
-      ) {
-        finalDisplayName = `Compute Cluster - ${specificName}`;
+    if (clusterSpecificName) {
+      if (['storage'].some(type => roleKey.includes(type))) {
+        finalDisplayName = `Storage Cluster - ${clusterSpecificName}`;
+      } else if (['compute', 'controller'].some(type => roleKey.includes(type))) {
+        finalDisplayName = `Compute Cluster - ${clusterSpecificName}`;
       } else {
-        // For other types that have a distinct name, use that name.
-        finalDisplayName = specificName;
+        finalDisplayName = clusterSpecificName; // Use specific name for other types like firewalls if provided
       }
-    } else if (role.name && typeof role.name === 'string' && role.name.trim() !== '' && role.name.trim().toLowerCase() === roleKey) {
-      // If role.name is the same as role.role (e.g. role: "firewall", name: "Firewall"), just use it as is.
-      finalDisplayName = role.name.trim();
+    } else {
+      // Fallback if no specific name (role.name) is provided
+      if (['storage'].some(type => roleKey.includes(type))) {
+        finalDisplayName = `Storage Cluster - ${role.role}`; // e.g., "Storage Cluster - storagenode"
+      } else if (['compute', 'controller'].some(type => roleKey.includes(type))) {
+        finalDisplayName = `Compute Cluster - ${role.role}`; // e.g., "Compute Cluster - computenode"
+      } else {
+        finalDisplayName = role.role; // e.g., "firewall"
+      }
     }
-    // else, finalDisplayName remains role.role (the generic type)
+
+    let autoDefaultTo: string[] = [];
+    const isCoreDevice = [
+      'firewall',
+      'spineswitch',
+      'borderleafswitch',
+      'border-switch',
+      'spine-switch',
+      'router'
+    ].some(type => roleKey.includes(type));
+
+    if (isCoreDevice) {
+      if (explicitCoreAZ) {
+        autoDefaultTo = [explicitCoreAZ];
+      } else {
+        autoDefaultTo = []; // No "Core" column available, default to no AZs for core devices
+      }
+    } else { // Non-core devices
+      if (nonCoreAZs.length > 0) {
+        autoDefaultTo = [...nonCoreAZs];
+      } else if (availabilityZones.length > 0) {
+        // This case means nonCoreAZs is empty.
+        // If explicitCoreAZ was found (e.g. "Core" is the *only* AZ), nonCoreAZs is empty.
+        // Non-core devices would then correctly default to no AZs here.
+        // If explicitCoreAZ was *not* found, nonCoreAZs would be a copy of all availabilityZones.
+        // So, this path (else if availabilityZones.length > 0) effectively means
+        // that nonCoreAZs was empty because only a Core AZ exists.
+        autoDefaultTo = []; // Default to no AZs if only Core AZ exists for non-core devices.
+      } else {
+        autoDefaultTo = []; // No AZs at all
+      }
+    }
 
     lines.push({
       id: role.id,
-      name: finalDisplayName, // Use the new descriptive name
+      name: finalDisplayName,
       clusterType: role.role, // Functional type remains role.role
       autoDefaultTo,
     });
