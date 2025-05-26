@@ -25,7 +25,7 @@ import type { ConnectionAttempt } from "@/types/infrastructure/connection-servic
 // Constants for estimation (can be adjusted or exposed)
 const RU_HEIGHT_CM = 4.45; // 1 RU height in cm
 const SLACK_PER_END_CM = 50;
-const INTRA_RACK_EXTRA_CM = 100; // extra for routing
+const INTRA_RACK_EXTRA_CM = 50; // extra for routing
 const DEFAULT_INTER_RACK_LENGTH_M = 10;
 
 type PortWithDevice = {
