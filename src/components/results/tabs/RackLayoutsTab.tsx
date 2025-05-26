@@ -54,6 +54,7 @@ export const RackLayoutsTab: React.FC = () => {
   const [snapshotAzNameMap, setSnapshotAzNameMap] = useState<Record<string, string>>({});
   const [snapshotRackNameMap, setSnapshotRackNameMap] = useState<Record<string, string>>({});
   const [resetTrigger, setResetTrigger] = useState<number>(0);
+  const [isLoadingLayout, setIsLoadingLayout] = useState(false);
   const activeDesign = useDesignStore(state => state.activeDesign);
   const updateDesign = useDesignStore(state => state.updateDesign);
   
@@ -223,6 +224,48 @@ export const RackLayoutsTab: React.FC = () => {
     }
   }
 
+  // Load Layout - restore from database
+  const handleLoadLayout = async () => {
+    setIsLoadingLayout(true);
+    try {
+      const data = await LayoutPersistenceService.loadLayoutForDesign();
+      if (
+        data &&
+        Array.isArray(data.rackprofiles) &&
+        data.rackprofiles.length > 0
+      ) {
+        // Basic validation: check that loaded racks contain only devices from current active design
+        const validDeviceIds = new Set(
+          (activeDesign?.components ?? []).map((c) => c.id)
+        );
+        const isValid = data.rackprofiles.every((rack: any) =>
+          (rack.devices ?? []).every((dev: any) => validDeviceIds.has(dev.deviceId))
+        );
+        if (!isValid) {
+          toast.error(
+            "The saved rack layout could not be loaded: the state does not match the current configuration (device set has changed)."
+          );
+          setIsLoadingLayout(false);
+          return;
+        }
+        // Restore racks
+        if (activeDesign) {
+          updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
+          toast.success("Rack layout loaded from database!");
+        }
+      } else {
+        toast.error(
+          "No saved rack layout found in the database for this design."
+        );
+      }
+    } catch (error) {
+      console.error("Error loading rack layout:", error);
+      toast.error("Failed to load rack layout: " + (error as Error).message);
+    } finally {
+      setIsLoadingLayout(false);
+    }
+  }
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="space-y-6">
@@ -234,20 +277,37 @@ export const RackLayoutsTab: React.FC = () => {
         </div>
         
         {/* Actions Row */}
-        <div className="flex justify-between items-center gap-2">
-          <Button 
-            variant="default"
-            onClick={handleAutoPlaceDevices}
-            disabled={isPlacing}
-          >
-            {isPlacing ? "Placing Devices..." : "Auto-Place Devices"}
-          </Button>
-          <Button variant="secondary" onClick={handleSaveLayout} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save Layout"}
-          </Button>
-          <Button variant="destructive" onClick={handleResetLayout} disabled={isResetting}>
-            {isResetting ? "Resetting..." : "Reset Layout"}
-          </Button>
+        <div className="flex flex-wrap justify-between items-center gap-2">
+          <div className="flex gap-2">
+            <Button 
+              variant="default"
+              onClick={handleAutoPlaceDevices}
+              disabled={isPlacing}
+            >
+              {isPlacing ? "Placing Devices..." : "Auto-Place Devices"}
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={handleSaveLayout} 
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "Save Layout"}
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleResetLayout} 
+              disabled={isResetting}
+            >
+              {isResetting ? "Resetting..." : "Reset Layout"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleLoadLayout}
+              disabled={isLoadingLayout}
+            >
+              {isLoadingLayout ? "Loading..." : "Load Layout"}
+            </Button>
+          </div>
         </div>
         
         {/* Filter controls */}
