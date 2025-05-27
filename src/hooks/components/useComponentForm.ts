@@ -74,9 +74,29 @@ export const useComponentForm = () => {
   
   const [componentForm, setComponentForm] = useState<ComponentFormValues>({...defaultFormState});
 
+  // Helper function to merge backend transceiver fields into the form and ensure both sets of keys exist
+  function hydrateTransceiverFormValues(values: ComponentFormValues): ComponentFormValues {
+    if (values.type === 'Transceiver') {
+      return {
+        ...values,
+        // Hydrate UI keys from backend data (if present)
+        transceiverModel: values.transceiverModel ?? values["transceiverModel"] ?? values["model"],
+        transceiverConnectorType: values.transceiverConnectorType ?? values["connectorType"],
+        mediaConnectorType: values.mediaConnectorType ?? values["mediaConnectorType"],
+        mediaTypeSupported: values.mediaTypeSupported ?? values["mediaTypeSupported"] ?? [],
+        transceiverSpeed: values.transceiverSpeed ?? values["speed"],
+        maxDistanceMeters: values.maxDistanceMeters ?? values["maxDistanceMeters"],
+        // Also provide the backend fields for processing
+        connectorType: values.connectorType ?? values.transceiverConnectorType,
+        speed: values.speed ?? values.transceiverSpeed,
+      };
+    }
+    return values;
+  }
+
   const resetForm = () => {
     console.log('Resetting form to default state');
-    setComponentForm({...defaultFormState});
+    setComponentForm(hydrateTransceiverFormValues({...defaultFormState}));
     setEditingComponentId(null);
   };
 
@@ -214,22 +234,38 @@ export const useComponentForm = () => {
       }
     }
 
-    const component = {
+    let component: any = {
       ...form,
-      ...(placement ? { placement } : {}), // Only add placement if it exists
+      ...(placement ? { placement } : {})
     };
+
+    // Map front-end transceiver fields into backend (plain) field names before submission
+    if (form.type === "Transceiver") {
+      component = {
+        ...component,
+        transceiverModel: form.transceiverModel,
+        mediaTypeSupported: form.mediaTypeSupported,
+        connectorType: form.transceiverConnectorType,
+        mediaConnectorType: form.mediaConnectorType,
+        speed: form.transceiverSpeed,
+        maxDistanceMeters: form.maxDistanceMeters,
+      };
+      // Remove UI-only keys to avoid duplication
+      delete component.transceiverConnectorType;
+      delete component.transceiverSpeed;
+    }
 
     // Remove irrelevant port fields for Cable type:
     if (component.type === "Cable") {
       delete component.ports;
     }
-    
+
     // Remove temporary placement fields
     delete component.validRUStart;
     delete component.validRUEnd;
     delete component.preferredRU;
     delete component.preferredRack;
-    
+
     console.log('Processed component:', component);
     return component;
   };
