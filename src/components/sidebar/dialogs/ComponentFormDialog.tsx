@@ -243,10 +243,24 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   };
 
   const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
+    console.log("Form data validated and submitted:", data);
     onSubmit(data);
   };
 
-  const { control } = form;
+  const handleFormSubmitError = (errors: any) => {
+    console.error("Form validation errors:", errors);
+    // You could add a toast notification here to inform the user
+    // toast.error("Please correct the errors in the form.");
+  };
+
+  const { control, formState } = form;
+
+  // Log errors when they change
+  useEffect(() => {
+    if (Object.keys(formState.errors).length > 0) {
+      console.log("Current RHF validation errors:", formState.errors);
+    }
+  }, [formState.errors]);
 
   // --- BULK PORT ADDITION UI/LOGIC ---
   const [bulkPort, setBulkPort] = useState({
@@ -312,7 +326,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
         </DialogHeader>
         <ScrollArea className="max-h-[calc(90vh-8rem)] px-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
+            <form onSubmit={form.handleSubmit(handleFormSubmit, handleFormSubmitError)} className="space-y-4 py-4">
               {/* Basic Component Information Section */}
               <BasicInfoFields
                 control={control}
