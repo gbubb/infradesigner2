@@ -123,7 +123,7 @@ interface ComponentFormDialogProps {
   onTypeChange: (value: string) => void;
   onSwitchChange: (checked: boolean) => void;
   onCancel: () => void;
-  onSubmit: () => void;
+  onSubmit: (data: z.infer<typeof formSchema>) => void;
   isEditing: boolean;
   addPort: () => void;
   removePort: (index: number) => void;
@@ -245,7 +245,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   };
 
   const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
-    onSubmit();
+    onSubmit(data);
   };
 
   const { control } = form;
@@ -649,7 +649,9 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
           <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" onClick={onSubmit}>{isEditing ? 'Update' : 'Save'}</Button>
+          <Button type="submit">
+            {isEditing ? 'Update' : 'Save'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

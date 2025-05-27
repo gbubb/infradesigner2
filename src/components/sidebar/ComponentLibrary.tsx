@@ -73,37 +73,42 @@ export const ComponentLibrary: React.FC = () => {
 
   const openEditDialog = (component: InfrastructureComponent) => {
     // First reset the form to clear any previous data
-    resetForm();
+    // resetForm(); // resetForm() is called by useComponentForm, avoid calling directly if it clears RHF state too early
     
     // Then set the editing ID
     setEditingComponentId(component.id);
     
-    // Extract placement values for form fields
-    const formValues = {
+    // Prepare formValues for react-hook-form initialization
+    // This data is used by ComponentFormDialog to set defaultValues for useForm
+    const initialFormValues = {
       ...component,
       isDefault: component.isDefault || false,
       validRUStart: component.placement?.validRUStart || 1,
       validRUEnd: component.placement?.validRUEnd || 42,
       preferredRU: component.placement?.preferredRU || 1,
       preferredRack: component.placement?.preferredRack || 1,
-      ports: component.ports ?? [], // Ensure ports is always set for type safety
+      ports: component.ports ?? [],
+      // Ensure correct field names for transceivers if editing one
+      // The form schema now uses 'speed' and 'connectorType' directly for transceivers.
+      // If component is a transceiver, its own speed and connectorType will be used.
+      // The defaultValues in ComponentFormDialog handle conditional logic based on type.
     };
     
-    // Log form values being set
-    console.log('Setting form values for editing:', formValues);
-    
-    // Set the component form with the extracted values
-    setComponentForm(formValues);
+    console.log('Setting initial form values for editing:', initialFormValues);
+    setComponentForm(initialFormValues); // This sets the state consumed by formValues prop of ComponentFormDialog
     setIsEditDialogOpen(true);
   };
 
-  const handleAddComponent = () => {
-    if (!validateForm()) return;
+  // Updated to accept data from the form
+  const handleAddComponent = (submittedData: any) => { 
+    // The `validateForm()` call might be redundant if RHF + Zod handles all validation prior to this point.
+    // if (!validateForm()) return; // validateForm was likely operating on the stale componentForm state.
     
-    console.log('Form before processing:', componentForm);
+    console.log('Data received by handleAddComponent:', submittedData);
 
-    // Process the form for submission - consolidating placement fields
-    const componentToSave = processFormForSubmission(componentForm);
+    // Process the form for submission - consolidating placement fields, etc.
+    // Crucially, use the submittedData from react-hook-form, not the old componentForm state.
+    const componentToSave = processFormForSubmission(submittedData);
     
     // Ensure ID is always set for new components but not for edits
     if (!editingComponentId) {
