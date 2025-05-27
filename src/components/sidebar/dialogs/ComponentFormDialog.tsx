@@ -108,9 +108,9 @@ const formSchema = z.object({
   // Transceiver specific fields
   transceiverModel: z.nativeEnum(TransceiverModel).optional(),
   mediaTypeSupported: z.array(z.nativeEnum(MediaType)).optional(),
-  transceiverConnectorType: z.nativeEnum(ConnectorType).optional(),
+  connectorType: z.nativeEnum(ConnectorType).optional(),
   mediaConnectorType: z.nativeEnum(ConnectorType).optional(),
-  transceiverSpeed: z.nativeEnum(PortSpeed).optional(),
+  speed: z.nativeEnum(PortSpeed).optional(),
   maxDistanceMeters: z.number().optional()
 });
 
@@ -213,12 +213,16 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       connectorB_Type: formValues.connectorB_Type || ConnectorType.RJ45,
       mediaType: formValues.mediaType || CableMediaType.CopperCat6a,
       cableSpeed: formValues.cableSpeed || undefined,
-      // Transceiver specific defaults
+      // Transceiver specific defaults - using direct field names from Transceiver interface
       transceiverModel: formValues.transceiverModel || undefined,
       mediaTypeSupported: formValues.mediaTypeSupported || [],
-      transceiverConnectorType: formValues.transceiverConnectorType || ConnectorType.SFP,
+      // For Transceiver, 'connectorType' is its port-side connector, 'speed' is its speed.
+      // These will be conditionally relevant based on formValues.type when form loads.
+      // Ensure these don't clash with *other* components' 'connectorType' or 'speed' if formValues is flat.
+      // The schema has these as distinct now (e.g. cassette 'portType', switch 'portSpeedType').
+      connectorType: formValues.type === ComponentType.Transceiver ? (formValues.connectorType || ConnectorType.SFP) : (formValues.portType || ConnectorType.RJ45),
       mediaConnectorType: formValues.mediaConnectorType || ConnectorType.LC,
-      transceiverSpeed: formValues.transceiverSpeed || PortSpeed.Speed10G,
+      speed: formValues.type === ComponentType.Transceiver ? (formValues.speed || PortSpeed.Speed10G) : (formValues.portSpeedType || PortSpeed.Speed10G),
       maxDistanceMeters: formValues.maxDistanceMeters || 0
     },
     values: formValues,

@@ -43,7 +43,7 @@ export const OpticsFields: React.FC<OpticsFieldsProps> = ({ control }) => {
 
       <FormField
         control={control}
-        name="transceiverSpeed" // Matches schema name
+        name="speed"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Speed</FormLabel>
@@ -64,7 +64,7 @@ export const OpticsFields: React.FC<OpticsFieldsProps> = ({ control }) => {
 
       <FormField
         control={control}
-        name="transceiverConnectorType" // Matches schema name (Port-side)
+        name="connectorType"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Port-Side Connector</FormLabel>
@@ -86,7 +86,7 @@ export const OpticsFields: React.FC<OpticsFieldsProps> = ({ control }) => {
 
       <FormField
         control={control}
-        name="mediaConnectorType" // Matches schema name (Media-side)
+        name="mediaConnectorType"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Media-Side Connector</FormLabel>
