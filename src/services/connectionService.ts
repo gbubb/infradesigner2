@@ -378,9 +378,17 @@ export function generateConnections(
             
             // Iterate through available destination ports
             for (const dstPort of availableDstPorts) {
-              currentSrcPort = candidateSrcPort; // Tentatively set currentSrcPort
-              currentDstPort = dstPort; // Tentatively set currentDstPort
+              currentSrcPort = candidateSrcPort;
+              currentDstPort = dstPort;
               
+              // Determine effective media types, inferring Copper for RJ45 if not set
+              const effectiveSrcMediaType = currentSrcPort.connectorType === ConnectorType.RJ45 && !currentSrcPort.mediaType 
+                                          ? MediaType.Copper 
+                                          : currentSrcPort.mediaType;
+              const effectiveDstMediaType = currentDstPort.connectorType === ConnectorType.RJ45 && !currentDstPort.mediaType 
+                                          ? MediaType.Copper 
+                                          : currentDstPort.mediaType;
+
               let cable: Cable | undefined = undefined;
               let selectedSrcTransceiver: Transceiver | undefined = undefined;
               let selectedDstTransceiver: Transceiver | undefined = undefined;
@@ -395,7 +403,7 @@ export function generateConnections(
               );
 
               // 1. Handle Copper to Copper connections
-              if (currentSrcPort.mediaType === MediaType.Copper && currentDstPort.mediaType === MediaType.Copper) {
+              if (effectiveSrcMediaType === MediaType.Copper && effectiveDstMediaType === MediaType.Copper) {
                 if (currentSrcPort.connectorType === ConnectorType.RJ45 && currentDstPort.connectorType === ConnectorType.RJ45) {
                   // Assuming Cat6a for RJ45 copper links for now. This could be made more specific by rules if needed.
                   cable = findCompatibleCableTemplate(cableLookup, ConnectorType.RJ45, ConnectorType.RJ45, CableMediaType.CopperCat6a, currentSrcPort.speed);
@@ -411,8 +419,8 @@ export function generateConnections(
               }
               // 2. Else (ports are likely optical/DAC capable, or media types not strictly copper)
               //    This path handles DAC and Fiber/Optics.
-              else if ((!currentSrcPort.mediaType || currentSrcPort.mediaType !== MediaType.Copper) && 
-                       (!currentDstPort.mediaType || currentDstPort.mediaType !== MediaType.Copper)) {
+              else if ((!effectiveSrcMediaType || effectiveSrcMediaType !== MediaType.Copper) && 
+                       (!effectiveDstMediaType || effectiveDstMediaType !== MediaType.Copper)) {
                 
                 // Attempt DAC first if length is suitable
                 if (lengthMeters <= 5) {
@@ -446,8 +454,8 @@ export function generateConnections(
                      connectionReasoning = (connectionReasoning ? connectionReasoning + "; " : "") + `Connection > 5m (${lengthMeters}m), attempting fiber optics.`;
                   }
                   
-                  const srcRequiredFiberMedia = currentSrcPort.mediaType === MediaType.FiberMM || currentSrcPort.mediaType === MediaType.FiberSM ? currentSrcPort.mediaType : undefined;
-                  const dstRequiredFiberMedia = currentDstPort.mediaType === MediaType.FiberMM || currentDstPort.mediaType === MediaType.FiberSM ? currentDstPort.mediaType : undefined;
+                  const srcRequiredFiberMedia = effectiveSrcMediaType === MediaType.FiberMM || effectiveSrcMediaType === MediaType.FiberSM ? effectiveSrcMediaType : undefined;
+                  const dstRequiredFiberMedia = effectiveDstMediaType === MediaType.FiberMM || effectiveDstMediaType === MediaType.FiberSM ? effectiveDstMediaType : undefined;
 
                   if (srcRequiredFiberMedia && dstRequiredFiberMedia && srcRequiredFiberMedia === dstRequiredFiberMedia) {
                     selectedSrcTransceiver = findCompatibleTransceiverTemplate(allTransceiverTemplates, currentSrcPort, srcRequiredFiberMedia);
@@ -490,7 +498,7 @@ export function generateConnections(
               }
               // 3. Else (mixed media types or other unhandled scenarios)
               else {
-                connectionReasoning = `Incompatible port media types (Src: ${currentSrcPort.mediaType || 'NotSet'}, Dst: ${currentDstPort.mediaType || 'NotSet'}). Cannot directly connect.`;
+                connectionReasoning = `Incompatible port media types (Src: ${effectiveSrcMediaType || 'NotSet'}, Dst: ${effectiveDstMediaType || 'NotSet'}). Cannot directly connect.`;
               }
 
               // Final decision based on whether a cable was found
