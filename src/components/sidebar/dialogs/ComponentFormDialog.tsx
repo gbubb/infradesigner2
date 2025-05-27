@@ -77,14 +77,20 @@ const formSchema = z.object({
   switchRole: z.nativeEnum(SwitchRole).optional(),
   portCount: z.number().optional(),
   portSpeed: z.string().optional(),
-  portSpeedType: z.nativeEnum(PortSpeed).optional(),
+  portSpeedType: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.nativeEnum(PortSpeed).optional()
+  ),
   portsProvidedQuantity: z.number().optional(),
   layer: z.number().optional(),
   // Disk specific fields
   capacityTB: z.number().optional(),
   formFactor: z.string().optional(),
   interface: z.string().optional(),
-  diskType: z.nativeEnum(DiskType).optional(),
+  diskType: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.nativeEnum(DiskType).optional()
+  ),
   rpm: z.number().optional(),
   iops: z.number().optional(),
   readSpeed: z.number().optional(),
