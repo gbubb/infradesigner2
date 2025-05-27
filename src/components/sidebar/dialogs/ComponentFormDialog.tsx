@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -161,7 +161,10 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+  });
+
+  useEffect(() => {
+    const defaults = {
       type: formValues.type || ComponentType.Server,
       name: formValues.name || '',
       manufacturer: formValues.manufacturer || '',
@@ -208,25 +211,20 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       portQuantity: formValues.portQuantity || 24,
       length: formValues.length || 3,
       portType: formValues.portType || ConnectorType.RJ45,
-      // Cable specific defaults
       connectorA_Type: formValues.connectorA_Type || ConnectorType.RJ45,
       connectorB_Type: formValues.connectorB_Type || ConnectorType.RJ45,
       mediaType: formValues.mediaType || CableMediaType.CopperCat6a,
       cableSpeed: formValues.cableSpeed || undefined,
-      // Transceiver specific defaults - using direct field names from Transceiver interface
       transceiverModel: formValues.transceiverModel || undefined,
       mediaTypeSupported: formValues.mediaTypeSupported || [],
-      // For Transceiver, 'connectorType' is its port-side connector, 'speed' is its speed.
-      // These will be conditionally relevant based on formValues.type when form loads.
-      // Ensure these don't clash with *other* components' 'connectorType' or 'speed' if formValues is flat.
-      // The schema has these as distinct now (e.g. cassette 'portType', switch 'portSpeedType').
       connectorType: formValues.type === ComponentType.Transceiver ? (formValues.connectorType || ConnectorType.SFP) : (formValues.portType || ConnectorType.RJ45),
       mediaConnectorType: formValues.mediaConnectorType || ConnectorType.LC,
       speed: formValues.type === ComponentType.Transceiver ? (formValues.speed || PortSpeed.Speed10G) : (formValues.portSpeedType || PortSpeed.Speed10G),
-      maxDistanceMeters: formValues.maxDistanceMeters || 0
-    },
-    values: formValues,
-  });
+      maxDistanceMeters: formValues.maxDistanceMeters || 0,
+      ports: formValues.ports || []
+    };
+    form.reset(defaults);
+  }, [formValues, form, maxRackUnits]);
 
   const getDefaultPrefix = (type: string) => {
     switch(type) {
