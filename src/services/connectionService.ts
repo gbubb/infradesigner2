@@ -378,9 +378,14 @@ export function generateConnections(
             
             // Iterate through available destination ports
             for (const dstPort of availableDstPorts) {
-              if (usedDstPorts.has(`${targetDevice.id}:${dstPort.id}`)) {
-                  continue;
-              }
+              currentSrcPort = candidateSrcPort; // Tentatively set currentSrcPort
+              currentDstPort = dstPort; // Tentatively set currentDstPort
+              
+              let cable: Cable | undefined = undefined;
+              let selectedSrcTransceiver: Transceiver | undefined = undefined;
+              let selectedDstTransceiver: Transceiver | undefined = undefined;
+              let finalCableMediaType: CableMediaType | undefined = undefined;
+              let connectionReasoning = ""; // Reset for each port pair attempt
 
               const lengthMeters = estimateCableLength(
                 { deviceId: srcDevice.id, ruPosition: srcPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
@@ -389,81 +394,107 @@ export function generateConnections(
                 dstRack
               );
 
-              let cable: Cable | undefined = undefined;
-              let selectedSrcTransceiver: Transceiver | undefined = undefined;
-              let selectedDstTransceiver: Transceiver | undefined = undefined;
-              let finalCableMediaType: CableMediaType | undefined = undefined;
-
-              if (lengthMeters <= 5) {
-                // Try DAC first
-                // Determine DAC CableMediaType based on port speed/type (e.g., SFP+ for 10G, QSFP+ for 40G)
-                // This is a simplification; real mapping might be more complex or data-driven
-                let dacMediaType: CableMediaType | undefined;
-                if (candidateSrcPort.speed === PortSpeed.Speed10G && candidateSrcPort.connectorType === ConnectorType.SFP) dacMediaType = CableMediaType.DACSFP;
-                else if (candidateSrcPort.speed === PortSpeed.Speed40G && candidateSrcPort.connectorType === ConnectorType.QSFP) dacMediaType = CableMediaType.DACQSFP;
-                // Add more DAC types (QSFP28 for 100G DAC, etc.) if defined and needed
-                else if (candidateSrcPort.speed === PortSpeed.Speed100G && candidateSrcPort.connectorType === ConnectorType.QSFP) dacMediaType = CableMediaType.DACQSFP; // Assuming QSFP can be 100G DAC for now
-                
-                if (dacMediaType && candidateSrcPort.connectorType === dstPort.connectorType && candidateSrcPort.speed === dstPort.speed) {
-                  cable = findCompatibleCableTemplate(cableLookup, candidateSrcPort.connectorType, dstPort.connectorType, dacMediaType, candidateSrcPort.speed);
+              // 1. Handle Copper to Copper connections
+              if (currentSrcPort.mediaType === MediaType.Copper && currentDstPort.mediaType === MediaType.Copper) {
+                if (currentSrcPort.connectorType === ConnectorType.RJ45 && currentDstPort.connectorType === ConnectorType.RJ45) {
+                  // Assuming Cat6a for RJ45 copper links for now. This could be made more specific by rules if needed.
+                  cable = findCompatibleCableTemplate(cableLookup, ConnectorType.RJ45, ConnectorType.RJ45, CableMediaType.CopperCat6a, currentSrcPort.speed);
                   if (cable) {
                     finalCableMediaType = cable.mediaType;
-                    connectionReasoning = "Direct Attach Cable (DAC) used for short distance.";
+                    connectionReasoning = "Copper Ethernet cable (Cat6a assumed). Distance: " + lengthMeters + "m.";
                   } else {
-                    connectionReasoning = "DAC suitable for port types/speed not found in library for short distance.";
-                    // Attempt fiber as fallback if DAC is not found, even for short distances
-                  }
-                }
-              }
-              
-              // If no DAC cable (either too long, or suitable DAC not found/matched), try fiber + transceivers
-              if (!cable) {
-                if (candidateSrcPort.mediaType && dstPort.mediaType && candidateSrcPort.mediaType === dstPort.mediaType && 
-                   (candidateSrcPort.mediaType === MediaType.FiberMM || candidateSrcPort.mediaType === MediaType.FiberSM)) {
-
-                  selectedSrcTransceiver = findCompatibleTransceiverTemplate(allTransceiverTemplates, candidateSrcPort, candidateSrcPort.mediaType);
-                  selectedDstTransceiver = findCompatibleTransceiverTemplate(allTransceiverTemplates, dstPort, dstPort.mediaType);
-
-                  if (selectedSrcTransceiver && selectedDstTransceiver && 
-                      selectedSrcTransceiver.mediaConnectorType && selectedDstTransceiver.mediaConnectorType &&
-                      selectedSrcTransceiver.mediaTypeSupported.includes(candidateSrcPort.mediaType) && 
-                      selectedDstTransceiver.mediaTypeSupported.includes(dstPort.mediaType) &&
-                      selectedSrcTransceiver.maxDistanceMeters >= lengthMeters && 
-                      selectedDstTransceiver.maxDistanceMeters >= lengthMeters) {
-
-                    // Determine required Fiber CableMediaType (e.g., FiberSMDuplex)
-                    let fiberCableType: CableMediaType | undefined;
-                    if (candidateSrcPort.mediaType === MediaType.FiberSM) fiberCableType = CableMediaType.FiberSMDuplex;
-                    else if (candidateSrcPort.mediaType === MediaType.FiberMM) fiberCableType = CableMediaType.FiberMMDuplex;
-
-                    if (fiberCableType && selectedSrcTransceiver.mediaConnectorType === selectedDstTransceiver.mediaConnectorType) {
-                      cable = findCompatibleCableTemplate(cableLookup, selectedSrcTransceiver.mediaConnectorType, selectedDstTransceiver.mediaConnectorType, fiberCableType);
-                      if (cable) {
-                        finalCableMediaType = cable.mediaType;
-                        connectionReasoning = `Fiber optic cable with ${selectedSrcTransceiver.transceiverModel} and ${selectedDstTransceiver.transceiverModel}.`;
-                      } else {
-                        connectionReasoning = `Compatible transceivers found (${selectedSrcTransceiver.transceiverModel}/${selectedDstTransceiver.transceiverModel}), but no suitable fiber cable found in library for their media connectors (${selectedSrcTransceiver.mediaConnectorType}).`;
-                      }
-                    } else {
-                      connectionReasoning = `Transceivers found, but their media-side connectors do not match or required fiber cable type could not be determined (Src: ${selectedSrcTransceiver.mediaConnectorType}, Dst: ${selectedDstTransceiver.mediaConnectorType}).`;
-                    }
-                  } else {
-                    if (!selectedSrcTransceiver) connectionReasoning += "No compatible source transceiver. ";
-                    if (!selectedDstTransceiver) connectionReasoning += "No compatible destination transceiver. ";
-                    if (selectedSrcTransceiver && selectedSrcTransceiver.maxDistanceMeters < lengthMeters) connectionReasoning += "Source transceiver max distance too short. ";
-                    if (selectedDstTransceiver && selectedDstTransceiver.maxDistanceMeters < lengthMeters) connectionReasoning += "Destination transceiver max distance too short. ";
-                    if (connectionReasoning === "") connectionReasoning = "Transceiver or fiber connection failed for unknown reason.";
+                    connectionReasoning = "No suitable Copper Cat6a RJ45 cable template found in library.";
                   }
                 } else {
-                   connectionReasoning = "Port media types are not compatible for fiber or not specified as fiber.";
-                   if (lengthMeters > 5 && !cable) { // Specifically if it was too long for DAC and then this path is hit
-                      // Prepend to existing reasoning or set if empty
-                      connectionReasoning = (connectionReasoning ? connectionReasoning + " " : "") + "Connection > 5m requires fiber, but port media types are unsuitable or not specified as fiber.";
-                   }
+                  connectionReasoning = `Unsupported connector types for Copper connection: ${currentSrcPort.connectorType} to ${currentDstPort.connectorType}. RJ45 expected.`;
                 }
               }
+              // 2. Else (ports are likely optical/DAC capable, or media types not strictly copper)
+              //    This path handles DAC and Fiber/Optics.
+              else if ((!currentSrcPort.mediaType || currentSrcPort.mediaType !== MediaType.Copper) && 
+                       (!currentDstPort.mediaType || currentDstPort.mediaType !== MediaType.Copper)) {
+                
+                // Attempt DAC first if length is suitable
+                if (lengthMeters <= 5) {
+                  let dacMediaType: CableMediaType | undefined;
+                  if (currentSrcPort.speed === PortSpeed.Speed10G && currentSrcPort.connectorType === ConnectorType.SFP) dacMediaType = CableMediaType.DACSFP;
+                  else if (currentSrcPort.speed === PortSpeed.Speed40G && currentSrcPort.connectorType === ConnectorType.QSFP) dacMediaType = CableMediaType.DACQSFP;
+                  else if (currentSrcPort.speed === PortSpeed.Speed100G && currentSrcPort.connectorType === ConnectorType.QSFP) dacMediaType = CableMediaType.DACQSFP; // TODO: Add DACQSFP28 if exists
+                  // Add other DAC type mappings here (e.g., QSFP28 100G)
 
-              if (cable && currentSrcPort && currentDstPort) { // Ensure currentSrcPort and currentDstPort are set
+                  if (dacMediaType && currentSrcPort.connectorType === currentDstPort.connectorType && currentSrcPort.speed === currentDstPort.speed) {
+                    cable = findCompatibleCableTemplate(cableLookup, currentSrcPort.connectorType, currentDstPort.connectorType, dacMediaType, currentSrcPort.speed);
+                    if (cable) {
+                      finalCableMediaType = cable.mediaType;
+                      connectionReasoning = "Direct Attach Cable (DAC) used.";
+                    } else {
+                      connectionReasoning = `Suitable DAC (${dacMediaType}, ${currentSrcPort.speed}) not found in library for short distance (${lengthMeters}m).`;
+                    }
+                  } else {
+                    connectionReasoning = `Ports not suitable for DAC (mismatched types/speeds, or no defined DAC mapping for ${currentSrcPort.connectorType}/${currentSrcPort.speed}). Distance: ${lengthMeters}m.`;
+                  }
+                }
+
+                // If no DAC cable (either too long, or suitable DAC not found/matched), try fiber + transceivers
+                if (!cable) {
+                  // Ensure connectionReasoning reflects why DAC wasn't used IF it was attempted
+                  if (lengthMeters <= 5 && !connectionReasoning.includes("DAC")) {
+                     // This case should ideally be covered by DAC failure reasons above.
+                     // If it gets here, it means DAC path wasn't even fully evaluated.
+                     connectionReasoning = (connectionReasoning ? connectionReasoning + "; " : "") + "DAC attempt failed or skipped; trying fiber.";
+                  } else if (lengthMeters > 5) {
+                     connectionReasoning = (connectionReasoning ? connectionReasoning + "; " : "") + `Connection > 5m (${lengthMeters}m), attempting fiber optics.`;
+                  }
+                  
+                  const srcRequiredFiberMedia = currentSrcPort.mediaType === MediaType.FiberMM || currentSrcPort.mediaType === MediaType.FiberSM ? currentSrcPort.mediaType : undefined;
+                  const dstRequiredFiberMedia = currentDstPort.mediaType === MediaType.FiberMM || currentDstPort.mediaType === MediaType.FiberSM ? currentDstPort.mediaType : undefined;
+
+                  if (srcRequiredFiberMedia && dstRequiredFiberMedia && srcRequiredFiberMedia === dstRequiredFiberMedia) {
+                    selectedSrcTransceiver = findCompatibleTransceiverTemplate(allTransceiverTemplates, currentSrcPort, srcRequiredFiberMedia);
+                    selectedDstTransceiver = findCompatibleTransceiverTemplate(allTransceiverTemplates, currentDstPort, dstRequiredFiberMedia);
+                    
+                    let fiberFailureReason = "";
+                    if (!selectedSrcTransceiver) fiberFailureReason += "No src transceiver. ";
+                    if (!selectedDstTransceiver) fiberFailureReason += "No dst transceiver. ";
+                    if (selectedSrcTransceiver && selectedSrcTransceiver.maxDistanceMeters < lengthMeters) fiberFailureReason += `Src transceiver too short (${selectedSrcTransceiver.maxDistanceMeters}m vs ${lengthMeters}m). `; 
+                    if (selectedDstTransceiver && selectedDstTransceiver.maxDistanceMeters < lengthMeters) fiberFailureReason += `Dst transceiver too short (${selectedDstTransceiver.maxDistanceMeters}m vs ${lengthMeters}m). `; 
+
+                    if (selectedSrcTransceiver && selectedDstTransceiver && !fiberFailureReason) {
+                      if (selectedSrcTransceiver.mediaConnectorType && selectedDstTransceiver.mediaConnectorType && selectedSrcTransceiver.mediaConnectorType === selectedDstTransceiver.mediaConnectorType) {
+                        let fiberCableType: CableMediaType | undefined;
+                        if (srcRequiredFiberMedia === MediaType.FiberSM) fiberCableType = CableMediaType.FiberSMDuplex;
+                        else if (srcRequiredFiberMedia === MediaType.FiberMM) fiberCableType = CableMediaType.FiberMMDuplex;
+
+                        if (fiberCableType) {
+                          cable = findCompatibleCableTemplate(cableLookup, selectedSrcTransceiver.mediaConnectorType, selectedDstTransceiver.mediaConnectorType, fiberCableType);
+                          if (cable) {
+                            finalCableMediaType = cable.mediaType;
+                            connectionReasoning = `Fiber with ${selectedSrcTransceiver.transceiverModel} to ${selectedDstTransceiver.transceiverModel}.`;
+                          } else {
+                            fiberFailureReason += `No ${fiberCableType} cable with ${selectedSrcTransceiver.mediaConnectorType} connectors found.`;
+                          }
+                        } else {
+                          fiberFailureReason += "Could not determine fiber cable type (SM/MM duplex). ";
+                        }
+                      } else {
+                        fiberFailureReason += `Transceiver media connectors mismatch (Src: ${selectedSrcTransceiver.mediaConnectorType}, Dst: ${selectedDstTransceiver.mediaConnectorType}). `;
+                      }
+                    } 
+                    if (fiberFailureReason) {
+                        connectionReasoning = (connectionReasoning ? connectionReasoning + "; " : "") + "Fiber attempt: " + fiberFailureReason.trim();
+                    }
+                  } else {
+                     connectionReasoning = (connectionReasoning ? connectionReasoning + "; " : "") + "Ports not compatible for fiber (mismatched Fiber SM/MM types or not specified as fiber). ";
+                  }
+                }
+              }
+              // 3. Else (mixed media types or other unhandled scenarios)
+              else {
+                connectionReasoning = `Incompatible port media types (Src: ${currentSrcPort.mediaType || 'NotSet'}, Dst: ${currentDstPort.mediaType || 'NotSet'}). Cannot directly connect.`;
+              }
+
+              // Final decision based on whether a cable was found
+              if (cable && currentSrcPort && currentDstPort) {
                 const connection: NetworkConnection = {
                   id: `${srcDevice.id}-${currentSrcPort.id}__${targetDevice.id}-${currentDstPort.id}-${connectionsMadeForThisPair}`,
                   sourceDeviceId: srcDevice.id,
@@ -501,11 +532,23 @@ export function generateConnections(
                 foundPortPairThisAttempt = true; // Set this flag AFTER successful assignment of currentSrcPort and currentDstPort
                 break; // Found a dstPort, break from dstPort loop for this srcPort
               } else {
-                // This block is hit if cable is not found for the current candidateSrcPort and dstPort pair.
-                // It does not mean the entire attempt for the pair has failed yet,
-                // nor that candidateSrcPort itself is invalid for other dstPorts.
-                // The more general failure for the pairAttempt is logged outside this inner loop.
-              }
+                // Failure logging
+                if (!connectionReasoning) { // Default reason if none was set
+                  connectionReasoning = "No suitable connection path (Copper, DAC, or Fiber) could be established for the port pair.";
+                }
+                connectionAttempts.push({
+                  ruleId: rule.id,
+                  ruleName: rule.name,
+                  sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
+                  sourceDeviceId: srcDevice.id,
+                  sourcePortId: currentSrcPort?.id || 'unknown',
+                  targetDeviceName: getDeviceName(allDevices, targetDevice.id),
+                  targetDeviceId: targetDevice.id,
+                  targetPortId: currentDstPort?.id || 'unknown',
+                  status: "Failed",
+                  reason: connectionReasoning,
+                });
+              } // End if cable / else log failure for this port pair
             } // End DstPort loop
 
             if (foundPortPairThisAttempt) {

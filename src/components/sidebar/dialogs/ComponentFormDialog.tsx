@@ -352,14 +352,16 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                 getDefaultPrefix={getDefaultPrefix}
               />
 
-              {/* Placement Section */}
-              <PlacementSection
-                control={control}
-                formValues={formValues}
-                onInputChange={onInputChange}
-                maxRackUnits={maxRackUnits}
-                ComponentType={ComponentType}
-              />
+              {/* Placement Section - Not for Transceivers */}
+              {formValues.type !== ComponentType.Transceiver && (
+                <PlacementSection
+                  control={control}
+                  formValues={formValues}
+                  onInputChange={onInputChange}
+                  maxRackUnits={maxRackUnits}
+                  ComponentType={ComponentType}
+                />
+              )}
 
               {/* Cost and Power Section */}
               <CostAndPowerSection
@@ -478,8 +480,8 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                 </div>
               )}
 
-              {/* ---- BULK PORTS SECTION ---- */}
-              {!isCable && (
+              {/* ---- BULK PORTS SECTION - Not for Transceivers or Cables ---- */}
+              {formValues.type !== ComponentType.Transceiver && !isCable && (
                 <div className="mb-4 border p-3 rounded-lg">
                   <div className="font-semibold mb-1">Add Multiple Ports</div>
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
@@ -562,8 +564,8 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
               )}
               {/* ---- END BULK PORTS SECTION ---- */}
 
-              {/* ---- SINGLE PORTS SECTION ---- */}
-              {!isCable && (
+              {/* ---- SINGLE PORTS SECTION - Not for Transceivers or Cables ---- */}
+              {formValues.type !== ComponentType.Transceiver && !isCable && (
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <div className="font-semibold">Ports</div>
