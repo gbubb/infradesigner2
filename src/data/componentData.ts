@@ -130,6 +130,19 @@ export const cableTemplates: Cable[] = [
     mediaType: CableMediaType.FiberMMDuplex
   },
   {
+    id: 'cbl-mm-mpo-10m',
+    type: ComponentType.Cable,
+    name: 'MPO-12 MM Fiber Cable OM4 - 10m',
+    manufacturer: 'Generic',
+    model: 'MM-MPO-OM4-10M',
+    cost: 75,
+    powerRequired: 0,
+    length: 10,
+    connectorA_Type: ConnectorType.MPO12,
+    connectorB_Type: ConnectorType.MPO12,
+    mediaType: CableMediaType.FiberMMDuplex
+  },
+  {
     id: 'cbl-2',
     type: ComponentType.Cable,
     name: 'MPO-12 SM Fiber Cable - 5m',

@@ -25,7 +25,8 @@ import {
   SwitchRole,
   DiskType,
   ConnectorType,
-  TransceiverModel
+  TransceiverModel,
+  CableMediaType
 } from '@/types/infrastructure';
 import { PortSpeed, PortRole, MediaType } from '@/types/infrastructure/port-types';
 import { RouterFirewallFormFields } from '../forms/RouterFirewallFormFields';
@@ -102,7 +103,7 @@ const formSchema = z.object({
   // Cable specific fields
   connectorA_Type: z.nativeEnum(ConnectorType).optional(),
   connectorB_Type: z.nativeEnum(ConnectorType).optional(),
-  mediaType: z.nativeEnum(MediaType).optional(),
+  mediaType: z.nativeEnum(CableMediaType).optional(),
   cableSpeed: z.nativeEnum(PortSpeed).optional(),
   // Transceiver specific fields
   transceiverModel: z.nativeEnum(TransceiverModel).optional(),
@@ -210,7 +211,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       // Cable specific defaults
       connectorA_Type: formValues.connectorA_Type || ConnectorType.RJ45,
       connectorB_Type: formValues.connectorB_Type || ConnectorType.RJ45,
-      mediaType: formValues.mediaType || MediaType.Copper,
+      mediaType: formValues.mediaType || CableMediaType.CopperCat6a,
       cableSpeed: formValues.cableSpeed || undefined,
       // Transceiver specific defaults
       transceiverModel: formValues.transceiverModel || undefined,
@@ -574,7 +575,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                   {(formValues.ports && formValues.ports.length > 0) ? (
                     <div className="space-y-2">
                       {formValues.ports.map((port: any, idx: number) => (
-                        <div key={port.id || idx} className="border rounded p-3 flex flex-col sm:flex-row gap-2 items-center">
+                        <div key={port.id || idx} className="border rounded p-3 flex flex-col sm:flex-row gap-2 items-center flex-wrap">
                           <Input
                             type="text"
                             placeholder="Name (e.g. eth0)"
@@ -608,6 +609,16 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                           >
                             {Object.values(ConnectorType).map(ct => (
                               <option value={ct} key={ct}>{ct}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={port.mediaType || ''}
+                            className="border rounded px-2 py-1"
+                            onChange={e => handlePortChange(idx, 'mediaType', e.target.value || undefined)}
+                          >
+                            <option value="">Media Type (Optional)</option>
+                            {Object.values(MediaType).map(mt => (
+                              <option value={mt} key={mt}>{mt}</option>
                             ))}
                           </select>
                           <Button

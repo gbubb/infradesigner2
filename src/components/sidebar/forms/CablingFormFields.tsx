@@ -3,7 +3,7 @@ import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/for
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConnectorType } from '@/types/infrastructure';
-import { PortSpeed } from '@/types/infrastructure/port-types';
+import { PortSpeed, CableMediaType } from '@/types/infrastructure/port-types';
 
 interface CablingFormFieldsProps {
   register: any;
@@ -250,6 +250,33 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                     <SelectItem value={ConnectorType.LC}>LC</SelectItem>
                     <SelectItem value={ConnectorType.SFP}>SFP</SelectItem>
                     <SelectItem value={ConnectorType.QSFP}>QSFP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={register.control}
+            name="mediaType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Media Type</FormLabel>
+                <Select 
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    onSelectChange('mediaType', value);
+                  }}
+                  value={field.value || ''}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select cable media type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.values(CableMediaType).map(cmt => (
+                      <SelectItem key={cmt} value={cmt}>{cmt}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </FormItem>
