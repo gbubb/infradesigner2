@@ -318,6 +318,8 @@ export function generateConnections(
 
         // Try to make 'desiredConnectionsForThisPair' connections between srcDevice and targetDevice
         for (let pairAttempt = 0; pairAttempt < desiredConnectionsForThisPair; pairAttempt++) {
+          let connectionReasoning = ""; // Initialize connectionReasoning for each attempt
+
           if (connectionsMadeForThisSrcDeviceOverall >= maxOverallConnectionsForSrc) {
             break; // Overall limit for this source device reached
           }
@@ -355,6 +357,9 @@ export function generateConnections(
           // Iterate through available source ports for this specific connection attempt
           for (let i = 0; i < mutableAvailableSrcPorts.length; i++) {
             const candidateSrcPort = mutableAvailableSrcPorts[i]; 
+            // currentSrcPort will be set to candidateSrcPort if a successful pair is found
+            // currentDstPort will be set if a successful pair is found
+
             if (usedSrcPorts.has(`${srcDevice.id}:${candidateSrcPort.id}`)) {
                 continue; 
             }
@@ -388,7 +393,6 @@ export function generateConnections(
               let selectedSrcTransceiver: Transceiver | undefined = undefined;
               let selectedDstTransceiver: Transceiver | undefined = undefined;
               let finalCableMediaType: CableMediaType | undefined = undefined;
-              let connectionReasoning = "";
 
               if (lengthMeters <= 5) {
                 // Try DAC first
@@ -459,17 +463,17 @@ export function generateConnections(
                 }
               }
 
-              if (cable) {
+              if (cable && currentSrcPort && currentDstPort) { // Ensure currentSrcPort and currentDstPort are set
                 const connection: NetworkConnection = {
-                  id: `${srcDevice.id}-${currentSrcPort!.id}__${targetDevice.id}-${currentDstPort!.id}-${connectionsMadeForThisPair}`, 
+                  id: `${srcDevice.id}-${currentSrcPort.id}__${targetDevice.id}-${currentDstPort.id}-${connectionsMadeForThisPair}`,
                   sourceDeviceId: srcDevice.id,
-                  sourcePortId: currentSrcPort!.id,
+                  sourcePortId: currentSrcPort.id,
                   destinationDeviceId: targetDevice.id,
-                  destinationPortId: currentDstPort!.id,
-                  cableTemplateId: cable.id,
+                  destinationPortId: currentDstPort.id,
+                  cableTemplateId: cable.id, // cable is confirmed to be defined here
                   lengthMeters,
-                  mediaType: finalCableMediaType, // Use the mediaType of the actual cable used or determined
-                  speed: candidateSrcPort.speed, // Speed of the connection is dictated by the port speed
+                  mediaType: finalCableMediaType,
+                  speed: currentSrcPort.speed, // Use currentSrcPort which is confirmed
                   transceiverSourceModel: selectedSrcTransceiver?.transceiverModel,
                   transceiverDestinationModel: selectedDstTransceiver?.transceiverModel,
                   status: "planned",
@@ -479,42 +483,33 @@ export function generateConnections(
                   ruleName: rule.name,
                   sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
                   sourceDeviceId: srcDevice.id,
-                  sourcePortId: currentSrcPort!.id,
+                  sourcePortId: currentSrcPort.id, // Use currentSrcPort
                   targetDeviceName: getDeviceName(allDevices, targetDevice.id),
                   targetDeviceId: targetDevice.id,
-                  targetPortId: currentDstPort!.id,
+                  targetPortId: currentDstPort.id, // Use currentDstPort
                   status: "Success",
-                  reason: connectionReasoning, // Updated reason
+                  reason: connectionReasoning, 
                   connection,
                 });
-                usedSrcPorts.add(`${srcDevice.id}:${currentSrcPort!.id}`);
-                usedDstPorts.add(`${targetDevice.id}:${currentDstPort!.id}`);
+                usedSrcPorts.add(`${srcDevice.id}:${currentSrcPort.id}`);
+                usedDstPorts.add(`${targetDevice.id}:${currentDstPort.id}`);
                 
-                // Remove the used source port from the mutable list for this srcDevice
                 mutableAvailableSrcPorts.splice(i, 1);
                 
                 connectionsMadeForThisPair++;
                 connectionsMadeForThisSrcDeviceOverall++;
+                foundPortPairThisAttempt = true; // Set this flag AFTER successful assignment of currentSrcPort and currentDstPort
                 break; // Found a dstPort, break from dstPort loop for this srcPort
               } else {
-                // No suitable cable (DAC or Fiber) could be found
-                connectionAttempts.push({
-                  ruleId: rule.id,
-                  ruleName: rule.name,
-                  sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
-                  sourceDeviceId: srcDevice.id,
-                  sourcePortId: candidateSrcPort.id,
-                  targetDeviceName: getDeviceName(allDevices, targetDevice.id),
-                  targetDeviceId: targetDevice.id,
-                  targetPortId: dstPort.id,
-                  status: "Failed",
-                  reason: connectionReasoning || "No compatible cable (DAC or Fiber+Transceiver) found.", // Use accumulated reasoning
-                });
-              } // End if cable found (DAC or Fiber)
+                // This block is hit if cable is not found for the current candidateSrcPort and dstPort pair.
+                // It does not mean the entire attempt for the pair has failed yet,
+                // nor that candidateSrcPort itself is invalid for other dstPorts.
+                // The more general failure for the pairAttempt is logged outside this inner loop.
+              }
             } // End DstPort loop
 
             if (foundPortPairThisAttempt) {
-              break; // Found a pair, break from srcPort loop for this pairAttempt
+              break; // Found a pair, break from srcPort loop (mutableAvailableSrcPorts) for this pairAttempt
             }
           } // End SrcPort loop (iterating mutableAvailableSrcPorts)
 
@@ -525,11 +520,12 @@ export function generateConnections(
                 ruleName: rule.name,
                 sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
                 sourceDeviceId: srcDevice.id,
-                // No specific srcPort to list if none worked for this pair attempt
+                // sourcePortId: candidateSrcPort.id, // candidateSrcPort is not guaranteed to be the one that failed, or might be confusing here.
                 targetDeviceName: getDeviceName(allDevices, targetDevice.id),
                 targetDeviceId: targetDevice.id,
+                // targetPortId: dstPort.id, // Similarly, dstPort is not well-defined here for a general pair failure.
                 status: "Failed",
-                reason: `Could not establish connection ${connectionsMadeForThisPair + 1} of ${desiredConnectionsForThisPair} for pair ${getDeviceName(allDevices, srcDevice.id)} to ${getDeviceName(allDevices, targetDevice.id)}. No suitable port pair or cable.`,
+                reason: connectionReasoning || `Could not establish connection ${connectionsMadeForThisPair + 1} of ${desiredConnectionsForThisPair} for pair ${getDeviceName(allDevices, srcDevice.id)} to ${getDeviceName(allDevices, targetDevice.id)}. No suitable port pair or cable.`,
             });
             break; // Break from pairAttempt loop for this targetDevice, cannot make more connections to this pair
           }

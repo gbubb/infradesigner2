@@ -263,18 +263,19 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                 <FormLabel>Speed (Optional - for DACs)</FormLabel>
                 <Select 
                   onValueChange={(value) => {
-                    field.onChange(value);
-                    onSelectChange('cableSpeed', value);
+                    const actualValue = value === "--none--" ? undefined : value;
+                    field.onChange(actualValue);
+                    onSelectChange('cableSpeed', actualValue || '' );
                   }}
-                  value={field.value || ''}
+                  value={field.value || "--none--"}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select speed if applicable" />
+                      <SelectValue placeholder="Select speed (N/A)" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">N/A</SelectItem>
+                    <SelectItem value="--none--">N/A (e.g. for Fiber)</SelectItem>
                     {Object.values(PortSpeed).map(s => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}

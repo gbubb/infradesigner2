@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Check, ChevronDown } from 'lucide-react';
@@ -26,7 +25,8 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({ selectedCategory
     ComponentCategory.Security,
     ComponentCategory.Acceleration,
     ComponentCategory.Cabling,
-    ComponentCategory.Cables
+    ComponentCategory.Cables,
+    ComponentCategory.Optics
   ];
 
   const getDisplayText = (category: string) => {

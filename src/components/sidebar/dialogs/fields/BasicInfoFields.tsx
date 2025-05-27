@@ -1,4 +1,3 @@
-
 import React from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -51,6 +50,7 @@ export const BasicInfoFields: React.FC<Props> = ({
               <SelectItem value="CopperPatchPanel">Copper Patch Panel</SelectItem>
               <SelectItem value="Cassette">Cassette</SelectItem>
               <SelectItem value="Cable">Cable</SelectItem>
+              <SelectItem value={ComponentType.Transceiver}>{ComponentType.Transceiver}</SelectItem>
             </SelectContent>
           </Select>
           <FormMessage />
