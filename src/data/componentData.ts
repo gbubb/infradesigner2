@@ -1,4 +1,3 @@
-
 // Add the new imports
 import { 
   ComponentType, 
@@ -7,10 +6,11 @@ import {
   CopperPatchPanel,
   Cassette,
   Cable,
-  ConnectorType
+  ConnectorType,
+  Transceiver
 } from '../types/infrastructure';
 
-import { CableMediaType } from '../types/infrastructure';
+import { CableMediaType, MediaType, PortSpeed, TransceiverModel } from '../types/infrastructure';
 
 // Define empty templates for the missing arrays
 const serverTemplates: InfrastructureComponent[] = [];
@@ -19,6 +19,7 @@ const routerTemplates: InfrastructureComponent[] = [];
 const firewallTemplates: InfrastructureComponent[] = [];
 const diskTemplates: InfrastructureComponent[] = [];
 const gpuTemplates: InfrastructureComponent[] = [];
+const transceiverTemplates: Transceiver[] = [];
 
 // Add sample fiber patch panels
 export const fiberPatchPanelTemplates: FiberPatchPanel[] = [
@@ -103,9 +104,35 @@ export const cableTemplates: Cable[] = [
     mediaType: CableMediaType.CopperCat6a
   },
   {
+    id: 'cbl-sm-lc-10m',
+    type: ComponentType.Cable,
+    name: 'LC-LC SM Duplex Fiber Patch Cable - 10m',
+    manufacturer: 'Generic',
+    model: 'SM-LC-LC-10M',
+    cost: 15,
+    powerRequired: 0,
+    length: 10,
+    connectorA_Type: ConnectorType.LC,
+    connectorB_Type: ConnectorType.LC,
+    mediaType: CableMediaType.FiberSMDuplex
+  },
+  {
+    id: 'cbl-mm-lc-10m',
+    type: ComponentType.Cable,
+    name: 'LC-LC MM Duplex Fiber Patch Cable OM4 - 10m',
+    manufacturer: 'Generic',
+    model: 'MM-LC-LC-OM4-10M',
+    cost: 12,
+    powerRequired: 0,
+    length: 10,
+    connectorA_Type: ConnectorType.LC,
+    connectorB_Type: ConnectorType.LC,
+    mediaType: CableMediaType.FiberMMDuplex
+  },
+  {
     id: 'cbl-2',
     type: ComponentType.Cable,
-    name: 'MPO-12 Fiber Cable',
+    name: 'MPO-12 SM Fiber Cable - 5m',
     manufacturer: 'Corning',
     model: 'MPO-SM-5M',
     cost: 65,
@@ -118,7 +145,7 @@ export const cableTemplates: Cable[] = [
   {
     id: 'cbl-3',
     type: ComponentType.Cable,
-    name: 'SFP+ DAC Cable',
+    name: 'SFP+ DAC Cable - 3m',
     manufacturer: 'Cisco',
     model: 'SFP-H10GB-CU3M',
     cost: 45,
@@ -126,12 +153,13 @@ export const cableTemplates: Cable[] = [
     length: 3,
     connectorA_Type: ConnectorType.SFP,
     connectorB_Type: ConnectorType.SFP,
-    mediaType: CableMediaType.DACSFP
+    mediaType: CableMediaType.DACSFP,
+    speed: PortSpeed.Speed10G
   },
   {
     id: 'cbl-4',
     type: ComponentType.Cable,
-    name: 'QSFP+ DAC Cable',
+    name: 'QSFP+ DAC Cable - 3m',
     manufacturer: 'Mellanox',
     model: 'MC2210130-003',
     cost: 85,
@@ -139,7 +167,76 @@ export const cableTemplates: Cable[] = [
     length: 3,
     connectorA_Type: ConnectorType.QSFP,
     connectorB_Type: ConnectorType.QSFP,
-    mediaType: CableMediaType.DACQSFP
+    mediaType: CableMediaType.DACQSFP,
+    speed: PortSpeed.Speed40G
+  }
+];
+
+// Transceiver Templates
+export const transceiverTemplatesList: Transceiver[] = [
+  {
+    id: 'trn-sfp-10g-sr',
+    type: ComponentType.Transceiver,
+    name: 'SFP+ 10G SR Transceiver',
+    manufacturer: 'Generic',
+    model: 'SFP-10G-SR-G',
+    transceiverModel: TransceiverModel.SFP_10G_SR,
+    mediaTypeSupported: [MediaType.FiberMM],
+    connectorType: ConnectorType.SFP,
+    mediaConnectorType: ConnectorType.LC,
+    speed: PortSpeed.Speed10G,
+    maxDistanceMeters: 300,
+    cost: 20,
+    powerRequired: 1,
+    ruSize: 0
+  },
+  {
+    id: 'trn-sfp-10g-lr',
+    type: ComponentType.Transceiver,
+    name: 'SFP+ 10G LR Transceiver',
+    manufacturer: 'Generic',
+    model: 'SFP-10G-LR-G',
+    transceiverModel: TransceiverModel.SFP_10G_LR,
+    mediaTypeSupported: [MediaType.FiberSM],
+    connectorType: ConnectorType.SFP,
+    mediaConnectorType: ConnectorType.LC,
+    speed: PortSpeed.Speed10G,
+    maxDistanceMeters: 10000,
+    cost: 35,
+    powerRequired: 1.5,
+    ruSize: 0
+  },
+  {
+    id: 'trn-qsfp28-100g-sr4',
+    type: ComponentType.Transceiver,
+    name: 'QSFP28 100G SR4 Transceiver',
+    manufacturer: 'Generic',
+    model: 'QSFP28-100G-SR4-G',
+    transceiverModel: TransceiverModel.QSFP28_100G_SR4,
+    mediaTypeSupported: [MediaType.FiberMM],
+    connectorType: ConnectorType.QSFP,
+    mediaConnectorType: ConnectorType.MPO12,
+    speed: PortSpeed.Speed100G,
+    maxDistanceMeters: 100,
+    cost: 150,
+    powerRequired: 3.5,
+    ruSize: 0
+  },
+  {
+    id: 'trn-qsfp28-100g-lr4',
+    type: ComponentType.Transceiver,
+    name: 'QSFP28 100G LR4 Transceiver',
+    manufacturer: 'Generic',
+    model: 'QSFP28-100G-LR4-G',
+    transceiverModel: TransceiverModel.QSFP28_100G_LR4,
+    mediaTypeSupported: [MediaType.FiberSM],
+    connectorType: ConnectorType.QSFP,
+    mediaConnectorType: ConnectorType.LC,
+    speed: PortSpeed.Speed100G,
+    maxDistanceMeters: 10000,
+    cost: 250,
+    powerRequired: 4,
+    ruSize: 0
   }
 ];
 
@@ -154,7 +251,8 @@ export const allComponentTemplates: InfrastructureComponent[] = [
   ...fiberPatchPanelTemplates,
   ...copperPatchPanelTemplates,
   ...cassetteTemplates,
-  ...cableTemplates
+  ...cableTemplates,
+  ...transceiverTemplatesList
 ];
 
 // Export defaultComponents for use in componentLibrarySlice

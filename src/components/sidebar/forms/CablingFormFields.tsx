@@ -3,6 +3,7 @@ import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/for
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConnectorType } from '@/types/infrastructure';
+import { PortSpeed } from '@/types/infrastructure/port-types';
 
 interface CablingFormFieldsProps {
   register: any;
@@ -249,6 +250,34 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                     <SelectItem value={ConnectorType.LC}>LC</SelectItem>
                     <SelectItem value={ConnectorType.SFP}>SFP</SelectItem>
                     <SelectItem value={ConnectorType.QSFP}>QSFP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={register.control}
+            name="cableSpeed"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Speed (Optional - for DACs)</FormLabel>
+                <Select 
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    onSelectChange('cableSpeed', value);
+                  }}
+                  value={field.value || ''}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select speed if applicable" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">N/A</SelectItem>
+                    {Object.values(PortSpeed).map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </FormItem>

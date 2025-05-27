@@ -24,7 +24,8 @@ import {
   NetworkPortType, 
   SwitchRole,
   DiskType,
-  ConnectorType
+  ConnectorType,
+  TransceiverModel
 } from '@/types/infrastructure';
 import { PortSpeed, PortRole, MediaType } from '@/types/infrastructure/port-types';
 import { RouterFirewallFormFields } from '../forms/RouterFirewallFormFields';
@@ -36,6 +37,7 @@ import { ServerFields } from "./fields/ServerFields";
 import { SwitchFields } from "./fields/SwitchFields";
 import { RouterFirewallFields } from "./fields/RouterFirewallFields";
 import { CablingFields } from "./fields/CablingFields";
+import { OpticsFields } from "./fields/OpticsFields";
 
 const formSchema = z.object({
   type: z.nativeEnum(ComponentType),
@@ -96,7 +98,19 @@ const formSchema = z.object({
   cassetteCapacity: z.number().optional(),
   portQuantity: z.number().optional(),
   length: z.number().optional(),
-  portType: z.nativeEnum(ConnectorType).optional()
+  portType: z.nativeEnum(ConnectorType).optional(),
+  // Cable specific fields
+  connectorA_Type: z.nativeEnum(ConnectorType).optional(),
+  connectorB_Type: z.nativeEnum(ConnectorType).optional(),
+  mediaType: z.nativeEnum(MediaType).optional(),
+  cableSpeed: z.nativeEnum(PortSpeed).optional(),
+  // Transceiver specific fields
+  transceiverModel: z.nativeEnum(TransceiverModel).optional(),
+  mediaTypeSupported: z.array(z.nativeEnum(MediaType)).optional(),
+  transceiverConnectorType: z.nativeEnum(ConnectorType).optional(),
+  mediaConnectorType: z.nativeEnum(ConnectorType).optional(),
+  transceiverSpeed: z.nativeEnum(PortSpeed).optional(),
+  maxDistanceMeters: z.number().optional()
 });
 
 interface ComponentFormDialogProps {
@@ -192,7 +206,19 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       cassetteCapacity: formValues.cassetteCapacity || 12,
       portQuantity: formValues.portQuantity || 24,
       length: formValues.length || 3,
-      portType: formValues.portType || ConnectorType.RJ45
+      portType: formValues.portType || ConnectorType.RJ45,
+      // Cable specific defaults
+      connectorA_Type: formValues.connectorA_Type || ConnectorType.RJ45,
+      connectorB_Type: formValues.connectorB_Type || ConnectorType.RJ45,
+      mediaType: formValues.mediaType || MediaType.Copper,
+      cableSpeed: formValues.cableSpeed || undefined,
+      // Transceiver specific defaults
+      transceiverModel: formValues.transceiverModel || undefined,
+      mediaTypeSupported: formValues.mediaTypeSupported || [],
+      transceiverConnectorType: formValues.transceiverConnectorType || ConnectorType.SFP,
+      mediaConnectorType: formValues.mediaConnectorType || ConnectorType.LC,
+      transceiverSpeed: formValues.transceiverSpeed || PortSpeed.Speed10G,
+      maxDistanceMeters: formValues.maxDistanceMeters || 0
     },
     values: formValues,
   });
@@ -378,6 +404,11 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                   onInputChange={onInputChange}
                   onSelectChange={onSelectChange}
                 />
+              )}
+
+              {/* Optics/Transceiver fields */}
+              {formValues.type === ComponentType.Transceiver && (
+                <OpticsFields control={control} />
               )}
 
               {/* Disk fields */}
