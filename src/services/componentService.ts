@@ -68,8 +68,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
         const details = component.details ? 
           (typeof component.details === 'string' ? 
             JSON.parse(component.details) : component.details) : {};
-        
-        // Ensure we correctly assign ports array where present
+
         switch (component.type) {
           case ComponentType.Server:
             const memoryCapacity = details.memoryCapacity || details.memoryGB || 
@@ -169,6 +168,22 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               mediaType: details.mediaType || CableMediaType.CopperCat6a
             } as Cable;
 
+          case ComponentType.Transceiver:
+            // Extract all relevant optics fields
+            return {
+              ...baseComponent,
+              transceiverModel: details.transceiverModel,
+              mediaTypeSupported: details.mediaTypeSupported || [],
+              connectorType: details.connectorType,
+              mediaConnectorType: details.mediaConnectorType,
+              speed: details.speed,
+              maxDistanceMeters: details.maxDistanceMeters,
+              wavelengthNm: details.wavelengthNm,
+              ruSize: details.ruSize ?? 0,
+              // for placement
+              ...(details.placement ? { placement: details.placement } : {}),
+            };
+
           default:
             return {
               ...baseComponent,
@@ -235,7 +250,7 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
       Object.assign(specializedFields, rest);
     }
     
-    // Special handling for structured cabling components
+    // Special handling for structured cabling and optics
     switch (componentWithValidID.type) {
       case ComponentType.FiberPatchPanel:
         specializedFields.ruSize = (componentWithValidID as FiberPatchPanel).ruSize || 0;
@@ -255,6 +270,21 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
         specializedFields.connectorA_Type = cable.connectorA_Type || ConnectorType.RJ45;
         specializedFields.connectorB_Type = cable.connectorB_Type || ConnectorType.RJ45;
         specializedFields.mediaType = cable.mediaType || CableMediaType.CopperCat6a;
+        break;
+      case ComponentType.Transceiver:
+        // Carefully extract all optical property fields
+        specializedFields.transceiverModel = (componentWithValidID as any).transceiverModel;
+        specializedFields.mediaTypeSupported = (componentWithValidID as any).mediaTypeSupported || [];
+        specializedFields.connectorType = (componentWithValidID as any).connectorType;
+        specializedFields.mediaConnectorType = (componentWithValidID as any).mediaConnectorType;
+        specializedFields.speed = (componentWithValidID as any).speed;
+        specializedFields.maxDistanceMeters = (componentWithValidID as any).maxDistanceMeters;
+        specializedFields.wavelengthNm = (componentWithValidID as any).wavelengthNm;
+        specializedFields.ruSize = 0;
+        // for placement (optional)
+        if ((componentWithValidID as any).placement) {
+          specializedFields.placement = (componentWithValidID as any).placement;
+        }
         break;
     }
     
