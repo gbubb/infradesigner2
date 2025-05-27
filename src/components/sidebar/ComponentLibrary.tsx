@@ -10,7 +10,6 @@ import { ComponentLibraryHeader } from './components/ComponentLibraryHeader';
 import { ComponentCategory, ComponentType, InfrastructureComponent, componentTypeToCategory } from '@/types/infrastructure';
 import { useComponentsByType } from '@/hooks/design/useComponentsByType';
 import { v4 as uuidv4 } from 'uuid';
-import { ConnectorType, PortSpeed, CableMediaType } from '@/types/infrastructure';
 
 export const ComponentLibrary: React.FC = () => {
   const { 
@@ -73,65 +72,38 @@ export const ComponentLibrary: React.FC = () => {
   };
 
   const openEditDialog = (component: InfrastructureComponent) => {
-    // resetForm(); // Called by useComponentForm, avoid direct call if it clears RHF state too early
+    // First reset the form to clear any previous data
+    resetForm();
+    
+    // Then set the editing ID
     setEditingComponentId(component.id);
-
-    // Prepare formValues for react-hook-form initialization
-    // Map old prefixed names to new direct names if necessary for backwards compatibility
-    // and ensure all fields expected by the form are present.
-    const initialFormValues: any = {
-      ...component, // Spread the original component first
+    
+    // Extract placement values for form fields
+    const formValues = {
+      ...component,
       isDefault: component.isDefault || false,
       validRUStart: component.placement?.validRUStart || 1,
       validRUEnd: component.placement?.validRUEnd || 42,
       preferredRU: component.placement?.preferredRU || 1,
       preferredRack: component.placement?.preferredRack || 1,
-      ports: component.ports ?? [],
+      ports: component.ports ?? [], // Ensure ports is always set for type safety
     };
-
-    if (component.type === ComponentType.Transceiver) {
-      // Explicitly map fields for transceivers, handling potential old prefixed names
-      // The form and schema now expect direct names like 'speed', 'connectorType'.
-      initialFormValues.transceiverModel = component.transceiverModel || (component as any).transceiverModel;
-      initialFormValues.mediaTypeSupported = component.mediaTypeSupported || (component as any).mediaTypeSupported || [];
-      
-      // Handle mapping for connectorType (port-side for transceiver)
-      initialFormValues.connectorType = component.connectorType || (component as any).transceiverConnectorType || ConnectorType.SFP;
-      
-      initialFormValues.mediaConnectorType = component.mediaConnectorType || ConnectorType.LC;
-      
-      // Handle mapping for speed
-      initialFormValues.speed = component.speed || (component as any).transceiverSpeed || PortSpeed.Speed10G;
-      
-      initialFormValues.maxDistanceMeters = component.maxDistanceMeters || (component as any).maxDistanceMeters || 0;
-      initialFormValues.wavelengthNm = component.wavelengthNm || (component as any).wavelengthNm;
-      initialFormValues.ruSize = 0; // Transceivers always 0 RU
-    }
-    // Add similar mapping for other component types if their form fields were renamed
-    // For Cable, ensure its specific fields are correctly passed if schema changed:
-    if (component.type === ComponentType.Cable) {
-        initialFormValues.connectorA_Type = component.connectorA_Type || ConnectorType.RJ45;
-        initialFormValues.connectorB_Type = component.connectorB_Type || ConnectorType.RJ45;
-        initialFormValues.mediaType = component.mediaType || CableMediaType.CopperCat6a; // CableMediaType
-        initialFormValues.cableSpeed = component.cableSpeed || (component as any).speed || undefined; // map cable's own speed
-        initialFormValues.length = component.length || 0;
-    }
-
-    console.log('Setting initial form values for editing (after mapping):', initialFormValues);
-    setComponentForm(initialFormValues); 
+    
+    // Log form values being set
+    console.log('Setting form values for editing:', formValues);
+    
+    // Set the component form with the extracted values
+    setComponentForm(formValues);
     setIsEditDialogOpen(true);
   };
 
-  // Updated to accept data from the form
-  const handleAddComponent = (submittedData: any) => { 
-    // The `validateForm()` call might be redundant if RHF + Zod handles all validation prior to this point.
-    // if (!validateForm()) return; // validateForm was likely operating on the stale componentForm state.
+  const handleAddComponent = () => {
+    if (!validateForm()) return;
     
-    console.log('Data received by handleAddComponent:', submittedData);
+    console.log('Form before processing:', componentForm);
 
-    // Process the form for submission - consolidating placement fields, etc.
-    // Crucially, use the submittedData from react-hook-form, not the old componentForm state.
-    const componentToSave = processFormForSubmission(submittedData);
+    // Process the form for submission - consolidating placement fields
+    const componentToSave = processFormForSubmission(componentForm);
     
     // Ensure ID is always set for new components but not for edits
     if (!editingComponentId) {

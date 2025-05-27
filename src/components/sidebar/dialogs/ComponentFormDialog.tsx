@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -123,7 +123,7 @@ interface ComponentFormDialogProps {
   onTypeChange: (value: string) => void;
   onSwitchChange: (checked: boolean) => void;
   onCancel: () => void;
-  onSubmit: (data: z.infer<typeof formSchema>) => void;
+  onSubmit: () => void;
   isEditing: boolean;
   addPort: () => void;
   removePort: (index: number) => void;
@@ -161,10 +161,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-  });
-
-  useEffect(() => {
-    const defaults = {
+    defaultValues: {
       type: formValues.type || ComponentType.Server,
       name: formValues.name || '',
       manufacturer: formValues.manufacturer || '',
@@ -211,20 +208,25 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       portQuantity: formValues.portQuantity || 24,
       length: formValues.length || 3,
       portType: formValues.portType || ConnectorType.RJ45,
+      // Cable specific defaults
       connectorA_Type: formValues.connectorA_Type || ConnectorType.RJ45,
       connectorB_Type: formValues.connectorB_Type || ConnectorType.RJ45,
       mediaType: formValues.mediaType || CableMediaType.CopperCat6a,
       cableSpeed: formValues.cableSpeed || undefined,
+      // Transceiver specific defaults - using direct field names from Transceiver interface
       transceiverModel: formValues.transceiverModel || undefined,
       mediaTypeSupported: formValues.mediaTypeSupported || [],
+      // For Transceiver, 'connectorType' is its port-side connector, 'speed' is its speed.
+      // These will be conditionally relevant based on formValues.type when form loads.
+      // Ensure these don't clash with *other* components' 'connectorType' or 'speed' if formValues is flat.
+      // The schema has these as distinct now (e.g. cassette 'portType', switch 'portSpeedType').
       connectorType: formValues.type === ComponentType.Transceiver ? (formValues.connectorType || ConnectorType.SFP) : (formValues.portType || ConnectorType.RJ45),
       mediaConnectorType: formValues.mediaConnectorType || ConnectorType.LC,
       speed: formValues.type === ComponentType.Transceiver ? (formValues.speed || PortSpeed.Speed10G) : (formValues.portSpeedType || PortSpeed.Speed10G),
-      maxDistanceMeters: formValues.maxDistanceMeters || 0,
-      ports: formValues.ports || []
-    };
-    form.reset(defaults);
-  }, [formValues, form, maxRackUnits]);
+      maxDistanceMeters: formValues.maxDistanceMeters || 0
+    },
+    values: formValues,
+  });
 
   const getDefaultPrefix = (type: string) => {
     switch(type) {
@@ -243,24 +245,10 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   };
 
   const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
-    console.log("Form data validated and submitted:", data);
-    onSubmit(data);
+    onSubmit();
   };
 
-  const handleFormSubmitError = (errors: any) => {
-    console.error("Form validation errors:", errors);
-    // You could add a toast notification here to inform the user
-    // toast.error("Please correct the errors in the form.");
-  };
-
-  const { control, formState } = form;
-
-  // Log errors when they change
-  useEffect(() => {
-    if (Object.keys(formState.errors).length > 0) {
-      console.log("Current RHF validation errors:", formState.errors);
-    }
-  }, [formState.errors]);
+  const { control } = form;
 
   // --- BULK PORT ADDITION UI/LOGIC ---
   const [bulkPort, setBulkPort] = useState({
@@ -326,7 +314,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
         </DialogHeader>
         <ScrollArea className="max-h-[calc(90vh-8rem)] px-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFormSubmit, handleFormSubmitError)} className="space-y-4 py-4">
+            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
               {/* Basic Component Information Section */}
               <BasicInfoFields
                 control={control}
@@ -661,9 +649,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
           <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">
-            {isEditing ? 'Update' : 'Save'}
-          </Button>
+          <Button type="submit" onClick={onSubmit}>{isEditing ? 'Update' : 'Save'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

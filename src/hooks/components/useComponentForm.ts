@@ -70,14 +70,6 @@ export const useComponentForm = () => {
     diskType: '',
     // New: detailed network ports
     ports: [],
-    // Add: transceiver/optics-specific default fields!
-    transceiverModel: undefined,
-    mediaTypeSupported: [],
-    connectorType: undefined,
-    mediaConnectorType: undefined,
-    speed: undefined,
-    maxDistanceMeters: 0,
-    wavelengthNm: undefined,
   };
   
   const [componentForm, setComponentForm] = useState<ComponentFormValues>({...defaultFormState});
@@ -227,67 +219,20 @@ export const useComponentForm = () => {
       ...(placement ? { placement } : {}), // Only add placement if it exists
     };
 
-    // --- PATCH: For Transceivers, persist all optical properties ---
-    let processed = { ...form };
-
-    if (form.type === ComponentType.Transceiver) {
-      processed = {
-        ...processed,
-        transceiverModel: form.transceiverModel,
-        mediaTypeSupported: form.mediaTypeSupported,
-        connectorType: form.connectorType,
-        mediaConnectorType: form.mediaConnectorType,
-        speed: form.speed,
-        maxDistanceMeters: form.maxDistanceMeters,
-        wavelengthNm: form.wavelengthNm,
-        // ruSize should always be 0 for transceivers
-        ruSize: 0,
-      };
+    // Remove irrelevant port fields for Cable type:
+    if (component.type === "Cable") {
+      delete component.ports;
     }
-
-    // Remove port stuff for cables (keep existing code)
-    if (processed.type === "Cable") {
-      delete processed.ports;
-    }
-
+    
     // Remove temporary placement fields
-    delete processed.validRUStart;
-    delete processed.validRUEnd;
-    delete processed.preferredRU;
-    delete processed.preferredRack;
-
-    // Optionally: ensure no stray undefined fields in backend
-    Object.keys(processed).forEach(key => {
-      if (processed[key] === undefined) delete processed[key];
-    });
-
-    console.log('Processed component:', processed);
-    return processed;
+    delete component.validRUStart;
+    delete component.validRUEnd;
+    delete component.preferredRU;
+    delete component.preferredRack;
+    
+    console.log('Processed component:', component);
+    return component;
   };
-
-  // Fix: hydrate form for editing an existing transceiver
-  function hydrateFormForEdit(component: any) {
-    if (!component) return { ...defaultFormState };
-    let hydrated = { ...defaultFormState, ...component };
-
-    if (component.type === ComponentType.Transceiver) {
-      hydrated = {
-        ...hydrated,
-        transceiverModel: component.transceiverModel,
-        mediaTypeSupported: component.mediaTypeSupported || [],
-        connectorType: component.connectorType,
-        mediaConnectorType: component.mediaConnectorType,
-        speed: component.speed,
-        maxDistanceMeters: component.maxDistanceMeters,
-        wavelengthNm: component.wavelengthNm,
-        ruSize: 0,
-      };
-    }
-    return hydrated;
-  }
-
-  // Export this helper if needed by consuming dialog components (optional)
-  // Otherwise incorporate in-place. Usage not currently shown but ready if needed.
 
   // Close dialogs and reset form properly
   const handleCloseAddDialog = () => {
