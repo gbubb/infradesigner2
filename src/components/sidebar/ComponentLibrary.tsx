@@ -10,6 +10,78 @@ import { ComponentLibraryHeader } from './components/ComponentLibraryHeader';
 import { ComponentCategory, ComponentType, InfrastructureComponent, componentTypeToCategory } from '@/types/infrastructure';
 import { useComponentsByType } from '@/hooks/design/useComponentsByType';
 import { v4 as uuidv4 } from 'uuid';
+import * as z from 'zod';
+import { 
+  ServerRole, 
+  DiskSlotType, 
+  NetworkPortType, 
+  SwitchRole,
+  DiskType,
+  ConnectorType,
+  TransceiverModel,
+  CableMediaType
+} from '@/types/infrastructure';
+import { PortSpeed, MediaType } from '@/types/infrastructure/port-types';
+
+// Define the form schema type for the data argument, mirroring ComponentFormDialog
+const formSchema = z.object({
+  type: z.nativeEnum(ComponentType),
+  name: z.string().min(2),
+  manufacturer: z.string().min(2),
+  model: z.string().min(2),
+  cost: z.number(),
+  powerRequired: z.number(),
+  isDefault: z.boolean(),
+  namingPrefix: z.string().optional(),
+  validRUStart: z.number().optional(),
+  validRUEnd: z.number().optional(),
+  preferredRU: z.number().optional(),
+  preferredRack: z.number().optional(),
+  serverRole: z.nativeEnum(ServerRole).optional(),
+  cpuModel: z.string().optional(),
+  cpuCount: z.number().optional(),
+  cpuSockets: z.number().optional(),
+  cpuCoresPerSocket: z.number().optional(),
+  memoryCapacity: z.number().optional(),
+  diskSlotType: z.nativeEnum(DiskSlotType).optional(),
+  diskSlotQuantity: z.number().optional(),
+  ruSize: z.number().optional(),
+  networkPortType: z.nativeEnum(NetworkPortType).optional(),
+  portsConsumedQuantity: z.number().optional(),
+  switchRole: z.nativeEnum(SwitchRole).optional(),
+  portCount: z.number().optional(),
+  portSpeed: z.string().optional(),
+  portSpeedType: z.nativeEnum(PortSpeed).optional(),
+  portsProvidedQuantity: z.number().optional(),
+  layer: z.number().optional(),
+  capacityTB: z.number().optional(),
+  formFactor: z.string().optional(),
+  interface: z.string().optional(),
+  diskType: z.nativeEnum(DiskType).optional(),
+  rpm: z.number().optional(),
+  iops: z.number().optional(),
+  readSpeed: z.number().optional(),
+  writeSpeed: z.number().optional(),
+  throughput: z.number().optional(),
+  connectionPerSecond: z.number().optional(),
+  concurrentConnections: z.number().optional(),
+  features: z.array(z.string()).optional(),
+  supportedProtocols: z.array(z.string()).optional(),
+  cassetteCapacity: z.number().optional(),
+  portQuantity: z.number().optional(),
+  length: z.number().optional(),
+  portType: z.nativeEnum(ConnectorType).optional(),
+  connectorA_Type: z.nativeEnum(ConnectorType).optional(),
+  connectorB_Type: z.nativeEnum(ConnectorType).optional(),
+  mediaType: z.nativeEnum(CableMediaType).optional(),
+  cableSpeed: z.nativeEnum(PortSpeed).optional(),
+  transceiverModel: z.nativeEnum(TransceiverModel).optional(),
+  mediaTypeSupported: z.array(z.nativeEnum(MediaType)).optional(),
+  connectorType: z.nativeEnum(ConnectorType).optional(),
+  mediaConnectorType: z.nativeEnum(ConnectorType).optional(),
+  speed: z.nativeEnum(PortSpeed).optional(),
+  maxDistanceMeters: z.number().optional(),
+});
 
 export const ComponentLibrary: React.FC = () => {
   const { 
@@ -97,13 +169,16 @@ export const ComponentLibrary: React.FC = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleAddComponent = () => {
-    if (!validateForm()) return;
-    
-    console.log('Form before processing:', componentForm);
+  const handleAddComponent = (data: z.infer<typeof formSchema>) => {
+    console.log('Form data received for processing:', data);
 
     // Process the form for submission - consolidating placement fields
-    const componentToSave = processFormForSubmission(componentForm);
+    const processedData = {
+      ...data,
+      ports: componentForm.ports,
+    }
+
+    const componentToSave = processFormForSubmission(processedData as any);
     
     // Ensure ID is always set for new components but not for edits
     if (!editingComponentId) {

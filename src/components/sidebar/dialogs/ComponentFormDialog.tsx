@@ -123,7 +123,7 @@ interface ComponentFormDialogProps {
   onTypeChange: (value: string) => void;
   onSwitchChange: (checked: boolean) => void;
   onCancel: () => void;
-  onSubmit: () => void;
+  onSubmit: (data: z.infer<typeof formSchema>) => void;
   isEditing: boolean;
   addPort: () => void;
   removePort: (index: number) => void;
@@ -245,7 +245,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   };
 
   const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
-    onSubmit();
+    onSubmit(data);
   };
 
   const { control } = form;
@@ -314,7 +314,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
         </DialogHeader>
         <ScrollArea className="max-h-[calc(90vh-8rem)] px-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
+            <form onSubmit={form.handleSubmit(handleFormSubmit)} id="component-form" className="space-y-4 py-4">
               {/* Basic Component Information Section */}
               <BasicInfoFields
                 control={control}
@@ -649,7 +649,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
           <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" onClick={onSubmit}>{isEditing ? 'Update' : 'Save'}</Button>
+          <Button type="submit" form="component-form">{isEditing ? 'Update' : 'Save'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
