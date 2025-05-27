@@ -92,6 +92,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
     targetAZId: rule?.targetAZId || '',
     connectionPattern: rule?.connectionPattern || ConnectionPattern.ConnectToEachTarget,
     numberOfTargets: rule?.numberOfTargets || 1,
+    connectionsPerPair: rule?.connectionsPerPair || 1,
     cableId: rule?.cableId || '',
     enabled: rule?.enabled ?? true,
     maxConnections: rule?.maxConnections,
@@ -231,6 +232,23 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
                 setFormData(prev => ({
                   ...prev,
                   numberOfTargets: Number(e.target.value) || 1,
+                }))
+              }
+            />
+          </div>
+        )}
+        {formData.connectionPattern === ConnectionPattern.ConnectToEachTarget && (
+          <div>
+            <Label htmlFor="connectionsPerPair">Connections Per Target Pair</Label>
+            <Input
+              id="connectionsPerPair"
+              type="number"
+              min={1}
+              value={formData.connectionsPerPair || 1}
+              onChange={e =>
+                setFormData(prev => ({
+                  ...prev,
+                  connectionsPerPair: Number(e.target.value) || 1,
                 }))
               }
             />

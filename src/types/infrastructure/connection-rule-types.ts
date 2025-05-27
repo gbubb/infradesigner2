@@ -39,6 +39,7 @@ export interface ConnectionRule {
   targetAZId?: string;
   connectionPattern: ConnectionPattern;
   numberOfTargets?: number;
+  connectionsPerPair?: number;
   cableId?: string;
   enabled: boolean;
   maxConnections?: number;

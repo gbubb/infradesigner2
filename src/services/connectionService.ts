@@ -288,43 +288,51 @@ export function generateConnections(
         return;
       }
 
-      let connectionsMadeForThisSrcDevice = 0;
-      const connectedToTargetIdsForThisSrcDevice = new Set<string>();
+      let connectionsMadeForThisSrcDeviceOverall = 0; // Renamed for clarity
+      // const connectedToTargetIdsForThisSrcDevice = new Set<string>(); // This set might need rethinking for multiple connections to the same target.
 
       // Determine N based on rule
-      let numTargetsToConnectForRule = 1; // Default: connect to one target
+      let numTargetsToConnectForRule = 1; 
       if (rule.connectionPattern === ConnectionPattern.ConnectToEachTarget) {
-        numTargetsToConnectForRule = targets.length; 
+        numTargetsToConnectForRule = targets.length;
       } else if (rule.connectionPattern === ConnectionPattern.ConnectToNTargets && rule.numberOfTargets && rule.numberOfTargets > 0) {
         numTargetsToConnectForRule = rule.numberOfTargets;
       }
-      // Max connections for this device is also limited by its available ports or rule.maxConnections
-      const maxConnectionsForSrcDevice = Math.min(
-        availableSrcPorts.length, 
-        numTargetsToConnectForRule,
+      
+      const maxOverallConnectionsForSrc = Math.min(
+        availableSrcPorts.length,
+        (rule.connectionPattern === ConnectionPattern.ConnectToEachTarget && rule.connectionsPerPair) 
+          ? targets.length * rule.connectionsPerPair 
+          : numTargetsToConnectForRule, // For ConnectToNTargets, this is the N targets (1 connection each)
         rule.maxConnections || Infinity
       );
+      
+      // Create a mutable list of available source ports for this srcDevice
+      let mutableAvailableSrcPorts = [...availableSrcPorts];
 
-      for (const srcPort of availableSrcPorts) {
-        if (connectionsMadeForThisSrcDevice >= maxConnectionsForSrcDevice) {
-          break; // Source device has made all its required connections for this rule
-        }
-        if (usedSrcPorts.has(`${srcDevice.id}:${srcPort.id}`)) {
-            continue; // Should be redundant due to initial filter, but good practice
-        }
+      for (const targetDevice of targets) {
+        if (srcDevice.id === targetDevice.id) continue;
 
-        let connectionMadeForThisSrcPort = false;
+        let connectionsMadeForThisPair = 0;
+        const desiredConnectionsForThisPair = (rule.connectionPattern === ConnectionPattern.ConnectToEachTarget && rule.connectionsPerPair)
+          ? rule.connectionsPerPair
+          : 1; // For other patterns, or if connectionsPerPair is not set, assume 1
 
-        for (const targetDevice of targets) {
-          if (srcDevice.id === targetDevice.id) continue; // Cannot connect to self
-          if (connectedToTargetIdsForThisSrcDevice.has(targetDevice.id)) continue; // Already connected to this target by this source device
+        // Try to make 'desiredConnectionsForThisPair' connections between srcDevice and targetDevice
+        for (let pairAttempt = 0; pairAttempt < desiredConnectionsForThisPair; pairAttempt++) {
+          if (connectionsMadeForThisSrcDeviceOverall >= maxOverallConnectionsForSrc) {
+            break; // Overall limit for this source device reached
+          }
+          if (mutableAvailableSrcPorts.length === 0) {
+            break; // No more source ports on this device
+          }
 
           const srcPlace = rackPlacement[srcDevice.id] || {};
           const dstPlace = rackPlacement[targetDevice.id] || {};
           const srcRack = (rackprofiles || []).find((r) => r.id === srcPlace.rackId) as RackProfile | undefined;
           const dstRack = (rackprofiles || []).find((r) => r.id === dstPlace.rackId) as RackProfile | undefined;
 
-          // AZ Scope Check
+          // AZ Scope Check (moved inside pairAttempt loop as it's per-connection)
           if (rule.azScope === 'SameAZ') {
             if (!srcRack || !dstRack || srcRack.availabilityZoneId !== dstRack.availabilityZoneId) {
               connectionAttempts.push({
@@ -332,154 +340,192 @@ export function generateConnections(
                 ruleName: rule.name,
                 sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
                 sourceDeviceId: srcDevice.id,
-                sourcePortId: srcPort.id,
+                // sourcePortId: srcPort.id, // srcPort not yet selected for this attempt
                 targetDeviceName: getDeviceName(allDevices, targetDevice.id),
                 targetDeviceId: targetDevice.id,
                 status: "Skipped",
-                reason: `Target device in different AZ (Source AZ: ${srcRack?.availabilityZoneId || 'N/A'}, Target AZ: ${dstRack?.availabilityZoneId || 'N/A'}). Rule requires same AZ.`,
+                reason: `Target device in different AZ (Source AZ: ${srcRack?.availabilityZoneId || 'N/A'}, Target AZ: ${dstRack?.availabilityZoneId || 'N/A'}). Rule requires same AZ. Pair attempt ${pairAttempt + 1}.`,
               });
-              continue; // Skip to next targetDevice
+              continue; // Try next pairAttempt or next target
             }
           }
-          // Add other scope checks here if necessary, e.g., 'DifferentAZ', 'SameRack'
+          
+          let currentSrcPort: Port | undefined = undefined;
+          let currentDstPort: Port | undefined = undefined;
+          let foundPortPairThisAttempt = false;
 
-          const availableDstPorts = filterPorts(targetDevice, rule.targetPortCriteria)
-            .filter(p => !usedDstPorts.has(`${targetDevice.id}:${p.id}`) && !p.connectedToDeviceId);
-
-          if (!availableDstPorts.length) {
-            // No available ports on this specific target, try next target for this srcPort
-            // Log this attempt if desired, but it's not a failure of the srcPort yet
-            continue; 
-          }
-
-          for (const dstPort of availableDstPorts) {
-            if (usedDstPorts.has(`${targetDevice.id}:${dstPort.id}`)) {
-                continue; // Should be redundant, but good practice
+          // Iterate through available source ports for this specific connection attempt
+          for (let i = 0; i < mutableAvailableSrcPorts.length; i++) {
+            const candidateSrcPort = mutableAvailableSrcPorts[i]; 
+            if (usedSrcPorts.has(`${srcDevice.id}:${candidateSrcPort.id}`)) {
+                continue; 
             }
 
-            const lengthMeters = estimateCableLength(
-              { deviceId: srcDevice.id, ruPosition: srcPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
-              srcRack,
-              { deviceId: targetDevice.id, ruPosition: dstPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
-              dstRack
-            );
-            const cable = findCableForPorts_optimized(cableLookup, srcPort, dstPort);
+            const availableDstPorts = filterPorts(targetDevice, rule.targetPortCriteria)
+              .filter(p => !usedDstPorts.has(`${targetDevice.id}:${p.id}`) && !p.connectedToDeviceId);
 
-            if (cable) {
-              // Transceiver logic (simplified, assuming it stays largely the same)
-              let transceiverSourceModel: TransceiverModel | undefined;
-              let transceiverDestinationModel: TransceiverModel | undefined;
-              let srcTrans: Transceiver | undefined;
-              let dstTrans: Transceiver | undefined;
-              if (
-                [MediaType.FiberSM, MediaType.FiberMM].includes(srcPort.mediaType) ||
-                [MediaType.FiberSM, MediaType.FiberMM].includes(dstPort.mediaType)
-              ) {
-                srcTrans = findTransceiverForPort(transceivers, srcPort, lengthMeters);
-                dstTrans = findTransceiverForPort(transceivers, dstPort, lengthMeters);
-                transceiverSourceModel = srcTrans?.transceiverModel;
-                transceiverDestinationModel = dstTrans?.transceiverModel;
-                if (!srcTrans) {
-                  connectionAttempts.push({
-                    ruleId: rule.id,
-                    ruleName: rule.name,
-                    sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
-                    sourceDeviceId: srcDevice.id,
-                    sourcePortId: srcPort.id,
-                    targetDeviceName: getDeviceName(allDevices, targetDevice.id),
-                    targetDeviceId: targetDevice.id,
-                    targetPortId: dstPort.id,
-                    status: "Failed",
-                    reason: "No compatible transceiver for source port.",
-                  });
+            if (!availableDstPorts.length) {
+              // No destination ports available on this targetDevice for any of its ports
+              // This means this targetDevice cannot be connected to *at all* by any remaining srcPort
+              // So, we might as well break the outer loop for this targetDevice if no connections made yet.
+              // However, if some connections were made to this pair, we continue to try *other* srcPorts.
+              // For now, just note no dst ports for *this* srcPort.
+              continue; // Try next srcPort
+            }
+            
+            // Iterate through available destination ports
+            for (const dstPort of availableDstPorts) {
+              if (usedDstPorts.has(`${targetDevice.id}:${dstPort.id}`)) {
                   continue;
-                }
-                if (!dstTrans) {
-                  connectionAttempts.push({
-                    ruleId: rule.id,
-                    ruleName: rule.name,
-                    sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
-                    sourceDeviceId: srcDevice.id,
-                    sourcePortId: srcPort.id,
-                    targetDeviceName: getDeviceName(allDevices, targetDevice.id),
-                    targetDeviceId: targetDevice.id,
-                    targetPortId: dstPort.id,
-                    status: "Failed",
-                    reason: "No compatible transceiver for target port.",
-                  });
-                  continue;
-                }
               }
-              // Connection succeeded!
-              const connection: NetworkConnection = {
-                id: `${srcDevice.id}-${srcPort.id}__${targetDevice.id}-${dstPort.id}`,
-                sourceDeviceId: srcDevice.id,
-                sourcePortId: srcPort.id,
-                destinationDeviceId: targetDevice.id,
-                destinationPortId: dstPort.id,
-                cableTemplateId: cable?.id,
-                lengthMeters,
-                mediaType: cable?.mediaType,
-                speed: srcPort.speed,
-                transceiverSourceModel,
-                transceiverDestinationModel,
-                status: "planned",
-              };
-              connectionAttempts.push({
+
+              const lengthMeters = estimateCableLength(
+                { deviceId: srcDevice.id, ruPosition: srcPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
+                srcRack,
+                { deviceId: targetDevice.id, ruPosition: dstPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
+                dstRack
+              );
+              const cable = findCableForPorts_optimized(cableLookup, candidateSrcPort, dstPort);
+
+              if (cable) {
+                // Transceiver logic (simplified)
+                let transceiverSourceModel: TransceiverModel | undefined;
+                let transceiverDestinationModel: TransceiverModel | undefined;
+                let srcTrans: Transceiver | undefined;
+                let dstTrans: Transceiver | undefined;
+                if (
+                  [MediaType.FiberSM, MediaType.FiberMM].includes(candidateSrcPort.mediaType) ||
+                  [MediaType.FiberSM, MediaType.FiberMM].includes(dstPort.mediaType)
+                ) {
+                  srcTrans = findTransceiverForPort(transceivers, candidateSrcPort, lengthMeters);
+                  dstTrans = findTransceiverForPort(transceivers, dstPort, lengthMeters);
+                  transceiverSourceModel = srcTrans?.transceiverModel;
+                  transceiverDestinationModel = dstTrans?.transceiverModel;
+                  if (!srcTrans) {
+                    connectionAttempts.push({
+                      ruleId: rule.id,
+                      ruleName: rule.name,
+                      sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
+                      sourceDeviceId: srcDevice.id,
+                      sourcePortId: candidateSrcPort.id,
+                      targetDeviceName: getDeviceName(allDevices, targetDevice.id),
+                      targetDeviceId: targetDevice.id,
+                      targetPortId: dstPort.id,
+                      status: "Failed",
+                      reason: "No compatible transceiver for source port.",
+                    });
+                    continue; // to next dstPort, or if no more dstPorts, to next candidateSrcPort
+                  }
+                  if (!dstTrans) {
+                    connectionAttempts.push({
+                      ruleId: rule.id,
+                      ruleName: rule.name,
+                      sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
+                      sourceDeviceId: srcDevice.id,
+                      sourcePortId: candidateSrcPort.id,
+                      targetDeviceName: getDeviceName(allDevices, targetDevice.id),
+                      targetDeviceId: targetDevice.id,
+                      targetPortId: dstPort.id,
+                      status: "Failed",
+                      reason: "No compatible transceiver for target port.",
+                    });
+                    continue; // to next dstPort, or if no more dstPorts, to next candidateSrcPort
+                  }
+                }
+                // Connection succeeded for this srcPort and dstPort!
+                currentSrcPort = candidateSrcPort;
+                currentDstPort = dstPort;
+                foundPortPairThisAttempt = true;
+
+                const connection: NetworkConnection = {
+                  id: `${srcDevice.id}-${currentSrcPort.id}__${targetDevice.id}-${currentDstPort.id}-${connectionsMadeForThisPair}`, // Ensure unique ID per pair connection
+                  sourceDeviceId: srcDevice.id,
+                  sourcePortId: currentSrcPort.id,
+                  destinationDeviceId: targetDevice.id,
+                  destinationPortId: currentDstPort.id,
+                  cableTemplateId: cable?.id,
+                  lengthMeters,
+                  mediaType: cable?.mediaType,
+                  speed: currentSrcPort.speed,
+                  transceiverSourceModel, // From transceiver logic
+                  transceiverDestinationModel, // From transceiver logic
+                  status: "planned",
+                };
+                connectionAttempts.push({
+                  ruleId: rule.id,
+                  ruleName: rule.name,
+                  sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
+                  sourceDeviceId: srcDevice.id,
+                  sourcePortId: currentSrcPort.id,
+                  targetDeviceName: getDeviceName(allDevices, targetDevice.id),
+                  targetDeviceId: targetDevice.id,
+                  targetPortId: currentDstPort.id,
+                  status: "Success",
+                  reason: `Connection ${connectionsMadeForThisPair + 1} of ${desiredConnectionsForThisPair} for pair established.`,
+                  connection,
+                });
+                usedSrcPorts.add(`${srcDevice.id}:${currentSrcPort.id}`);
+                usedDstPorts.add(`${targetDevice.id}:${currentDstPort.id}`);
+                
+                // Remove the used source port from the mutable list for this srcDevice
+                mutableAvailableSrcPorts.splice(i, 1);
+                
+                connectionsMadeForThisPair++;
+                connectionsMadeForThisSrcDeviceOverall++;
+                break; // Found a dstPort, break from dstPort loop for this srcPort
+              } else {
+                // Log attempt if no cable, but don't push to main attempts unless it's the final verdict for the pair
+              }
+            } // End DstPort loop
+
+            if (foundPortPairThisAttempt) {
+              break; // Found a pair, break from srcPort loop for this pairAttempt
+            }
+          } // End SrcPort loop (iterating mutableAvailableSrcPorts)
+
+          if (!foundPortPairThisAttempt) {
+             // If after trying all available srcPorts, no connection was made for *this pairAttempt*
+            connectionAttempts.push({
                 ruleId: rule.id,
                 ruleName: rule.name,
                 sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
                 sourceDeviceId: srcDevice.id,
-                sourcePortId: srcPort.id,
+                // No specific srcPort to list if none worked for this pair attempt
                 targetDeviceName: getDeviceName(allDevices, targetDevice.id),
                 targetDeviceId: targetDevice.id,
-                targetPortId: dstPort.id,
-                status: "Success",
-                reason: "Connection established.",
-                connection,
-              });
-              usedSrcPorts.add(`${srcDevice.id}:${srcPort.id}`);
-              usedDstPorts.add(`${targetDevice.id}:${dstPort.id}`);
-              connectedToTargetIdsForThisSrcDevice.add(targetDevice.id);
-              connectionsMadeForThisSrcDevice++;
-              connectionMadeForThisSrcPort = true;
-              break; // DstPort loop (this srcPort found a connection)
-            } else {
-              connectionAttempts.push({
-                ruleId: rule.id,
-                ruleName: rule.name,
-                sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
-                sourceDeviceId: srcDevice.id,
-                sourcePortId: srcPort.id,
-                targetDeviceName: getDeviceName(allDevices, targetDevice.id),
-                targetDeviceId: targetDevice.id,
-                targetPortId: dstPort.id,
                 status: "Failed",
-                reason: "No compatible cable component found in library.", // Or other reason like no transceiver
-              });
-            } // End if cable
-          } // End DstPort loop
-
-          if (connectionMadeForThisSrcPort) {
-            break; // TargetDevice loop (this srcPort is done, move to next srcPort for this srcDevice)
+                reason: `Could not establish connection ${connectionsMadeForThisPair + 1} of ${desiredConnectionsForThisPair} for pair ${getDeviceName(allDevices, srcDevice.id)} to ${getDeviceName(allDevices, targetDevice.id)}. No suitable port pair or cable.`,
+            });
+            break; // Break from pairAttempt loop for this targetDevice, cannot make more connections to this pair
           }
-        } // End TargetDevice loop
+        } // End pairAttempt loop (for desiredConnectionsForThisPair)
+        
+        // After trying to make all desired connections for this srcDevice-targetDevice pair:
+        if (connectionsMadeForThisPair < desiredConnectionsForThisPair && rule.connectionPattern === ConnectionPattern.ConnectToEachTarget) {
+            // Log if not all desired connections for *this specific pair* could be made.
+            // This is more of an "Info" or "Skipped" for the remaining count, rather than a hard "Failed" for the rule.
+            // The individual failed attempts are logged above.
+        }
 
-        if (!connectionMadeForThisSrcPort && connectionsMadeForThisSrcDevice < maxConnectionsForSrcDevice) {
-          // This srcPort could not find any suitable distinct target to connect to.
-          // Log this as a specific type of failure if needed.
-          connectionAttempts.push({
+      } // End TargetDevice loop
+      
+      // Logging for overall source device connections
+      if (connectionsMadeForThisSrcDeviceOverall === 0 && availableSrcPorts.length > 0) {
+         connectionAttempts.push({
             ruleId: rule.id,
             ruleName: rule.name,
             sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
             sourceDeviceId: srcDevice.id,
-            sourcePortId: srcPort.id,
-            status: "Failed",
-            reason: `Src port could not establish a required connection to a distinct available target. Wanted ${maxConnectionsForSrcDevice} for device, made ${connectionsMadeForThisSrcDevice}.`,
+            status: "Info",
+            reason: `Source device ${getDeviceName(allDevices, srcDevice.id)} could not establish any connections despite having available ports and matching targets. Check target port availability or specific rule constraints (e.g., AZ).`,
           });
-        }
-      } // End SrcPort loop for this SrcDevice
+      } else if (connectionsMadeForThisSrcDeviceOverall < maxOverallConnectionsForSrc && connectionsMadeForThisSrcDeviceOverall > 0) {
+        // Some connections made, but not all possible/max. This is often normal.
+        // Potentially add an info log if verbose logging is desired.
+      }
+
     }); // End Sources loop
   }); // End Rules loop
   return connectionAttempts;
 }
+
