@@ -151,6 +151,16 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   removePort,
   updatePort
 }) => {
+  // --- ADDED LOG --- 
+  console.log('[ComponentFormDialog] Render/Re-render', { 
+    isOpen, 
+    isEditing, 
+    formValuesType: formValues?.type,
+    // Avoid logging full formValues here to prevent excessive console noise if it's large,
+    // but you can log specific problematic fields if needed.
+    // formValues
+  });
+
   const physicalConstraints = useDesignStore((state) => 
     state.activeDesign?.requirements?.physicalConstraints);
   const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
@@ -245,7 +255,15 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   };
 
   const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
+    // --- ADDED LOG --- 
+    console.log('[ComponentFormDialog] handleFormSubmit (onValid) called with data:', data);
     onSubmit(data);
+  };
+
+  // --- ADDED LOG HANDLER ---
+  const handleFormErrors = (errors: any) => {
+    console.error('[ComponentFormDialog] Form validation failed (onInvalid):', errors);
+    // You can add more specific error handling or user notification here if needed
   };
 
   const { control } = form;
@@ -314,7 +332,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
         </DialogHeader>
         <ScrollArea className="max-h-[calc(90vh-8rem)] px-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFormSubmit)} id="component-form" className="space-y-4 py-4">
+            <form onSubmit={form.handleSubmit(handleFormSubmit, handleFormErrors)} id="component-form" className="space-y-4 py-4">
               {/* Basic Component Information Section */}
               <BasicInfoFields
                 control={control}
