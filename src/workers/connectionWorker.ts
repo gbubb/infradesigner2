@@ -1,14 +1,15 @@
 import { generateConnections } from '@/services/connectionService';
-import type { InfrastructureDesign, ConnectionRule, Cable } from '@/types/infrastructure';
+import type { InfrastructureDesign, ConnectionRule, Cable, Transceiver } from '@/types/infrastructure';
 import type { ConnectionAttempt } from '@/types/infrastructure/connection-service-types';
 
 self.onmessage = (event: MessageEvent<{ 
   design: InfrastructureDesign, 
   rules: ConnectionRule[], 
-  allCableTemplates: Cable[]
+  allCableTemplates: Cable[],
+  allTransceiverTemplates: Transceiver[]
 }>) => {
   try {
-    const { design, rules, allCableTemplates } = event.data;
+    const { design, rules, allCableTemplates, allTransceiverTemplates } = event.data;
     // Ensure components and rules are not undefined, providing empty arrays as defaults if necessary.
     const safeDesign = {
       ...design,
@@ -18,8 +19,10 @@ self.onmessage = (event: MessageEvent<{
     };
     const safeRules = rules || [];
     const safeAllCableTemplates = allCableTemplates || [];
+    const safeAllTransceiverTemplates = allTransceiverTemplates || [];
 
     console.log('[ConnectionWorker] Received allCableTemplates count:', safeAllCableTemplates.length);
+    console.log('[ConnectionWorker] Received allTransceiverTemplates count:', safeAllTransceiverTemplates.length);
     console.log('[ConnectionWorker] Sample of received cable templates:', 
       safeAllCableTemplates.slice(0, 5).map(c => ({ 
         id: c.id, 
@@ -30,7 +33,7 @@ self.onmessage = (event: MessageEvent<{
       }))
     );
 
-    const attempts: ConnectionAttempt[] = generateConnections(safeDesign, safeRules, safeAllCableTemplates);
+    const attempts: ConnectionAttempt[] = generateConnections(safeDesign, safeRules, safeAllCableTemplates, safeAllTransceiverTemplates);
     self.postMessage({ status: 'success', attempts });
   } catch (error) {
     console.error('[ConnectionWorker] Error during connection generation:', error);

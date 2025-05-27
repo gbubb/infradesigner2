@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Save, Trash2, Plus, Network } from "lucide-react";
-import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable, Port } from "@/types/infrastructure";
+import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable, Port, Transceiver } from "@/types/infrastructure";
 import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
 import ConnectionReportModal from "./ConnectionReportModal";
 
@@ -154,6 +154,11 @@ const NetworkConnectionsTab: React.FC = () => {
       (c): c is Cable => c.type === ComponentType.Cable
     );
 
+    // Get all transceiver templates from the component library store
+    const allTransceiverTemplates = componentTemplates.filter(
+      (c): c is Transceiver => c.type === ComponentType.Transceiver
+    );
+
     console.log('[NetworkConnectionsTab] All cable templates from store being sent to worker:', 
       allCableTemplates.map(c => ({ 
         id: c.id, 
@@ -218,7 +223,8 @@ const NetworkConnectionsTab: React.FC = () => {
     worker.postMessage({ 
       design: activeDesign, 
       rules: activeDesign.connectionRules || [],
-      allCableTemplates: allCableTemplates // Pass cable templates to worker
+      allCableTemplates: allCableTemplates, // Pass cable templates to worker
+      allTransceiverTemplates: allTransceiverTemplates // Pass transceiver templates to worker
     });
   };
 

@@ -80,49 +80,45 @@ function getDeviceName(components: InfrastructureComponent[], id: string) {
   return components.find(d => d.id === id)?.name || id?.substring(0, 6);
 }
 
-// Try to find a compatible cable (template) from the library
-function findCableForPorts_optimized(
-  cableLookup: Map<string, Cable>,
-  srcPort: Port,
-  dstPort: Port,
-): Cable | undefined {
-  if (!srcPort.connectorType || !dstPort.connectorType) {
-    // This case should ideally not happen if ports are well-defined
-    // but good to log if it does, as it would prevent any match.
-    console.warn('[ConnectionService] Source or Destination port missing connectorType:', {
-      srcPortId: srcPort.id,
-      srcConnectorType: srcPort.connectorType,
-      dstPortId: dstPort.id,
-      dstConnectorType: dstPort.connectorType,
-    });
-    return undefined;
-  }
-  const key = [srcPort.connectorType, dstPort.connectorType].sort().join(':');
-  const cable = cableLookup.get(key);
-
-  if (!cable) {
-    // This is the critical log for debugging cable data.
-    console.log('[ConnectionService] No compatible cable found in lookup. Requirements:', {
-      requiredConnectorsKey: key,
-      srcPortConnector: srcPort.connectorType,
-      dstPortConnector: dstPort.connectorType
-    });
-  }
-  return cable;
+// Renamed and updated to use passed-in templates
+function findCompatibleTransceiverTemplate(
+  transceiverTemplates: Transceiver[],
+  port: Port,
+  requiredMediaType: MediaType, // e.g., FiberMM, FiberSM
+  // distanceMeters: number // Distance is checked by the caller if needed for specific model selection
+): Transceiver | undefined {
+  // Find a transceiver template that matches the port's connector (SFP, QSFP), speed, and desired media type.
+  // Further filtering by distance can happen if multiple models match.
+  return transceiverTemplates.find(t =>
+     t.connectorType === port.connectorType && // Matches port's physical interface for the transceiver
+     t.speed === port.speed &&
+     t.mediaTypeSupported.includes(requiredMediaType) // Supports the fiber type we intend to use
+     // t.maxDistanceMeters >= distanceMeters // This check will be done by the caller if choosing between multiple valid transceivers
+  );
 }
 
-// If needed, find transceivers for a port (for fiber, etc.)
-function findTransceiverForPort(
-  transceivers: Transceiver[],
-  port: Port,
-  distanceMeters: number
-): Transceiver | undefined {
-  return transceivers.find(x =>
-     x.mediaTypeSupported.includes(port.mediaType) &&
-     x.connectorType === port.connectorType &&
-     x.speed === port.speed &&
-     (!x.maxDistanceMeters || x.maxDistanceMeters >= distanceMeters)
-  );
+// Updated findCableForPorts_optimized to potentially take target connector types for fiber
+// For DACs, srcPort.connectorType and dstPort.connectorType are used directly.
+// For Fiber, srcTransceiver.mediaConnectorType and dstTransceiver.mediaConnectorType are used.
+function findCompatibleCableTemplate(
+  cableLookup: Map<string, Cable>,
+  connectorA: ConnectorType,
+  connectorB: ConnectorType,
+  requiredMediaType: CableMediaType, // e.g., DACSFP, FiberSMDuplex
+  requiredSpeed?: PortSpeed // Optional: for speed-specific DACs
+): Cable | undefined {
+  const key = [connectorA, connectorB].sort().join(':');
+  const candidates = Array.from(cableLookup.values()).filter(c => {
+    const connectorMatch = (c.connectorA_Type === connectorA && c.connectorB_Type === connectorB) ||
+                         (c.connectorA_Type === connectorB && c.connectorB_Type === connectorA);
+    const mediaMatch = c.mediaType === requiredMediaType;
+    const speedMatch = !requiredSpeed || c.speed === requiredSpeed || !c.speed; // If cable has no speed, it's generic
+    return connectorMatch && mediaMatch && speedMatch;
+  });
+
+  // console.log('[ConnectionService] Cable candidates for key', key, requiredMediaType, requiredSpeed, candidates);
+  // For now, return the first match. Could be enhanced to pick shortest/cheapest etc.
+  return candidates[0];
 }
 
 function estimateCableLength(
@@ -148,9 +144,10 @@ function estimateCableLength(
 export function generateConnections(
   design: InfrastructureDesign,
   rules: ConnectionRule[],
-  allCableTemplates: Cable[] // Added new parameter for all cable templates
+  allCableTemplates: Cable[],
+  allTransceiverTemplates: Transceiver[] // Added transceiver templates
 ): ConnectionAttempt[] {
-  const { components, rackprofiles } = design; // components here are the PLACED devices
+  const { components, rackprofiles } = design;
   const connectionAttempts: ConnectionAttempt[] = [];
   if (!components || !components.length) {
     // This checks for placed devices. If no devices, no connections can be made.
@@ -221,7 +218,8 @@ export function generateConnections(
 
   console.log('[ConnectionService] Constructed cableLookup map keys:', Array.from(cableLookup.keys()));
 
-  const transceivers = design.components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[]; // Transceivers can still be part of the design components
+  // Transceivers are now passed in as templates, not sourced from design.components directly for generation.
+  // const transceivers = design.components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[];
 
   // Log component breakdown
   const allDevices = components.filter((c) =>
@@ -385,70 +383,95 @@ export function generateConnections(
                 { deviceId: targetDevice.id, ruPosition: dstPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
                 dstRack
               );
-              const cable = findCableForPorts_optimized(cableLookup, candidateSrcPort, dstPort);
 
-              if (cable) {
-                // Transceiver logic (simplified)
-                let transceiverSourceModel: TransceiverModel | undefined;
-                let transceiverDestinationModel: TransceiverModel | undefined;
-                let srcTrans: Transceiver | undefined;
-                let dstTrans: Transceiver | undefined;
-                if (
-                  [MediaType.FiberSM, MediaType.FiberMM].includes(candidateSrcPort.mediaType) ||
-                  [MediaType.FiberSM, MediaType.FiberMM].includes(dstPort.mediaType)
-                ) {
-                  srcTrans = findTransceiverForPort(transceivers, candidateSrcPort, lengthMeters);
-                  dstTrans = findTransceiverForPort(transceivers, dstPort, lengthMeters);
-                  transceiverSourceModel = srcTrans?.transceiverModel;
-                  transceiverDestinationModel = dstTrans?.transceiverModel;
-                  if (!srcTrans) {
-                    connectionAttempts.push({
-                      ruleId: rule.id,
-                      ruleName: rule.name,
-                      sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
-                      sourceDeviceId: srcDevice.id,
-                      sourcePortId: candidateSrcPort.id,
-                      targetDeviceName: getDeviceName(allDevices, targetDevice.id),
-                      targetDeviceId: targetDevice.id,
-                      targetPortId: dstPort.id,
-                      status: "Failed",
-                      reason: "No compatible transceiver for source port.",
-                    });
-                    continue; // to next dstPort, or if no more dstPorts, to next candidateSrcPort
-                  }
-                  if (!dstTrans) {
-                    connectionAttempts.push({
-                      ruleId: rule.id,
-                      ruleName: rule.name,
-                      sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
-                      sourceDeviceId: srcDevice.id,
-                      sourcePortId: candidateSrcPort.id,
-                      targetDeviceName: getDeviceName(allDevices, targetDevice.id),
-                      targetDeviceId: targetDevice.id,
-                      targetPortId: dstPort.id,
-                      status: "Failed",
-                      reason: "No compatible transceiver for target port.",
-                    });
-                    continue; // to next dstPort, or if no more dstPorts, to next candidateSrcPort
+              let cable: Cable | undefined = undefined;
+              let selectedSrcTransceiver: Transceiver | undefined = undefined;
+              let selectedDstTransceiver: Transceiver | undefined = undefined;
+              let finalCableMediaType: CableMediaType | undefined = undefined;
+              let connectionReasoning = "";
+
+              if (lengthMeters <= 5) {
+                // Try DAC first
+                // Determine DAC CableMediaType based on port speed/type (e.g., SFP+ for 10G, QSFP+ for 40G)
+                // This is a simplification; real mapping might be more complex or data-driven
+                let dacMediaType: CableMediaType | undefined;
+                if (candidateSrcPort.speed === PortSpeed.Speed10G && candidateSrcPort.connectorType === ConnectorType.SFP) dacMediaType = CableMediaType.DACSFP;
+                else if (candidateSrcPort.speed === PortSpeed.Speed40G && candidateSrcPort.connectorType === ConnectorType.QSFP) dacMediaType = CableMediaType.DACQSFP;
+                // Add more DAC types (QSFP28 for 100G DAC, etc.) if defined and needed
+                else if (candidateSrcPort.speed === PortSpeed.Speed100G && candidateSrcPort.connectorType === ConnectorType.QSFP) dacMediaType = CableMediaType.DACQSFP; // Assuming QSFP can be 100G DAC for now
+                
+                if (dacMediaType && candidateSrcPort.connectorType === dstPort.connectorType && candidateSrcPort.speed === dstPort.speed) {
+                  cable = findCompatibleCableTemplate(cableLookup, candidateSrcPort.connectorType, dstPort.connectorType, dacMediaType, candidateSrcPort.speed);
+                  if (cable) {
+                    finalCableMediaType = cable.mediaType;
+                    connectionReasoning = "Direct Attach Cable (DAC) used for short distance.";
+                  } else {
+                    connectionReasoning = "DAC suitable for port types/speed not found in library for short distance.";
+                    // Attempt fiber as fallback if DAC is not found, even for short distances
                   }
                 }
-                // Connection succeeded for this srcPort and dstPort!
-                currentSrcPort = candidateSrcPort;
-                currentDstPort = dstPort;
-                foundPortPairThisAttempt = true;
+              }
+              
+              // If no DAC cable (either too long, or suitable DAC not found/matched), try fiber + transceivers
+              if (!cable) {
+                if (candidateSrcPort.mediaType && dstPort.mediaType && candidateSrcPort.mediaType === dstPort.mediaType && 
+                   (candidateSrcPort.mediaType === MediaType.FiberMM || candidateSrcPort.mediaType === MediaType.FiberSM)) {
 
+                  selectedSrcTransceiver = findCompatibleTransceiverTemplate(allTransceiverTemplates, candidateSrcPort, candidateSrcPort.mediaType);
+                  selectedDstTransceiver = findCompatibleTransceiverTemplate(allTransceiverTemplates, dstPort, dstPort.mediaType);
+
+                  if (selectedSrcTransceiver && selectedDstTransceiver && 
+                      selectedSrcTransceiver.mediaConnectorType && selectedDstTransceiver.mediaConnectorType &&
+                      selectedSrcTransceiver.mediaTypeSupported.includes(candidateSrcPort.mediaType) && 
+                      selectedDstTransceiver.mediaTypeSupported.includes(dstPort.mediaType) &&
+                      selectedSrcTransceiver.maxDistanceMeters >= lengthMeters && 
+                      selectedDstTransceiver.maxDistanceMeters >= lengthMeters) {
+
+                    // Determine required Fiber CableMediaType (e.g., FiberSMDuplex)
+                    let fiberCableType: CableMediaType | undefined;
+                    if (candidateSrcPort.mediaType === MediaType.FiberSM) fiberCableType = CableMediaType.FiberSMDuplex;
+                    else if (candidateSrcPort.mediaType === MediaType.FiberMM) fiberCableType = CableMediaType.FiberMMDuplex;
+
+                    if (fiberCableType && selectedSrcTransceiver.mediaConnectorType === selectedDstTransceiver.mediaConnectorType) {
+                      cable = findCompatibleCableTemplate(cableLookup, selectedSrcTransceiver.mediaConnectorType, selectedDstTransceiver.mediaConnectorType, fiberCableType);
+                      if (cable) {
+                        finalCableMediaType = cable.mediaType;
+                        connectionReasoning = `Fiber optic cable with ${selectedSrcTransceiver.transceiverModel} and ${selectedDstTransceiver.transceiverModel}.`;
+                      } else {
+                        connectionReasoning = `Compatible transceivers found (${selectedSrcTransceiver.transceiverModel}/${selectedDstTransceiver.transceiverModel}), but no suitable fiber cable found in library for their media connectors (${selectedSrcTransceiver.mediaConnectorType}).`;
+                      }
+                    } else {
+                      connectionReasoning = `Transceivers found, but their media-side connectors do not match or required fiber cable type could not be determined (Src: ${selectedSrcTransceiver.mediaConnectorType}, Dst: ${selectedDstTransceiver.mediaConnectorType}).`;
+                    }
+                  } else {
+                    if (!selectedSrcTransceiver) connectionReasoning += "No compatible source transceiver. ";
+                    if (!selectedDstTransceiver) connectionReasoning += "No compatible destination transceiver. ";
+                    if (selectedSrcTransceiver && selectedSrcTransceiver.maxDistanceMeters < lengthMeters) connectionReasoning += "Source transceiver max distance too short. ";
+                    if (selectedDstTransceiver && selectedDstTransceiver.maxDistanceMeters < lengthMeters) connectionReasoning += "Destination transceiver max distance too short. ";
+                    if (connectionReasoning === "") connectionReasoning = "Transceiver or fiber connection failed for unknown reason.";
+                  }
+                } else {
+                   connectionReasoning = "Port media types are not compatible for fiber or not specified as fiber.";
+                   if (lengthMeters > 5 && !cable) { // Specifically if it was too long for DAC and then this path is hit
+                      // Prepend to existing reasoning or set if empty
+                      connectionReasoning = (connectionReasoning ? connectionReasoning + " " : "") + "Connection > 5m requires fiber, but port media types are unsuitable or not specified as fiber.";
+                   }
+                }
+              }
+
+              if (cable) {
                 const connection: NetworkConnection = {
-                  id: `${srcDevice.id}-${currentSrcPort.id}__${targetDevice.id}-${currentDstPort.id}-${connectionsMadeForThisPair}`, // Ensure unique ID per pair connection
+                  id: `${srcDevice.id}-${currentSrcPort!.id}__${targetDevice.id}-${currentDstPort!.id}-${connectionsMadeForThisPair}`, 
                   sourceDeviceId: srcDevice.id,
-                  sourcePortId: currentSrcPort.id,
+                  sourcePortId: currentSrcPort!.id,
                   destinationDeviceId: targetDevice.id,
-                  destinationPortId: currentDstPort.id,
-                  cableTemplateId: cable?.id,
+                  destinationPortId: currentDstPort!.id,
+                  cableTemplateId: cable.id,
                   lengthMeters,
-                  mediaType: cable?.mediaType,
-                  speed: currentSrcPort.speed,
-                  transceiverSourceModel, // From transceiver logic
-                  transceiverDestinationModel, // From transceiver logic
+                  mediaType: finalCableMediaType, // Use the mediaType of the actual cable used or determined
+                  speed: candidateSrcPort.speed, // Speed of the connection is dictated by the port speed
+                  transceiverSourceModel: selectedSrcTransceiver?.transceiverModel,
+                  transceiverDestinationModel: selectedDstTransceiver?.transceiverModel,
                   status: "planned",
                 };
                 connectionAttempts.push({
@@ -456,16 +479,16 @@ export function generateConnections(
                   ruleName: rule.name,
                   sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
                   sourceDeviceId: srcDevice.id,
-                  sourcePortId: currentSrcPort.id,
+                  sourcePortId: currentSrcPort!.id,
                   targetDeviceName: getDeviceName(allDevices, targetDevice.id),
                   targetDeviceId: targetDevice.id,
-                  targetPortId: currentDstPort.id,
+                  targetPortId: currentDstPort!.id,
                   status: "Success",
-                  reason: `Connection ${connectionsMadeForThisPair + 1} of ${desiredConnectionsForThisPair} for pair established.`,
+                  reason: connectionReasoning, // Updated reason
                   connection,
                 });
-                usedSrcPorts.add(`${srcDevice.id}:${currentSrcPort.id}`);
-                usedDstPorts.add(`${targetDevice.id}:${currentDstPort.id}`);
+                usedSrcPorts.add(`${srcDevice.id}:${currentSrcPort!.id}`);
+                usedDstPorts.add(`${targetDevice.id}:${currentDstPort!.id}`);
                 
                 // Remove the used source port from the mutable list for this srcDevice
                 mutableAvailableSrcPorts.splice(i, 1);
@@ -474,8 +497,20 @@ export function generateConnections(
                 connectionsMadeForThisSrcDeviceOverall++;
                 break; // Found a dstPort, break from dstPort loop for this srcPort
               } else {
-                // Log attempt if no cable, but don't push to main attempts unless it's the final verdict for the pair
-              }
+                // No suitable cable (DAC or Fiber) could be found
+                connectionAttempts.push({
+                  ruleId: rule.id,
+                  ruleName: rule.name,
+                  sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
+                  sourceDeviceId: srcDevice.id,
+                  sourcePortId: candidateSrcPort.id,
+                  targetDeviceName: getDeviceName(allDevices, targetDevice.id),
+                  targetDeviceId: targetDevice.id,
+                  targetPortId: dstPort.id,
+                  status: "Failed",
+                  reason: connectionReasoning || "No compatible cable (DAC or Fiber+Transceiver) found.", // Use accumulated reasoning
+                });
+              } // End if cable found (DAC or Fiber)
             } // End DstPort loop
 
             if (foundPortPairThisAttempt) {

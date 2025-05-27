@@ -1,4 +1,3 @@
-
 import { InfrastructureComponent, ComponentType, ConnectorType } from './component-types';
 import { MediaType, PortSpeed } from './port-types';
 
@@ -18,6 +17,7 @@ export interface Transceiver extends InfrastructureComponent {
   transceiverModel: TransceiverModel;
   mediaTypeSupported: MediaType[];
   connectorType: ConnectorType;
+  mediaConnectorType: ConnectorType;
   speed: PortSpeed;
   maxDistanceMeters: number;
   wavelengthNm?: number; // Optional, e.g. 850nm

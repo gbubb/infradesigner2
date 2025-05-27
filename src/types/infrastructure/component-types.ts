@@ -49,7 +49,7 @@ export enum ConnectorType {
 
 // Forward import types to avoid circular references
 // We need to import these types after defining ConnectorType
-import { Port, CableMediaType } from './port-types';
+import { Port, CableMediaType, PortSpeed } from './port-types';
 
 // Core component interfaces
 export interface InfrastructureComponent {
@@ -109,4 +109,5 @@ export interface Cable extends InfrastructureComponent {
   connectorA_Type: ConnectorType;
   connectorB_Type: ConnectorType;
   mediaType: CableMediaType;
+  speed?: PortSpeed; // Added for speed-specific cables like DACs
 }
