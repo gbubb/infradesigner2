@@ -20,7 +20,8 @@ export const DesignStatisticsTab: React.FC = () => {
     costPerTB,
     totalPower,
     totalRackUnits,
-    amortizedCostsByType
+    amortizedCostsByType,
+    monthlyCostPerAverageVM // <-- new
   } = useDesignCalculations();
 
   // Calculate capital cost directly
@@ -93,6 +94,7 @@ export const DesignStatisticsTab: React.FC = () => {
           totalCapitalCost={capitalCost}
           costPerVCPU={costPerVCPU}
           costTBMemory={costPerTB}
+          monthlyCostPerAverageVM={monthlyCostPerAverageVM}
         />
       </div>
       

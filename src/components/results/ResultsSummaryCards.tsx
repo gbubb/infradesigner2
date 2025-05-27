@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -16,6 +15,7 @@ interface KeyMetricsProps {
   totalCapitalCost: number;
   costPerVCPU: number;
   costTBMemory: number;
+  monthlyCostPerAverageVM?: number; // new, optional for backward compat
 }
 
 export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
@@ -79,7 +79,8 @@ export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
 export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
   totalCapitalCost,
   costPerVCPU,
-  costTBMemory
+  costTBMemory,
+  monthlyCostPerAverageVM
 }) => {
   return (
     <Card>
@@ -100,6 +101,14 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
             <span className="text-muted-foreground">Cost TB/Memory:</span>
             <span className="font-medium">${costTBMemory.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
           </div>
+          {typeof monthlyCostPerAverageVM === 'number' && monthlyCostPerAverageVM > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">
+                Monthly cost for an average VM <span className="text-xs">(6 vCPU, 18GiB RAM)</span>:
+              </span>
+              <span className="font-medium">${monthlyCostPerAverageVM.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

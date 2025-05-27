@@ -31,7 +31,8 @@ function calculateDesignMetrics(design: InfrastructureDesign) {
     amortizedCostMonthly: 0,
     monthlyCost: 0,
     networkUtilization: 0,
-    storageUtilization: 0
+    storageUtilization: 0,
+    monthlyCostPerAverageVM: 0 // <-- new metric
   };
   
   // Return default metrics if design is empty
@@ -135,6 +136,17 @@ function calculateDesignMetrics(design: InfrastructureDesign) {
   // Calculate total power for the metrics interface
   metrics.totalPower = metrics.maximumPower;
   
+  // Calculate total memory in GiB for average VM calculation
+  const totalMemGiB = metrics.totalMemoryTB * 1024;
+  const avgVmsByVcpu = metrics.totalVCPUs / 6;
+  const avgVmsByMem = totalMemGiB / 18;
+  const quantityOfAverageVMs = Math.floor(Math.min(avgVmsByVcpu, avgVmsByMem));
+  if (quantityOfAverageVMs > 0) {
+    metrics.monthlyCostPerAverageVM = metrics.monthlyCost / quantityOfAverageVMs;
+  } else {
+    metrics.monthlyCostPerAverageVM = 0;
+  }
+  
   return metrics;
 }
 
@@ -166,6 +178,7 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
     totalMemoryTB: Math.abs(getPercentDifference(metricsA.totalMemoryTB, metricsB.totalMemoryTB)) > 10,
     totalStorageTB: Math.abs(getPercentDifference(metricsA.totalStorageTB, metricsB.totalStorageTB)) > 10,
     monthlyCost: Math.abs(getPercentDifference(metricsA.monthlyCost, metricsB.monthlyCost)) > 10,
+    monthlyCostPerAverageVM: Math.abs(getPercentDifference(metricsA.monthlyCostPerAverageVM, metricsB.monthlyCostPerAverageVM)) > 10,
   };
   
   return (

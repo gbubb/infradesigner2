@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useStorageClustersWrapper } from './useStorageClustersWrapper';
@@ -8,6 +7,9 @@ import { useCostAnalysis } from './useCostAnalysis';
 import { useDesignValidation } from './useDesignValidation';
 import { useResourceMetrics } from './useResourceMetrics';
 import { InfrastructureDesign } from '@/types/infrastructure';
+
+export const AVERAGE_VM_VCPU = 6;
+export const AVERAGE_VM_MEM_GIB = 18;
 
 /**
  * A completely rewritten version of useDesignCalculations that avoids React's useMemo
@@ -89,6 +91,26 @@ export const useDesignCalculations = () => {
     : []
   , [designValidationResult?.designErrors]);
 
+  // Add calculation for # of average VMs platform can host (based on vCPU and RAM)
+  const quantityOfAverageVMs = useMemo(() => {
+    const totalVCPUs = actualHardwareTotals?.totalVCPUs || 0;
+    // Memory in GB, get total memory in TB and convert
+    const totalMemGiB = (actualHardwareTotals?.totalMemoryTB || 0) * 1024;
+    const byVCpu = totalVCPUs / AVERAGE_VM_VCPU;
+    const byMem = totalMemGiB / AVERAGE_VM_MEM_GIB;
+    return Math.floor(Math.min(byVCpu, byMem));
+  }, [actualHardwareTotals?.totalVCPUs, actualHardwareTotals?.totalMemoryTB]);
+
+  // Calculate Monthly cost per average VM
+  const monthlyCostPerAverageVM = useMemo(() => {
+    // Use operational cost from cost analysis (which is full monthly)
+    const totalMonthlyCost = (costAnalysisResult?.operationalCosts?.totalMonthly ?? 0);
+    if (quantityOfAverageVMs > 0) {
+      return totalMonthlyCost / quantityOfAverageVMs;
+    }
+    return 0;
+  }, [costAnalysisResult?.operationalCosts?.totalMonthly, quantityOfAverageVMs]);
+
   // Directly calculate values that don't need to be in state
   const components = useMemo(() => 
     Array.isArray(activeDesign?.components) ? activeDesign.components : []
@@ -124,6 +146,8 @@ export const useDesignCalculations = () => {
     resourceMetrics,
     resourceUtilization,
     designErrors,
-    amortizedCostsByType
+    amortizedCostsByType,
+    monthlyCostPerAverageVM,
+    quantityOfAverageVMs
   };
 };

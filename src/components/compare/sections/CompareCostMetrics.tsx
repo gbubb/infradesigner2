@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 
@@ -112,6 +111,25 @@ export const CompareCostMetrics: React.FC<CompareCostMetricsProps> = ({
         </div>
         <div className="text-center">
           {formatWithChange(metricsA.costPerTB, metricsB.costPerTB, 'currency', 'lower')}
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-3 gap-4 items-center">
+        <div className="flex items-center">
+          <span>Monthly cost for an average VM</span>
+          {significantDifferences.monthlyCostPerAverageVM && (
+            <Badge variant="outline" className="ml-2">Significant</Badge>
+          )}
+        </div>
+        <div className="text-center">
+          {metricsA.monthlyCostPerAverageVM > 0
+            ? `$${metricsA.monthlyCostPerAverageVM.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+            : 'N/A'}
+        </div>
+        <div className="text-center">
+          {metricsB.monthlyCostPerAverageVM > 0
+            ? formatWithChange(metricsA.monthlyCostPerAverageVM, metricsB.monthlyCostPerAverageVM, 'currency', 'lower')
+            : 'N/A'}
         </div>
       </div>
     </div>
