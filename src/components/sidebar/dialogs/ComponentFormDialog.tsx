@@ -60,7 +60,7 @@ const formSchema = z.object({
   validRUStart: z.number().optional(),
   validRUEnd: z.number().optional(),
   preferredRU: z.number().optional(),
-  preferredRack: z.number().optional(),
+  // preferredRack: z.number().optional(), // Removed as per request
   // Server specific fields
   serverRole: z.nativeEnum(ServerRole).optional(),
   cpuModel: z.string().optional(),
@@ -75,14 +75,14 @@ const formSchema = z.object({
   portsConsumedQuantity: z.number().optional(),
   // Switch specific fields
   switchRole: z.nativeEnum(SwitchRole).optional(),
-  portCount: z.number().optional(),
+  // portCount: z.number().optional(), // Commented out as per request
   portSpeed: z.string().optional(),
   portSpeedType: z.preprocess(
     (val) => (val === "" ? undefined : val),
     z.nativeEnum(PortSpeed).optional()
   ),
   portsProvidedQuantity: z.number().optional(),
-  layer: z.number().optional(),
+  // layer: z.number().optional(), // Commented out as per request
   // Disk specific fields
   capacityTB: z.number().optional(),
   formFactor: z.string().optional(),
@@ -189,7 +189,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       validRUStart: formValues.placement?.validRUStart || 1,
       validRUEnd: formValues.placement?.validRUEnd || maxRackUnits,
       preferredRU: formValues.placement?.preferredRU || 1,
-      preferredRack: formValues.placement?.preferredRack || 1,
+      // preferredRack: formValues.placement?.preferredRack || 1, // Removed
       serverRole: formValues.serverRole || ServerRole.Compute,
       cpuModel: formValues.cpuModel || '',
       cpuCount: formValues.cpuCount || 1,
@@ -202,11 +202,11 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       networkPortType: formValues.networkPortType || NetworkPortType.SFP,
       portsConsumedQuantity: formValues.portsConsumedQuantity || 2,
       switchRole: formValues.switchRole || SwitchRole.Access,
-      portCount: formValues.portCount || 24,
+      // portCount: formValues.portCount || 24, // Commented out
       portSpeed: formValues.portSpeed || '10',
       portSpeedType: formValues.portSpeedType || PortSpeed.Speed10G,
       portsProvidedQuantity: formValues.portsProvidedQuantity || 24,
-      layer: formValues.layer || 3,
+      // layer: formValues.layer || 3, // Commented out
       capacityTB: formValues.capacityTB || 1,
       formFactor: formValues.formFactor || '2.5"',
       interface: formValues.interface || 'SATA',
