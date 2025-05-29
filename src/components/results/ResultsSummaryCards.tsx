@@ -15,7 +15,9 @@ interface KeyMetricsProps {
   totalCapitalCost: number;
   costPerVCPU: number;
   costTBMemory: number;
-  monthlyCostPerAverageVM?: number; // new, optional for backward compat
+  monthlyCostPerAverageVM?: number;
+  averageVMVCPUs?: number;
+  averageVMMemoryGB?: number;
 }
 
 export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
@@ -80,7 +82,9 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
   totalCapitalCost,
   costPerVCPU,
   costTBMemory,
-  monthlyCostPerAverageVM
+  monthlyCostPerAverageVM,
+  averageVMVCPUs = 4,
+  averageVMMemoryGB = 8
 }) => {
   return (
     <Card>
@@ -104,7 +108,7 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
           {typeof monthlyCostPerAverageVM === 'number' && monthlyCostPerAverageVM > 0 && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">
-                Monthly cost for an average VM <span className="text-xs">(6 vCPU, 18GiB RAM)</span>:
+                Monthly cost for an average VM <span className="text-xs">({averageVMVCPUs} vCPU, {averageVMMemoryGB}GiB RAM)</span>:
               </span>
               <span className="font-medium">${monthlyCostPerAverageVM.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
             </div>

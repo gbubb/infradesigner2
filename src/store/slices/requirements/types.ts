@@ -1,4 +1,3 @@
-
 import { DesignRequirements, ComponentRole } from '@/types/infrastructure';
 
 // Define types for the Requirements slice
@@ -31,7 +30,9 @@ export const defaultRequirements: DesignRequirements = {
     computeClusters: [],
     controllerNodeCount: 3,
     infrastructureClusterRequired: false,
-    infrastructureNodeCount: 3
+    infrastructureNodeCount: 3,
+    averageVMVCPUs: 4,
+    averageVMMemoryGB: 8
   },
   storageRequirements: {
     storageClusters: []

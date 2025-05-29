@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +13,8 @@ interface ComputeRequirements {
   infrastructureNodeCount?: number;
   computeClusters: any[];
   deviceLifespanYears?: number;
+  averageVMVCPUs?: number;
+  averageVMMemoryGB?: number;
 }
 
 export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
@@ -100,6 +101,32 @@ export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
                 max="6"
                 placeholder="3"
                 value={requirements.deviceLifespanYears === undefined ? 3 : requirements.deviceLifespanYears}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="averageVMVCPUs">Average VM vCPUs</Label>
+              <Input
+                id="averageVMVCPUs"
+                name="averageVMVCPUs"
+                type="number"
+                min="1"
+                placeholder="e.g., 4"
+                value={requirements.averageVMVCPUs || ''}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="averageVMMemoryGB">Average VM Memory (GB)</Label>
+              <Input
+                id="averageVMMemoryGB"
+                name="averageVMMemoryGB"
+                type="number"
+                min="1"
+                placeholder="e.g., 8"
+                value={requirements.averageVMMemoryGB || ''}
                 onChange={handleInputChange}
               />
             </div>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
@@ -24,6 +23,10 @@ export const DesignStatisticsTab: React.FC = () => {
     amortizedCostsByType,
     monthlyCostPerAverageVM
   } = useDesignCalculations();
+
+  // Get average VM size from requirements
+  const averageVMVCPUs = activeDesign?.requirements?.computeRequirements?.averageVMVCPUs || 4;
+  const averageVMMemoryGB = activeDesign?.requirements?.computeRequirements?.averageVMMemoryGB || 8;
 
   // Use the cost analysis hook for proper licensing calculations
   const { capitalCost, operationalCosts, licensingCosts, totalCostOfOwnership } = useCostAnalysis();
@@ -51,6 +54,8 @@ export const DesignStatisticsTab: React.FC = () => {
           costPerVCPU={costPerVCPU}
           costTBMemory={costPerTB}
           monthlyCostPerAverageVM={monthlyCostPerAverageVM}
+          averageVMVCPUs={averageVMVCPUs}
+          averageVMMemoryGB={averageVMMemoryGB}
         />
       </div>
       

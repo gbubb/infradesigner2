@@ -28,6 +28,8 @@ export interface DesignRequirements {
     infrastructureNodeCount?: number;
     computeClusters: ComputeClusterRequirement[];
     deviceLifespanYears?: number;
+    averageVMVCPUs?: number;
+    averageVMMemoryGB?: number;
   };
   storageRequirements: {
     storageClusters: StorageClusterRequirement[];

@@ -91,15 +91,19 @@ export const useDesignCalculations = () => {
     : []
   , [designValidationResult?.designErrors]);
 
+  // Get average VM size from requirements
+  const averageVMVCPUs = activeDesign?.requirements?.computeRequirements?.averageVMVCPUs || 4;
+  const averageVMMemoryGB = activeDesign?.requirements?.computeRequirements?.averageVMMemoryGB || 8;
+
   // Add calculation for # of average VMs platform can host (based on vCPU and RAM)
   const quantityOfAverageVMs = useMemo(() => {
     const totalVCPUs = actualHardwareTotals?.totalVCPUs || 0;
     // Memory in GB, get total memory in TB and convert
     const totalMemGiB = (actualHardwareTotals?.totalMemoryTB || 0) * 1024;
-    const byVCpu = totalVCPUs / AVERAGE_VM_VCPU;
-    const byMem = totalMemGiB / AVERAGE_VM_MEM_GIB;
+    const byVCpu = totalVCPUs / averageVMVCPUs;
+    const byMem = totalMemGiB / averageVMMemoryGB;
     return Math.floor(Math.min(byVCpu, byMem));
-  }, [actualHardwareTotals?.totalVCPUs, actualHardwareTotals?.totalMemoryTB]);
+  }, [actualHardwareTotals?.totalVCPUs, actualHardwareTotals?.totalMemoryTB, averageVMVCPUs, averageVMMemoryGB]);
 
   // Calculate Monthly cost per average VM
   const monthlyCostPerAverageVM = useMemo(() => {
