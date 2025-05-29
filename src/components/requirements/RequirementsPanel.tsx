@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,6 +6,7 @@ import { StorageRequirementsForm } from './StorageRequirementsForm';
 import { NetworkRequirementsForm } from './NetworkRequirementsForm';
 import { PhysicalConstraintsForm } from './PhysicalConstraintsForm';
 import { LicensingRequirementsForm } from './LicensingRequirementsForm';
+import { PricingRequirementsForm } from './PricingRequirementsForm';
 import { useDesignStore } from '@/store/designStore';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -57,16 +57,21 @@ export const RequirementsPanel: React.FC = () => {
     updateRequirements({ licensingRequirements });
   }, [updateRequirements]);
 
+  const handleUpdatePricingRequirements = useCallback((pricingRequirements) => {
+    updateRequirements({ pricingRequirements });
+  }, [updateRequirements]);
+
   return (
     <div className="w-full p-6">
       <h2 className="text-2xl font-semibold mb-6">Design Requirements</h2>
       <Tabs defaultValue="compute" value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid grid-cols-5 mb-8">
+        <TabsList className="grid grid-cols-6 mb-8">
           <TabsTrigger value="compute">Compute</TabsTrigger>
           <TabsTrigger value="storage">Storage</TabsTrigger>
           <TabsTrigger value="network">Network</TabsTrigger>
           <TabsTrigger value="physical">Physical</TabsTrigger>
-          <TabsTrigger value="licensing">Licensing</TabsTrigger>
+          <TabsTrigger value="costs">Costs</TabsTrigger>
+          <TabsTrigger value="pricing">Pricing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="compute">
@@ -115,11 +120,21 @@ export const RequirementsPanel: React.FC = () => {
             </Card>
           </div>
         </TabsContent>
-        <TabsContent value="licensing">
+        <TabsContent value="costs">
           <div className={sectionClass}>
             <LicensingRequirementsForm
               requirements={requirements.licensingRequirements || { supportCostPerNode: 0, additionalCosts: [] }}
               onUpdate={handleUpdateLicensingRequirements}
+            />
+          </div>
+        </TabsContent>
+        <TabsContent value="pricing">
+          <div className={sectionClass}>
+            <PricingRequirementsForm
+              requirements={requirements.pricingRequirements || { computePricing: [], storagePricing: [] }}
+              computeClusters={requirements.computeRequirements.computeClusters}
+              storageClusters={requirements.storageRequirements.storageClusters}
+              onUpdate={handleUpdatePricingRequirements}
             />
           </div>
         </TabsContent>

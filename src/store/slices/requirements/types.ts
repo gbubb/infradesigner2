@@ -56,5 +56,9 @@ export const defaultRequirements: DesignRequirements = {
     supportCostPerNode: 0,
     supportCostFrequency: 'monthly',
     additionalCosts: []
+  },
+  pricingRequirements: {
+    computePricing: [],
+    storagePricing: []
   }
 };
