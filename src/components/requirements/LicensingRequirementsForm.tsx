@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,6 +29,13 @@ export const LicensingRequirementsForm: React.FC<LicensingRequirementsFormProps>
     onUpdate({
       ...requirements,
       supportCostPerNode: parseFloat(value) || 0
+    });
+  };
+
+  const handleSupportFrequencyChange = (frequency: 'monthly' | 'quarterly' | 'annually') => {
+    onUpdate({
+      ...requirements,
+      supportCostFrequency: frequency
     });
   };
 
@@ -80,6 +86,12 @@ export const LicensingRequirementsForm: React.FC<LicensingRequirementsFormProps>
     { value: 'annually', label: 'Annually' }
   ];
 
+  const supportFrequencyOptions = [
+    { value: 'monthly', label: 'Monthly' },
+    { value: 'quarterly', label: 'Quarterly' },
+    { value: 'annually', label: 'Annually' }
+  ];
+
   return (
     <div className="space-y-6">
       <Card>
@@ -87,7 +99,7 @@ export const LicensingRequirementsForm: React.FC<LicensingRequirementsFormProps>
           <CardTitle>Support Costs</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="supportCostPerNode">Support Cost per Node ($)</Label>
               <Input
@@ -99,6 +111,24 @@ export const LicensingRequirementsForm: React.FC<LicensingRequirementsFormProps>
                 onChange={(e) => handleSupportCostChange(e.target.value)}
                 placeholder="0.00"
               />
+            </div>
+            <div>
+              <Label htmlFor="supportFrequency">Frequency</Label>
+              <Select
+                value={requirements.supportCostFrequency || 'monthly'}
+                onValueChange={handleSupportFrequencyChange}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {supportFrequencyOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>

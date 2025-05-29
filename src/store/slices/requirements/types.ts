@@ -54,6 +54,7 @@ export const defaultRequirements: DesignRequirements = {
   },
   licensingRequirements: {
     supportCostPerNode: 0,
+    supportCostFrequency: 'monthly',
     additionalCosts: []
   }
 };

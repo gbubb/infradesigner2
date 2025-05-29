@@ -9,5 +9,6 @@ export interface LicensingCost {
 
 export interface LicensingRequirements {
   supportCostPerNode?: number;
+  supportCostFrequency?: 'monthly' | 'quarterly' | 'annually';
   additionalCosts: LicensingCost[];
 }

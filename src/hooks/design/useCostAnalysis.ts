@@ -36,12 +36,29 @@ export const useCostAnalysis = () => {
     let oneTimeCosts = 0;
     let monthlyCosts = 0;
 
-    // Support cost per node
+    // Support cost per node with frequency
     if (licensingReqs.supportCostPerNode) {
       const totalNodes = (activeDesign?.components || []).filter(
         component => component.type === ComponentType.Server
       ).length;
-      monthlyCosts += licensingReqs.supportCostPerNode * totalNodes;
+      
+      const supportCostPerNode = licensingReqs.supportCostPerNode;
+      const frequency = licensingReqs.supportCostFrequency || 'monthly';
+      
+      let monthlySupportCost = 0;
+      switch (frequency) {
+        case 'monthly':
+          monthlySupportCost = supportCostPerNode;
+          break;
+        case 'quarterly':
+          monthlySupportCost = supportCostPerNode / 3;
+          break;
+        case 'annually':
+          monthlySupportCost = supportCostPerNode / 12;
+          break;
+      }
+      
+      monthlyCosts += monthlySupportCost * totalNodes;
     }
 
     // Additional costs
