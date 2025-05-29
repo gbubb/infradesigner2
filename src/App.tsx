@@ -40,20 +40,16 @@ function App() {
             <div className="App">
               <Routes>
                 <Route path="/shared/:sharingId" element={<SharedDesignLoader />} />
-                <Route path="/*" element={
-                  <AppLayout>
-                    <Routes>
-                      <Route path="/" element={<RequirementsPanel />} />
-                      <Route path="/components" element={<ComponentLibrary />} />
-                      <Route path="/design" element={<DesignPanel />} />
-                      <Route path="/configure" element={<ConfigurePanel />} />
-                      <Route path="/results" element={<ResultsPanel />} />
-                      <Route path="/compare" element={<ComparePanel />} />
-                      <Route path="/model" element={<ModelPanel />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </AppLayout>
-                } />
+                <Route path="/" element={<AppLayout />}>
+                  <Route index element={<RequirementsPanel />} />
+                  <Route path="components" element={<ComponentLibrary />} />
+                  <Route path="design" element={<DesignPanel />} />
+                  <Route path="configure" element={<ConfigurePanel />} />
+                  <Route path="results" element={<ResultsPanel />} />
+                  <Route path="compare" element={<ComparePanel />} />
+                  <Route path="model" element={<ModelPanel />} />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
               </Routes>
             </div>
           </Router>
