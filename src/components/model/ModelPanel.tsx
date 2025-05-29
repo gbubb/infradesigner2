@@ -121,6 +121,12 @@ export const ModelPanel: React.FC = () => {
       const cluster = [...computePricing, ...storagePricing].find(c => c.clusterId === clusterId);
       return sum + (count * (cluster?.powerWatts || 500)); // Default to 500W if not specified
     }, 0);
+
+    // Calculate total storage devices for proportional cost allocation
+    const totalStorageDevices = activeDesign?.components.filter(
+      component => (component.type === ComponentType.Disk || 
+        (component.type === ComponentType.Server && component.role === 'storageNode'))
+    ).reduce((sum, component) => sum + (component.quantity || 1), 0) || 0;
     
     // Analyze compute clusters
     computePricing.forEach(cluster => {
@@ -186,8 +192,9 @@ export const ModelPanel: React.FC = () => {
       
       // Calculate storage-specific hardware costs for this cluster
       const storageDevices = activeDesign?.components.filter(
-        component => (component.role === 'storageNode' || component.type === ComponentType.Disk) &&
-        component.clusterId === cluster.clusterId
+        component => (component.type === ComponentType.Disk || 
+          (component.type === ComponentType.Server && component.role === 'storageNode')) &&
+          component.clusterId === cluster.clusterId
       ) || [];
       
       const storageHardwareCost = storageDevices.reduce((total, device) => {
