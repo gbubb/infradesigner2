@@ -227,6 +227,33 @@ export const ModelPanel: React.FC = () => {
           licensing: licensingCostShare,
           total: totalClusterCost
         },
+        costBreakdown: {
+          storage: {
+            hardwareCost: storageHardwareCost,
+            deviceCount: storageDevices.reduce((sum, device) => sum + (device.quantity || 1), 0),
+            amortizationPeriod: storageLifespan
+          },
+          network: {
+            totalCost: operationalCosts.networkMonthly,
+            deviceShare: deviceCount,
+            totalDevices: totalDeviceCount
+          },
+          rack: {
+            totalCost: operationalCosts.racksMonthly,
+            ruShare: clusterRU,
+            totalRU: totalRU
+          },
+          energy: {
+            totalCost: operationalCosts.energyMonthly,
+            powerShare: clusterPower,
+            totalPower: totalPower
+          },
+          licensing: {
+            totalCost: operationalCosts.licensingMonthly,
+            deviceShare: deviceCount,
+            totalDevices: totalDeviceCount
+          }
+        },
         revenue,
         profit,
         profitMargin: revenue > 0 ? (profit / revenue) * 100 : 0
