@@ -21,7 +21,8 @@ export const DesignStatisticsTab: React.FC = () => {
     totalPower,
     totalRackUnits,
     amortizedCostsByType,
-    monthlyCostPerAverageVM
+    monthlyCostPerAverageVM,
+    quantityOfAverageVMs
   } = useDesignCalculations();
 
   // Get average VM size from requirements
@@ -31,7 +32,7 @@ export const DesignStatisticsTab: React.FC = () => {
   // Use the cost analysis hook for proper licensing calculations
   const { capitalCost, operationalCosts, licensingCosts, totalCostOfOwnership } = useCostAnalysis();
 
-  // Calculate power per rack value
+  // Calculate power per rack
   const powerPerRack = resourceMetrics?.totalRackQuantity 
     ? (totalPower / resourceMetrics.totalRackQuantity)
     : 0;
@@ -56,6 +57,10 @@ export const DesignStatisticsTab: React.FC = () => {
           monthlyCostPerAverageVM={monthlyCostPerAverageVM}
           averageVMVCPUs={averageVMVCPUs}
           averageVMMemoryGB={averageVMMemoryGB}
+          totalVCPUs={actualHardwareTotals.totalVCPUs}
+          totalMemoryTB={actualHardwareTotals.totalComputeMemoryTB}
+          monthlyCost={operationalCosts.totalMonthly}
+          quantityOfAverageVMs={quantityOfAverageVMs}
         />
       </div>
       

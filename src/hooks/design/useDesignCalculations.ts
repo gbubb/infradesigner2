@@ -95,25 +95,19 @@ export const useDesignCalculations = () => {
   const averageVMVCPUs = activeDesign?.requirements?.computeRequirements?.averageVMVCPUs || 4;
   const averageVMMemoryGB = activeDesign?.requirements?.computeRequirements?.averageVMMemoryGB || 8;
 
-  // Add calculation for # of average VMs platform can host (based on vCPU and RAM)
-  const quantityOfAverageVMs = useMemo(() => {
-    const totalVCPUs = actualHardwareTotals?.totalVCPUs || 0;
-    // Memory in GB, get total memory in TB and convert
-    const totalMemGiB = (actualHardwareTotals?.totalMemoryTB || 0) * 1024;
-    const byVCpu = totalVCPUs / averageVMVCPUs;
-    const byMem = totalMemGiB / averageVMMemoryGB;
-    return Math.floor(Math.min(byVCpu, byMem));
-  }, [actualHardwareTotals?.totalVCPUs, actualHardwareTotals?.totalMemoryTB, averageVMVCPUs, averageVMMemoryGB]);
+  // Calculate total resources
+  const totalVCPUs = actualHardwareTotals.totalVCPUs;
+  const totalMemoryGB = actualHardwareTotals.totalComputeMemoryTB * 1024;
 
-  // Calculate Monthly cost per average VM
-  const monthlyCostPerAverageVM = useMemo(() => {
-    // Use operational cost from cost analysis (which is full monthly)
-    const totalMonthlyCost = (costAnalysisResult?.operationalCosts?.totalMonthly ?? 0);
-    if (quantityOfAverageVMs > 0) {
-      return totalMonthlyCost / quantityOfAverageVMs;
-    }
-    return 0;
-  }, [costAnalysisResult?.operationalCosts?.totalMonthly, quantityOfAverageVMs]);
+  // Calculate maximum number of VMs based on CPU and memory constraints
+  const vmsByCPU = Math.floor(totalVCPUs / averageVMVCPUs);
+  const vmsByMemory = Math.floor(totalMemoryGB / averageVMMemoryGB);
+  const quantityOfAverageVMs = Math.min(vmsByCPU, vmsByMemory);
+
+  // Calculate monthly cost per average VM
+  const monthlyCostPerAverageVM = quantityOfAverageVMs > 0
+    ? costAnalysisResult?.operationalCosts?.totalMonthly / quantityOfAverageVMs
+    : 0;
 
   // Directly calculate values that don't need to be in state
   const components = useMemo(() => 

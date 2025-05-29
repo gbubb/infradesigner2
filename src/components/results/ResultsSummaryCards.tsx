@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AverageVMCostBreakdown } from './AverageVMCostBreakdown';
 
 interface ResourceSummaryProps {
   totalVCPUs: number;
@@ -15,9 +16,13 @@ interface KeyMetricsProps {
   totalCapitalCost: number;
   costPerVCPU: number;
   costTBMemory: number;
-  monthlyCostPerAverageVM?: number;
-  averageVMVCPUs?: number;
-  averageVMMemoryGB?: number;
+  monthlyCostPerAverageVM: number;
+  averageVMVCPUs: number;
+  averageVMMemoryGB: number;
+  totalVCPUs: number;
+  totalMemoryTB: number;
+  monthlyCost: number;
+  quantityOfAverageVMs: number;
 }
 
 export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
@@ -83,8 +88,12 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
   costPerVCPU,
   costTBMemory,
   monthlyCostPerAverageVM,
-  averageVMVCPUs = 4,
-  averageVMMemoryGB = 8
+  averageVMVCPUs,
+  averageVMMemoryGB,
+  totalVCPUs,
+  totalMemoryTB,
+  monthlyCost,
+  quantityOfAverageVMs
 }) => {
   return (
     <Card>
@@ -92,27 +101,29 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
         <CardTitle>Key Metrics</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Total Capital Cost:</span>
-            <span className="font-medium">${totalCapitalCost.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Cost per vCPU:</span>
-            <span className="font-medium">${costPerVCPU.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Cost TB/Memory:</span>
-            <span className="font-medium">${costTBMemory.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-          </div>
-          {typeof monthlyCostPerAverageVM === 'number' && monthlyCostPerAverageVM > 0 && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">
-                Monthly cost for an average VM <span className="text-xs">({averageVMVCPUs} vCPU, {averageVMMemoryGB}GiB RAM)</span>:
-              </span>
-              <span className="font-medium">${monthlyCostPerAverageVM.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Monthly cost for an average VM</p>
+              <p className="text-xs text-muted-foreground">
+                Based on {averageVMVCPUs} vCPU and {averageVMMemoryGB} GiB RAM
+              </p>
             </div>
-          )}
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold">
+                ${monthlyCostPerAverageVM.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </span>
+              <AverageVMCostBreakdown
+                totalVCPUs={totalVCPUs}
+                totalMemoryTB={totalMemoryTB}
+                averageVMVCPUs={averageVMVCPUs}
+                averageVMMemoryGB={averageVMMemoryGB}
+                monthlyCost={monthlyCost}
+                quantityOfAverageVMs={quantityOfAverageVMs}
+                monthlyCostPerAverageVM={monthlyCostPerAverageVM}
+              />
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
