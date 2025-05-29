@@ -180,15 +180,6 @@ export const ModelPanel: React.FC = () => {
     // Analyze storage clusters
     storagePricing.forEach(cluster => {
       const consumption = clusterConsumption[cluster.clusterId] || 50;
-      const deviceCount = clusterDeviceCounts[cluster.clusterId] || 0;
-      const clusterRU = deviceCount * (cluster.rackUnits || 1);
-      const clusterPower = deviceCount * (cluster.powerWatts || 500);
-      
-      // Calculate proportional costs for shared infrastructure
-      const networkCostShare = operationalCosts.networkMonthly * (deviceCount / totalDeviceCount);
-      const rackCostShare = operationalCosts.racksMonthly * (clusterRU / totalRU);
-      const energyCostShare = operationalCosts.energyMonthly * (clusterPower / totalPower);
-      const licensingCostShare = operationalCosts.licensingMonthly * (deviceCount / totalDeviceCount);
       
       // Calculate storage-specific hardware costs for this cluster
       const storageDevices = activeDesign?.components.filter(
@@ -200,6 +191,19 @@ export const ModelPanel: React.FC = () => {
       const storageHardwareCost = storageDevices.reduce((total, device) => {
         return total + (device.cost * (device.quantity || 1));
       }, 0);
+      
+      // Calculate actual device count for this cluster
+      const actualDeviceCount = storageDevices.reduce((sum, device) => sum + (device.quantity || 1), 0);
+      
+      // Calculate RU and power based on actual devices
+      const clusterRU = actualDeviceCount * (cluster.rackUnits || 1);
+      const clusterPower = actualDeviceCount * (cluster.powerWatts || 500);
+      
+      // Calculate proportional costs for shared infrastructure using actual device count
+      const networkCostShare = operationalCosts.networkMonthly * (actualDeviceCount / totalDeviceCount);
+      const rackCostShare = operationalCosts.racksMonthly * (clusterRU / totalRU);
+      const energyCostShare = operationalCosts.energyMonthly * (clusterPower / totalPower);
+      const licensingCostShare = operationalCosts.licensingMonthly * (actualDeviceCount / totalDeviceCount);
       
       // Calculate monthly amortized storage hardware cost
       const storageLifespan = activeDesign?.requirements?.storageRequirements?.deviceLifespanYears || 3;
@@ -218,7 +222,7 @@ export const ModelPanel: React.FC = () => {
         name: cluster.clusterName,
         type: 'storage',
         consumption,
-        deviceCount,
+        deviceCount: actualDeviceCount,
         costs: {
           storage: storageAmortizedCost,
           network: networkCostShare,
@@ -230,12 +234,12 @@ export const ModelPanel: React.FC = () => {
         costBreakdown: {
           storage: {
             hardwareCost: storageHardwareCost,
-            deviceCount: storageDevices.reduce((sum, device) => sum + (device.quantity || 1), 0),
+            deviceCount: actualDeviceCount,
             amortizationPeriod: storageLifespan
           },
           network: {
             totalCost: operationalCosts.networkMonthly,
-            deviceShare: deviceCount,
+            deviceShare: actualDeviceCount,
             totalDevices: totalDeviceCount
           },
           rack: {
@@ -250,7 +254,7 @@ export const ModelPanel: React.FC = () => {
           },
           licensing: {
             totalCost: operationalCosts.licensingMonthly,
-            deviceShare: deviceCount,
+            deviceShare: actualDeviceCount,
             totalDevices: totalDeviceCount
           }
         },
