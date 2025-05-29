@@ -16,12 +16,12 @@ import ModelPanel from '@/components/model/ModelPanel';
 import Auth from '@/pages/Auth';
 import NotFound from '@/pages/NotFound';
 import { SharedDesignLoader } from '@/components/layout/SharedDesignLoader';
-import { useAuth } from '@/hooks/useAuth';
+import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import './App.css';
 
 const queryClient = new QueryClient();
 
-function App() {
+function AppContent() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -57,6 +57,14 @@ function App() {
         <Toaster />
       </ThemeProvider>
     </QueryClientProvider>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
