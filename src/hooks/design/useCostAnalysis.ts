@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useHardwareTotals } from './useHardwareTotals';
@@ -148,13 +147,15 @@ export const useCostAnalysis = () => {
     const energyMonthly = energyCosts.monthlyEnergyCost;
     const amortizedMonthly = amortizedCostsByType.total;
     const licensingMonthly = licensingCosts.monthly;
-    const totalMonthly = rackMonthly + energyMonthly + amortizedMonthly + licensingMonthly;
+    const networkMonthly = amortizedCostsByType.network;
+    const totalMonthly = rackMonthly + energyMonthly + amortizedMonthly + licensingMonthly + networkMonthly;
     
     return { 
       racksMonthly: rackMonthly, 
       energyMonthly, 
       amortizedMonthly, 
       licensingMonthly,
+      networkMonthly,
       totalMonthly 
     };
   }, [energyCosts.monthlyEnergyCost, amortizedCostsByType.total, licensingCosts.monthly, activeDesign?.requirements]);

@@ -108,20 +108,34 @@ export const ModelPanel: React.FC = () => {
   const clusterAnalysis = useMemo(() => {
     const analysis: Record<string, any> = {};
     
+    // Calculate total device count, RU, and power for proportional cost allocation
+    const totalDeviceCount = Object.values(clusterDeviceCounts).reduce((sum, count) => sum + count, 0);
+    const totalRU = Object.entries(clusterDeviceCounts).reduce((sum, [clusterId, count]) => {
+      const cluster = [...computePricing, ...storagePricing].find(c => c.clusterId === clusterId);
+      return sum + (count * (cluster?.rackUnits || 1)); // Default to 1 RU if not specified
+    }, 0);
+    const totalPower = Object.entries(clusterDeviceCounts).reduce((sum, [clusterId, count]) => {
+      const cluster = [...computePricing, ...storagePricing].find(c => c.clusterId === clusterId);
+      return sum + (count * (cluster?.powerWatts || 500)); // Default to 500W if not specified
+    }, 0);
+    
     // Analyze compute clusters
     computePricing.forEach(cluster => {
       const consumption = clusterConsumption[cluster.clusterId] || 50;
       const deviceCount = clusterDeviceCounts[cluster.clusterId] || 0;
+      const clusterRU = deviceCount * (cluster.rackUnits || 1);
+      const clusterPower = deviceCount * (cluster.powerWatts || 500);
       
       // Calculate proportional costs
-      const networkCostShare = networkCostApportionment[cluster.clusterId] || 0;
-      const baseComputeCost = operationalCosts.amortizedMonthly * 0.6; // Assume 60% for compute infrastructure
-      const computeCostShare = baseComputeCost / computePricing.length; // Distribute evenly among compute clusters
-      const rackCostShare = (operationalCosts.racksMonthly / computePricing.length); // Distribute rack costs
-      const energyCostShare = (operationalCosts.energyMonthly * 0.6 / computePricing.length); // 60% energy for compute
-      const licensingCostShare = (operationalCosts.licensingMonthly / computePricing.length); // Distribute licensing
+      const networkCostShare = operationalCosts.networkMonthly * (deviceCount / totalDeviceCount);
+      const rackCostShare = operationalCosts.racksMonthly * (clusterRU / totalRU);
+      const energyCostShare = operationalCosts.energyMonthly * (clusterPower / totalPower);
+      const licensingCostShare = operationalCosts.licensingMonthly * (deviceCount / totalDeviceCount);
       
-      const totalClusterCost = computeCostShare + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
+      // Get the full amortized cost for this specific cluster
+      const clusterAmortizedCost = operationalCosts.amortizedMonthly * (deviceCount / totalDeviceCount);
+      
+      const totalClusterCost = clusterAmortizedCost + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
       
       // Calculate revenue based on VM consumption
       const averageVMVCPUs = requirements.computeRequirements?.averageVMVCPUs || 4;
@@ -141,7 +155,7 @@ export const ModelPanel: React.FC = () => {
         consumption,
         deviceCount,
         costs: {
-          compute: computeCostShare,
+          compute: clusterAmortizedCost,
           network: networkCostShare,
           rack: rackCostShare,
           energy: energyCostShare,
@@ -158,16 +172,19 @@ export const ModelPanel: React.FC = () => {
     storagePricing.forEach(cluster => {
       const consumption = clusterConsumption[cluster.clusterId] || 50;
       const deviceCount = clusterDeviceCounts[cluster.clusterId] || 0;
+      const clusterRU = deviceCount * (cluster.rackUnits || 1);
+      const clusterPower = deviceCount * (cluster.powerWatts || 500);
       
       // Calculate proportional costs
-      const networkCostShare = networkCostApportionment[cluster.clusterId] || 0;
-      const baseStorageCost = operationalCosts.amortizedMonthly * 0.4; // Assume 40% for storage infrastructure
-      const storageCostShare = baseStorageCost / storagePricing.length; // Distribute evenly among storage clusters
-      const rackCostShare = (operationalCosts.racksMonthly / storagePricing.length); // Distribute rack costs
-      const energyCostShare = (operationalCosts.energyMonthly * 0.4 / storagePricing.length); // 40% energy for storage
-      const licensingCostShare = (operationalCosts.licensingMonthly / storagePricing.length); // Distribute licensing
+      const networkCostShare = operationalCosts.networkMonthly * (deviceCount / totalDeviceCount);
+      const rackCostShare = operationalCosts.racksMonthly * (clusterRU / totalRU);
+      const energyCostShare = operationalCosts.energyMonthly * (clusterPower / totalPower);
+      const licensingCostShare = operationalCosts.licensingMonthly * (deviceCount / totalDeviceCount);
       
-      const totalClusterCost = storageCostShare + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
+      // Get the full amortized cost for this specific cluster
+      const clusterAmortizedCost = operationalCosts.amortizedMonthly * (deviceCount / totalDeviceCount);
+      
+      const totalClusterCost = clusterAmortizedCost + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
       
       // Calculate revenue based on storage consumption
       const clusterMetrics = storageClustersMetrics.find(m => m.id === cluster.clusterId);
@@ -182,7 +199,7 @@ export const ModelPanel: React.FC = () => {
         consumption,
         deviceCount,
         costs: {
-          storage: storageCostShare,
+          storage: clusterAmortizedCost,
           network: networkCostShare,
           rack: rackCostShare,
           energy: energyCostShare,
@@ -196,7 +213,7 @@ export const ModelPanel: React.FC = () => {
     });
     
     return analysis;
-  }, [clusterConsumption, clusterDeviceCounts, networkCostApportionment, computePricing, storagePricing, operationalCosts, requirements, actualHardwareTotals, storageClustersMetrics]);
+  }, [clusterConsumption, clusterDeviceCounts, computePricing, storagePricing, operationalCosts, requirements, actualHardwareTotals, storageClustersMetrics]);
 
   // Calculate overall totals
   const overallAnalysis = useMemo(() => {

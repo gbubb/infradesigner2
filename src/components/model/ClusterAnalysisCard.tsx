@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 
@@ -43,7 +42,7 @@ export const ClusterAnalysisCard: React.FC<ClusterAnalysisCardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <h6 className="font-medium text-green-600">Revenue</h6>
-          <div className="font-medium text-lg">€{analysis.revenue.toLocaleString()}</div>
+          <div className="font-medium text-lg">${analysis.revenue.toFixed(2)}</div>
         </div>
         
         <div className="space-y-2">
@@ -52,34 +51,34 @@ export const ClusterAnalysisCard: React.FC<ClusterAnalysisCardProps> = ({
             {analysis.type === 'compute' && analysis.costs.compute !== undefined && (
               <div className="flex justify-between">
                 <span>Compute:</span>
-                <span>€{analysis.costs.compute.toLocaleString()}</span>
+                <span>${analysis.costs.compute.toFixed(2)}</span>
               </div>
             )}
             {analysis.type === 'storage' && analysis.costs.storage !== undefined && (
               <div className="flex justify-between">
                 <span>Storage:</span>
-                <span>€{analysis.costs.storage.toLocaleString()}</span>
+                <span>${analysis.costs.storage.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between">
               <span>Network:</span>
-              <span>€{analysis.costs.network.toLocaleString()}</span>
+              <span>${analysis.costs.network.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Rack:</span>
-              <span>€{analysis.costs.rack.toLocaleString()}</span>
+              <span>${analysis.costs.rack.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Energy:</span>
-              <span>€{analysis.costs.energy.toLocaleString()}</span>
+              <span>${analysis.costs.energy.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Licensing:</span>
-              <span>€{analysis.costs.licensing.toLocaleString()}</span>
+              <span>${analysis.costs.licensing.toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-medium border-t pt-1">
               <span>Total:</span>
-              <span>€{analysis.costs.total.toLocaleString()}</span>
+              <span>${analysis.costs.total.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -90,7 +89,7 @@ export const ClusterAnalysisCard: React.FC<ClusterAnalysisCardProps> = ({
           </h6>
           <div className="space-y-1">
             <div className={`font-medium text-lg ${analysis.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              €{analysis.profit.toLocaleString()}
+              ${analysis.profit.toFixed(2)}
             </div>
             <div className="text-sm">
               <span className="text-muted-foreground">Margin: </span>
