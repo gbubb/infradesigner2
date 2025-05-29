@@ -9,6 +9,7 @@ interface DetailedCostAnalysisCardProps {
     racksMonthly: number;
     energyMonthly: number;
     amortizedMonthly: number;
+    licensingMonthly?: number;
     totalMonthly: number;
   };
   amortizedCostsByType: {
@@ -18,16 +19,24 @@ interface DetailedCostAnalysisCardProps {
     total: number;
   };
   totalCostOfOwnership: number;
+  licensingCosts?: {
+    oneTime: number;
+    monthly: number;
+  };
 }
 
 export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> = ({
   capitalCost,
   operationalCosts,
   amortizedCostsByType,
-  totalCostOfOwnership
+  totalCostOfOwnership,
+  licensingCosts
 }) => {
   // Calculate first year operational costs (monthly × 12)
   const firstYearOperationalCost = operationalCosts.totalMonthly * 12;
+
+  // Calculate hardware capital cost (excluding licensing)
+  const hardwareCapitalCost = licensingCosts ? capitalCost - licensingCosts.oneTime : capitalCost;
 
   return (
     <Card className="mb-8">
@@ -40,8 +49,18 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
             <h3 className="text-lg font-medium mb-2">1. Capital Costs</h3>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Hardware Cost</span>
-                <span className="font-medium">${capitalCost.toLocaleString()}</span>
+                <span className="text-muted-foreground">Hardware Cost</span>
+                <span className="font-medium">${hardwareCapitalCost.toLocaleString()}</span>
+              </div>
+              {licensingCosts && licensingCosts.oneTime > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">One-time Licensing</span>
+                  <span className="font-medium">${licensingCosts.oneTime.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-medium pt-2 border-t">
+                <span>Total Capital Cost</span>
+                <span>${capitalCost.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -82,6 +101,19 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
                   <span>${amortizedCostsByType.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
+
+              {licensingCosts && licensingCosts.monthly > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Licensing and Support</h4>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Licensing & Support</span>
+                      <span className="font-medium">${licensingCosts.monthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                </>
+              )}
               
               <div className="flex justify-between pt-2 border-t font-medium">
                 <span>Total Monthly Operational Cost</span>
@@ -99,7 +131,7 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
               <span>${firstYearOperationalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Includes 12 months of operational costs (amortization, energy, and rack colocation)
+              Includes 12 months of operational costs (amortization, energy, rack colocation, and licensing)
             </p>
           </div>
         </div>

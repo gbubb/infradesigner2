@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useHardwareTotals } from './useHardwareTotals';
@@ -24,23 +25,62 @@ export const useCostAnalysis = () => {
     activeDesign?.requirements?.physicalConstraints?.useColoRacks, 
     activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros
   ]);
+
+  // Calculate licensing costs
+  const licensingCosts = useMemo(() => {
+    const licensingReqs = activeDesign?.requirements?.licensingRequirements;
+    if (!licensingReqs) {
+      return { oneTime: 0, monthly: 0 };
+    }
+
+    let oneTimeCosts = 0;
+    let monthlyCosts = 0;
+
+    // Support cost per node
+    if (licensingReqs.supportCostPerNode) {
+      const totalNodes = (activeDesign?.components || []).filter(
+        component => component.type === ComponentType.Server
+      ).length;
+      monthlyCosts += licensingReqs.supportCostPerNode * totalNodes;
+    }
+
+    // Additional costs
+    licensingReqs.additionalCosts.forEach(cost => {
+      switch (cost.frequency) {
+        case 'one-time':
+          oneTimeCosts += cost.amount;
+          break;
+        case 'monthly':
+          monthlyCosts += cost.amount;
+          break;
+        case 'quarterly':
+          monthlyCosts += cost.amount / 3;
+          break;
+        case 'annually':
+          monthlyCosts += cost.amount / 12;
+          break;
+      }
+    });
+
+    return { oneTime: oneTimeCosts, monthly: monthlyCosts };
+  }, [activeDesign?.requirements?.licensingRequirements, activeDesign?.components]);
   
-  // Calculate total capital cost
+  // Calculate total capital cost (including one-time licensing costs)
   const capitalCost = useMemo(() => {
     if (!activeDesign?.components || activeDesign.components.length === 0) return 0;
-    // Each component in activeDesign.components is now an individual instance with quantity 1
-    // Its cost is the unit cost.
-    return activeDesign.components.reduce((total, component) => {
-      return total + component.cost; // component.quantity is 1 for each instance
+    
+    const hardwareCost = activeDesign.components.reduce((total, component) => {
+      return total + component.cost;
     }, 0);
-  }, [activeDesign?.components]);
+    
+    return hardwareCost + licensingCosts.oneTime;
+  }, [activeDesign?.components, licensingCosts.oneTime]);
 
   // Recalculate cost per vCPU using only compute and non-storage components
   const costPerVCPU = useMemo(() => {
     if (!actualHardwareTotals.totalVCPUs || actualHardwareTotals.totalVCPUs === 0) return 0;
     const computeCapitalCost = activeDesign?.components?.reduce((total, component) => {
       if (component.role !== 'storageNode' && component.type !== ComponentType.Disk) {
-        // component.quantity is 1 for each instance
         return total + component.cost;
       }
       return total;
@@ -61,7 +101,6 @@ export const useCostAnalysis = () => {
     let networkTotal = 0;
 
     activeDesign.components.forEach(component => {
-      // component.quantity is 1 for each instance
       const componentCost = component.cost;
       if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
         storageTotal += componentCost;
@@ -78,9 +117,9 @@ export const useCostAnalysis = () => {
     const networkAmortized = networkTotal / (networkLifespan * monthsInYear);
     const totalAmortized = computeAmortized + storageAmortized + networkAmortized;
     return { compute: computeAmortized, storage: storageAmortized, network: networkAmortized, total: totalAmortized };
-  }, [activeDesign?.components, activeDesign?.requirements]); // Simplified dependency array
+  }, [activeDesign?.components, activeDesign?.requirements]);
   
-  // Compute operational costs
+  // Compute operational costs (including licensing)
   const operationalCosts = useMemo(() => {
     const totalRackQuantityValue = (activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity || 1) + 
       (activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks ? 2 : 0);
@@ -91,9 +130,17 @@ export const useCostAnalysis = () => {
     const rackMonthly = rackCostPerMonthValue * totalRackQuantityValue;
     const energyMonthly = energyCosts.monthlyEnergyCost;
     const amortizedMonthly = amortizedCostsByType.total;
-    const totalMonthly = rackMonthly + energyMonthly + amortizedMonthly;
-    return { racksMonthly: rackMonthly, energyMonthly, amortizedMonthly, totalMonthly };
-  }, [energyCosts.monthlyEnergyCost, amortizedCostsByType.total, activeDesign?.requirements]); // Simplified dependency array
+    const licensingMonthly = licensingCosts.monthly;
+    const totalMonthly = rackMonthly + energyMonthly + amortizedMonthly + licensingMonthly;
+    
+    return { 
+      racksMonthly: rackMonthly, 
+      energyMonthly, 
+      amortizedMonthly, 
+      licensingMonthly,
+      totalMonthly 
+    };
+  }, [energyCosts.monthlyEnergyCost, amortizedCostsByType.total, licensingCosts.monthly, activeDesign?.requirements]);
   
   // Calculate TCO for 12 months (operational costs only)
   const totalCostOfOwnership = useMemo(() => {
@@ -105,7 +152,6 @@ export const useCostAnalysis = () => {
     if (!actualHardwareTotals.totalStorageTB || actualHardwareTotals.totalStorageTB === 0) return 0;
     const storageCapitalCost = activeDesign?.components?.reduce((total, component) => {
       if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
-        // component.quantity is 1 for each instance
         return total + component.cost;
       }
       return total;
@@ -119,6 +165,7 @@ export const useCostAnalysis = () => {
     totalCostOfOwnership,
     costPerVCPU,
     costPerTB,
-    amortizedCostsByType
+    amortizedCostsByType,
+    licensingCosts
   };
 };

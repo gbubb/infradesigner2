@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -5,6 +6,7 @@ import { ComputeRequirementsForm } from './ComputeRequirementsForm';
 import { StorageRequirementsForm } from './StorageRequirementsForm';
 import { NetworkRequirementsForm } from './NetworkRequirementsForm';
 import { PhysicalConstraintsForm } from './PhysicalConstraintsForm';
+import { LicensingRequirementsForm } from './LicensingRequirementsForm';
 import { useDesignStore } from '@/store/designStore';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -51,15 +53,20 @@ export const RequirementsPanel: React.FC = () => {
     updateRequirements({ physicalConstraints });
   }, [updateRequirements]);
 
+  const handleUpdateLicensingRequirements = useCallback((licensingRequirements) => {
+    updateRequirements({ licensingRequirements });
+  }, [updateRequirements]);
+
   return (
     <div className="w-full p-6">
       <h2 className="text-2xl font-semibold mb-6">Design Requirements</h2>
       <Tabs defaultValue="compute" value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid grid-cols-4 mb-8">
+        <TabsList className="grid grid-cols-5 mb-8">
           <TabsTrigger value="compute">Compute</TabsTrigger>
           <TabsTrigger value="storage">Storage</TabsTrigger>
           <TabsTrigger value="network">Network</TabsTrigger>
           <TabsTrigger value="physical">Physical</TabsTrigger>
+          <TabsTrigger value="licensing">Licensing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="compute">
@@ -106,6 +113,14 @@ export const RequirementsPanel: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+        <TabsContent value="licensing">
+          <div className={sectionClass}>
+            <LicensingRequirementsForm
+              requirements={requirements.licensingRequirements || { supportCostPerNode: 0, additionalCosts: [] }}
+              onUpdate={handleUpdateLicensingRequirements}
+            />
           </div>
         </TabsContent>
       </Tabs>

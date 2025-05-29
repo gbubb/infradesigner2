@@ -51,5 +51,9 @@ export const defaultRequirements: DesignRequirements = {
     rackUnitsPerRack: 42,
     powerPerRackWatts: 5000,
     operationalLoadPercentage: 50
+  },
+  licensingRequirements: {
+    supportCostPerNode: 0,
+    additionalCosts: []
   }
 };

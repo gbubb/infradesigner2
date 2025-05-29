@@ -21,7 +21,7 @@ export const DesignStatisticsTab: React.FC = () => {
     totalPower,
     totalRackUnits,
     amortizedCostsByType,
-    monthlyCostPerAverageVM // <-- new
+    monthlyCostPerAverageVM
   } = useDesignCalculations();
 
   // Calculate capital cost directly
@@ -37,6 +37,7 @@ export const DesignStatisticsTab: React.FC = () => {
         racksMonthly: 0,
         energyMonthly: 0,
         amortizedMonthly: 0,
+        licensingMonthly: 0,
         totalMonthly: 0
       };
     }
@@ -49,6 +50,36 @@ export const DesignStatisticsTab: React.FC = () => {
       total: 0,
       ...(amortizedCostsByType || {})
     };
+
+    // Calculate licensing costs
+    const licensingReqs = activeDesign.requirements.licensingRequirements;
+    let licensingMonthly = 0;
+    
+    if (licensingReqs) {
+      // Support cost per node
+      if (licensingReqs.supportCostPerNode) {
+        const totalNodes = (activeDesign.components || []).filter(
+          component => component.type === 'Server'
+        ).length;
+        licensingMonthly += licensingReqs.supportCostPerNode * totalNodes;
+      }
+
+      // Additional costs
+      licensingReqs.additionalCosts.forEach(cost => {
+        switch (cost.frequency) {
+          case 'monthly':
+            licensingMonthly += cost.amount;
+            break;
+          case 'quarterly':
+            licensingMonthly += cost.amount / 3;
+            break;
+          case 'annually':
+            licensingMonthly += cost.amount / 12;
+            break;
+          // one-time costs are not included in monthly operational costs
+        }
+      });
+    }
     
     const racksMonthly = (
       (activeDesign.requirements.physicalConstraints?.useColoRacks ? 
@@ -57,20 +88,38 @@ export const DesignStatisticsTab: React.FC = () => {
     );
     
     const energyMonthly = 100; // Simplified for this component
-    const totalMonthly = racksMonthly + energyMonthly + (safeAmortizedCosts.total || 0);
+    const totalMonthly = racksMonthly + energyMonthly + (safeAmortizedCosts.total || 0) + licensingMonthly;
     
     return {
       racksMonthly,
       energyMonthly,
       amortizedMonthly: safeAmortizedCosts.total || 0,
+      licensingMonthly,
       totalMonthly
     };
   }, [activeDesign, amortizedCostsByType]);
+
+  // Calculate licensing costs for capital costs
+  const licensingCosts = React.useMemo(() => {
+    const licensingReqs = activeDesign?.requirements?.licensingRequirements;
+    if (!licensingReqs) {
+      return { oneTime: 0, monthly: operationalCosts.licensingMonthly };
+    }
+
+    let oneTimeCosts = 0;
+    licensingReqs.additionalCosts.forEach(cost => {
+      if (cost.frequency === 'one-time') {
+        oneTimeCosts += cost.amount;
+      }
+    });
+
+    return { oneTime: oneTimeCosts, monthly: operationalCosts.licensingMonthly };
+  }, [activeDesign?.requirements?.licensingRequirements, operationalCosts.licensingMonthly]);
   
-  // Calculate TCO
+  // Calculate TCO including licensing
   const totalCostOfOwnership = React.useMemo(() => {
-    return capitalCost + (operationalCosts.totalMonthly * 12);
-  }, [capitalCost, operationalCosts.totalMonthly]);
+    return (capitalCost + licensingCosts.oneTime) + (operationalCosts.totalMonthly * 12);
+  }, [capitalCost, licensingCosts.oneTime, operationalCosts.totalMonthly]);
 
   // Calculate power per rack value
   const powerPerRack = resourceMetrics?.totalRackQuantity 
@@ -91,7 +140,7 @@ export const DesignStatisticsTab: React.FC = () => {
         />
         
         <KeyMetricsCard
-          totalCapitalCost={capitalCost}
+          totalCapitalCost={capitalCost + licensingCosts.oneTime}
           costPerVCPU={costPerVCPU}
           costTBMemory={costPerTB}
           monthlyCostPerAverageVM={monthlyCostPerAverageVM}
@@ -99,10 +148,11 @@ export const DesignStatisticsTab: React.FC = () => {
       </div>
       
       <DetailedCostAnalysisCard 
-        capitalCost={capitalCost}
+        capitalCost={capitalCost + licensingCosts.oneTime}
         operationalCosts={operationalCosts}
         amortizedCostsByType={amortizedCostsByType || { compute: 0, storage: 0, network: 0, total: 0 }}
         totalCostOfOwnership={totalCostOfOwnership}
+        licensingCosts={licensingCosts}
       />
       
       <StorageClustersTable clusters={storageClustersMetrics} />

@@ -1,6 +1,6 @@
-
 import { NetworkTopology, ManagementNetworkType, IPMINetworkType } from './network-types';
 import { StorageClusterRequirement } from './storage-types';
+import { LicensingRequirements } from './licensing-types';
 
 // Compute cluster requirements
 export interface ComputeClusterRequirement {
@@ -58,6 +58,7 @@ export interface DesignRequirements {
     operationalLoadPercentage?: number;
     networkCoreRackQuantity?: number;
   };
+  licensingRequirements?: LicensingRequirements;
 }
 
 export enum DeviceRoleType {
