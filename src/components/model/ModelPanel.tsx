@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
@@ -124,8 +123,16 @@ export const ModelPanel: React.FC = () => {
       
       const totalClusterCost = computeCostShare + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
       
-      // Calculate revenue based on consumption
-      const revenue = cluster.pricePerMonth * (consumption / 100);
+      // Calculate revenue based on VM consumption
+      const averageVMVCPUs = requirements.computeRequirements?.averageVMVCPUs || 4;
+      const averageVMMemoryGB = requirements.computeRequirements?.averageVMMemoryGB || 8;
+      const totalVCPUs = actualHardwareTotals.totalVCPUs / computePricing.length;
+      const totalMemoryGB = (actualHardwareTotals.totalComputeMemoryTB * 1024) / computePricing.length;
+      const vmsByCPU = Math.floor(totalVCPUs / averageVMVCPUs);
+      const vmsByMemory = Math.floor(totalMemoryGB / averageVMMemoryGB);
+      const maxVMs = Math.min(vmsByCPU, vmsByMemory);
+      const currentVMs = Math.floor(consumption * maxVMs / 100);
+      const revenue = cluster.pricePerMonth * currentVMs;
       const profit = revenue - totalClusterCost;
       
       analysis[cluster.clusterId] = {
@@ -162,8 +169,11 @@ export const ModelPanel: React.FC = () => {
       
       const totalClusterCost = storageCostShare + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
       
-      // Calculate revenue based on consumption
-      const revenue = cluster.pricePerMonth * (consumption / 100);
+      // Calculate revenue based on storage consumption
+      const clusterMetrics = storageClustersMetrics.find(m => m.id === cluster.clusterId);
+      const usableStorageTiB = clusterMetrics?.usableCapacityTiB || 0;
+      const currentStorageTiB = consumption * usableStorageTiB / 100;
+      const revenue = cluster.pricePerMonth * currentStorageTiB * 1024; // Convert TiB to GiB for pricing
       const profit = revenue - totalClusterCost;
       
       analysis[cluster.clusterId] = {
@@ -186,7 +196,7 @@ export const ModelPanel: React.FC = () => {
     });
     
     return analysis;
-  }, [clusterConsumption, clusterDeviceCounts, networkCostApportionment, computePricing, storagePricing, operationalCosts]);
+  }, [clusterConsumption, clusterDeviceCounts, networkCostApportionment, computePricing, storagePricing, operationalCosts, requirements, actualHardwareTotals, storageClustersMetrics]);
 
   // Calculate overall totals
   const overallAnalysis = useMemo(() => {
@@ -234,12 +244,13 @@ export const ModelPanel: React.FC = () => {
         clusterConsumption={clusterConsumption}
         clusterDeviceCounts={clusterDeviceCounts}
         updateClusterConsumption={updateClusterConsumption}
+        storageClustersMetrics={storageClustersMetrics}
       />
 
       {/* Per-Cluster Analysis */}
       <Card>
         <CardHeader>
-          <CardTitle>Cluster-Level Profit Analysis</CardTitle>
+          <CardTitle>Outcome</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

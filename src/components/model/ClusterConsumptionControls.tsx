@@ -6,12 +6,27 @@ import { ClusterPricing } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 
+interface StorageClusterMetrics {
+  id: string;
+  name: string;
+  poolType: string;
+  maxFillFactor: number;
+  totalRawCapacityTB: number;
+  usableCapacityTB: number;
+  usableCapacityTiB: number;
+  effectiveCapacityTiB: number;
+  totalNodeCost: number;
+  costPerTiB: number;
+  nodeCount: number;
+}
+
 interface ClusterConsumptionControlsProps {
   computePricing: ClusterPricing[];
   storagePricing: ClusterPricing[];
   clusterConsumption: Record<string, number>;
   clusterDeviceCounts: Record<string, number>;
   updateClusterConsumption: (clusterId: string, consumption: number) => void;
+  storageClustersMetrics: StorageClusterMetrics[];
 }
 
 export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProps> = ({
@@ -19,7 +34,8 @@ export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProp
   storagePricing,
   clusterConsumption,
   clusterDeviceCounts,
-  updateClusterConsumption
+  updateClusterConsumption,
+  storageClustersMetrics
 }) => {
   const { requirements } = useDesignStore();
   const { actualHardwareTotals } = useDesignCalculations();
@@ -54,14 +70,14 @@ export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProp
     const capacity: Record<string, number> = {};
     
     storagePricing.forEach(cluster => {
-      // Calculate usable storage for this cluster based on device count
-      const deviceCount = clusterDeviceCounts[cluster.clusterId] || 0;
-      const usableStorageTiB = actualHardwareTotals.totalStorageTB / storagePricing.length;
+      // Get the actual storage capacity for this cluster from the metrics
+      const clusterMetrics = storageClustersMetrics.find(m => m.id === cluster.clusterId);
+      const usableStorageTiB = clusterMetrics?.usableCapacityTiB || 0;
       capacity[cluster.clusterId] = usableStorageTiB;
     });
     
     return capacity;
-  }, [storagePricing, clusterDeviceCounts, actualHardwareTotals]);
+  }, [storagePricing, storageClustersMetrics]);
 
   return (
     <>
@@ -93,7 +109,6 @@ export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProp
                     className="w-full"
                   />
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <div>Devices: {clusterDeviceCounts[cluster.clusterId] || 0}</div>
                     <div>Resources: {currentVCPUs} vCPUs, {currentMemoryGB.toFixed(1)} GB Memory</div>
                     <div>Max Capacity: {resources.maxVMs} VMs ({resources.vcpus} vCPUs, {resources.memoryGB.toFixed(1)} GB Memory)</div>
                     <div>Price: €{cluster.pricePerMonth}/month per unit</div>
@@ -131,7 +146,6 @@ export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProp
                     className="w-full"
                   />
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <div>Devices: {clusterDeviceCounts[cluster.clusterId] || 0}</div>
                     <div>Capacity: {capacity.toFixed(1)} TiB usable storage</div>
                     <div>Price: €{cluster.pricePerMonth}/month per GiB</div>
                   </div>
