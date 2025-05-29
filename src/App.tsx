@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +21,7 @@ import { DesignPanel } from "@/components/design/DesignPanel";
 import { ConfigurePanel } from "@/components/configure/ConfigurePanel";
 import { ResultsPanel } from "@/components/results/ResultsPanel";
 import { ComparePanel } from "@/components/compare/ComparePanel";
+import { ModelPanel } from "@/components/model/ModelPanel";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +57,7 @@ const AppRoutes = () => {
         <Route path="configure/*" element={<ConfigurePanel />} />
         <Route path="results" element={<ResultsPanel />} />
         <Route path="compare" element={<ComparePanel />} />
+        <Route path="model" element={<ModelPanel />} />
       </Route>
       <Route path="/designs/:sharingId" element={<Index />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
