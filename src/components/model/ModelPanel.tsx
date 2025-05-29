@@ -194,7 +194,7 @@ export const ModelPanel: React.FC = () => {
       const storageDevices = activeDesign?.components.filter(
         component => (component.type === ComponentType.Disk || 
           (component.type === ComponentType.Server && component.role === 'storageNode')) &&
-          component.clusterId === cluster.clusterId
+          (component as any).clusterInfo?.clusterId === cluster.clusterId
       ) || [];
       
       const storageHardwareCost = storageDevices.reduce((total, device) => {
