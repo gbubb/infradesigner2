@@ -2,6 +2,7 @@
 import React from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
+import { useCostAnalysis } from '@/hooks/design/useCostAnalysis';
 import { ResourceSummaryCard, KeyMetricsCard } from '../ResultsSummaryCards';
 import { DetailedCostAnalysisCard } from '../DetailedCostAnalysisCard';
 import { StorageClustersTable } from '../StorageClustersTable';
@@ -24,102 +25,8 @@ export const DesignStatisticsTab: React.FC = () => {
     monthlyCostPerAverageVM
   } = useDesignCalculations();
 
-  // Calculate capital cost directly
-  const capitalCost = activeDesign?.components?.reduce(
-    (total, c) => total + (c.cost * (c.quantity || 1)), 
-    0
-  ) || 0;
-
-  // Calculate operational costs based on design requirements and power usage
-  const operationalCosts = React.useMemo(() => {
-    if (!activeDesign || !activeDesign.requirements) {
-      return {
-        racksMonthly: 0,
-        energyMonthly: 0,
-        amortizedMonthly: 0,
-        licensingMonthly: 0,
-        totalMonthly: 0
-      };
-    }
-    
-    // Safe default for amortized costs
-    const safeAmortizedCosts = {
-      compute: 0,
-      storage: 0,
-      network: 0,
-      total: 0,
-      ...(amortizedCostsByType || {})
-    };
-
-    // Calculate licensing costs
-    const licensingReqs = activeDesign.requirements.licensingRequirements;
-    let licensingMonthly = 0;
-    
-    if (licensingReqs) {
-      // Support cost per node
-      if (licensingReqs.supportCostPerNode) {
-        const totalNodes = (activeDesign.components || []).filter(
-          component => component.type === 'Server'
-        ).length;
-        licensingMonthly += licensingReqs.supportCostPerNode * totalNodes;
-      }
-
-      // Additional costs
-      licensingReqs.additionalCosts.forEach(cost => {
-        switch (cost.frequency) {
-          case 'monthly':
-            licensingMonthly += cost.amount;
-            break;
-          case 'quarterly':
-            licensingMonthly += cost.amount / 3;
-            break;
-          case 'annually':
-            licensingMonthly += cost.amount / 12;
-            break;
-          // one-time costs are not included in monthly operational costs
-        }
-      });
-    }
-    
-    const racksMonthly = (
-      (activeDesign.requirements.physicalConstraints?.useColoRacks ? 
-        (activeDesign.requirements.physicalConstraints.rackCostPerMonthEuros || 2000) : 0) * 
-      (activeDesign.requirements.physicalConstraints?.computeStorageRackQuantity || 1)
-    );
-    
-    const energyMonthly = 100; // Simplified for this component
-    const totalMonthly = racksMonthly + energyMonthly + (safeAmortizedCosts.total || 0) + licensingMonthly;
-    
-    return {
-      racksMonthly,
-      energyMonthly,
-      amortizedMonthly: safeAmortizedCosts.total || 0,
-      licensingMonthly,
-      totalMonthly
-    };
-  }, [activeDesign, amortizedCostsByType]);
-
-  // Calculate licensing costs for capital costs
-  const licensingCosts = React.useMemo(() => {
-    const licensingReqs = activeDesign?.requirements?.licensingRequirements;
-    if (!licensingReqs) {
-      return { oneTime: 0, monthly: operationalCosts.licensingMonthly };
-    }
-
-    let oneTimeCosts = 0;
-    licensingReqs.additionalCosts.forEach(cost => {
-      if (cost.frequency === 'one-time') {
-        oneTimeCosts += cost.amount;
-      }
-    });
-
-    return { oneTime: oneTimeCosts, monthly: operationalCosts.licensingMonthly };
-  }, [activeDesign?.requirements?.licensingRequirements, operationalCosts.licensingMonthly]);
-  
-  // Calculate TCO including licensing
-  const totalCostOfOwnership = React.useMemo(() => {
-    return (capitalCost + licensingCosts.oneTime) + (operationalCosts.totalMonthly * 12);
-  }, [capitalCost, licensingCosts.oneTime, operationalCosts.totalMonthly]);
+  // Use the cost analysis hook for proper licensing calculations
+  const { capitalCost, operationalCosts, licensingCosts, totalCostOfOwnership } = useCostAnalysis();
 
   // Calculate power per rack value
   const powerPerRack = resourceMetrics?.totalRackQuantity 
@@ -140,7 +47,7 @@ export const DesignStatisticsTab: React.FC = () => {
         />
         
         <KeyMetricsCard
-          totalCapitalCost={capitalCost + licensingCosts.oneTime}
+          totalCapitalCost={capitalCost}
           costPerVCPU={costPerVCPU}
           costTBMemory={costPerTB}
           monthlyCostPerAverageVM={monthlyCostPerAverageVM}
@@ -148,7 +55,7 @@ export const DesignStatisticsTab: React.FC = () => {
       </div>
       
       <DetailedCostAnalysisCard 
-        capitalCost={capitalCost + licensingCosts.oneTime}
+        capitalCost={capitalCost}
         operationalCosts={operationalCosts}
         amortizedCostsByType={amortizedCostsByType || { compute: 0, storage: 0, network: 0, total: 0 }}
         totalCostOfOwnership={totalCostOfOwnership}
