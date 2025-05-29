@@ -5,26 +5,26 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { DndProvider } from '@/components/providers/DndProvider';
-import AppLayout from '@/components/layout/AppLayout';
+import { AppLayout } from '@/components/layout/AppLayout';
 import RequirementsPanel from '@/components/requirements/RequirementsPanel';
-import ComponentLibrary from '@/components/sidebar/ComponentLibrary';
-import DesignPanel from '@/components/design/DesignPanel';
+import { ComponentLibrary } from '@/components/sidebar/ComponentLibrary';
+import { DesignPanel } from '@/components/design/DesignPanel';
 import ConfigurePanel from '@/components/configure/ConfigurePanel';
-import ResultsPanel from '@/components/results/ResultsPanel';
-import ComparePanel from '@/components/compare/ComparePanel';
+import { ResultsPanel } from '@/components/results/ResultsPanel';
+import { ComparePanel } from '@/components/compare/ComparePanel';
 import ModelPanel from '@/components/model/ModelPanel';
 import Auth from '@/pages/Auth';
 import NotFound from '@/pages/NotFound';
-import SharedDesignLoader from '@/components/layout/SharedDesignLoader';
+import { SharedDesignLoader } from '@/components/layout/SharedDesignLoader';
 import { useAuth } from '@/hooks/useAuth';
 import './App.css';
 
 const queryClient = new QueryClient();
 
 function App() {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
 
-  if (loading) {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
