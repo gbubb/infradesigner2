@@ -1,18 +1,17 @@
 
 import React from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Wrench, Folder, FolderOpen, ArrowRight, Settings, TrendingUp } from "lucide-react";
+import { LayoutDashboard, Wrench, Folder, FolderOpen, ArrowRight, Settings } from "lucide-react";
 
 const SIDEBAR_WIDTH = 140;
 
 const sidebarSections = [
   { label: "Requirements", path: "/", icon: LayoutDashboard, color: "bg-[#3e78b2]" },
-  { label: "Components", path: "/components", icon: Folder, color: "bg-[#FFB703]" },
+  { label: "Components", path: "/components", icon: Folder, color: "bg-[#FFB703]" }, // updated label
   { label: "Design", path: "/design", icon: Wrench, color: "bg-[#219EBC]" },
   { label: "Configure", path: "/configure", icon: Settings, color: "bg-[#8E54E9]" },
   { label: "Results", path: "/results", icon: FolderOpen, color: "bg-[#43AA8B]" },
-  { label: "Compare", path: "/compare", icon: ArrowRight, color: "bg-[#FF6392]" },
-  { label: "Model", path: "/model", icon: TrendingUp, color: "bg-[#9C27B0]" }
+  { label: "Compare", path: "/compare", icon: ArrowRight, color: "bg-[#FF6392]" }
 ];
 
 export const AppSidebar: React.FC = () => {
