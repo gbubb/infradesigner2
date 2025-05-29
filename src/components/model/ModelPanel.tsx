@@ -1,12 +1,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { Badge } from '@/components/ui/badge';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 import { useDesignStore } from '@/store/designStore';
 import { useCostAnalysis } from '@/hooks/design/useCostAnalysis';
 import { ComponentType } from '@/types/infrastructure';
+import { ClusterConsumptionControls } from './ClusterConsumptionControls';
+import { ClusterAnalysisCard } from './ClusterAnalysisCard';
+import { OperationalCostAlignmentCard, OverallSummaryCard } from './ModelSummaryCards';
 
 export const ModelPanel: React.FC = () => {
   const { requirements } = useDesignStore();
@@ -221,85 +222,19 @@ export const ModelPanel: React.FC = () => {
       <h2 className="text-2xl font-semibold">Revenue Model</h2>
       
       {/* Total Operational Cost Alignment Check */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Operational Cost Alignment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-muted-foreground">Results Function Total:</span>
-              <div className="font-medium">€{operationalCosts.totalMonthly.toLocaleString()}</div>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Model Function Total:</span>
-              <div className="font-medium">€{overallAnalysis.totalCosts.toLocaleString()}</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <OperationalCostAlignmentCard 
+        resultsTotal={operationalCosts.totalMonthly}
+        modelTotal={overallAnalysis.totalCosts}
+      />
 
-      {/* Compute Cluster Consumption Controls */}
-      {computePricing.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Compute Cluster Consumption</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {computePricing.map((cluster) => (
-              <div key={cluster.clusterId} className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">{cluster.clusterName}</span>
-                  <Badge variant="outline">{clusterConsumption[cluster.clusterId] || 50}%</Badge>
-                </div>
-                <Slider
-                  value={[clusterConsumption[cluster.clusterId] || 50]}
-                  onValueChange={(value) => updateClusterConsumption(cluster.clusterId, value[0])}
-                  max={100}
-                  min={0}
-                  step={5}
-                  className="w-full"
-                />
-                <div className="text-sm text-muted-foreground">
-                  Devices: {clusterDeviceCounts[cluster.clusterId] || 0} | 
-                  Price: €{cluster.pricePerMonth}/month per unit
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Storage Cluster Consumption Controls */}
-      {storagePricing.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Storage Cluster Consumption</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {storagePricing.map((cluster) => (
-              <div key={cluster.clusterId} className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">{cluster.clusterName}</span>
-                  <Badge variant="outline">{clusterConsumption[cluster.clusterId] || 50}%</Badge>
-                </div>
-                <Slider
-                  value={[clusterConsumption[cluster.clusterId] || 50]}
-                  onValueChange={(value) => updateClusterConsumption(cluster.clusterId, value[0])}
-                  max={100}
-                  min={0}
-                  step={5}
-                  className="w-full"
-                />
-                <div className="text-sm text-muted-foreground">
-                  Devices: {clusterDeviceCounts[cluster.clusterId] || 0} | 
-                  Price: €{cluster.pricePerMonth}/month per GiB
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      {/* Cluster Consumption Controls */}
+      <ClusterConsumptionControls
+        computePricing={computePricing}
+        storagePricing={storagePricing}
+        clusterConsumption={clusterConsumption}
+        clusterDeviceCounts={clusterDeviceCounts}
+        updateClusterConsumption={updateClusterConsumption}
+      />
 
       {/* Per-Cluster Analysis */}
       <Card>
@@ -309,123 +244,23 @@ export const ModelPanel: React.FC = () => {
         <CardContent>
           <div className="space-y-4">
             {Object.entries(clusterAnalysis).map(([clusterId, analysis]) => (
-              <div key={clusterId} className="border rounded-lg p-4">
-                <div className="flex justify-between items-center mb-3">
-                  <h5 className="font-medium">{analysis.name}</h5>
-                  <div className="flex gap-2">
-                    <Badge variant="outline">{analysis.type}</Badge>
-                    <Badge variant="outline">{analysis.consumption}% utilized</Badge>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <h6 className="font-medium text-green-600">Revenue</h6>
-                    <div className="font-medium text-lg">€{analysis.revenue.toLocaleString()}</div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h6 className="font-medium text-red-600">Allocated Costs</h6>
-                    <div className="space-y-1 text-sm">
-                      {analysis.type === 'compute' && (
-                        <div className="flex justify-between">
-                          <span>Compute:</span>
-                          <span>€{analysis.costs.compute.toLocaleString()}</span>
-                        </div>
-                      )}
-                      {analysis.type === 'storage' && (
-                        <div className="flex justify-between">
-                          <span>Storage:</span>
-                          <span>€{analysis.costs.storage.toLocaleString()}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span>Network:</span>
-                        <span>€{analysis.costs.network.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Rack:</span>
-                        <span>€{analysis.costs.rack.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Energy:</span>
-                        <span>€{analysis.costs.energy.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Licensing:</span>
-                        <span>€{analysis.costs.licensing.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between font-medium border-t pt-1">
-                        <span>Total:</span>
-                        <span>€{analysis.costs.total.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h6 className={`font-medium ${analysis.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      Profit/Loss
-                    </h6>
-                    <div className="space-y-1">
-                      <div className={`font-medium text-lg ${analysis.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        €{analysis.profit.toLocaleString()}
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Margin: </span>
-                        <span className={analysis.profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {analysis.profitMargin.toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Devices: {analysis.deviceCount}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ClusterAnalysisCard
+                key={clusterId}
+                clusterId={clusterId}
+                analysis={analysis}
+              />
             ))}
           </div>
         </CardContent>
       </Card>
 
       {/* Overall Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Overall Revenue & Profit Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <h4 className="font-medium text-green-600">Total Revenue</h4>
-              <div className="font-medium text-xl">€{overallAnalysis.totalRevenue.toLocaleString()}</div>
-            </div>
-            
-            <div className="space-y-2">
-              <h4 className="font-medium text-red-600">Total Costs</h4>
-              <div className="font-medium text-xl">€{overallAnalysis.totalCosts.toLocaleString()}</div>
-            </div>
-            
-            <div className="space-y-2">
-              <h4 className={`font-medium ${overallAnalysis.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                Net Profit/Loss
-              </h4>
-              <div className={`font-medium text-xl ${overallAnalysis.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                €{overallAnalysis.totalProfit.toLocaleString()}
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h4 className="font-medium text-blue-600">Profit Margin</h4>
-              <div className={`font-medium text-xl ${overallAnalysis.profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {overallAnalysis.profitMargin.toFixed(1)}%
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Annual: €{(overallAnalysis.totalProfit * 12).toLocaleString()}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <OverallSummaryCard
+        totalRevenue={overallAnalysis.totalRevenue}
+        totalCosts={overallAnalysis.totalCosts}
+        totalProfit={overallAnalysis.totalProfit}
+        profitMargin={overallAnalysis.profitMargin}
+      />
     </div>
   );
 };
