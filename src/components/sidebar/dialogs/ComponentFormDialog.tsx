@@ -76,7 +76,7 @@ const formSchema = z.object({
   // Switch specific fields
   switchRole: z.nativeEnum(SwitchRole).optional(),
   // portCount: z.number().optional(), // Commented out as per request
-  portSpeed: z.string().optional(),
+  // portSpeed: z.string().optional(), // Commented out as per request
   portSpeedType: z.preprocess(
     (val) => (val === "" ? undefined : val),
     z.nativeEnum(PortSpeed).optional()
@@ -203,7 +203,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       portsConsumedQuantity: formValues.portsConsumedQuantity || 2,
       switchRole: formValues.switchRole || SwitchRole.Access,
       // portCount: formValues.portCount || 24, // Commented out
-      portSpeed: formValues.portSpeed || '10',
+      // portSpeed: formValues.portSpeed || '10', // Commented out
       portSpeedType: formValues.portSpeedType || PortSpeed.Speed10G,
       portsProvidedQuantity: formValues.portsProvidedQuantity || 24,
       // layer: formValues.layer || 3, // Commented out

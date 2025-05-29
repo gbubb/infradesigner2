@@ -1,4 +1,3 @@
-
 import React from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -113,7 +112,7 @@ export const PlacementSection: React.FC<Props> = ({
             </FormItem>
           )}
         />
-        <FormField
+        {/* <FormField
           control={control}
           name="preferredRack"
           render={({ field }) => (
@@ -138,7 +137,7 @@ export const PlacementSection: React.FC<Props> = ({
               </FormDescription>
             </FormItem>
           )}
-        />
+        /> */}
       </div>
     </div>
   );

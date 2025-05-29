@@ -1,4 +1,3 @@
-
 import React from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -50,7 +49,7 @@ export const SwitchFields: React.FC<Props> = ({
           </FormItem>
         )}
       />
-      <FormField
+      {/* <FormField
         control={control}
         name="layer"
         render={({ field }) => (
@@ -72,7 +71,7 @@ export const SwitchFields: React.FC<Props> = ({
             <FormMessage />
           </FormItem>
         )}
-      />
+      /> */}
       <FormField
         control={control}
         name="ruSize"
@@ -95,7 +94,7 @@ export const SwitchFields: React.FC<Props> = ({
           </FormItem>
         )}
       />
-      <FormField
+      {/* <FormField
         control={control}
         name="portCount"
         render={({ field }) => (
@@ -116,10 +115,10 @@ export const SwitchFields: React.FC<Props> = ({
             <FormMessage />
           </FormItem>
         )}
-      />
+      /> */}
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <FormField
+      {/* <FormField
         control={control}
         name="portSpeedType"
         render={({ field }) => (
@@ -147,7 +146,7 @@ export const SwitchFields: React.FC<Props> = ({
             <FormMessage />
           </FormItem>
         )}
-      />
+      /> */}
       <FormField
         control={control}
         name="portsProvidedQuantity"
