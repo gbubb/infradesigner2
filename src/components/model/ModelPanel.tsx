@@ -7,7 +7,6 @@ import { ComponentType } from '@/types/infrastructure';
 import { ClusterConsumptionControls } from './ClusterConsumptionControls';
 import { ClusterAnalysisCard } from './ClusterAnalysisCard';
 import { OperationalCostAlignmentCard, OverallSummaryCard } from './ModelSummaryCards';
-import { TCOAnalysisChart } from './TCOAnalysisChart';
 
 export const ModelPanel: React.FC = () => {
   const { requirements } = useDesignStore();
@@ -359,54 +358,34 @@ export const ModelPanel: React.FC = () => {
   }
 
   return (
-    <div className="w-full p-6">
-      <h2 className="text-2xl font-semibold mb-6">Revenue Model</h2>
+    <div className="w-full p-6 space-y-6">
+      <h2 className="text-2xl font-semibold">Revenue Model</h2>
       
-      {!hasValidDesign ? (
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-muted-foreground">
-              No valid design found. Please create a design first in the Design panel.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {/* TCO Analysis Charts */}
-          <div className="grid grid-cols-1 gap-6">
-            {computePricing.map((cluster) => (
-              <TCOAnalysisChart
-                key={cluster.clusterId}
-                clusterId={cluster.clusterId}
-                clusterName={cluster.clusterName}
-                clusterType="compute"
-                currentUtilization={clusterConsumption[cluster.clusterId] || 50}
-              />
-            ))}
-            {storagePricing.map((cluster) => (
-              <TCOAnalysisChart
-                key={cluster.clusterId}
-                clusterId={cluster.clusterId}
-                clusterName={cluster.clusterName}
-                clusterType="storage"
-                currentUtilization={clusterConsumption[cluster.clusterId] || 50}
-              />
-            ))}
-          </div>
+      {/* Total Operational Cost Alignment Check */}
+      <OperationalCostAlignmentCard 
+        resultsTotal={operationalCosts.totalMonthly}
+        modelTotal={overallAnalysis.totalCosts}
+      />
 
-          {/* Existing components */}
-          <ClusterConsumptionControls
-            computePricing={computePricing}
-            storagePricing={storagePricing}
-            clusterConsumption={clusterConsumption}
-            clusterDeviceCounts={clusterDeviceCounts}
-            updateClusterConsumption={updateClusterConsumption}
-            storageClustersMetrics={storageClustersMetrics}
-            storageOverallocationRatios={storageOverallocationRatios}
-            updateStorageOverallocationRatio={updateStorageOverallocationRatio}
-          />
+      {/* Cluster Consumption Controls */}
+      <ClusterConsumptionControls
+        computePricing={computePricing}
+        storagePricing={storagePricing}
+        clusterConsumption={clusterConsumption}
+        clusterDeviceCounts={clusterDeviceCounts}
+        updateClusterConsumption={updateClusterConsumption}
+        storageClustersMetrics={storageClustersMetrics}
+        storageOverallocationRatios={storageOverallocationRatios}
+        updateStorageOverallocationRatio={updateStorageOverallocationRatio}
+      />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Per-Cluster Analysis */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Outcome</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
             {Object.entries(clusterAnalysis).map(([clusterId, analysis]) => (
               <ClusterAnalysisCard
                 key={clusterId}
@@ -415,21 +394,16 @@ export const ModelPanel: React.FC = () => {
               />
             ))}
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <OperationalCostAlignmentCard
-              resultsTotal={operationalCosts.totalMonthly}
-              modelTotal={overallAnalysis.totalCosts}
-            />
-            <OverallSummaryCard
-              totalRevenue={overallAnalysis.totalRevenue}
-              totalCosts={overallAnalysis.totalCosts}
-              totalProfit={overallAnalysis.totalProfit}
-              profitMargin={overallAnalysis.profitMargin}
-            />
-          </div>
-        </div>
-      )}
+      {/* Overall Summary */}
+      <OverallSummaryCard
+        totalRevenue={overallAnalysis.totalRevenue}
+        totalCosts={overallAnalysis.totalCosts}
+        totalProfit={overallAnalysis.totalProfit}
+        profitMargin={overallAnalysis.profitMargin}
+      />
     </div>
   );
 };
