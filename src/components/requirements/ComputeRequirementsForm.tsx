@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, X } from 'lucide-react';
 import { ComputeClusterForm } from './ComputeClusterForm';
 import { v4 as uuidv4 } from 'uuid';
+import { Switch } from '@/components/ui/switch';
 
 interface ComputeRequirements {
   controllerNodeCount?: number;
@@ -88,6 +89,17 @@ export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
                 placeholder="e.g., 3"
                 value={requirements.infrastructureNodeCount || ''}
                 onChange={handleInputChange}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between space-x-2 rounded-md border p-4">
+              <div>
+                <h4 className="text-sm font-medium">Infrastructure Cluster Required</h4>
+                <p className="text-sm text-muted-foreground">Use dedicated nodes for infrastructure services</p>
+              </div>
+              <Switch
+                checked={requirements.infrastructureClusterRequired || false}
+                onCheckedChange={(checked) => onUpdate({ ...requirements, infrastructureClusterRequired: checked })}
               />
             </div>
             
