@@ -144,7 +144,22 @@ export const ModelPanel: React.FC = () => {
       // Get the full amortized cost for this specific cluster
       const clusterAmortizedCost = operationalCosts.amortizedMonthly * (deviceCount / totalDeviceCount);
       
-      const totalClusterCost = clusterAmortizedCost + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
+      // Calculate compute-specific hardware costs for this cluster
+      const computeDevices = activeDesign?.components.filter(
+        component => component.type === ComponentType.Server && 
+        component.role === 'computeNode' &&
+        (component as any).clusterInfo?.clusterId === cluster.clusterId
+      ) || [];
+      
+      const computeHardwareCost = computeDevices.reduce((total, device) => {
+        return total + (device.cost * (device.quantity || 1));
+      }, 0);
+      
+      // Calculate monthly amortized compute hardware cost
+      const computeLifespan = activeDesign?.requirements?.computeRequirements?.deviceLifespanYears || 3;
+      const computeAmortizedCost = computeHardwareCost / (computeLifespan * 12);
+      
+      const totalClusterCost = computeAmortizedCost + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
       
       // Calculate revenue based on VM consumption
       const averageVMVCPUs = requirements.computeRequirements?.averageVMVCPUs || 4;
@@ -164,12 +179,39 @@ export const ModelPanel: React.FC = () => {
         consumption,
         deviceCount,
         costs: {
-          compute: clusterAmortizedCost,
+          compute: computeAmortizedCost,
           network: networkCostShare,
           rack: rackCostShare,
           energy: energyCostShare,
           licensing: licensingCostShare,
           total: totalClusterCost
+        },
+        costBreakdown: {
+          compute: {
+            hardwareCost: computeHardwareCost,
+            deviceCount: deviceCount,
+            amortizationPeriod: computeLifespan
+          },
+          network: {
+            totalCost: operationalCosts.networkMonthly,
+            deviceShare: deviceCount,
+            totalDevices: totalDeviceCount
+          },
+          rack: {
+            totalCost: operationalCosts.racksMonthly,
+            ruShare: clusterRU,
+            totalRU: totalRU
+          },
+          energy: {
+            totalCost: operationalCosts.energyMonthly,
+            powerShare: clusterPower,
+            totalPower: totalPower
+          },
+          licensing: {
+            totalCost: operationalCosts.licensingMonthly,
+            deviceShare: deviceCount,
+            totalDevices: totalDeviceCount
+          }
         },
         revenue,
         profit,
