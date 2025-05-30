@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -27,11 +26,11 @@ export const OperationalCostAlignmentCard: React.FC<OperationalCostAlignmentProp
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="text-muted-foreground">Results Function Total:</span>
-            <div className="font-medium">€{resultsTotal.toLocaleString()}</div>
+            <div className="font-medium">${resultsTotal.toLocaleString()}</div>
           </div>
           <div>
             <span className="text-muted-foreground">Model Function Total:</span>
-            <div className="font-medium">€{modelTotal.toLocaleString()}</div>
+            <div className="font-medium">${modelTotal.toLocaleString()}</div>
           </div>
         </div>
       </CardContent>
@@ -54,12 +53,12 @@ export const OverallSummaryCard: React.FC<OverallAnalysisProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="space-y-2">
             <h4 className="font-medium text-green-600">Total Revenue</h4>
-            <div className="font-medium text-xl">€{totalRevenue.toLocaleString()}</div>
+            <div className="font-medium text-xl">${totalRevenue.toLocaleString()}</div>
           </div>
           
           <div className="space-y-2">
             <h4 className="font-medium text-red-600">Total Costs</h4>
-            <div className="font-medium text-xl">€{totalCosts.toLocaleString()}</div>
+            <div className="font-medium text-xl">${totalCosts.toLocaleString()}</div>
           </div>
           
           <div className="space-y-2">
@@ -67,7 +66,7 @@ export const OverallSummaryCard: React.FC<OverallAnalysisProps> = ({
               Net Profit/Loss
             </h4>
             <div className={`font-medium text-xl ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              €{totalProfit.toLocaleString()}
+              ${totalProfit.toLocaleString()}
             </div>
           </div>
           
@@ -77,7 +76,7 @@ export const OverallSummaryCard: React.FC<OverallAnalysisProps> = ({
               {profitMargin.toFixed(1)}%
             </div>
             <div className="text-sm text-muted-foreground">
-              Annual: €{(totalProfit * 12).toLocaleString()}
+              Annual: ${(totalProfit * 12).toLocaleString()}
             </div>
           </div>
         </div>

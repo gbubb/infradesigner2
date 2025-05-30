@@ -111,7 +111,7 @@ export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProp
                   <div className="text-sm text-muted-foreground space-y-1">
                     <div>Resources: {currentVCPUs} vCPUs, {currentMemoryGB.toFixed(1)} GB Memory</div>
                     <div>Max Capacity: {resources.maxVMs} VMs ({resources.vcpus} vCPUs, {resources.memoryGB.toFixed(1)} GB Memory)</div>
-                    <div>Price: €{cluster.pricePerMonth}/month per unit</div>
+                    <div>Price: ${cluster.pricePerMonth}/month per unit</div>
                   </div>
                 </div>
               );
@@ -147,7 +147,7 @@ export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProp
                   />
                   <div className="text-sm text-muted-foreground space-y-1">
                     <div>Capacity: {capacity.toFixed(1)} TiB usable storage</div>
-                    <div>Price: €{cluster.pricePerMonth}/month per GiB</div>
+                    <div>Price: ${cluster.pricePerMonth}/month per GiB</div>
                   </div>
                 </div>
               );
