@@ -374,20 +374,22 @@ export const ModelPanel: React.FC = () => {
         <div className="space-y-6">
           {/* TCO Analysis Charts */}
           <div className="grid grid-cols-1 gap-6">
-            {computePricing.map(cluster => (
+            {computePricing.map((cluster) => (
               <TCOAnalysisChart
                 key={cluster.clusterId}
                 clusterId={cluster.clusterId}
                 clusterName={cluster.clusterName}
                 clusterType="compute"
+                currentUtilization={clusterConsumption[cluster.clusterId] || 50}
               />
             ))}
-            {storagePricing.map(cluster => (
+            {storagePricing.map((cluster) => (
               <TCOAnalysisChart
                 key={cluster.clusterId}
                 clusterId={cluster.clusterId}
                 clusterName={cluster.clusterName}
                 clusterType="storage"
+                currentUtilization={clusterConsumption[cluster.clusterId] || 50}
               />
             ))}
           </div>
