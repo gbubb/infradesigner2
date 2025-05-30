@@ -38,11 +38,28 @@ export const ModelPanel: React.FC = () => {
     return initial;
   });
 
+  // Initialize state for storage cluster overallocation ratios
+  const [storageOverallocationRatios, setStorageOverallocationRatios] = useState<Record<string, number>>(() => {
+    const initial: Record<string, number> = {};
+    storagePricing.forEach(cluster => {
+      initial[cluster.clusterId] = 1.0; // Default to 1.0 (no overallocation)
+    });
+    return initial;
+  });
+
   // Update consumption for a specific cluster
   const updateClusterConsumption = (clusterId: string, consumption: number) => {
     setClusterConsumption(prev => ({
       ...prev,
       [clusterId]: consumption
+    }));
+  };
+
+  // Update overallocation ratio for a specific storage cluster
+  const updateStorageOverallocationRatio = (clusterId: string, ratio: number) => {
+    setStorageOverallocationRatios(prev => ({
+      ...prev,
+      [clusterId]: ratio
     }));
   };
 
@@ -222,6 +239,7 @@ export const ModelPanel: React.FC = () => {
     // Analyze storage clusters
     storagePricing.forEach(cluster => {
       const consumption = clusterConsumption[cluster.clusterId] || 50;
+      const overallocationRatio = storageOverallocationRatios[cluster.clusterId] || 1.0;
       
       // Calculate storage-specific hardware costs for this cluster
       const storageDevices = activeDesign?.components.filter(
@@ -253,11 +271,12 @@ export const ModelPanel: React.FC = () => {
       
       const totalClusterCost = storageAmortizedCost + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
       
-      // Calculate revenue based on storage consumption
+      // Calculate revenue based on storage consumption with overallocation
       const clusterMetrics = storageClustersMetrics.find(m => m.id === cluster.clusterId);
       const usableStorageTiB = clusterMetrics?.usableCapacityTiB || 0;
       const currentStorageTiB = consumption * usableStorageTiB / 100;
-      const revenue = cluster.pricePerMonth * currentStorageTiB * 1024; // Convert TiB to GiB for pricing
+      const overallocatedStorageTiB = currentStorageTiB * overallocationRatio;
+      const revenue = cluster.pricePerMonth * overallocatedStorageTiB * 1024; // Convert TiB to GiB for pricing
       const profit = revenue - totalClusterCost;
       
       analysis[cluster.clusterId] = {
@@ -307,7 +326,7 @@ export const ModelPanel: React.FC = () => {
     });
     
     return analysis;
-  }, [clusterConsumption, clusterDeviceCounts, computePricing, storagePricing, operationalCosts, requirements, actualHardwareTotals, storageClustersMetrics]);
+  }, [clusterConsumption, clusterDeviceCounts, computePricing, storagePricing, operationalCosts, requirements, actualHardwareTotals, storageClustersMetrics, storageOverallocationRatios]);
 
   // Calculate overall totals
   const overallAnalysis = useMemo(() => {
@@ -356,6 +375,8 @@ export const ModelPanel: React.FC = () => {
         clusterDeviceCounts={clusterDeviceCounts}
         updateClusterConsumption={updateClusterConsumption}
         storageClustersMetrics={storageClustersMetrics}
+        storageOverallocationRatios={storageOverallocationRatios}
+        updateStorageOverallocationRatio={updateStorageOverallocationRatio}
       />
 
       {/* Per-Cluster Analysis */}

@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { ClusterPricing } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface StorageClusterMetrics {
   id: string;
@@ -27,6 +29,8 @@ interface ClusterConsumptionControlsProps {
   clusterDeviceCounts: Record<string, number>;
   updateClusterConsumption: (clusterId: string, consumption: number) => void;
   storageClustersMetrics: StorageClusterMetrics[];
+  storageOverallocationRatios: Record<string, number>;
+  updateStorageOverallocationRatio: (clusterId: string, ratio: number) => void;
 }
 
 export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProps> = ({
@@ -35,7 +39,9 @@ export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProp
   clusterConsumption,
   clusterDeviceCounts,
   updateClusterConsumption,
-  storageClustersMetrics
+  storageClustersMetrics,
+  storageOverallocationRatios,
+  updateStorageOverallocationRatio
 }) => {
   const { requirements } = useDesignStore();
   const { actualHardwareTotals } = useDesignCalculations();
@@ -130,12 +136,14 @@ export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProp
             {storagePricing.map((cluster) => {
               const capacity = storageClusterCapacity[cluster.clusterId];
               const currentStorageTiB = (clusterConsumption[cluster.clusterId] || 50) * capacity / 100;
+              const overallocationRatio = storageOverallocationRatios[cluster.clusterId] || 1.0;
+              const overallocatedStorageTiB = currentStorageTiB * overallocationRatio;
               
               return (
                 <div key={cluster.clusterId} className="space-y-2">
                   <div className="flex justify-between">
                     <span className="font-medium">{cluster.clusterName}</span>
-                    <Badge variant="outline">{currentStorageTiB.toFixed(1)} TiB</Badge>
+                    <Badge variant="outline">{overallocatedStorageTiB.toFixed(1)} TiB</Badge>
                   </div>
                   <Slider
                     value={[clusterConsumption[cluster.clusterId] || 50]}
@@ -145,8 +153,28 @@ export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProp
                     step={5}
                     className="w-full"
                   />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Overallocation Ratio</Label>
+                      <Input
+                        type="number"
+                        min="1.0"
+                        max="2.5"
+                        step="0.1"
+                        value={overallocationRatio}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          if (!isNaN(value) && value >= 1.0 && value <= 2.5) {
+                            updateStorageOverallocationRatio(cluster.clusterId, value);
+                          }
+                        }}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
                   <div className="text-sm text-muted-foreground space-y-1">
                     <div>Capacity: {capacity.toFixed(1)} TiB usable storage</div>
+                    <div>Overallocated: {overallocatedStorageTiB.toFixed(1)} TiB</div>
                     <div>Price: ${cluster.pricePerMonth}/month per GiB</div>
                   </div>
                 </div>
