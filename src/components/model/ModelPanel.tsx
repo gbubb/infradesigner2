@@ -7,8 +7,6 @@ import { ComponentType } from '@/types/infrastructure';
 import { ClusterConsumptionControls } from './ClusterConsumptionControls';
 import { ClusterAnalysisCard } from './ClusterAnalysisCard';
 import { OperationalCostAlignmentCard, OverallSummaryCard } from './ModelSummaryCards';
-import { TcoSensitivityAnalysis } from './TcoSensitivityAnalysis';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export const ModelPanel: React.FC = () => {
   const { requirements } = useDesignStore();
@@ -361,64 +359,51 @@ export const ModelPanel: React.FC = () => {
 
   return (
     <div className="w-full p-6 space-y-6">
-      <h2 className="text-2xl font-semibold">Revenue Model & TCO Analysis</h2>
+      <h2 className="text-2xl font-semibold">Revenue Model</h2>
       
-      <Tabs defaultValue="revenue" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="revenue">Revenue Model</TabsTrigger>
-          <TabsTrigger value="tco">TCO Sensitivity</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="revenue" className="space-y-6">
-          {/* Total Operational Cost Alignment Check */}
-          <OperationalCostAlignmentCard 
-            resultsTotal={operationalCosts.totalMonthly}
-            modelTotal={overallAnalysis.totalCosts}
-          />
+      {/* Total Operational Cost Alignment Check */}
+      <OperationalCostAlignmentCard 
+        resultsTotal={operationalCosts.totalMonthly}
+        modelTotal={overallAnalysis.totalCosts}
+      />
 
-          {/* Cluster Consumption Controls */}
-          <ClusterConsumptionControls
-            computePricing={computePricing}
-            storagePricing={storagePricing}
-            clusterConsumption={clusterConsumption}
-            clusterDeviceCounts={clusterDeviceCounts}
-            updateClusterConsumption={updateClusterConsumption}
-            storageClustersMetrics={storageClustersMetrics}
-            storageOverallocationRatios={storageOverallocationRatios}
-            updateStorageOverallocationRatio={updateStorageOverallocationRatio}
-          />
+      {/* Cluster Consumption Controls */}
+      <ClusterConsumptionControls
+        computePricing={computePricing}
+        storagePricing={storagePricing}
+        clusterConsumption={clusterConsumption}
+        clusterDeviceCounts={clusterDeviceCounts}
+        updateClusterConsumption={updateClusterConsumption}
+        storageClustersMetrics={storageClustersMetrics}
+        storageOverallocationRatios={storageOverallocationRatios}
+        updateStorageOverallocationRatio={updateStorageOverallocationRatio}
+      />
 
-          {/* Per-Cluster Analysis */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Outcome</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Object.entries(clusterAnalysis).map(([clusterId, analysis]) => (
-                  <ClusterAnalysisCard
-                    key={clusterId}
-                    clusterId={clusterId}
-                    analysis={analysis}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+      {/* Per-Cluster Analysis */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Outcome</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {Object.entries(clusterAnalysis).map(([clusterId, analysis]) => (
+              <ClusterAnalysisCard
+                key={clusterId}
+                clusterId={clusterId}
+                analysis={analysis}
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* Overall Summary */}
-          <OverallSummaryCard
-            totalRevenue={overallAnalysis.totalRevenue}
-            totalCosts={overallAnalysis.totalCosts}
-            totalProfit={overallAnalysis.totalProfit}
-            profitMargin={overallAnalysis.profitMargin}
-          />
-        </TabsContent>
-        
-        <TabsContent value="tco">
-          <TcoSensitivityAnalysis />
-        </TabsContent>
-      </Tabs>
+      {/* Overall Summary */}
+      <OverallSummaryCard
+        totalRevenue={overallAnalysis.totalRevenue}
+        totalCosts={overallAnalysis.totalCosts}
+        totalProfit={overallAnalysis.totalProfit}
+        profitMargin={overallAnalysis.profitMargin}
+      />
     </div>
   );
 };
