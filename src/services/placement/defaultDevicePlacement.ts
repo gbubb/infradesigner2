@@ -10,7 +10,6 @@ export function placeDefaultDevice({
   state,
   typeLabel,
   typeCounters,
-  silent = false
 }: {
   component: any,
   allowedAZs: string[],
@@ -18,8 +17,7 @@ export function placeDefaultDevice({
   components: any[],
   state: any,
   typeLabel: string,
-  typeCounters: Record<string, number>,
-  silent?: boolean
+  typeCounters: Record<string, number>
 }): { placed: boolean, reportItem: any } {
   let placed = false;
   let reportItem = null;
@@ -50,7 +48,6 @@ export function placeDefaultDevice({
     racks: [minRack],
     device: component,
     ruHeight,
-    silent,
     activeDesignState: state
   });
   let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;

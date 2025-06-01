@@ -29,21 +29,6 @@ export interface PlacementReport {
 
 export class AutomatedPlacementService {
   static placeAllDesignDevices(designId?: string, clusterAZAssignments?: ClusterAZAssignment[]): PlacementReport {
-    // Use silent mode during auto-placement to prevent excessive toasts
-    const result = this.placeAllDesignDevicesInternal(designId, clusterAZAssignments, true);
-    
-    // Show single summary toast after placement
-    const { toast } = require('sonner');
-    if (result.placedDevices > 0) {
-      toast.success(`Auto-placement completed: ${result.placedDevices} devices placed${result.failedDevices > 0 ? `, ${result.failedDevices} failed` : ''}`);
-    } else if (result.failedDevices > 0) {
-      toast.error(`Auto-placement failed: ${result.failedDevices} devices could not be placed`);
-    }
-
-    return result;
-  }
-
-  private static placeAllDesignDevicesInternal(designId?: string, clusterAZAssignments?: ClusterAZAssignment[], silent = false): PlacementReport {
     const state = useDesignStore.getState();
     const activeDesign = state.activeDesign;
 
@@ -169,7 +154,7 @@ export class AutomatedPlacementService {
         allowedAZs = componentClusterAZs;
       }
       const { placed, reportItem } = placeDefaultDevice({
-        component, allowedAZs, rackProfiles, components, state, typeLabel, typeCounters, silent
+        component, allowedAZs, rackProfiles, components, state, typeLabel, typeCounters
       });
       if (placed) placedDevices++; else failedDevices++;
       placementResult.items.push(reportItem);

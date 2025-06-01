@@ -63,7 +63,7 @@ export const createDesignSlice: StateCreator<
     return newDesignId;
   },
   
-  updateActiveDesign: (components, options = {}) => {
+  updateActiveDesign: (components) => {
     set((state) => {
       if (!state.activeDesign) {
         toast.error("No active design to update");
@@ -82,7 +82,7 @@ export const createDesignSlice: StateCreator<
         
         // Save with user ID if available
         saveDesignToDB(updatedDesign, userId).then(success => {
-          if (success && !options.silent) {
+          if (success) {
             toast.success(`Updated design: ${updatedDesign.name}`);
           }
         });
@@ -95,7 +95,7 @@ export const createDesignSlice: StateCreator<
     });
   },
   
-  updateDesign: (id, updates, options = {}) => {
+  updateDesign: (id, updates) => {
     set((state) => {
       const existingDesignIndex = state.savedDesigns.findIndex(d => d.id === id);
       
@@ -126,7 +126,7 @@ export const createDesignSlice: StateCreator<
         
         // Save with user ID if available
         saveDesignToDB(updatedDesign, userId).then(success => {
-          if (success && !options.silent) {
+          if (success) {
             toast.success(`Updated design: ${updatedDesign.name}`);
           }
         });

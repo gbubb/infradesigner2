@@ -6,14 +6,12 @@ export function tryPlaceDeviceInRacksWithConstraints({
   racks,
   device,
   ruHeight,
-  activeDesignState,
-  silent = false
+  activeDesignState
 }: {
   racks: RackProfile[],
   device: any,
   ruHeight: number,
-  activeDesignState: any,
-  silent?: boolean
+  activeDesignState: any
 }): {
   success: boolean,
   reason?: string,
@@ -37,7 +35,7 @@ export function tryPlaceDeviceInRacksWithConstraints({
     ) {
       const available = isRUAvailableWithComponentRU(rack, preferredRU, ruHeight, activeDesignState);
       if (available) {
-        const result = RackService.placeDevice(rack.id, device.id, preferredRU, silent);
+        const result = RackService.placeDevice(rack.id, device.id, preferredRU);
         if (result.success) {
           return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: preferredRU };
         }
@@ -52,7 +50,7 @@ export function tryPlaceDeviceInRacksWithConstraints({
       if (preferredRU && ru === preferredRU) continue;
       const available = isRUAvailableWithComponentRU(rack, ru, ruHeight, activeDesignState);
       if (available) {
-        const result = RackService.placeDevice(rack.id, device.id, ru, silent);
+        const result = RackService.placeDevice(rack.id, device.id, ru);
         if (result.success) {
           return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: ru };
         }

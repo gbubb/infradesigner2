@@ -43,8 +43,7 @@ export class RackService {
     name?: string,
     uHeight: number = 42, 
     availabilityZoneId?: string,
-    rackType: RackType = RackType.ComputeStorage,
-    silent = false
+    rackType: RackType = RackType.ComputeStorage
   ): string {
     const state = useDesignStore.getState();
     const profiles = this.getAllRackProfiles();
@@ -66,7 +65,7 @@ export class RackService {
     if (state.activeDesign) {
       state.updateDesign(state.activeDesign.id, {
         rackprofiles: profiles
-      }, { silent });
+      });
     }
 
     // Also update in local storage as backup
@@ -76,14 +75,14 @@ export class RackService {
     return newProfile.id;
   }
 
-  static clearAllRackProfiles(silent = false): void {
+  static clearAllRackProfiles(): void {
     const state = useDesignStore.getState();
 
     // Update in design if possible
     if (state.activeDesign) {
       state.updateDesign(state.activeDesign.id, {
         rackprofiles: []
-      }, { silent });
+      });
     }
 
     // Also clear local storage backup
@@ -91,7 +90,7 @@ export class RackService {
     localStorage.removeItem(storageKey);
   }
 
-  static updateRackProfile(rackId: string, updates: Partial<RackProfile>, silent = false): boolean {
+  static updateRackProfile(rackId: string, updates: Partial<RackProfile>): boolean {
     const state = useDesignStore.getState();
     const profiles = this.getAllRackProfiles();
 
@@ -109,7 +108,7 @@ export class RackService {
     if (state.activeDesign) {
       state.updateDesign(state.activeDesign.id, {
         rackprofiles: profiles
-      }, { silent });
+      });
     }
 
     // Also update in local storage as backup
@@ -119,7 +118,7 @@ export class RackService {
     return true;
   }
 
-  static deleteRackProfile(rackId: string, silent = false): boolean {
+  static deleteRackProfile(rackId: string): boolean {
     const state = useDesignStore.getState();
     const profiles = this.getAllRackProfiles();
 
@@ -133,7 +132,7 @@ export class RackService {
     if (state.activeDesign) {
       state.updateDesign(state.activeDesign.id, {
         rackprofiles: newProfiles
-      }, { silent });
+      });
     }
 
     // Also update in local storage as backup
@@ -153,7 +152,7 @@ export class RackService {
     return allRacks.find(rack => rack.devices.some(device => device.deviceId === deviceId));
   }
 
-  static placeDevice(rackId: string, deviceId: string, targetRuPosition?: number, silent = false): PlacementResult {
+  static placeDevice(rackId: string, deviceId: string, targetRuPosition?: number): PlacementResult {
     const state = useDesignStore.getState();
     const rack = this.getRackProfile(rackId);
 
@@ -238,7 +237,7 @@ export class RackService {
     rack.devices.push(placedDevice);
 
     // Save the updated rack
-    const updated = this.updateRackProfile(rackId, { devices: rack.devices }, silent);
+    const updated = this.updateRackProfile(rackId, { devices: rack.devices });
 
     if (!updated) {
       return { success: false, error: "Failed to update rack profile" };
