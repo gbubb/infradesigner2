@@ -19,17 +19,17 @@ export const OperationalCostAlignmentCard: React.FC<OperationalCostAlignmentProp
 }) => {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Operational Cost Alignment</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Operational Cost Alignment</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <span className="text-muted-foreground">Results Function Total:</span>
+            <span className="text-xs text-muted-foreground">Results Total</span>
             <div className="font-medium">${resultsTotal.toLocaleString()}</div>
           </div>
           <div>
-            <span className="text-muted-foreground">Model Function Total:</span>
+            <span className="text-xs text-muted-foreground">Model Total</span>
             <div className="font-medium">${modelTotal.toLocaleString()}</div>
           </div>
         </div>
@@ -46,38 +46,37 @@ export const OverallSummaryCard: React.FC<OverallAnalysisProps> = ({
 }) => {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Overall Revenue & Profit Summary</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Overall Summary</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="space-y-2">
-            <h4 className="font-medium text-green-600">Total Revenue</h4>
-            <div className="font-medium text-xl">${totalRevenue.toLocaleString()}</div>
-          </div>
-          
-          <div className="space-y-2">
-            <h4 className="font-medium text-red-600">Total Costs</h4>
-            <div className="font-medium text-xl">${totalCosts.toLocaleString()}</div>
-          </div>
-          
-          <div className="space-y-2">
-            <h4 className={`font-medium ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              Net Profit/Loss
-            </h4>
-            <div className={`font-medium text-xl ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${totalProfit.toLocaleString()}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <div className="text-xs text-muted-foreground">Revenue</div>
+              <div className="font-medium text-green-600">${totalRevenue.toLocaleString()}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Costs</div>
+              <div className="font-medium text-red-600">${totalCosts.toLocaleString()}</div>
             </div>
           </div>
-          
-          <div className="space-y-2">
-            <h4 className="font-medium text-blue-600">Profit Margin</h4>
-            <div className={`font-medium text-xl ${profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {profitMargin.toFixed(1)}%
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <div className="text-xs text-muted-foreground">Profit</div>
+              <div className={`font-medium ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                ${totalProfit.toLocaleString()}
+              </div>
             </div>
-            <div className="text-sm text-muted-foreground">
-              Annual: ${(totalProfit * 12).toLocaleString()}
+            <div>
+              <div className="text-xs text-muted-foreground">Margin</div>
+              <div className={`font-medium ${profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {profitMargin.toFixed(1)}%
+              </div>
             </div>
+          </div>
+          <div className="col-span-2 text-xs text-muted-foreground text-center pt-1 border-t">
+            Annual Profit: ${(totalProfit * 12).toLocaleString()}
           </div>
         </div>
       </CardContent>

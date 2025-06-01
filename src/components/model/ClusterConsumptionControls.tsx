@@ -86,103 +86,112 @@ export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProp
   }, [storagePricing, storageClustersMetrics]);
 
   return (
-    <>
-      {/* Compute Cluster Consumption Controls */}
-      {computePricing.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Compute Cluster Consumption</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {computePricing.map((cluster) => {
-              const resources = computeClusterResources[cluster.clusterId];
-              const currentVMs = Math.floor((clusterConsumption[cluster.clusterId] || 50) * resources.maxVMs / 100);
-              const currentVCPUs = currentVMs * averageVMVCPUs;
-              const currentMemoryGB = currentVMs * averageVMMemoryGB;
-              
-              return (
-                <div key={cluster.clusterId} className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="font-medium">{cluster.clusterName}</span>
-                    <Badge variant="outline">{currentVMs} VMs</Badge>
-                  </div>
-                  <Slider
-                    value={[clusterConsumption[cluster.clusterId] || 50]}
-                    onValueChange={(value) => updateClusterConsumption(cluster.clusterId, value[0])}
-                    max={100}
-                    min={0}
-                    step={5}
-                    className="w-full"
-                  />
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <div>Resources: {currentVCPUs} vCPUs, {currentMemoryGB.toFixed(1)} GB Memory</div>
-                    <div>Max Capacity: {resources.maxVMs} VMs ({resources.vcpus} vCPUs, {resources.memoryGB.toFixed(1)} GB Memory)</div>
-                    <div>Price: ${cluster.pricePerMonth}/month per unit</div>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Storage Cluster Consumption Controls */}
-      {storagePricing.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Storage Cluster Consumption</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {storagePricing.map((cluster) => {
-              const capacity = storageClusterCapacity[cluster.clusterId];
-              const currentStorageTiB = (clusterConsumption[cluster.clusterId] || 50) * capacity / 100;
-              const overallocationRatio = storageOverallocationRatios[cluster.clusterId] || 1.0;
-              const overallocatedStorageTiB = currentStorageTiB * overallocationRatio;
-              
-              return (
-                <div key={cluster.clusterId} className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="font-medium">{cluster.clusterName}</span>
-                    <Badge variant="outline">{overallocatedStorageTiB.toFixed(1)} TiB</Badge>
-                  </div>
-                  <Slider
-                    value={[clusterConsumption[cluster.clusterId] || 50]}
-                    onValueChange={(value) => updateClusterConsumption(cluster.clusterId, value[0])}
-                    max={100}
-                    min={0}
-                    step={5}
-                    className="w-full"
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Overallocation Ratio</Label>
-                      <Input
-                        type="number"
-                        min="1.0"
-                        max="2.5"
-                        step="0.1"
-                        value={overallocationRatio}
-                        onChange={(e) => {
-                          const value = parseFloat(e.target.value);
-                          if (!isNaN(value) && value >= 1.0 && value <= 2.5) {
-                            updateStorageOverallocationRatio(cluster.clusterId, value);
-                          }
-                        }}
-                        className="w-full"
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle>Consumption Inputs</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Compute Clusters */}
+        {computePricing.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-muted-foreground">Compute Clusters</h4>
+            <div className="grid gap-3">
+              {computePricing.map((cluster) => {
+                const resources = computeClusterResources[cluster.clusterId];
+                const currentVMs = Math.floor((clusterConsumption[cluster.clusterId] || 50) * resources.maxVMs / 100);
+                const consumption = clusterConsumption[cluster.clusterId] || 50;
+                
+                return (
+                  <div key={cluster.clusterId} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{cluster.clusterName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{consumption}%</span>
+                        <Badge variant="outline" className="text-xs">{currentVMs} VMs</Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs min-w-[50px]">Utilization:</Label>
+                      <Slider
+                        value={[consumption]}
+                        onValueChange={(value) => updateClusterConsumption(cluster.clusterId, value[0])}
+                        max={100}
+                        min={0}
+                        step={5}
+                        className="flex-1"
                       />
                     </div>
+                    <div className="text-xs text-muted-foreground">
+                      Max: {resources.maxVMs} VMs • ${cluster.pricePerMonth}/VM/month
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <div>Capacity: {capacity.toFixed(1)} TiB usable storage</div>
-                    <div>Overallocated: {overallocatedStorageTiB.toFixed(1)} TiB</div>
-                    <div>Price: ${cluster.pricePerMonth}/month per GiB</div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Storage Clusters */}
+        {storagePricing.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-muted-foreground">Storage Clusters</h4>
+            <div className="grid gap-3">
+              {storagePricing.map((cluster) => {
+                const capacity = storageClusterCapacity[cluster.clusterId];
+                const consumption = clusterConsumption[cluster.clusterId] || 50;
+                const currentStorageTiB = consumption * capacity / 100;
+                const overallocationRatio = storageOverallocationRatios[cluster.clusterId] || 1.0;
+                const overallocatedStorageTiB = currentStorageTiB * overallocationRatio;
+                
+                return (
+                  <div key={cluster.clusterId} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{cluster.clusterName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{consumption}%</span>
+                        <Badge variant="outline" className="text-xs">{overallocatedStorageTiB.toFixed(1)} TiB</Badge>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Utilization</Label>
+                        <Slider
+                          value={[consumption]}
+                          onValueChange={(value) => updateClusterConsumption(cluster.clusterId, value[0])}
+                          max={100}
+                          min={0}
+                          step={5}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Contention Ratio</Label>
+                        <Input
+                          type="number"
+                          min="1.0"
+                          max="2.5"
+                          step="0.1"
+                          value={overallocationRatio}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            if (!isNaN(value) && value >= 1.0 && value <= 2.5) {
+                              updateStorageOverallocationRatio(cluster.clusterId, value);
+                            }
+                          }}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Capacity: {capacity.toFixed(1)} TiB • ${cluster.pricePerMonth}/GiB/month
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      )}
-    </>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };

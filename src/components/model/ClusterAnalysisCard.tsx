@@ -64,30 +64,30 @@ export const ClusterAnalysisCard: React.FC<ClusterAnalysisCardProps> = ({
   analysis
 }) => {
   return (
-    <div key={clusterId} className="border rounded-lg p-4">
-      <div className="flex justify-between items-center mb-3">
-        <h5 className="font-medium">{analysis.name}</h5>
-        <div className="flex gap-2">
-          <Badge variant="outline">{analysis.type}</Badge>
-          <Badge variant="outline">{analysis.consumption}% utilized</Badge>
+    <div key={clusterId} className="border rounded-lg p-3">
+      <div className="flex justify-between items-center mb-2">
+        <h5 className="text-sm font-medium">{analysis.name}</h5>
+        <div className="flex gap-1">
+          <Badge variant="outline" className="text-xs py-0 h-5">{analysis.type}</Badge>
+          <Badge variant="outline" className="text-xs py-0 h-5">{analysis.consumption}% utilized</Badge>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <h6 className="font-medium text-green-600">Revenue</h6>
-          <div className="font-medium text-lg">${analysis.revenue.toFixed(2)}</div>
+      <div className="grid grid-cols-3 gap-3 text-sm">
+        <div>
+          <div className="text-xs text-muted-foreground">Revenue</div>
+          <div className="font-medium text-green-600">${analysis.revenue.toFixed(0)}</div>
         </div>
         
-        <div className="space-y-2">
-          <h6 className="font-medium text-red-600">Allocated Costs</h6>
-          <div className="space-y-1 text-sm">
+        <div>
+          <div className="text-xs text-muted-foreground">Costs</div>
+          <div className="font-medium text-red-600">
             <Collapsible>
-              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium">
-                <ChevronDown className="h-4 w-4" />
-                Show Cost Breakdown
+              <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                <ChevronDown className="h-3 w-3" />
+                Details
               </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-2 pt-2">
+              <CollapsibleContent className="space-y-1 pt-1 text-xs">
                 {analysis.type === 'compute' && analysis.costs.compute !== undefined && analysis.costBreakdown?.compute && (
                   <div className="space-y-1 pl-4 border-l-2 border-blue-200">
                     <div className="font-medium text-blue-600">Compute Hardware</div>
@@ -172,30 +172,15 @@ export const ClusterAnalysisCard: React.FC<ClusterAnalysisCardProps> = ({
               <span>Licensing:</span>
               <span>${analysis.costs.licensing.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between font-medium border-t pt-1">
-              <span>Total:</span>
-              <span>${analysis.costs.total.toFixed(2)}</span>
-            </div>
+            ${analysis.costs.total.toFixed(0)}
           </div>
         </div>
         
-        <div className="space-y-2">
-          <h6 className={`font-medium ${analysis.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            Profit/Loss
-          </h6>
-          <div className="space-y-1">
-            <div className={`font-medium text-lg ${analysis.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${analysis.profit.toFixed(2)}
-            </div>
-            <div className="text-sm">
-              <span className="text-muted-foreground">Margin: </span>
-              <span className={analysis.profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}>
-                {analysis.profitMargin.toFixed(1)}%
-              </span>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Devices: {analysis.deviceCount}
-            </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Profit</div>
+          <div className={`font-medium ${analysis.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            ${analysis.profit.toFixed(0)}
+            <span className="text-xs ml-1">({analysis.profitMargin.toFixed(0)}%)</span>
           </div>
         </div>
       </div>

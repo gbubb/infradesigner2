@@ -358,52 +358,61 @@ export const ModelPanel: React.FC = () => {
   }
 
   return (
-    <div className="w-full p-6 space-y-6">
-      <h2 className="text-2xl font-semibold">Revenue Model</h2>
+    <div className="w-full p-6">
+      <h2 className="text-2xl font-semibold mb-4">Revenue Model</h2>
       
-      {/* Total Operational Cost Alignment Check */}
-      <OperationalCostAlignmentCard 
-        resultsTotal={operationalCosts.totalMonthly}
-        modelTotal={overallAnalysis.totalCosts}
-      />
+      {/* Main layout with side-by-side panels on larger screens */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Left column - Inputs */}
+        <div className="space-y-4">
+          {/* Total Operational Cost Alignment Check */}
+          <OperationalCostAlignmentCard 
+            resultsTotal={operationalCosts.totalMonthly}
+            modelTotal={overallAnalysis.totalCosts}
+          />
 
-      {/* Cluster Consumption Controls */}
-      <ClusterConsumptionControls
-        computePricing={computePricing}
-        storagePricing={storagePricing}
-        clusterConsumption={clusterConsumption}
-        clusterDeviceCounts={clusterDeviceCounts}
-        updateClusterConsumption={updateClusterConsumption}
-        storageClustersMetrics={storageClustersMetrics}
-        storageOverallocationRatios={storageOverallocationRatios}
-        updateStorageOverallocationRatio={updateStorageOverallocationRatio}
-      />
+          {/* Cluster Consumption Controls */}
+          <ClusterConsumptionControls
+            computePricing={computePricing}
+            storagePricing={storagePricing}
+            clusterConsumption={clusterConsumption}
+            clusterDeviceCounts={clusterDeviceCounts}
+            updateClusterConsumption={updateClusterConsumption}
+            storageClustersMetrics={storageClustersMetrics}
+            storageOverallocationRatios={storageOverallocationRatios}
+            updateStorageOverallocationRatio={updateStorageOverallocationRatio}
+          />
+        </div>
 
-      {/* Per-Cluster Analysis */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Outcome</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {Object.entries(clusterAnalysis).map(([clusterId, analysis]) => (
-              <ClusterAnalysisCard
-                key={clusterId}
-                clusterId={clusterId}
-                analysis={analysis}
-              />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+        {/* Right column - Outcomes */}
+        <div className="space-y-4">
+          {/* Per-Cluster Analysis */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Outcome</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Object.entries(clusterAnalysis).map(([clusterId, analysis]) => (
+                  <ClusterAnalysisCard
+                    key={clusterId}
+                    clusterId={clusterId}
+                    analysis={analysis}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Overall Summary */}
-      <OverallSummaryCard
-        totalRevenue={overallAnalysis.totalRevenue}
-        totalCosts={overallAnalysis.totalCosts}
-        totalProfit={overallAnalysis.totalProfit}
-        profitMargin={overallAnalysis.profitMargin}
-      />
+          {/* Overall Summary */}
+          <OverallSummaryCard
+            totalRevenue={overallAnalysis.totalRevenue}
+            totalCosts={overallAnalysis.totalCosts}
+            totalProfit={overallAnalysis.totalProfit}
+            profitMargin={overallAnalysis.profitMargin}
+          />
+        </div>
+      </div>
     </div>
   );
 };
