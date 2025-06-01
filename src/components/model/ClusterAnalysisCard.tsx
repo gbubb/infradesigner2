@@ -164,41 +164,11 @@ export const ClusterAnalysisCard: React.FC<ClusterAnalysisCardProps> = ({
                     <div className="font-medium">Allocated Cost: ${analysis.costs.licensing.toFixed(2)}</div>
                   </div>
                 </div>
+                <div className="font-medium border-t pt-1 mt-1">
+                  Total: ${analysis.costs.total.toFixed(0)}
+                </div>
               </CollapsibleContent>
             </Collapsible>
-            {analysis.type === 'compute' && analysis.costs.compute !== undefined && (
-              <div className="flex justify-between">
-                <span>Compute:</span>
-                <span>${analysis.costs.compute.toFixed(2)}</span>
-              </div>
-            )}
-            {analysis.type === 'storage' && analysis.costs.storage !== undefined && (
-              <div className="flex justify-between">
-                <span>Storage:</span>
-                <span>${analysis.costs.storage.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span>Network:</span>
-              <span>${analysis.costs.network.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Rack:</span>
-              <span>${analysis.costs.rack.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Energy:</span>
-              <span>${analysis.costs.energy.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Licensing:</span>
-              <span>${analysis.costs.licensing.toFixed(2)}</span>
-            </div>
-            <div className="font-medium border-t pt-1 mt-1">
-              Total: ${analysis.costs.total.toFixed(0)}
-            </div>
-            </CollapsibleContent>
-          </Collapsible>
         </div>
         
         {/* Profit Column */}
