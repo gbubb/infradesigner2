@@ -94,20 +94,22 @@ export const ClusterAnalysisCard: React.FC<ClusterAnalysisCardProps> = ({
       </div>
       
       <div className="grid grid-cols-3 gap-3 text-sm">
+        {/* Revenue Column */}
         <div>
-          <div className="text-xs text-muted-foreground">Revenue</div>
+          <div className="text-xs text-muted-foreground mb-1">Revenue</div>
           <div className="font-medium text-green-600">${analysis.revenue.toFixed(0)}</div>
         </div>
         
+        {/* Costs Column */}
         <div>
-          <div className="text-xs text-muted-foreground">Costs</div>
-          <div className="space-y-1">
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-                <ChevronDown className="h-3 w-3" />
-                Details
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-1 pt-1 text-xs">
+          <div className="text-xs text-muted-foreground mb-1">Costs</div>
+          <div className="font-medium text-red-600">${analysis.costs.total.toFixed(0)}</div>
+          <Collapsible>
+            <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-1">
+              <ChevronDown className="h-3 w-3" />
+              Details
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pt-1 text-xs">
                 {analysis.type === 'compute' && analysis.costs.compute !== undefined && analysis.costBreakdown?.compute && (
                   <div className="space-y-1 pl-4 border-l-2 border-blue-200">
                     <div className="font-medium text-blue-600">Compute Hardware</div>
@@ -192,14 +194,16 @@ export const ClusterAnalysisCard: React.FC<ClusterAnalysisCardProps> = ({
               <span>Licensing:</span>
               <span>${analysis.costs.licensing.toFixed(2)}</span>
             </div>
-            <div className="font-medium text-red-600 border-t pt-1">
+            <div className="font-medium border-t pt-1 mt-1">
               Total: ${analysis.costs.total.toFixed(0)}
             </div>
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
         
+        {/* Profit Column */}
         <div>
-          <div className="text-xs text-muted-foreground">Profit</div>
+          <div className="text-xs text-muted-foreground mb-1">Profit</div>
           <div className={`font-medium ${analysis.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             ${analysis.profit.toFixed(0)}
             <span className="text-xs ml-1">({analysis.profitMargin.toFixed(0)}%)</span>
