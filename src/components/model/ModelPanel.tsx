@@ -232,7 +232,11 @@ export const ModelPanel: React.FC = () => {
         },
         revenue,
         profit,
-        profitMargin: revenue > 0 ? (profit / revenue) * 100 : 0
+        profitMargin: revenue > 0 ? (profit / revenue) * 100 : 0,
+        costPerUnit: currentVMs > 0 ? totalClusterCost / currentVMs : 0,
+        pricePerUnit: cluster.pricePerMonth,
+        currentUnits: currentVMs,
+        maxUnits: maxVMs
       };
     });
     
@@ -321,7 +325,11 @@ export const ModelPanel: React.FC = () => {
         },
         revenue,
         profit,
-        profitMargin: revenue > 0 ? (profit / revenue) * 100 : 0
+        profitMargin: revenue > 0 ? (profit / revenue) * 100 : 0,
+        costPerUnit: overallocatedStorageTiB > 0 ? totalClusterCost / overallocatedStorageTiB : 0,
+        pricePerUnit: cluster.pricePerMonth * 1024, // Convert to per TiB
+        currentUnits: overallocatedStorageTiB,
+        maxUnits: usableStorageTiB
       };
     });
     

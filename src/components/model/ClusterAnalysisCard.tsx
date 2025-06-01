@@ -52,6 +52,10 @@ interface ClusterAnalysisData {
   revenue: number;
   profit: number;
   profitMargin: number;
+  costPerUnit: number;
+  pricePerUnit: number;
+  currentUnits: number;
+  maxUnits: number;
 }
 
 interface ClusterAnalysisCardProps {
@@ -73,6 +77,22 @@ export const ClusterAnalysisCard: React.FC<ClusterAnalysisCardProps> = ({
         </div>
       </div>
       
+      {/* Cost per unit metric */}
+      <div className="mb-2 p-2 bg-muted/50 rounded text-xs">
+        <div className="flex justify-between items-center">
+          <span className="text-muted-foreground">Cost per {analysis.type === 'compute' ? 'VM' : 'TiB'}:</span>
+          <div className="text-right">
+            <span className="font-medium">${analysis.costPerUnit.toFixed(2)}</span>
+            <span className="text-muted-foreground ml-1">
+              (vs ${analysis.pricePerUnit.toFixed(2)} price)
+            </span>
+          </div>
+        </div>
+        <div className="text-xs text-muted-foreground mt-1">
+          {analysis.currentUnits.toFixed(0)} of {analysis.maxUnits.toFixed(0)} {analysis.type === 'compute' ? 'VMs' : 'TiB'} active
+        </div>
+      </div>
+      
       <div className="grid grid-cols-3 gap-3 text-sm">
         <div>
           <div className="text-xs text-muted-foreground">Revenue</div>
@@ -81,7 +101,7 @@ export const ClusterAnalysisCard: React.FC<ClusterAnalysisCardProps> = ({
         
         <div>
           <div className="text-xs text-muted-foreground">Costs</div>
-          <div className="font-medium text-red-600">
+          <div className="space-y-1">
             <Collapsible>
               <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                 <ChevronDown className="h-3 w-3" />
@@ -172,7 +192,9 @@ export const ClusterAnalysisCard: React.FC<ClusterAnalysisCardProps> = ({
               <span>Licensing:</span>
               <span>${analysis.costs.licensing.toFixed(2)}</span>
             </div>
-            ${analysis.costs.total.toFixed(0)}
+            <div className="font-medium text-red-600 border-t pt-1">
+              Total: ${analysis.costs.total.toFixed(0)}
+            </div>
           </div>
         </div>
         
