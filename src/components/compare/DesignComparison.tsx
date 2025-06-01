@@ -8,9 +8,15 @@ import {
 } from '@/types/infrastructure';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CompareCostMetrics } from './sections/CompareCostMetrics';
 import { CompareResourceMetrics } from './sections/CompareResourceMetrics';
 import { ComparePowerMetrics } from './sections/ComparePowerMetrics';
+import { CostBreakdownChart } from './charts/CostBreakdownChart';
+import { CostDistributionPieCharts } from './charts/CostDistributionPieCharts';
+import { TCOProjectionChart } from './charts/TCOProjectionChart';
+import { ResourceUtilizationRadar } from './charts/ResourceUtilizationRadar';
+import { ComponentLevelComparison } from './tables/ComponentLevelComparison';
 
 // Helper function to calculate all relevant metrics from a design
 function calculateDesignMetrics(design: InfrastructureDesign) {
@@ -181,6 +187,81 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
     monthlyCostPerAverageVM: Math.abs(getPercentDifference(metricsA.monthlyCostPerAverageVM, metricsB.monthlyCostPerAverageVM)) > 10,
   };
   
+  // Calculate component costs by type
+  const calculateComponentCostsByType = (design: InfrastructureDesign, monthlyCost: number) => {
+    const costs = {
+      compute: 0,
+      storage: 0,
+      network: 0,
+      cabling: 0,
+      operational: 0
+    };
+
+    design.components.forEach(component => {
+      const quantity = component.quantity || 1;
+      const totalCost = component.cost * quantity;
+
+      switch (component.type) {
+        case ComponentType.Server:
+          if (component.role === 'storageNode') {
+            costs.storage += totalCost;
+          } else {
+            costs.compute += totalCost;
+          }
+          break;
+        case ComponentType.Disk:
+        case ComponentType.GPU:
+          costs.storage += totalCost;
+          break;
+        case ComponentType.Switch:
+        case ComponentType.Router:
+        case ComponentType.Firewall:
+        case ComponentType.Transceiver:
+          costs.network += totalCost;
+          break;
+        case ComponentType.FiberPatchPanel:
+        case ComponentType.CopperPatchPanel:
+        case ComponentType.Cassette:
+        case ComponentType.FiberCable:
+        case ComponentType.CopperCable:
+          costs.cabling += totalCost;
+          break;
+        default:
+          break;
+      }
+    });
+
+    costs.operational = monthlyCost * 12; // Annual operational costs
+    return costs;
+  };
+
+  const designACosts = calculateComponentCostsByType(designA, metricsA.monthlyCost);
+  const designBCosts = calculateComponentCostsByType(designB, metricsB.monthlyCost);
+
+  // Calculate rack units and network ports
+  const calculateAdditionalMetrics = (design: InfrastructureDesign) => {
+    let rackUnits = 0;
+    let networkPorts = 0;
+
+    design.components.forEach(component => {
+      const quantity = component.quantity || 1;
+      if (component.rackMountSize) {
+        rackUnits += component.rackMountSize * quantity;
+      }
+      
+      // Count switch ports
+      if (component.type === ComponentType.Switch) {
+        const switchComponent = component as Switch;
+        networkPorts += (switchComponent.numberOfPorts || 0) * quantity;
+      }
+    });
+
+    return { rackUnits, networkPorts };
+  };
+
+  const additionalMetricsA = calculateAdditionalMetrics(designA);
+  const additionalMetricsB = calculateAdditionalMetrics(designB);
+
   return (
     <div className="space-y-8">
       <Card>
@@ -189,45 +270,122 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">
-            This comparison highlights the differences between the selected designs across various metrics.
-            Significant differences ({">"} 10%) are highlighted.
+            Interactive comparison showing cost breakdowns, resource utilization, and component-level differences.
           </p>
-          
-          <div className="grid grid-cols-3 gap-4 mb-4 text-center font-medium">
-            <div>Metrics</div>
-            <div>{designA.name}</div>
-            <div>{designB.name}</div>
-          </div>
-          
-          <CompareCostMetrics 
-            designAName={designA.name}
-            designBName={designB.name}
-            metricsA={metricsA}
-            metricsB={metricsB}
-            significantDifferences={significantDifferences}
-          />
-          
-          <Separator className="my-6" />
-          
-          <CompareResourceMetrics
-            designAName={designA.name}
-            designBName={designB.name}
-            metricsA={metricsA}
-            metricsB={metricsB}
-            significantDifferences={significantDifferences}
-          />
-          
-          <Separator className="my-6" />
-          
-          <ComparePowerMetrics
-            designAName={designA.name}
-            designBName={designB.name}
-            metricsA={metricsA}
-            metricsB={metricsB}
-            significantDifferences={significantDifferences}
-          />
         </CardContent>
       </Card>
+
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid grid-cols-5 w-full">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="costs">Cost Analysis</TabsTrigger>
+          <TabsTrigger value="resources">Resources</TabsTrigger>
+          <TabsTrigger value="components">Components</TabsTrigger>
+          <TabsTrigger value="tco">TCO Projection</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Comparison Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 mb-4 text-center font-medium">
+                <div>Metrics</div>
+                <div>{designA.name}</div>
+                <div>{designB.name}</div>
+              </div>
+              
+              <CompareCostMetrics 
+                designAName={designA.name}
+                designBName={designB.name}
+                metricsA={metricsA}
+                metricsB={metricsB}
+                significantDifferences={significantDifferences}
+              />
+              
+              <Separator className="my-6" />
+              
+              <CompareResourceMetrics
+                designAName={designA.name}
+                designBName={designB.name}
+                metricsA={metricsA}
+                metricsB={metricsB}
+                significantDifferences={significantDifferences}
+              />
+              
+              <Separator className="my-6" />
+              
+              <ComparePowerMetrics
+                designAName={designA.name}
+                designBName={designB.name}
+                metricsA={metricsA}
+                metricsB={metricsB}
+                significantDifferences={significantDifferences}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="costs" className="space-y-6">
+          <CostBreakdownChart
+            designAName={designA.name}
+            designBName={designB.name}
+            designACosts={designACosts}
+            designBCosts={designBCosts}
+          />
+          <CostDistributionPieCharts
+            designAName={designA.name}
+            designBName={designB.name}
+            designACosts={designACosts}
+            designBCosts={designBCosts}
+          />
+        </TabsContent>
+
+        <TabsContent value="resources" className="space-y-6">
+          <ResourceUtilizationRadar
+            designAName={designA.name}
+            designBName={designB.name}
+            designAMetrics={{
+              vCPUs: metricsA.totalVCPUs,
+              memoryTB: metricsA.totalMemoryTB,
+              storageTB: metricsA.totalStorageTB,
+              powerKW: metricsA.maximumPower / 1000,
+              rackUnits: additionalMetricsA.rackUnits,
+              networkPorts: additionalMetricsA.networkPorts
+            }}
+            designBMetrics={{
+              vCPUs: metricsB.totalVCPUs,
+              memoryTB: metricsB.totalMemoryTB,
+              storageTB: metricsB.totalStorageTB,
+              powerKW: metricsB.maximumPower / 1000,
+              rackUnits: additionalMetricsB.rackUnits,
+              networkPorts: additionalMetricsB.networkPorts
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="components" className="space-y-6">
+          <ComponentLevelComparison
+            designAName={designA.name}
+            designBName={designB.name}
+            designAComponents={designA.components}
+            designBComponents={designB.components}
+          />
+        </TabsContent>
+
+        <TabsContent value="tco" className="space-y-6">
+          <TCOProjectionChart
+            designAName={designA.name}
+            designBName={designB.name}
+            designACapitalCost={metricsA.totalCost}
+            designBCapitalCost={metricsB.totalCost}
+            designAOperationalCost={metricsA.monthlyCost}
+            designBOperationalCost={metricsB.monthlyCost}
+            years={5}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
