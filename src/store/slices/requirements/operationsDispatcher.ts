@@ -54,9 +54,87 @@ export const createRequirementsSliceOperations = (set: any, get: any): Requireme
     },
     
     calculateComponentRoles: () => {
-      const { requirements } = get();
+      const state = get();
+      const { requirements, componentRoles: existingRoles, activeDesign } = state;
+      
+      // Create a map of existing assignments before recalculation
+      const existingAssignments: Record<string, { componentId: string, diskConfig?: any, gpuConfig?: any }> = {};
+      
+      // Get assignments from current componentRoles
+      existingRoles.forEach(role => {
+        if (role.assignedComponentId) {
+          const roleKey = role.role === 'storageNode' && role.clusterInfo?.clusterId
+            ? `${role.role}-${role.clusterInfo.clusterId}`
+            : role.role;
+          existingAssignments[roleKey] = {
+            componentId: role.assignedComponentId,
+            diskConfig: state.selectedDisksByRole[role.id],
+            gpuConfig: state.selectedGPUsByRole[role.id]
+          };
+        }
+      });
+      
+      // Also check activeDesign for any additional assignments
+      if (activeDesign?.componentRoles) {
+        activeDesign.componentRoles.forEach(role => {
+          if (role.assignedComponentId) {
+            const roleKey = role.role === 'storageNode' && role.clusterInfo?.clusterId
+              ? `${role.role}-${role.clusterInfo.clusterId}`
+              : role.role;
+            // Only add if not already in existingAssignments
+            if (!existingAssignments[roleKey]) {
+              existingAssignments[roleKey] = {
+                componentId: role.assignedComponentId,
+                diskConfig: activeDesign.selectedDisksByRole?.[role.id],
+                gpuConfig: activeDesign.selectedGPUsByRole?.[role.id]
+              };
+            }
+          }
+        });
+      }
+      
+      // Calculate new roles
       const newRoles = calculateComponentRoles(requirements);
-      set({ componentRoles: newRoles });
+      
+      // Restore assignments to the new roles
+      const updatedRoles = newRoles.map(role => {
+        const roleKey = role.role === 'storageNode' && role.clusterInfo?.clusterId
+          ? `${role.role}-${role.clusterInfo.clusterId}`
+          : role.role;
+        
+        if (existingAssignments[roleKey]) {
+          return {
+            ...role,
+            assignedComponentId: existingAssignments[roleKey].componentId
+          };
+        }
+        return role;
+      });
+      
+      // Rebuild disk and GPU configurations
+      const newDisksByRole: Record<string, any> = {};
+      const newGPUsByRole: Record<string, any> = {};
+      
+      updatedRoles.forEach(role => {
+        const roleKey = role.role === 'storageNode' && role.clusterInfo?.clusterId
+          ? `${role.role}-${role.clusterInfo.clusterId}`
+          : role.role;
+        
+        if (existingAssignments[roleKey]) {
+          if (existingAssignments[roleKey].diskConfig) {
+            newDisksByRole[role.id] = existingAssignments[roleKey].diskConfig;
+          }
+          if (existingAssignments[roleKey].gpuConfig) {
+            newGPUsByRole[role.id] = existingAssignments[roleKey].gpuConfig;
+          }
+        }
+      });
+      
+      set({ 
+        componentRoles: updatedRoles,
+        selectedDisksByRole: newDisksByRole,
+        selectedGPUsByRole: newGPUsByRole
+      });
     },
     
     calculateRequiredQuantity: (roleId: string, componentId: string): number => {

@@ -40,9 +40,33 @@ export const DesignPanel: React.FC = () => {
   }, [activeDesign]);
 
   useEffect(() => {
-    if (componentRoles.length > 0) {
+    if (componentRoles.length > 0 && activeDesign) {
+      // Create a map of existing assignments from activeDesign
+      const existingAssignments: Record<string, string> = {};
+      if (activeDesign.componentRoles && activeDesign.componentRoles.length > 0) {
+        activeDesign.componentRoles.forEach(savedRole => {
+          if (savedRole.assignedComponentId) {
+            // For storage nodes, use cluster-specific key
+            const roleKey = savedRole.role === 'storageNode' && savedRole.clusterInfo?.clusterId
+              ? `${savedRole.role}-${savedRole.clusterInfo.clusterId}`
+              : savedRole.role;
+            existingAssignments[roleKey] = savedRole.assignedComponentId;
+          }
+        });
+      }
+
       componentRoles.forEach(role => {
-        if (!role.assignedComponentId) {
+        // Check for existing assignment in activeDesign first
+        const roleKey = role.role === 'storageNode' && role.clusterInfo?.clusterId
+          ? `${role.role}-${role.clusterInfo.clusterId}`
+          : role.role;
+        
+        if (!role.assignedComponentId && existingAssignments[roleKey]) {
+          // Restore assignment from activeDesign
+          console.log(`Restoring assignment for ${roleKey} from activeDesign: ${existingAssignments[roleKey]}`);
+          assignComponentToRole(role.id, existingAssignments[roleKey]);
+        } else if (!role.assignedComponentId) {
+          // Only assign defaults if no existing assignment found
           let componentType: ComponentType | undefined;
           
           if (role.role.includes('Node') || role.role.includes('node')) {
@@ -75,7 +99,7 @@ export const DesignPanel: React.FC = () => {
         }
       });
     }
-  }, [componentRoles, componentTemplates, findDefaultComponent, assignComponentToRole]);
+  }, [componentRoles, componentTemplates, findDefaultComponent, assignComponentToRole, activeDesign]);
 
   const getComponentsForRole = (role: string) => {
     switch (role) {
