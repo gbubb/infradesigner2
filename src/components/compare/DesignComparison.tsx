@@ -238,25 +238,60 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
   const designACosts = calculateComponentCostsByType(designA, metricsA.monthlyCost);
   const designBCosts = calculateComponentCostsByType(designB, metricsB.monthlyCost);
 
-  // Calculate rack units and network ports
+  // Calculate rack units and usable storage capacity
   const calculateAdditionalMetrics = (design: InfrastructureDesign) => {
     let rackUnits = 0;
-    let networkPorts = 0;
+    let usableStorageTB = 0;
 
+    // Calculate total rack units from all components
     design.components.forEach(component => {
       const quantity = component.quantity || 1;
-      if (component.rackMountSize) {
-        rackUnits += component.rackMountSize * quantity;
-      }
-      
-      // Count switch ports
-      if (component.type === ComponentType.Switch) {
-        const switchComponent = component as Switch;
-        networkPorts += (switchComponent.numberOfPorts || 0) * quantity;
-      }
+      const ruSize = component.ruSize || component.rackMountSize || 1; // Support both property names
+      rackUnits += ruSize * quantity;
     });
 
-    return { rackUnits, networkPorts };
+    // Calculate usable storage capacity from storage clusters
+    if (design.requirements?.storageRequirements?.storageClusters) {
+      design.requirements.storageRequirements.storageClusters.forEach(cluster => {
+        // Find storage nodes for this cluster
+        const clusterNodes = design.components.filter(
+          component => component.role === 'storageNode' && 
+          (component as any).clusterInfo?.clusterId === cluster.id
+        );
+        
+        // Calculate total raw capacity for this cluster
+        let clusterRawCapacityTB = 0;
+        clusterNodes.forEach(node => {
+          const quantity = node.quantity || 1;
+          
+          // Add attached disks capacity if available
+          if ('attachedDisks' in node) {
+            const disks = (node as any).attachedDisks || [];
+            disks.forEach((disk: any) => {
+              if (disk && 'capacityTB' in disk) {
+                clusterRawCapacityTB += disk.capacityTB * (disk.quantity || 1) * quantity;
+              }
+            });
+          }
+        });
+        
+        // Calculate usable capacity based on pool type and efficiency
+        const StoragePoolEfficiencyFactors: Record<string, number> = {
+          '3 Replica': 0.33333,
+          '2 Replica': 0.5,
+          'Erasure Coding 4+2': 0.66666,
+          'Erasure Coding 8+3': 0.72727,
+          'Erasure Coding 6+3': 0.66666,
+          'Erasure Coding 10+4': 0.71429,
+        };
+        
+        const poolEfficiencyFactor = StoragePoolEfficiencyFactors[cluster.poolType || '3 Replica'] || (1/3);
+        const clusterUsableCapacityTB = clusterRawCapacityTB * poolEfficiencyFactor;
+        usableStorageTB += clusterUsableCapacityTB;
+      });
+    }
+
+    return { rackUnits, usableStorageTB };
   };
 
   const additionalMetricsA = calculateAdditionalMetrics(designA);
@@ -349,18 +384,16 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
             designAMetrics={{
               vCPUs: metricsA.totalVCPUs,
               memoryTB: metricsA.totalMemoryTB,
-              storageTB: metricsA.totalStorageTB,
+              storageTB: additionalMetricsA.usableStorageTB,
               powerKW: metricsA.maximumPower / 1000,
-              rackUnits: additionalMetricsA.rackUnits,
-              networkPorts: additionalMetricsA.networkPorts
+              rackUnits: additionalMetricsA.rackUnits
             }}
             designBMetrics={{
               vCPUs: metricsB.totalVCPUs,
               memoryTB: metricsB.totalMemoryTB,
-              storageTB: metricsB.totalStorageTB,
+              storageTB: additionalMetricsB.usableStorageTB,
               powerKW: metricsB.maximumPower / 1000,
-              rackUnits: additionalMetricsB.rackUnits,
-              networkPorts: additionalMetricsB.networkPorts
+              rackUnits: additionalMetricsB.rackUnits
             }}
           />
         </TabsContent>

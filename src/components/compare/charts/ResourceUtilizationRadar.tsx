@@ -8,7 +8,6 @@ interface ResourceMetrics {
   storageTB: number;
   powerKW: number;
   rackUnits: number;
-  networkPorts: number;
 }
 
 interface ResourceUtilizationRadarProps {
@@ -32,7 +31,6 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
       storageTB: Math.max(designAMetrics.storageTB, designBMetrics.storageTB),
       powerKW: Math.max(designAMetrics.powerKW, designBMetrics.powerKW),
       rackUnits: Math.max(designAMetrics.rackUnits, designBMetrics.rackUnits),
-      networkPorts: Math.max(designAMetrics.networkPorts, designBMetrics.networkPorts),
     };
 
     return [
@@ -66,12 +64,6 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
         [designBName]: (designBMetrics.rackUnits / maxValues.rackUnits) * 100,
         fullMark: 100,
       },
-      {
-        metric: 'Network Ports',
-        [designAName]: (designAMetrics.networkPorts / maxValues.networkPorts) * 100,
-        [designBName]: (designBMetrics.networkPorts / maxValues.networkPorts) * 100,
-        fullMark: 100,
-      },
     ];
   };
 
@@ -86,7 +78,6 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
         Storage: { A: designAMetrics.storageTB, B: designBMetrics.storageTB, unit: ' TB' },
         Power: { A: designAMetrics.powerKW, B: designBMetrics.powerKW, unit: ' kW' },
         'Rack Space': { A: designAMetrics.rackUnits, B: designBMetrics.rackUnits, unit: ' RU' },
-        'Network Ports': { A: designAMetrics.networkPorts, B: designBMetrics.networkPorts, unit: '' },
       };
 
       const values = actualValues[metricName as keyof typeof actualValues];
@@ -132,6 +123,7 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
     <Card>
       <CardHeader>
         <CardTitle>Resource Utilization Comparison</CardTitle>
+        <p className="text-sm text-muted-foreground">Comparing vCPUs, Memory, Usable Storage, Power, and Rack Space requirements</p>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={400}>
@@ -173,8 +165,11 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
                 <p className="text-sm">
                   <span className="font-medium">{designBName}:</span> {designBEfficiency.cpuPerRU.toFixed(1)}
                 </p>
-                <p className={`text-sm font-medium ${designBEfficiency.cpuPerRU > designAEfficiency.cpuPerRU ? 'text-green-600' : 'text-red-600'}`}>
-                  {((designBEfficiency.cpuPerRU - designAEfficiency.cpuPerRU) / designAEfficiency.cpuPerRU * 100).toFixed(1)}% difference
+                <p className={`text-sm font-medium ${designAEfficiency.cpuPerRU > 0 ? (designBEfficiency.cpuPerRU > designAEfficiency.cpuPerRU ? 'text-green-600' : 'text-red-600') : 'text-muted-foreground'}`}>
+                  {designAEfficiency.cpuPerRU > 0 ? 
+                    `${((designBEfficiency.cpuPerRU - designAEfficiency.cpuPerRU) / designAEfficiency.cpuPerRU * 100).toFixed(1)}% difference` :
+                    'No comparison available'
+                  }
                 </p>
               </div>
             </div>
@@ -188,8 +183,11 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
                 <p className="text-sm">
                   <span className="font-medium">{designBName}:</span> {designBEfficiency.tbPerRU.toFixed(2)}
                 </p>
-                <p className={`text-sm font-medium ${designBEfficiency.tbPerRU > designAEfficiency.tbPerRU ? 'text-green-600' : 'text-red-600'}`}>
-                  {((designBEfficiency.tbPerRU - designAEfficiency.tbPerRU) / designAEfficiency.tbPerRU * 100).toFixed(1)}% difference
+                <p className={`text-sm font-medium ${designAEfficiency.tbPerRU > 0 ? (designBEfficiency.tbPerRU > designAEfficiency.tbPerRU ? 'text-green-600' : 'text-red-600') : 'text-muted-foreground'}`}>
+                  {designAEfficiency.tbPerRU > 0 ? 
+                    `${((designBEfficiency.tbPerRU - designAEfficiency.tbPerRU) / designAEfficiency.tbPerRU * 100).toFixed(1)}% difference` :
+                    'No comparison available'
+                  }
                 </p>
               </div>
             </div>
@@ -203,8 +201,11 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
                 <p className="text-sm">
                   <span className="font-medium">{designBName}:</span> {designBEfficiency.cpuPerKW.toFixed(1)}
                 </p>
-                <p className={`text-sm font-medium ${designBEfficiency.cpuPerKW > designAEfficiency.cpuPerKW ? 'text-green-600' : 'text-red-600'}`}>
-                  {((designBEfficiency.cpuPerKW - designAEfficiency.cpuPerKW) / designAEfficiency.cpuPerKW * 100).toFixed(1)}% difference
+                <p className={`text-sm font-medium ${designAEfficiency.cpuPerKW > 0 ? (designBEfficiency.cpuPerKW > designAEfficiency.cpuPerKW ? 'text-green-600' : 'text-red-600') : 'text-muted-foreground'}`}>
+                  {designAEfficiency.cpuPerKW > 0 ? 
+                    `${((designBEfficiency.cpuPerKW - designAEfficiency.cpuPerKW) / designAEfficiency.cpuPerKW * 100).toFixed(1)}% difference` :
+                    'No comparison available'
+                  }
                 </p>
               </div>
             </div>
