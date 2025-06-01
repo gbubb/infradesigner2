@@ -64,18 +64,43 @@ export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const updateDesign = useDesignStore(state => state.updateDesign);
   
-  // Listen for requirements changes (as in Results) for rack re-init
-  const requirementsHash = JSON.stringify(activeDesign?.requirements || {});
+  // Monitor only rack-relevant requirements changes
+  const rackRelevantRequirements = React.useMemo(() => {
+    if (!activeDesign?.requirements) return {};
+    const { physicalConstraints, computeRequirements, storageRequirements } = activeDesign.requirements;
+    return {
+      rackQuantity: physicalConstraints?.computeStorageRackQuantity,
+      coreRackQuantity: physicalConstraints?.coreRackQuantity,
+      computeClusters: computeRequirements?.computeClusters?.map(c => ({ id: c.id, nodeCount: c.nodeCount })),
+      storageClusters: storageRequirements?.storageClusters?.map(c => ({ id: c.id, nodeCount: c.nodeCount })),
+      availabilityZones: activeDesign.requirements.physicalConstraints?.availabilityZones?.length
+    };
+  }, [activeDesign?.requirements]);
   
-  // Effect: On requirements change or page mount, ALWAYS clear racks and regenerate
+  const rackRequirementsHash = JSON.stringify(rackRelevantRequirements);
+  
+  // Effect: Only clear racks when rack-relevant requirements change
   useEffect(() => {
     if (!activeDesign) return;
-    // Always CLEAR racks (from design & storage) and force regeneration by increasing resetTrigger
-    RackService.clearAllRackProfiles();
-    setResetTrigger(prev => prev + 1);
-    setSelectedRackId(null);
-  // Only run when requirements or design changes, never from rackProfiles or resetTrigger itself
-  }, [activeDesign?.id, requirementsHash]);
+    
+    // Check if we have any existing racks and if they're still valid
+    const existingRacks = RackService.getAllRackProfiles();
+    if (existingRacks.length === 0) {
+      // No existing racks, trigger initialization
+      setResetTrigger(prev => prev + 1);
+      return;
+    }
+    
+    // If this is a new design or rack requirements changed, clear and regenerate
+    const prevHash = sessionStorage.getItem(`rack_requirements_${activeDesign.id}`);
+    if (prevHash !== rackRequirementsHash) {
+      sessionStorage.setItem(`rack_requirements_${activeDesign.id}`, rackRequirementsHash);
+      RackService.clearAllRackProfiles(true); // Silent clear
+      setResetTrigger(prev => prev + 1);
+      setSelectedRackId(null);
+      toast.info('Rack layout cleared due to infrastructure requirements change');
+    }
+  }, [activeDesign?.id, rackRequirementsHash]);
 
   // --- EFFECT TO LOAD SAVED RACK LAYOUTS ONLY WHEN USER EXPLICITLY ASKS ---
   const handleLoadLayout = async () => {
