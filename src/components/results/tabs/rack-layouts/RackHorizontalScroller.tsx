@@ -8,6 +8,7 @@ import { RackProfile } from '@/types/infrastructure/rack-types';
 import { useDesignStore } from '@/store/designStore';
 import { getDeviceColor } from '@/components/visualization/rack/rackUtils';
 import { ComponentType } from '@/types/infrastructure/component-types';
+import { RackService } from '@/services/rackService';
 
 interface RackHorizontalScrollerProps {
   racks: Array<{ id: string; name: string; azName?: string; availabilityZoneId?: string }>;
@@ -22,10 +23,9 @@ interface RackHorizontalScrollerProps {
 // Component to render a mini rack visualization
 const MiniRackVisualization: React.FC<{ rack: { id: string; name: string; azName?: string; availabilityZoneId?: string } }> = ({ rack }) => {
   const activeDesign = useDesignStore(state => state.activeDesign);
-  const placedComponents = useDesignStore(state => state.placedComponents);
   
-  // Get rack profile with device information
-  const rackProfile = activeDesign?.rackProfiles?.find(r => r.id === rack.id);
+  // Get rack profile with device information using RackService
+  const rackProfile = RackService.getRackProfile(rack.id);
   
   if (!rackProfile || !rackProfile.devices || rackProfile.devices.length === 0) {
     // Empty rack - show placeholder icon
@@ -46,10 +46,10 @@ const MiniRackVisualization: React.FC<{ rack: { id: string; name: string; azName
   return (
     <div className="absolute inset-0 flex flex-col-reverse px-1">
       {rackProfile.devices.map((placedDevice, index) => {
-        const component = placedComponents[placedDevice.deviceId];
+        const component = activeDesign?.components.find(c => c.id === placedDevice.deviceId);
         if (!component) return null;
         
-        const ruSize = component.rackUnits || 1;
+        const ruSize = component.ruSize || 1;
         const height = deviceHeight * ruSize;
         const bottom = deviceHeight * (placedDevice.ruPosition - 1);
         
