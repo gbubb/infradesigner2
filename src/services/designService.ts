@@ -32,9 +32,17 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
           const parsedConnectionRules = ('connection_rules' in design && design['connection_rules'])
             ? JSON.parse(String(design['connection_rules']) || '[]')
             : [];
-          const parsedRackProfiles = ('rackprofiles' in design && design['rackprofiles'])
-            ? JSON.parse(String(design['rackprofiles']) || '[]')
-            : [];
+          let parsedRackProfiles = [];
+          try {
+            if (design.rackprofiles) {
+              parsedRackProfiles = typeof design.rackprofiles === 'string' 
+                ? JSON.parse(design.rackprofiles) 
+                : design.rackprofiles;
+            }
+          } catch (e) {
+            console.warn('Error parsing rack profiles, using empty array:', e);
+            parsedRackProfiles = [];
+          }
 
           return {
             id: design.id,
@@ -99,9 +107,17 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
       const parsedConnectionRules = ('connection_rules' in data && data['connection_rules'])
         ? JSON.parse(String(data['connection_rules']) || '[]')
         : [];
-      const parsedRackProfiles = ('rackprofiles' in data && data['rackprofiles'])
-        ? JSON.parse(String(data['rackprofiles']) || '[]')
-        : [];
+      let parsedRackProfiles = [];
+      try {
+        if (data.rackprofiles) {
+          parsedRackProfiles = typeof data.rackprofiles === 'string' 
+            ? JSON.parse(data.rackprofiles) 
+            : data.rackprofiles;
+        }
+      } catch (e) {
+        console.warn('Error parsing rack profiles in shared design, using empty array:', e);
+        parsedRackProfiles = [];
+      }
 
       return {
         id: data.id,
