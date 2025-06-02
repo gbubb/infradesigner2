@@ -17,18 +17,35 @@ export class LayoutPersistenceService {
     if (error) throw error;
   }
 
-  static async loadLayoutForDesign() {
+  static async loadLayoutForDesign(): Promise<{ 
+    rackprofiles: InfrastructureDesign['rackprofiles'];
+    requirements?: InfrastructureDesign['requirements'];
+  }> {
     const state = useDesignStore.getState();
     const activeDesign = state.activeDesign;
     if (!activeDesign) throw new Error("No design loaded.");
-    // Expect rackprofiles in the result
+    // Expect rackprofiles and requirements in the result
     const { data, error } = await supabase
       .from("designs")
-      .select("rackprofiles") // use rackprofiles, not rackProfiles
+      .select("rackprofiles, requirements") // Also select requirements for validation
       .eq("id", activeDesign.id)
       .maybeSingle();
     if (error) throw error;
-    return { rackprofiles: data?.rackprofiles } as { rackprofiles: InfrastructureDesign['rackprofiles'] };
+
+    // Parse requirements if it exists and is a string
+    let parsedRequirements: InfrastructureDesign['requirements'] | undefined;
+    if (data?.requirements && typeof data.requirements === 'string') {
+      try {
+        parsedRequirements = JSON.parse(data.requirements);
+      } catch (e) {
+        console.error('Error parsing requirements:', e);
+      }
+    }
+
+    return { 
+      rackprofiles: data?.rackprofiles,
+      requirements: parsedRequirements
+    };
   }
 
   /**

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
 import { DndProvider } from 'react-dnd';
@@ -67,6 +67,100 @@ export const RackLayoutsTab: React.FC = () => {
   // Listen for requirements changes (as in Results) for rack re-init
   const requirementsHash = JSON.stringify(activeDesign?.requirements || {});
   
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
+  const hasUnsavedChangesRef = useRef(false);
+  const isNavigatingAwayRef = useRef(false);
+  
+  // Effect: Auto-save when devices are placed (with 2s debounce)
+  useEffect(() => {
+    if (!activeDesign || !hasUnsavedChangesRef.current) return;
+
+    // Clear any existing timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    // Set new timeout for auto-save
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      if (!isNavigatingAwayRef.current) { // Don't auto-save if we're navigating away (will use immediate save)
+        setIsAutoSaving(true);
+        try {
+          await LayoutPersistenceService.saveCurrentLayout();
+          hasUnsavedChangesRef.current = false;
+        } catch (error) {
+          console.error("Error auto-saving rack layout:", error);
+          toast.error("Failed to auto-save rack layout");
+        } finally {
+          setIsAutoSaving(false);
+        }
+      }
+    }, 2000);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [activeDesign?.rackprofiles]); // Only trigger on rack profile changes
+
+  // Effect: Auto-save when navigating away
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      if (hasUnsavedChangesRef.current && activeDesign) {
+        isNavigatingAwayRef.current = true;
+        try {
+          await LayoutPersistenceService.saveCurrentLayout();
+          hasUnsavedChangesRef.current = false;
+        } catch (error) {
+          console.error("Error saving rack layout before navigation:", error);
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [activeDesign]);
+
+  // Effect: Auto-load when mounting or returning to tab
+  useEffect(() => {
+    const loadSavedLayout = async () => {
+      if (!activeDesign) return;
+      
+      try {
+        const data = await LayoutPersistenceService.loadLayoutForDesign();
+        if (data?.rackprofiles?.length > 0) {
+          // Only load if requirements haven't changed
+          const currentRequirementsHash = JSON.stringify(activeDesign.requirements || {});
+          const savedRequirementsHash = JSON.stringify(data.requirements || {});
+          
+          if (currentRequirementsHash === savedRequirementsHash) {
+            // Ensure only valid devices are restored
+            const validDeviceIds = new Set(
+              (activeDesign?.components ?? []).map((c) => c.id)
+            );
+            const isValid = data.rackprofiles.every((rack: any) =>
+              (rack.devices ?? []).every((dev: any) => validDeviceIds.has(dev.deviceId))
+            );
+            
+            if (isValid) {
+              updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
+              setResetTrigger(prev => prev + 1);
+              setSelectedRackId(null);
+              hasUnsavedChangesRef.current = false;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error auto-loading rack layout:", error);
+      }
+    };
+
+    loadSavedLayout();
+  }, [activeDesign?.id]); // Only trigger on design ID change
+
   // Effect: On requirements change or page mount, ALWAYS clear racks and regenerate
   useEffect(() => {
     if (!activeDesign) return;
@@ -74,7 +168,7 @@ export const RackLayoutsTab: React.FC = () => {
     RackService.clearAllRackProfiles();
     setResetTrigger(prev => prev + 1);
     setSelectedRackId(null);
-  // Only run when requirements or design changes, never from rackProfiles or resetTrigger itself
+    hasUnsavedChangesRef.current = false; // Reset unsaved changes flag
   }, [activeDesign?.id, requirementsHash]);
 
   // --- EFFECT TO LOAD SAVED RACK LAYOUTS ONLY WHEN USER EXPLICITLY ASKS ---
@@ -268,11 +362,26 @@ export const RackLayoutsTab: React.FC = () => {
     }
   }, [readyToOpenReportDialog, placementReport]);
 
-  // Save Layout
+  // Modify DevicePalette onDevicePlaced callback to set unsaved changes flag
+  const handleDevicePlaced = useCallback(() => {
+    hasUnsavedChangesRef.current = true;
+    // Update rack stats after device placement
+    if (selectedRackId) {
+      try {
+        const updatedStats = analyzeRackLayout(selectedRackId);
+        setRackStats(updatedStats);
+      } catch (error) {
+        console.error("Error updating rack stats:", error);
+      }
+    }
+  }, [selectedRackId]);
+
+  // Modify handleSaveLayout to update the unsaved changes flag
   const handleSaveLayout = async () => {
     setIsSaving(true);
     try {
       await LayoutPersistenceService.saveCurrentLayout();
+      hasUnsavedChangesRef.current = false;
       toast.success('Rack layout saved!');
     } catch (error) {
       console.error("Error saving rack layout:", error);
@@ -280,7 +389,7 @@ export const RackLayoutsTab: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
-  }
+  };
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -356,17 +465,10 @@ export const RackLayoutsTab: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Device palette - takes 1/4 of the space (now on the left) */}
           <div className="md:col-span-1">
-            <DevicePalette rackId={selectedRackId || undefined} onDevicePlaced={() => {
-              // Update rack stats after device placement
-              if (selectedRackId) {
-                try {
-                  const updatedStats = analyzeRackLayout(selectedRackId);
-                  setRackStats(updatedStats);
-                } catch (error) {
-                  console.error("Error updating rack stats:", error);
-                }
-              }
-            }} />
+            <DevicePalette 
+              rackId={selectedRackId || undefined} 
+              onDevicePlaced={handleDevicePlaced} 
+            />
           </div>
 
           {/* Rack detail view - takes 3/4 of the space (now on the right) */}
@@ -431,6 +533,13 @@ export const RackLayoutsTab: React.FC = () => {
           setClusterAssignments={setClusterAZAssignments}
           onConfirm={handleConfirmAutoPlacement}
         />
+
+        {/* Add auto-save indicator */}
+        {isAutoSaving && (
+          <div className="fixed bottom-4 right-4 bg-background border rounded-md shadow-md px-4 py-2 text-sm text-muted-foreground">
+            Auto-saving...
+          </div>
+        )}
       </div>
     </DndProvider>
   );
