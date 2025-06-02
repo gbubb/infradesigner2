@@ -23,7 +23,7 @@ export interface InfrastructureDesign {
   is_public?: boolean;
   sharing_id?: string | null;
   // Rack layout information - match DB: rackprofiles
-  rackprofiles?: any;
+  rackprofiles?: RackProfile[];
   // Connection information
   connections?: Connection[];
   // Connection rules

@@ -32,6 +32,7 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
           const parsedConnectionRules = ('connection_rules' in design && design['connection_rules'])
             ? JSON.parse(String(design['connection_rules']) || '[]')
             : [];
+          const parsedRackProfiles = design.rackprofiles ? JSON.parse(String(design.rackprofiles) || '[]') : [];
 
           return {
             id: design.id,
@@ -43,6 +44,7 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
             selectedDisksByRole: parsedDisksByRole,
             selectedGPUsByRole: parsedGPUsByRole,
             connectionRules: parsedConnectionRules,
+            rackprofiles: parsedRackProfiles,
             createdAt: new Date(design.createdat),
             updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat),
             user_id: design.user_id || null,
@@ -95,6 +97,7 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
       const parsedConnectionRules = ('connection_rules' in data && data['connection_rules'])
         ? JSON.parse(String(data['connection_rules']) || '[]')
         : [];
+      const parsedRackProfiles = data.rackprofiles ? JSON.parse(String(data.rackprofiles) || '[]') : [];
 
       return {
         id: data.id,
@@ -106,6 +109,7 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
         selectedDisksByRole: parsedDisksByRole,
         selectedGPUsByRole: parsedGPUsByRole,
         connectionRules: parsedConnectionRules,
+        rackprofiles: parsedRackProfiles,
         createdAt: new Date(data.createdat),
         updatedAt: data.updatedat ? new Date(data.updatedat) : new Date(data.createdat),
         user_id: data.user_id || null,
@@ -136,6 +140,7 @@ export const saveDesign = async (design: InfrastructureDesign, userId?: string):
       selected_disks_by_role: JSON.stringify(design.selectedDisksByRole || {}),
       selected_gpus_by_role: JSON.stringify(design.selectedGPUsByRole || {}),
       connection_rules: JSON.stringify(design.connectionRules || []),
+      rackprofiles: JSON.stringify(design.rackprofiles || []),
       createdat: design.createdAt.toISOString(),
       updatedat: new Date().toISOString(),
       user_id: userId || design.user_id,
@@ -264,6 +269,7 @@ export const importDesign = async (file: File): Promise<InfrastructureDesign | n
           if (!importedDesign.selectedDisksByRole) importedDesign.selectedDisksByRole = {};
           if (!importedDesign.selectedGPUsByRole) importedDesign.selectedGPUsByRole = {};
           if (!importedDesign.connectionRules) importedDesign.connectionRules = [];
+          if (!importedDesign.rackprofiles) importedDesign.rackprofiles = [];
           importedDesign.createdAt = new Date(importedDesign.createdAt);
           importedDesign.updatedAt = importedDesign.updatedAt ? new Date(importedDesign.updatedAt) : new Date();
           
