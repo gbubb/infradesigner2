@@ -86,28 +86,43 @@ export const RackLayoutsTab: React.FC = () => {
   };
   
   const requirementsHash = JSON.stringify(rackAffectingRequirements);
-  const previousRequirementsHash = useRef<string>('');
+  
+  // Use localStorage to persist the requirements hash across component mounts
+  const getStoredRequirementsHash = () => {
+    if (!activeDesign) return '';
+    return localStorage.getItem(`rack_requirements_hash_${activeDesign.id}`) || '';
+  };
+  
+  const setStoredRequirementsHash = (hash: string) => {
+    if (!activeDesign) return;
+    localStorage.setItem(`rack_requirements_hash_${activeDesign.id}`, hash);
+  };
   
   // Effect: Only clear racks if requirements that affect rack layout have actually changed
   useEffect(() => {
     if (!activeDesign) return;
     
-    // Check if this is the first load or if requirements have actually changed
-    const existingRacks = RackService.getAllRackProfiles();
-    const hasExistingValidLayout = existingRacks.length > 0;
-    const requirementsChanged = previousRequirementsHash.current !== '' && 
-                               previousRequirementsHash.current !== requirementsHash;
+    const previousHash = getStoredRequirementsHash();
+    const hasRequirementsChanged = previousHash !== '' && previousHash !== requirementsHash;
     
-    if (!hasExistingValidLayout || requirementsChanged) {
-      // Only clear and regenerate if we don't have a valid layout or requirements changed
+    if (hasRequirementsChanged) {
+      // Only clear and regenerate if requirements actually changed
       console.log('Rack-affecting requirements changed, regenerating layout');
       RackService.clearAllRackProfiles();
       setResetTrigger(prev => prev + 1);
       setSelectedRackId(null);
+    } else {
+      // Check if we need to initialize for the first time
+      const existingRacks = RackService.getAllRackProfiles();
+      if (existingRacks.length === 0 && previousHash === '') {
+        // First time initialization
+        console.log('First time initialization of racks');
+        setResetTrigger(prev => prev + 1);
+      }
     }
     
-    // Update the previous hash for next comparison
-    previousRequirementsHash.current = requirementsHash;
+    // Update the stored hash
+    setStoredRequirementsHash(requirementsHash);
   }, [activeDesign?.id, requirementsHash]);
 
   // --- EFFECT TO LOAD SAVED RACK LAYOUTS ONLY WHEN USER EXPLICITLY ASKS ---

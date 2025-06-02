@@ -30,6 +30,12 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       return;
     }
     
+    // First, ensure any existing rack profiles from the design are synced
+    if (activeDesign.rackprofiles && activeDesign.rackprofiles.length > 0) {
+      const storageKey = `rack_profiles_${activeDesign.id}`;
+      localStorage.setItem(storageKey, JSON.stringify(activeDesign.rackprofiles));
+    }
+    
     // Check if racks exist already for this design
     const existingRacks = RackService.getAllRackProfiles();
     const shouldReinitialize =
