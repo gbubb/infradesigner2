@@ -28,8 +28,12 @@ import { LayoutPersistenceService } from '@/services/layoutPersistenceService';
 import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
+import { useAutoSaveRackLayouts } from '@/hooks/design/useAutoSaveRackLayouts';
 
 export const RackLayoutsTab: React.FC = () => {
+  // Enable auto-save for rack layouts
+  useAutoSaveRackLayouts(true);
+  
   // EXPLICITLY TYPE rackProfiles for type safety and error prevention
   const { rackProfiles, availabilityZones } = useRackInitialization() as {
     rackProfiles: { id: string; name: string; azName?: string; availabilityZoneId?: string }[];
@@ -114,10 +118,19 @@ export const RackLayoutsTab: React.FC = () => {
     } else {
       // Check if we need to initialize for the first time
       const existingRacks = RackService.getAllRackProfiles();
-      if (existingRacks.length === 0 && previousHash === '') {
-        // First time initialization
-        console.log('First time initialization of racks');
-        setResetTrigger(prev => prev + 1);
+      if (existingRacks.length === 0) {
+        // Check if we have saved rack profiles in the design
+        if (activeDesign.rackprofiles && activeDesign.rackprofiles.length > 0) {
+          // Load saved rack profiles
+          console.log('Loading saved rack profiles from design');
+          const storageKey = `rack_profiles_${activeDesign.id}`;
+          localStorage.setItem(storageKey, JSON.stringify(activeDesign.rackprofiles));
+          setResetTrigger(prev => prev + 1);
+        } else if (previousHash === '') {
+          // First time initialization
+          console.log('First time initialization of racks');
+          setResetTrigger(prev => prev + 1);
+        }
       }
     }
     
@@ -135,27 +148,45 @@ export const RackLayoutsTab: React.FC = () => {
         Array.isArray(data.rackprofiles) &&
         data.rackprofiles.length > 0
       ) {
-        // Ensure only valid devices are restored
+        // Filter out invalid devices instead of failing completely
         const validDeviceIds = new Set(
           (activeDesign?.components ?? []).map((c) => c.id)
         );
-        const isValid = data.rackprofiles.every((rack: any) =>
-          (rack.devices ?? []).every((dev: any) => validDeviceIds.has(dev.deviceId))
-        );
-        if (!isValid) {
-          toast.error(
-            "The saved rack layout could not be loaded: the state does not match the current configuration (device set has changed)."
-          );
-          setIsLoadingLayout(false);
-          return;
-        }
-        // Only update the design after loading here
+        
+        // Clean up rack profiles by removing invalid devices
+        const cleanedRackProfiles = data.rackprofiles.map((rack: any) => ({
+          ...rack,
+          devices: (rack.devices ?? []).filter((dev: any) => validDeviceIds.has(dev.deviceId))
+        }));
+        
+        // Count how many devices were removed
+        const originalDeviceCount = data.rackprofiles.reduce((sum: number, rack: any) => 
+          sum + (rack.devices?.length || 0), 0);
+        const cleanedDeviceCount = cleanedRackProfiles.reduce((sum: number, rack: any) => 
+          sum + (rack.devices?.length || 0), 0);
+        const removedCount = originalDeviceCount - cleanedDeviceCount;
+        
+        // Update the design with cleaned rack profiles
         if (activeDesign) {
-          updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
-          toast.success("Rack layout loaded from database!");
-          // Make sure to re-initialize to show loaded racks
+          // Clear existing racks first
+          RackService.clearAllRackProfiles();
+          
+          // Update design with loaded profiles
+          updateDesign(activeDesign.id, { rackprofiles: cleanedRackProfiles });
+          
+          // Sync to localStorage
+          const storageKey = `rack_profiles_${activeDesign.id}`;
+          localStorage.setItem(storageKey, JSON.stringify(cleanedRackProfiles));
+          
+          // Trigger re-initialization
           setResetTrigger(prev => prev + 1);
           setSelectedRackId(null);
+          
+          if (removedCount > 0) {
+            toast.success(`Rack layout loaded! (${removedCount} invalid devices removed)`);
+          } else {
+            toast.success("Rack layout loaded from database!");
+          }
         }
       } else {
         toast.error(
