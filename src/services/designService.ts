@@ -19,25 +19,49 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
       return [];
     }
     
+    console.log('Raw designs data from database:', data);
+    
+    // Handle empty or null data
+    if (!data || data.length === 0) {
+      console.log('No designs found in database');
+      return [];
+    }
+    
     // Convert database format to application format
-    const designs = (data?.map(design => {
-      if ('createdat' in design && 'name' in design) {
+    const designs = (data.map(design => {
+      console.log('Processing design:', design);
+      
+      // Check for required fields with flexible column naming
+      const hasRequiredFields = 
+        (design.id || design.ID) && 
+        (design.name || design.NAME) && 
+        (design.createdat || design.createdAt || design.created_at || design.CREATEDAT);
+      
+      if (hasRequiredFields) {
         try {
-          const parsedComponents = design.components ? JSON.parse(String(design.components) || '[]') : [];
-          const parsedRequirements = design.requirements ? JSON.parse(String(design.requirements) || '{}') : {};
-          const parsedComponentRoles = design.component_roles ? JSON.parse(String(design.component_roles) || '[]') : [];
-          const parsedDisksByRole = design.selected_disks_by_role ? JSON.parse(String(design.selected_disks_by_role) || '{}') : {};
-          const parsedGPUsByRole = design.selected_gpus_by_role ? JSON.parse(String(design.selected_gpus_by_role) || '{}') : {};
-          // Fix: Use bracket notation and default to []
-          const parsedConnectionRules = ('connection_rules' in design && design['connection_rules'])
-            ? JSON.parse(String(design['connection_rules']) || '[]')
-            : [];
-          const parsedRackProfiles = design.rackprofiles ? JSON.parse(String(design.rackprofiles) || '[]') : [];
+          // Safe JSON parsing with better error handling
+          const safeJSONParse = (value: any, defaultValue: any) => {
+            if (!value) return defaultValue;
+            try {
+              return JSON.parse(String(value));
+            } catch (e) {
+              console.warn('JSON parse error for value:', value, e);
+              return defaultValue;
+            }
+          };
+          
+          const parsedComponents = safeJSONParse(design.components, []);
+          const parsedRequirements = safeJSONParse(design.requirements, {});
+          const parsedComponentRoles = safeJSONParse(design.component_roles, []);
+          const parsedDisksByRole = safeJSONParse(design.selected_disks_by_role, {});
+          const parsedGPUsByRole = safeJSONParse(design.selected_gpus_by_role, {});
+          const parsedConnectionRules = safeJSONParse(design.connection_rules, []);
+          const parsedRackProfiles = safeJSONParse(design.rackprofiles, []);
 
           return {
-            id: design.id,
-            name: design.name,
-            description: design.description || '',
+            id: design.id || design.ID,
+            name: design.name || design.NAME,
+            description: design.description || design.DESCRIPTION || '',
             components: parsedComponents,
             requirements: parsedRequirements,
             componentRoles: parsedComponentRoles,
@@ -45,21 +69,24 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
             selectedGPUsByRole: parsedGPUsByRole,
             connectionRules: parsedConnectionRules,
             rackprofiles: parsedRackProfiles,
-            createdAt: new Date(design.createdat),
-            updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat),
-            user_id: design.user_id || null,
-            is_public: design.is_public || false,
-            sharing_id: design.sharing_id || null
+            createdAt: new Date(design.createdat || design.createdAt || design.created_at || design.CREATEDAT),
+            updatedAt: design.updatedat || design.updatedAt || design.updated_at || design.UPDATEDAT 
+              ? new Date(design.updatedat || design.updatedAt || design.updated_at || design.UPDATEDAT) 
+              : new Date(design.createdat || design.createdAt || design.created_at || design.CREATEDAT),
+            user_id: design.user_id || design.USER_ID || null,
+            is_public: design.is_public || design.IS_PUBLIC || false,
+            sharing_id: design.sharing_id || design.SHARING_ID || null
           };
         } catch (parseErr) {
           console.error('Error parsing design data:', parseErr, design);
           return null;
         }
       }
-      console.error('Invalid design data:', design);
+      console.error('Invalid design data - missing required fields:', design);
       return null;
     }).filter(Boolean) || []);
     
+    console.log(`Loaded ${designs.length} designs successfully`);
     return designs as InfrastructureDesign[];
   } catch (err) {
     console.error('Error loading designs:', err);
@@ -88,21 +115,29 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
     }
     
     try {
-      const parsedComponents = data.components ? JSON.parse(String(data.components) || '[]') : [];
-      const parsedRequirements = data.requirements ? JSON.parse(String(data.requirements) || '{}') : {};
-      const parsedComponentRoles = data.component_roles ? JSON.parse(String(data.component_roles) || '[]') : [];
-      const parsedDisksByRole = data.selected_disks_by_role ? JSON.parse(String(data.selected_disks_by_role) || '{}') : {};
-      const parsedGPUsByRole = data.selected_gpus_by_role ? JSON.parse(String(data.selected_gpus_by_role) || '{}') : {};
-      // Fix: Use bracket notation and default to []
-      const parsedConnectionRules = ('connection_rules' in data && data['connection_rules'])
-        ? JSON.parse(String(data['connection_rules']) || '[]')
-        : [];
-      const parsedRackProfiles = data.rackprofiles ? JSON.parse(String(data.rackprofiles) || '[]') : [];
+      // Safe JSON parsing with better error handling
+      const safeJSONParse = (value: any, defaultValue: any) => {
+        if (!value) return defaultValue;
+        try {
+          return JSON.parse(String(value));
+        } catch (e) {
+          console.warn('JSON parse error for value:', value, e);
+          return defaultValue;
+        }
+      };
+      
+      const parsedComponents = safeJSONParse(data.components, []);
+      const parsedRequirements = safeJSONParse(data.requirements, {});
+      const parsedComponentRoles = safeJSONParse(data.component_roles, []);
+      const parsedDisksByRole = safeJSONParse(data.selected_disks_by_role, {});
+      const parsedGPUsByRole = safeJSONParse(data.selected_gpus_by_role, {});
+      const parsedConnectionRules = safeJSONParse(data.connection_rules, []);
+      const parsedRackProfiles = safeJSONParse(data.rackprofiles, []);
 
       return {
-        id: data.id,
-        name: data.name,
-        description: data.description || '',
+        id: data.id || data.ID,
+        name: data.name || data.NAME,
+        description: data.description || data.DESCRIPTION || '',
         components: parsedComponents,
         requirements: parsedRequirements,
         componentRoles: parsedComponentRoles,
@@ -110,11 +145,13 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
         selectedGPUsByRole: parsedGPUsByRole,
         connectionRules: parsedConnectionRules,
         rackprofiles: parsedRackProfiles,
-        createdAt: new Date(data.createdat),
-        updatedAt: data.updatedat ? new Date(data.updatedat) : new Date(data.createdat),
-        user_id: data.user_id || null,
-        is_public: data.is_public || false,
-        sharing_id: data.sharing_id || null
+        createdAt: new Date(data.createdat || data.createdAt || data.created_at || data.CREATEDAT),
+        updatedAt: data.updatedat || data.updatedAt || data.updated_at || data.UPDATEDAT 
+          ? new Date(data.updatedat || data.updatedAt || data.updated_at || data.UPDATEDAT) 
+          : new Date(data.createdat || data.createdAt || data.created_at || data.CREATEDAT),
+        user_id: data.user_id || data.USER_ID || null,
+        is_public: data.is_public || data.IS_PUBLIC || false,
+        sharing_id: data.sharing_id || data.SHARING_ID || null
       };
     } catch (parseErr) {
       console.error('Error parsing shared design data:', parseErr, data);

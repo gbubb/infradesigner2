@@ -41,10 +41,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
-  // Initialize store data when the app starts
+  const { user } = useAuth();
+  
+  // Initialize store data when the app starts and when user changes
   useEffect(() => {
     initializeStore();
-  }, []);
+  }, [user]);
   
   return (
     <Routes>

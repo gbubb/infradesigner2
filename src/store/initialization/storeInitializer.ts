@@ -1,14 +1,23 @@
 
 import { useDesignStore } from '../designStore';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Flag to track if initialization has occurred
 let storeInitialized = false;
+let currentUserId: string | null = null;
 
 export const initializeStore = async () => {
-  if (storeInitialized) return;
-  
   const state = useDesignStore.getState();
+  
+  // Get current user ID
+  const { data } = await supabase.auth.getUser();
+  const userId = data?.user?.id || null;
+  
+  // Re-initialize if user changed or first time
+  if (storeInitialized && currentUserId === userId) return;
+  
+  currentUserId = userId;
   
   try {
     await state.loadComponentsFromDB();
