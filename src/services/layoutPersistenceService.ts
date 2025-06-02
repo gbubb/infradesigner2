@@ -9,10 +9,17 @@ export class LayoutPersistenceService {
     const state = useDesignStore.getState();
     const activeDesign = state.activeDesign;
     if (!activeDesign) throw new Error("No design loaded.");
+    
+    // Get current rack profiles from RackService
+    const currentRackProfiles = RackService.getAllRackProfiles();
+    
+    // Update the design in store first
+    state.updateDesign(activeDesign.id, { rackprofiles: currentRackProfiles });
+    
     // Save the rackprofiles to DB (patch the design)
     const { error } = await supabase
       .from("designs")
-      .update({ rackprofiles: activeDesign.rackprofiles }) // use rackprofiles, not rackProfiles
+      .update({ rackprofiles: currentRackProfiles })
       .eq("id", activeDesign.id);
     if (error) throw error;
   }

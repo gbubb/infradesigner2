@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
 import { DndProvider } from 'react-dnd';
@@ -64,17 +64,50 @@ export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const updateDesign = useDesignStore(state => state.updateDesign);
   
-  // Listen for requirements changes (as in Results) for rack re-init
-  const requirementsHash = JSON.stringify(activeDesign?.requirements || {});
+  // Create a more intelligent requirements hash that only tracks rack-affecting changes
+  const rackAffectingRequirements = {
+    computeStorageRackQuantity: activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity,
+    networkCoreRackQuantity: activeDesign?.requirements?.physicalConstraints?.networkCoreRackQuantity,
+    dedicatedNetworkCoreRacks: activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks,
+    availabilityZones: activeDesign?.requirements?.physicalConstraints?.availabilityZones?.map(az => ({ id: az.id, name: az.name })),
+    totalAvailabilityZones: activeDesign?.requirements?.physicalConstraints?.totalAvailabilityZones,
+    // Add component-related requirements that would affect placement
+    componentRoles: activeDesign?.componentRoles?.map(role => ({ 
+      id: role.id, 
+      deviceRoleType: role.deviceRoleType,
+      quantity: role.quantity 
+    })),
+    components: activeDesign?.components?.map(c => ({ 
+      id: c.id, 
+      type: c.type, 
+      ruSize: c.ruSize,
+      assignedRoles: c.assignedRoles 
+    }))
+  };
   
-  // Effect: On requirements change or page mount, ALWAYS clear racks and regenerate
+  const requirementsHash = JSON.stringify(rackAffectingRequirements);
+  const previousRequirementsHash = useRef<string>('');
+  
+  // Effect: Only clear racks if requirements that affect rack layout have actually changed
   useEffect(() => {
     if (!activeDesign) return;
-    // Always CLEAR racks (from design & storage) and force regeneration by increasing resetTrigger
-    RackService.clearAllRackProfiles();
-    setResetTrigger(prev => prev + 1);
-    setSelectedRackId(null);
-  // Only run when requirements or design changes, never from rackProfiles or resetTrigger itself
+    
+    // Check if this is the first load or if requirements have actually changed
+    const existingRacks = RackService.getAllRackProfiles();
+    const hasExistingValidLayout = existingRacks.length > 0;
+    const requirementsChanged = previousRequirementsHash.current !== '' && 
+                               previousRequirementsHash.current !== requirementsHash;
+    
+    if (!hasExistingValidLayout || requirementsChanged) {
+      // Only clear and regenerate if we don't have a valid layout or requirements changed
+      console.log('Rack-affecting requirements changed, regenerating layout');
+      RackService.clearAllRackProfiles();
+      setResetTrigger(prev => prev + 1);
+      setSelectedRackId(null);
+    }
+    
+    // Update the previous hash for next comparison
+    previousRequirementsHash.current = requirementsHash;
   }, [activeDesign?.id, requirementsHash]);
 
   // --- EFFECT TO LOAD SAVED RACK LAYOUTS ONLY WHEN USER EXPLICITLY ASKS ---

@@ -18,8 +18,11 @@ export class RackService {
   static getAllRackProfiles(): RackProfile[] {
     const state = useDesignStore.getState();
 
-    // Return from design if available
-    if (state.activeDesign?.rackprofiles) {
+    // Return from design if available and not empty
+    if (state.activeDesign?.rackprofiles && state.activeDesign.rackprofiles.length > 0) {
+      // Also sync to localStorage for backup
+      const storageKey = this.getStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(state.activeDesign.rackprofiles));
       return state.activeDesign.rackprofiles;
     }
 
@@ -28,7 +31,14 @@ export class RackService {
     const storedProfiles = localStorage.getItem(storageKey);
 
     if (storedProfiles) {
-      return JSON.parse(storedProfiles);
+      const profiles = JSON.parse(storedProfiles);
+      // Sync back to design if it exists but has empty rackprofiles
+      if (state.activeDesign && profiles.length > 0) {
+        state.updateDesign(state.activeDesign.id, {
+          rackprofiles: profiles
+        });
+      }
+      return profiles;
     }
 
     return [];
