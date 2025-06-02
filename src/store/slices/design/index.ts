@@ -20,7 +20,6 @@ import {
 } from './designOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
-import { RackService } from '@/services/rackService';
 
 export const createDesignSlice: StateCreator<
   StoreState,
@@ -180,13 +179,6 @@ export const createDesignSlice: StateCreator<
       
       toast.success(`Switched to design: ${design.name}`);
       
-      // Clear localStorage rack profiles when switching designs to avoid conflicts
-      const storageKey = `rack_profiles_${design.id}`;
-      if (design.rackprofiles && design.rackprofiles.length > 0) {
-        // Sync design's rack profiles to localStorage
-        localStorage.setItem(storageKey, JSON.stringify(design.rackprofiles));
-      }
-      
       return { 
         activeDesign: design,
         componentRoles: design.componentRoles || [],
@@ -204,16 +196,12 @@ export const createDesignSlice: StateCreator<
       return;
     }
     
-    // Get current rack profiles from RackService to ensure we have the latest
-    const currentRackProfiles = RackService.getAllRackProfiles();
-    
     const updatedDesign = {
       ...state.activeDesign,
       componentRoles: state.componentRoles,
       selectedDisksByRole: state.selectedDisksByRole,
       selectedGPUsByRole: state.selectedGPUsByRole,
       requirements: state.requirements,
-      rackprofiles: currentRackProfiles, // Include current rack profiles
       updatedAt: new Date()
     };
     
@@ -325,12 +313,6 @@ export const createDesignSlice: StateCreator<
       if (design) {
         // Set the shared design as active but read-only
         set((state) => {
-          // Sync rack profiles to localStorage if present
-          const storageKey = `rack_profiles_${design.id}`;
-          if (design.rackprofiles && design.rackprofiles.length > 0) {
-            localStorage.setItem(storageKey, JSON.stringify(design.rackprofiles));
-          }
-          
           // Add to designs list if not already present
           const existingDesignIndex = state.savedDesigns.findIndex(d => d.id === design.id);
           

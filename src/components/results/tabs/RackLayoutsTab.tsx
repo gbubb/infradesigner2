@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
 import { DndProvider } from 'react-dnd';
@@ -28,12 +28,8 @@ import { LayoutPersistenceService } from '@/services/layoutPersistenceService';
 import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
-import { useAutoSaveRackLayouts } from '@/hooks/design/useAutoSaveRackLayouts';
 
 export const RackLayoutsTab: React.FC = () => {
-  // Enable auto-save for rack layouts
-  useAutoSaveRackLayouts(true);
-  
   // EXPLICITLY TYPE rackProfiles for type safety and error prevention
   const { rackProfiles, availabilityZones } = useRackInitialization() as {
     rackProfiles: { id: string; name: string; azName?: string; availabilityZoneId?: string }[];
@@ -68,74 +64,17 @@ export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const updateDesign = useDesignStore(state => state.updateDesign);
   
-  // Create a more intelligent requirements hash that only tracks rack-affecting changes
-  const rackAffectingRequirements = {
-    computeStorageRackQuantity: activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity,
-    networkCoreRackQuantity: activeDesign?.requirements?.physicalConstraints?.networkCoreRackQuantity,
-    dedicatedNetworkCoreRacks: activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks,
-    availabilityZones: activeDesign?.requirements?.physicalConstraints?.availabilityZones?.map(az => ({ id: az.id, name: az.name })),
-    totalAvailabilityZones: activeDesign?.requirements?.physicalConstraints?.totalAvailabilityZones,
-    // Add component-related requirements that would affect placement
-    componentRoles: activeDesign?.componentRoles?.map(role => ({ 
-      id: role.id, 
-      deviceRoleType: role.deviceRoleType,
-      quantity: role.quantity 
-    })),
-    components: activeDesign?.components?.map(c => ({ 
-      id: c.id, 
-      type: c.type, 
-      ruSize: c.ruSize,
-      assignedRoles: c.assignedRoles 
-    }))
-  };
+  // Listen for requirements changes (as in Results) for rack re-init
+  const requirementsHash = JSON.stringify(activeDesign?.requirements || {});
   
-  const requirementsHash = JSON.stringify(rackAffectingRequirements);
-  
-  // Use localStorage to persist the requirements hash across component mounts
-  const getStoredRequirementsHash = () => {
-    if (!activeDesign) return '';
-    return localStorage.getItem(`rack_requirements_hash_${activeDesign.id}`) || '';
-  };
-  
-  const setStoredRequirementsHash = (hash: string) => {
-    if (!activeDesign) return;
-    localStorage.setItem(`rack_requirements_hash_${activeDesign.id}`, hash);
-  };
-  
-  // Effect: Only clear racks if requirements that affect rack layout have actually changed
+  // Effect: On requirements change or page mount, ALWAYS clear racks and regenerate
   useEffect(() => {
     if (!activeDesign) return;
-    
-    const previousHash = getStoredRequirementsHash();
-    const hasRequirementsChanged = previousHash !== '' && previousHash !== requirementsHash;
-    
-    if (hasRequirementsChanged) {
-      // Only clear and regenerate if requirements actually changed
-      console.log('Rack-affecting requirements changed, regenerating layout');
-      RackService.clearAllRackProfiles();
-      setResetTrigger(prev => prev + 1);
-      setSelectedRackId(null);
-    } else {
-      // Check if we need to initialize for the first time
-      const existingRacks = RackService.getAllRackProfiles();
-      if (existingRacks.length === 0) {
-        // Check if we have saved rack profiles in the design
-        if (activeDesign.rackprofiles && activeDesign.rackprofiles.length > 0) {
-          // Load saved rack profiles
-          console.log('Loading saved rack profiles from design');
-          const storageKey = `rack_profiles_${activeDesign.id}`;
-          localStorage.setItem(storageKey, JSON.stringify(activeDesign.rackprofiles));
-          setResetTrigger(prev => prev + 1);
-        } else if (previousHash === '') {
-          // First time initialization
-          console.log('First time initialization of racks');
-          setResetTrigger(prev => prev + 1);
-        }
-      }
-    }
-    
-    // Update the stored hash
-    setStoredRequirementsHash(requirementsHash);
+    // Always CLEAR racks (from design & storage) and force regeneration by increasing resetTrigger
+    RackService.clearAllRackProfiles();
+    setResetTrigger(prev => prev + 1);
+    setSelectedRackId(null);
+  // Only run when requirements or design changes, never from rackProfiles or resetTrigger itself
   }, [activeDesign?.id, requirementsHash]);
 
   // --- EFFECT TO LOAD SAVED RACK LAYOUTS ONLY WHEN USER EXPLICITLY ASKS ---
@@ -148,45 +87,27 @@ export const RackLayoutsTab: React.FC = () => {
         Array.isArray(data.rackprofiles) &&
         data.rackprofiles.length > 0
       ) {
-        // Filter out invalid devices instead of failing completely
+        // Ensure only valid devices are restored
         const validDeviceIds = new Set(
           (activeDesign?.components ?? []).map((c) => c.id)
         );
-        
-        // Clean up rack profiles by removing invalid devices
-        const cleanedRackProfiles = data.rackprofiles.map((rack: any) => ({
-          ...rack,
-          devices: (rack.devices ?? []).filter((dev: any) => validDeviceIds.has(dev.deviceId))
-        }));
-        
-        // Count how many devices were removed
-        const originalDeviceCount = data.rackprofiles.reduce((sum: number, rack: any) => 
-          sum + (rack.devices?.length || 0), 0);
-        const cleanedDeviceCount = cleanedRackProfiles.reduce((sum: number, rack: any) => 
-          sum + (rack.devices?.length || 0), 0);
-        const removedCount = originalDeviceCount - cleanedDeviceCount;
-        
-        // Update the design with cleaned rack profiles
+        const isValid = data.rackprofiles.every((rack: any) =>
+          (rack.devices ?? []).every((dev: any) => validDeviceIds.has(dev.deviceId))
+        );
+        if (!isValid) {
+          toast.error(
+            "The saved rack layout could not be loaded: the state does not match the current configuration (device set has changed)."
+          );
+          setIsLoadingLayout(false);
+          return;
+        }
+        // Only update the design after loading here
         if (activeDesign) {
-          // Clear existing racks first
-          RackService.clearAllRackProfiles();
-          
-          // Update design with loaded profiles
-          updateDesign(activeDesign.id, { rackprofiles: cleanedRackProfiles });
-          
-          // Sync to localStorage
-          const storageKey = `rack_profiles_${activeDesign.id}`;
-          localStorage.setItem(storageKey, JSON.stringify(cleanedRackProfiles));
-          
-          // Trigger re-initialization
+          updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
+          toast.success("Rack layout loaded from database!");
+          // Make sure to re-initialize to show loaded racks
           setResetTrigger(prev => prev + 1);
           setSelectedRackId(null);
-          
-          if (removedCount > 0) {
-            toast.success(`Rack layout loaded! (${removedCount} invalid devices removed)`);
-          } else {
-            toast.success("Rack layout loaded from database!");
-          }
         }
       } else {
         toast.error(
