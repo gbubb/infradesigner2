@@ -13,7 +13,7 @@ export interface RackProfileInitializationData {
   rackType?: 'Core' | 'ComputeStorage';
 }
 
-export const useRackInitialization = (resetTrigger: number = 0) => {
+export const useRackInitialization = (resetTrigger: number = 0, skipRedistribution: boolean = false) => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const [rackProfiles, setRackProfiles] = useState<RackProfileInitializationData[]>([]);
   const [availabilityZones, setAvailabilityZones] = useState<string[]>([]);
@@ -32,8 +32,14 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
     
     // Check if racks exist already for this design
     const existingRacks = RackService.getAllRackProfiles();
+    
+    // Check if we have valid existing racks with devices already placed
+    const hasPlacedDevices = existingRacks.some(rack => 
+      rack.devices && rack.devices.length > 0
+    );
+    
     const shouldReinitialize =
-      resetTrigger !== 0 || // new dependency: any change to trigger
+      (resetTrigger !== 0 && !skipRedistribution) || // Allow skipping redistribution
       prevDesignIdRef.current !== activeDesign.id ||
       existingRacks.length === 0;
     
@@ -108,9 +114,13 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       setAvailabilityZones(newAvailabilityZones);
       
       // Only distribute components if we have racks and components to distribute
-      if (newRacks.length > 0 && activeDesign.components && activeDesign.components.length > 0) {
+      // AND if we don't already have placed devices (avoid redistribution)
+      if (newRacks.length > 0 && activeDesign.components && activeDesign.components.length > 0 && !hasPlacedDevices) {
         distributeComponentsAcrossRacks(newRacks);
-        toast.success('Rack layouts initialized');
+        // Commented out to reduce noise - initialization happens automatically
+        // toast.success('Rack layouts initialized');
+      } else if (hasPlacedDevices) {
+        console.log('Skipping component distribution - devices already placed');
       }
       
       initializedRef.current = true;
@@ -197,7 +207,8 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       }
     });
     
-    toast.success('Components distributed across racks');
+    // Commented out to reduce noise - distribution happens automatically
+    // toast.success('Components distributed across racks');
   };
   
   const distributeComponentsEvenly = (

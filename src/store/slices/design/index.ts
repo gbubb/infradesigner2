@@ -83,7 +83,8 @@ export const createDesignSlice: StateCreator<
         // Save with user ID if available
         saveDesignToDB(updatedDesign, userId).then(success => {
           if (success) {
-            toast.success(`Updated design: ${updatedDesign.name}`);
+            // Commented out to reduce noise - too many updates happen automatically
+            // toast.success(`Updated design: ${updatedDesign.name}`);
           }
         });
       });
@@ -127,7 +128,8 @@ export const createDesignSlice: StateCreator<
         // Save with user ID if available
         saveDesignToDB(updatedDesign, userId).then(success => {
           if (success) {
-            toast.success(`Updated design: ${updatedDesign.name}`);
+            // Commented out to reduce noise - too many updates happen automatically
+            // toast.success(`Updated design: ${updatedDesign.name}`);
           }
         });
       });
