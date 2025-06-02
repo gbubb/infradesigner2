@@ -202,7 +202,6 @@ export const createDesignSlice: StateCreator<
       selectedDisksByRole: state.selectedDisksByRole,
       selectedGPUsByRole: state.selectedGPUsByRole,
       requirements: state.requirements,
-      rackprofiles: state.activeDesign.rackprofiles,
       updatedAt: new Date()
     };
     

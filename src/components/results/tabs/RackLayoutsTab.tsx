@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { analyzeRackLayout } from '@/utils/rackLayoutUtils';
 import { DndProvider } from 'react-dnd';
@@ -67,28 +67,14 @@ export const RackLayoutsTab: React.FC = () => {
   // Listen for requirements changes (as in Results) for rack re-init
   const requirementsHash = JSON.stringify(activeDesign?.requirements || {});
   
-  // Track the previous requirements hash to detect actual changes
-  const prevRequirementsHashRef = useRef<string>('');
-  
-  // Effect: Only clear racks when requirements actually change, not on mount
+  // Effect: On requirements change or page mount, ALWAYS clear racks and regenerate
   useEffect(() => {
     if (!activeDesign) return;
-    
-    // Check if this is the first load or if requirements actually changed
-    const currentHash = requirementsHash;
-    const isRequirementsChanged = prevRequirementsHashRef.current !== '' && 
-                                prevRequirementsHashRef.current !== currentHash;
-    
-    // Update the ref for next comparison
-    prevRequirementsHashRef.current = currentHash;
-    
-    // Only clear and regenerate if requirements actually changed
-    if (isRequirementsChanged) {
-      console.log('Requirements changed, clearing rack layouts');
-      RackService.clearAllRackProfiles();
-      setResetTrigger(prev => prev + 1);
-      setSelectedRackId(null);
-    }
+    // Always CLEAR racks (from design & storage) and force regeneration by increasing resetTrigger
+    RackService.clearAllRackProfiles();
+    setResetTrigger(prev => prev + 1);
+    setSelectedRackId(null);
+  // Only run when requirements or design changes, never from rackProfiles or resetTrigger itself
   }, [activeDesign?.id, requirementsHash]);
 
   // --- EFFECT TO LOAD SAVED RACK LAYOUTS ONLY WHEN USER EXPLICITLY ASKS ---
