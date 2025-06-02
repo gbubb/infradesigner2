@@ -4,6 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, HardDrive, Database } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { RackProfile } from '@/types/infrastructure/rack-types';
+import { useDesignStore } from '@/store/designStore';
+import { getDeviceColor } from '@/components/visualization/rack/rackUtils';
+import { ComponentType } from '@/types/infrastructure/component-types';
 
 interface RackHorizontalScrollerProps {
   racks: Array<{ id: string; name: string; azName?: string; availabilityZoneId?: string }>;
@@ -14,6 +18,69 @@ interface RackHorizontalScrollerProps {
   scrollStep: number;
   azNameMap: Record<string, string>;
 }
+
+// Component to render a mini rack visualization
+const MiniRackVisualization: React.FC<{ rack: { id: string; name: string; azName?: string; availabilityZoneId?: string } }> = ({ rack }) => {
+  const activeDesign = useDesignStore(state => state.activeDesign);
+  const placedComponents = useDesignStore(state => state.placedComponents);
+  
+  // Get rack profile with device information
+  const rackProfile = activeDesign?.rackProfiles?.find(r => r.id === rack.id);
+  
+  if (!rackProfile || !rackProfile.devices || rackProfile.devices.length === 0) {
+    // Empty rack - show placeholder icon
+    return (
+      <div className="absolute inset-0 flex items-center justify-center">
+        {rack.azName === 'Core' ? (
+          <Database className="h-8 w-8 text-muted-foreground" />
+        ) : (
+          <HardDrive className="h-8 w-8 text-muted-foreground" />
+        )}
+      </div>
+    );
+  }
+
+  const rackHeight = rackProfile.uHeight || 42; // Default 42U rack
+  const deviceHeight = 220 / rackHeight; // Scale devices to fit in the 220px visualization area
+  
+  return (
+    <div className="absolute inset-0 flex flex-col-reverse px-1">
+      {rackProfile.devices.map((placedDevice, index) => {
+        const component = placedComponents[placedDevice.deviceId];
+        if (!component) return null;
+        
+        const ruSize = component.rackUnits || 1;
+        const height = deviceHeight * ruSize;
+        const bottom = deviceHeight * (placedDevice.ruPosition - 1);
+        
+        return (
+          <div
+            key={`${placedDevice.deviceId}-${index}`}
+            className={`absolute left-1 right-1 border-l-2 ${getDeviceColor(component.type as ComponentType)} opacity-80`}
+            style={{
+              bottom: `${bottom}px`,
+              height: `${height}px`,
+              minHeight: '2px',
+              fontSize: '0.5rem',
+              lineHeight: '1',
+            }}
+            title={`${component.name} (${ruSize}U)`}
+          >
+            <div className="w-full h-full flex items-center justify-center text-xs font-medium truncate px-0.5">
+              {ruSize > 3 ? component.name.substring(0, 8) : ''}
+            </div>
+          </div>
+        );
+      })}
+      
+      {/* Add RU markers for context */}
+      <div className="absolute right-0 top-0 bottom-0 w-2 flex flex-col justify-between text-xs text-muted-foreground opacity-50">
+        <div style={{ fontSize: '0.4rem' }}>{rackHeight}</div>
+        <div style={{ fontSize: '0.4rem' }}>1</div>
+      </div>
+    </div>
+  );
+};
 
 export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
   racks,
@@ -77,14 +144,8 @@ export const RackHorizontalScroller: React.FC<RackHorizontalScrollerProps> = ({
                 onClick={() => setSelectedRackId(rack.id)}
               >
                 <CardContent className="p-2 flex flex-col items-center">
-                  <div className="bg-muted w-full h-[220px] rounded relative">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {rack.azName === 'Core' ? (
-                        <Database className="h-10 w-10 text-muted-foreground" />
-                      ) : (
-                        <HardDrive className="h-10 w-10 text-muted-foreground" />
-                      )}
-                    </div>
+                  <div className="bg-muted w-full h-[220px] rounded relative border">
+                    <MiniRackVisualization rack={rack} />
                   </div>
                   <div className="text-center mt-2">
                     <div className="font-medium text-xs truncate w-full">{getDisplayRackName(rack.name)}</div>
