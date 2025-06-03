@@ -1,6 +1,7 @@
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureComponent, ComponentType, Server, Switch, Disk, FiberPatchPanel, CopperPatchPanel, Cassette, Cable, ConnectorType } from '@/types/infrastructure';
 import { CableMediaType } from '@/types/infrastructure';
+import { Transceiver } from '@/types/infrastructure/transceiver-types';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -199,7 +200,9 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
                 length: details.length || 0,
                 connectorA_Type: details.connectorType || ConnectorType.RJ45,
                 connectorB_Type: details.connectorType || ConnectorType.RJ45,
-                mediaType: details.mediaType || CableMediaType.CopperCat6a
+                mediaType: details.mediaType || CableMediaType.CopperCat6a,
+                isBreakout: details.isBreakout || false,
+                connectorB_Quantity: details.connectorB_Quantity || 1
               } as Cable;
             }
             return {
@@ -208,8 +211,25 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               length: details.length || 0,
               connectorA_Type: details.connectorA_Type || ConnectorType.RJ45,
               connectorB_Type: details.connectorB_Type || ConnectorType.RJ45,
-              mediaType: details.mediaType || CableMediaType.CopperCat6a
+              mediaType: details.mediaType || CableMediaType.CopperCat6a,
+              isBreakout: details.isBreakout || false,
+              connectorB_Quantity: details.connectorB_Quantity || 1
             } as Cable;
+
+          case ComponentType.Transceiver:
+            return {
+              ...baseComponent,
+              ...commonFields,
+              transceiverModel: details.transceiverModel,
+              mediaTypeSupported: details.mediaTypeSupported || [],
+              connectorType: details.connectorType,
+              mediaConnectorType: details.mediaConnectorType,
+              speed: details.speed,
+              maxDistanceMeters: details.maxDistanceMeters || 0,
+              wavelengthNm: details.wavelengthNm,
+              breakoutCompatible: details.breakoutCompatible || false,
+              ruSize: 0 // Transceivers don't consume rack space
+            } as Transceiver;
 
           default:
             return {
@@ -298,6 +318,19 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
         specializedFields.connectorA_Type = cable.connectorA_Type || ConnectorType.RJ45;
         specializedFields.connectorB_Type = cable.connectorB_Type || ConnectorType.RJ45;
         specializedFields.mediaType = cable.mediaType || CableMediaType.CopperCat6a;
+        specializedFields.isBreakout = cable.isBreakout || false;
+        specializedFields.connectorB_Quantity = cable.connectorB_Quantity || 1;
+        break;
+      case ComponentType.Transceiver:
+        const transceiver = componentWithValidID as Transceiver;
+        specializedFields.transceiverModel = transceiver.transceiverModel;
+        specializedFields.mediaTypeSupported = transceiver.mediaTypeSupported || [];
+        specializedFields.connectorType = transceiver.connectorType;
+        specializedFields.mediaConnectorType = transceiver.mediaConnectorType;
+        specializedFields.speed = transceiver.speed;
+        specializedFields.maxDistanceMeters = transceiver.maxDistanceMeters || 0;
+        specializedFields.wavelengthNm = transceiver.wavelengthNm;
+        specializedFields.breakoutCompatible = transceiver.breakoutCompatible || false;
         break;
     }
     

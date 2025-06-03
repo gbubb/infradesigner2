@@ -70,6 +70,11 @@ export const useComponentForm = () => {
     diskType: '',
     // New: detailed network ports
     ports: [],
+    // Transceiver specific
+    breakoutCompatible: false,
+    // Cable specific
+    isBreakout: false,
+    connectorB_Quantity: 4,
   };
   
   const [componentForm, setComponentForm] = useState<ComponentFormValues>({...defaultFormState});

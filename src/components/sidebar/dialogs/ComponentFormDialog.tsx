@@ -134,7 +134,11 @@ const formSchema = z.object({
     (val) => (val === "" || val === undefined) ? undefined : val,
     z.nativeEnum(PortSpeed).optional()
   ),
-  maxDistanceMeters: z.number().optional()
+  maxDistanceMeters: z.number().optional(),
+  breakoutCompatible: z.boolean().optional(),
+  // Breakout cable fields
+  isBreakout: z.boolean().optional(),
+  connectorB_Quantity: z.number().optional()
 });
 
 interface ComponentFormDialogProps {
@@ -255,7 +259,10 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       connectorType: formValues.type === ComponentType.Transceiver ? (formValues.connectorType || ConnectorType.SFP) : (formValues.portType || ConnectorType.RJ45),
       mediaConnectorType: formValues.mediaConnectorType || ConnectorType.LC,
       speed: formValues.type === ComponentType.Transceiver ? (formValues.speed || PortSpeed.Speed10G) : (formValues.portSpeedType || PortSpeed.Speed10G),
-      maxDistanceMeters: formValues.maxDistanceMeters || 0
+      maxDistanceMeters: formValues.maxDistanceMeters || 0,
+      breakoutCompatible: formValues.breakoutCompatible || false,
+      isBreakout: formValues.isBreakout || false,
+      connectorB_Quantity: formValues.connectorB_Quantity || 4
     },
     values: formValues,
   });
