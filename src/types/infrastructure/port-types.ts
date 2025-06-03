@@ -48,9 +48,8 @@ export interface Port {
   connectedToPortId?: string;
   connectedToDeviceId?: string;
   cableId?: string;
-  transceiverId?: string; // NEW: link to a Transceiver instance in inventory
-  transceiverModel?: import('./transceiver-types').TransceiverModel; // NEW: model-type of installed optics
-  name?: string; // NEW: user-friendly port identifier
+  transceiverId?: string; // Link to a Transceiver instance in inventory
+  name?: string; // User-friendly port identifier
 }
 
 export { ConnectorType };

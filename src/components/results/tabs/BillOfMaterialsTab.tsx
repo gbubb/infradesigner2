@@ -7,7 +7,6 @@ import { ComponentCategory, ComponentType, InfrastructureComponent, componentTyp
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
-import { TransceiverModel } from '@/types/infrastructure/transceiver-types';
 import { CableMediaType } from '@/types/infrastructure/port-types';
 import { summarizeCablesFromConnections, summarizeTransceiversFromConnections, createPortUtilizationRows } from '../bom/networkBomUtils';
 import ComputeStorageTable from '../bom/ComputeStorageTable';
@@ -181,7 +180,7 @@ export const BillOfMaterialsTab: React.FC = () => {
       else if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${component.cassetteCapacity} cassettes`;
       else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${component.portQuantity} ports`;
       else if (component.type === ComponentType.Cassette) details = `${component.portType}, ${component.portQuantity} ports`;
-      csvContent += `${categoryName},${component.type},${component.role || component.transceiverModel || "-"},${component.manufacturer || "-"},${component.model || "-"},"${details}",${quantity},${component.costPer ?? component.cost},${totalCost}\r\n`;
+      csvContent += `${categoryName},${component.type},${component.role || component.name || "-"},${component.manufacturer || "-"},${component.model || "-"},"${details}",${quantity},${component.costPer ?? component.cost},${totalCost}\r\n`;
     });
     return encodeURI(csvContent);
   };
@@ -209,7 +208,7 @@ export const BillOfMaterialsTab: React.FC = () => {
   }
 
   // --- Use helper for port utilization rows
-  const portUtilizationRows = React.useMemo(() => createPortUtilizationRows(devices, networkConnections), [devices, networkConnections]);
+  const portUtilizationRows = React.useMemo(() => createPortUtilizationRows(devices, networkConnections, transceiverTemplates), [devices, networkConnections, transceiverTemplates]);
 
   return (
     <div className="space-y-6">
@@ -375,10 +374,10 @@ export const BillOfMaterialsTab: React.FC = () => {
                     </TableCell>
                   </TableRow>
                   {Object.values(transceiverLineItems).map((item, idx) => (
-                    <TableRow key={`all-trxline-${item.transceiverModel}-${idx}`}>
+                    <TableRow key={`all-trxline-${item.transceiverTemplateId}-${idx}`}>
                       <TableCell></TableCell>
                       <TableCell>Transceiver</TableCell>
-                      <TableCell>{item.transceiverModel}</TableCell>
+                      <TableCell>{item.name}</TableCell>
                       <TableCell>-</TableCell>
                       <TableCell>{item.model}</TableCell>
                       <TableCell className="text-right">{item.count}</TableCell>

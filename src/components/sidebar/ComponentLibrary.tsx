@@ -18,7 +18,6 @@ import {
   SwitchRole,
   DiskType,
   ConnectorType,
-  TransceiverModel,
   CableMediaType
 } from '@/types/infrastructure';
 import { PortSpeed, MediaType } from '@/types/infrastructure/port-types';
@@ -80,7 +79,6 @@ const formSchema = z.object({
   connectorB_Type: z.nativeEnum(ConnectorType).optional(),
   mediaType: z.nativeEnum(CableMediaType).optional(),
   cableSpeed: z.nativeEnum(PortSpeed).optional(),
-  transceiverModel: z.nativeEnum(TransceiverModel).optional(),
   mediaTypeSupported: z.array(z.nativeEnum(MediaType)).optional(),
   connectorType: z.nativeEnum(ConnectorType).optional(),
   mediaConnectorType: z.nativeEnum(ConnectorType).optional(),

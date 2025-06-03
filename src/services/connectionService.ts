@@ -17,7 +17,7 @@ import {
   DeviceOrientation,
   Cable, // ADDED
 } from "@/types/infrastructure";
-import { Transceiver, TransceiverModel } from "@/types/infrastructure/transceiver-types"; // ADDED
+import { Transceiver } from "@/types/infrastructure/transceiver-types"; // ADDED
 // ... keep existing code (CableMediaType, ConnectorType, and ConnectionAttempt imports) ...
 import { CableMediaType, ConnectorType, ConnectionPattern } from "@/types/infrastructure";
 import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";

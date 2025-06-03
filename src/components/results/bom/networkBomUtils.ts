@@ -1,7 +1,6 @@
 
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { NetworkConnection } from '@/types/infrastructure/connection-types';
-import { TransceiverModel } from '@/types/infrastructure/transceiver-types';
 
 /**
  * Summarizes cable line items from network connections.
@@ -64,8 +63,9 @@ export function summarizeTransceiversFromConnections(
   const transceiverLineItems: Record<
     string,
     {
-      transceiverModel: TransceiverModel,
+      transceiverTemplateId: string,
       count: number,
+      name: string,
       model: string,
       costPer: number,
       total: number
@@ -74,14 +74,15 @@ export function summarizeTransceiversFromConnections(
 
   networkConnections.forEach(conn => {
     // Source
-    if (conn.transceiverSourceModel) {
-      const trans = transceiverTemplates.find(t => t.transceiverModel === conn.transceiverSourceModel);
-      const key = String(conn.transceiverSourceModel);
+    if (conn.transceiverSourceId) {
+      const trans = transceiverTemplates.find(t => t.id === conn.transceiverSourceId);
+      const key = conn.transceiverSourceId;
       if (!transceiverLineItems[key]) {
         transceiverLineItems[key] = {
-          transceiverModel: conn.transceiverSourceModel,
+          transceiverTemplateId: conn.transceiverSourceId,
           count: 0,
-          model: trans?.model || conn.transceiverSourceModel,
+          name: trans?.name || '-',
+          model: trans?.model || '-',
           costPer: trans?.cost ?? 0,
           total: 0,
         };
@@ -90,14 +91,15 @@ export function summarizeTransceiversFromConnections(
       transceiverLineItems[key].total += transceiverLineItems[key].costPer;
     }
     // Destination
-    if (conn.transceiverDestinationModel) {
-      const trans = transceiverTemplates.find(t => t.transceiverModel === conn.transceiverDestinationModel);
-      const key = String(conn.transceiverDestinationModel);
+    if (conn.transceiverDestinationId) {
+      const trans = transceiverTemplates.find(t => t.id === conn.transceiverDestinationId);
+      const key = conn.transceiverDestinationId;
       if (!transceiverLineItems[key]) {
         transceiverLineItems[key] = {
-          transceiverModel: conn.transceiverDestinationModel,
+          transceiverTemplateId: conn.transceiverDestinationId,
           count: 0,
-          model: trans?.model || conn.transceiverDestinationModel,
+          name: trans?.name || '-',
+          model: trans?.model || '-',
           costPer: trans?.cost ?? 0,
           total: 0,
         };
@@ -115,23 +117,24 @@ export function summarizeTransceiversFromConnections(
  */
 export function createPortUtilizationRows(
   devices: InfrastructureComponent[],
-  networkConnections: NetworkConnection[]
+  networkConnections: NetworkConnection[],
+  transceiverTemplates: InfrastructureComponent[]
 ) {
   // Build port usage maps from networkConnections
-  const portStatusMap: Record<string, { status: 'Available' | 'Used', connId?: string, connectedTo?: string, transceiverModel?: string }> = {};
+  const portStatusMap: Record<string, { status: 'Available' | 'Used', connId?: string, connectedTo?: string, transceiverId?: string }> = {};
 
   networkConnections.forEach(conn => {
     portStatusMap[`${conn.sourceDeviceId}:${conn.sourcePortId}`] = {
       status: "Used",
       connId: conn.id,
       connectedTo: `${conn.destinationDeviceId}:${conn.destinationPortId}`,
-      transceiverModel: conn.transceiverSourceModel
+      transceiverId: conn.transceiverSourceId
     };
     portStatusMap[`${conn.destinationDeviceId}:${conn.destinationPortId}`] = {
       status: "Used",
       connId: conn.id,
       connectedTo: `${conn.sourceDeviceId}:${conn.sourcePortId}`,
-      transceiverModel: conn.transceiverDestinationModel
+      transceiverId: conn.transceiverDestinationId
     };
   });
 
@@ -141,6 +144,9 @@ export function createPortUtilizationRows(
     ports.forEach(port => {
       const pk = `${device.id}:${port.id}`;
       const status = portStatusMap[pk]?.status ?? "Available";
+      const transceiverName = portStatusMap[pk]?.transceiverId 
+        ? transceiverTemplates.find(t => t.id === portStatusMap[pk].transceiverId)?.name || "-"
+        : "-";
       rows.push({
         deviceId: device.id,
         deviceName: device.model,
@@ -149,7 +155,7 @@ export function createPortUtilizationRows(
         speed: port.speed,
         mediaType: port.mediaType,
         status,
-        transceiver: portStatusMap[pk]?.transceiverModel || port.transceiverModel || "-",
+        transceiver: transceiverName,
         connectedTo: portStatusMap[pk]?.connectedTo || "-",
       });
     });

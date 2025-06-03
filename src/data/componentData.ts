@@ -10,7 +10,7 @@ import {
   Transceiver
 } from '../types/infrastructure';
 
-import { CableMediaType, MediaType, PortSpeed, TransceiverModel } from '../types/infrastructure';
+import { CableMediaType, MediaType, PortSpeed } from '../types/infrastructure';
 
 // Define empty templates for the missing arrays
 const serverTemplates: InfrastructureComponent[] = [];
@@ -193,7 +193,6 @@ export const transceiverTemplatesList: Transceiver[] = [
     name: 'SFP+ 10G SR Transceiver',
     manufacturer: 'Generic',
     model: 'SFP-10G-SR-G',
-    transceiverModel: TransceiverModel.SFP_10G_SR,
     mediaTypeSupported: [MediaType.FiberMM],
     connectorType: ConnectorType.SFP,
     mediaConnectorType: ConnectorType.LC,
@@ -209,7 +208,6 @@ export const transceiverTemplatesList: Transceiver[] = [
     name: 'SFP+ 10G LR Transceiver',
     manufacturer: 'Generic',
     model: 'SFP-10G-LR-G',
-    transceiverModel: TransceiverModel.SFP_10G_LR,
     mediaTypeSupported: [MediaType.FiberSM],
     connectorType: ConnectorType.SFP,
     mediaConnectorType: ConnectorType.LC,
@@ -225,7 +223,6 @@ export const transceiverTemplatesList: Transceiver[] = [
     name: 'QSFP28 100G SR4 Transceiver',
     manufacturer: 'Generic',
     model: 'QSFP28-100G-SR4-G',
-    transceiverModel: TransceiverModel.QSFP28_100G_SR4,
     mediaTypeSupported: [MediaType.FiberMM],
     connectorType: ConnectorType.QSFP,
     mediaConnectorType: ConnectorType.MPO12,
@@ -241,7 +238,6 @@ export const transceiverTemplatesList: Transceiver[] = [
     name: 'QSFP28 100G LR4 Transceiver',
     manufacturer: 'Generic',
     model: 'QSFP28-100G-LR4-G',
-    transceiverModel: TransceiverModel.QSFP28_100G_LR4,
     mediaTypeSupported: [MediaType.FiberSM],
     connectorType: ConnectorType.QSFP,
     mediaConnectorType: ConnectorType.LC,
