@@ -28,7 +28,7 @@ const SLACK_PER_END_CM = 50;
 const INTRA_RACK_EXTRA_CM = 50; // extra for routing
 const DEFAULT_INTER_RACK_LENGTH_M = 10;
 const BREAKOUT_MAX_RU_DISTANCE = 8; // Maximum RU distance for devices sharing a breakout cable
-const BREAKOUT_400G_MAX_DISTANCE_M = 3; // Maximum distance for 400G breakout cables before requiring transceivers
+const BREAKOUT_400G_MAX_DISTANCE_M = 5; // Maximum distance for 400G breakout cables before requiring transceivers
 const BREAKOUT_100G_MAX_DISTANCE_M = 5; // Maximum distance for 100G breakout cables before requiring transceivers
 
 type PortWithDevice = {
