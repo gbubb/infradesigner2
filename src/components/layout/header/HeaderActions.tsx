@@ -83,11 +83,6 @@ export const HeaderActions = () => {
     return email.substring(0, 2).toUpperCase();
   };
 
-  const buttonBase =
-    "flex items-center gap-2 bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] shadow rounded-md border border-gray-300 focus:outline-none p-0 relative overflow-hidden";
-  const buttonCompact = "w-10 h-10 px-0 justify-center";
-  const buttonExpanded = "px-4 h-10";
-
   const TopbarButton = ({
     icon,
     label,
@@ -100,47 +95,77 @@ export const HeaderActions = () => {
     onClick?: () => void;
     buttonKey: string;
     disabled?: boolean;
-  }) => (
-    <button
-      type="button"
-      className={`${buttonBase} ${hoveredButton === buttonKey ? buttonExpanded : buttonCompact} ${disabled ? "opacity-60" : ""}`}
-      style={{
-        minWidth: hoveredButton === buttonKey ? 80 : 40,
-        maxWidth: 200,
-        transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-        transform: hoveredButton === buttonKey ? "scale(1.02)" : "scale(1)",
-      }}
-      onClick={onClick}
-      onMouseEnter={() => setHoveredButton(buttonKey)}
-      onMouseLeave={() => setHoveredButton(null)}
-      disabled={disabled}
-      aria-label={label}
-    >
-      <div 
-        className="flex items-center justify-center"
+  }) => {
+    const isExpanded = hoveredButton === buttonKey;
+    
+    return (
+      <button
+        type="button"
+        className={`
+          relative flex items-center bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] 
+          shadow rounded-md border border-gray-300 focus:outline-none
+          transition-all duration-300 ease-out overflow-hidden
+          ${disabled ? "opacity-60" : ""}
+          ${isExpanded ? "px-4 shadow-lg" : "px-0"}
+        `}
         style={{
-          transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-          transform: hoveredButton === buttonKey ? "translateX(-2px)" : "translateX(0)",
+          height: "40px",
+          minWidth: isExpanded ? "auto" : "40px",
+          width: isExpanded ? "auto" : "40px",
+          transform: isExpanded ? "scale(1.05)" : "scale(1)",
         }}
+        onClick={onClick}
+        onMouseEnter={() => setHoveredButton(buttonKey)}
+        onMouseLeave={() => setHoveredButton(null)}
+        disabled={disabled}
+        aria-label={label}
       >
-        {icon}
-      </div>
-      <span
-        className={`whitespace-nowrap font-medium text-sm transition-all duration-300 ease-out ${
-          hoveredButton === buttonKey 
-            ? "opacity-100 translate-x-0 max-w-[120px]" 
-            : "opacity-0 translate-x-2 max-w-0"
-        }`}
-        style={{
-          transitionProperty: "opacity, transform, max-width",
-          transitionDuration: "0.3s, 0.3s, 0.25s",
-          transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-        }}
-      >
-        {label}
-      </span>
-    </button>
-  );
+        {/* Icon container */}
+        <div 
+          className="flex items-center justify-center transition-all duration-300 ease-out"
+          style={{
+            width: "40px",
+            height: "40px",
+            transform: isExpanded ? "translateX(-8px)" : "translateX(0)",
+          }}
+        >
+          <div className={`transition-transform duration-300 ${isExpanded ? "scale-110" : "scale-100"}`}>
+            {icon}
+          </div>
+        </div>
+        
+        {/* Text label */}
+        <span
+          className={`
+            whitespace-nowrap font-medium text-sm pr-2
+            transition-all duration-300 ease-out
+            ${isExpanded 
+              ? "opacity-100 translate-x-0 max-w-[120px]" 
+              : "opacity-0 translate-x-4 max-w-0"
+            }
+          `}
+          style={{
+            transitionProperty: "opacity, transform, max-width",
+            overflow: "hidden",
+          }}
+        >
+          {label}
+        </span>
+        
+        {/* Subtle glow effect on hover */}
+        <div 
+          className={`
+            absolute inset-0 rounded-md pointer-events-none
+            transition-opacity duration-300
+            ${isExpanded ? "opacity-20" : "opacity-0"}
+          `}
+          style={{
+            background: "linear-gradient(45deg, rgba(26, 58, 95, 0.1), rgba(26, 58, 95, 0.05))",
+          }}
+        />
+      </button>
+    );
+  };
 
   return (
     <div className="flex items-center gap-2">
