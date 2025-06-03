@@ -87,14 +87,25 @@ function findCompatibleTransceiverTemplate(
   requiredMediaType: MediaType, // e.g., FiberMM, FiberSM
   // distanceMeters: number // Distance is checked by the caller if needed for specific model selection
 ): Transceiver | undefined {
-  // Find a transceiver template that matches the port's connector (SFP, QSFP), speed, and desired media type.
-  // Further filtering by distance can happen if multiple models match.
-  return transceiverTemplates.find(t =>
+  console.log(`[ConnectionService] Searching for transceiver: port ${port.connectorType}/${port.speed}, mediaType ${requiredMediaType}`);
+  console.log(`[ConnectionService] Available transceivers:`, transceiverTemplates.map(t => ({
+    id: t.id,
+    name: t.name,
+    connectorType: t.connectorType,
+    speed: t.speed,
+    mediaTypeSupported: t.mediaTypeSupported,
+    mediaConnectorType: t.mediaConnectorType,
+    maxDistanceMeters: t.maxDistanceMeters
+  })));
+  
+  const candidates = transceiverTemplates.filter(t =>
      t.connectorType === port.connectorType && // Matches port's physical interface for the transceiver
      t.speed === port.speed &&
      t.mediaTypeSupported.includes(requiredMediaType) // Supports the fiber type we intend to use
-     // t.maxDistanceMeters >= distanceMeters // This check will be done by the caller if choosing between multiple valid transceivers
   );
+  
+  console.log(`[ConnectionService] Found ${candidates.length} matching transceivers:`, candidates.map(t => t.name));
+  return candidates[0];
 }
 
 // Updated findCableForPorts_optimized to potentially take target connector types for fiber
@@ -108,16 +119,39 @@ function findCompatibleCableTemplate(
   requiredSpeed?: PortSpeed // Optional: for speed-specific DACs
 ): Cable | undefined {
   const key = [connectorA, connectorB].sort().join(':');
-  const candidates = Array.from(cableLookup.values()).filter(c => {
+  const allCables = Array.from(cableLookup.values());
+  
+  // Enhanced debugging for fiber cable search
+  if (requiredMediaType === CableMediaType.FiberMMDuplex || requiredMediaType === CableMediaType.FiberSMDuplex) {
+    console.log(`[ConnectionService] Searching for ${requiredMediaType} cable with connectors ${connectorA} <-> ${connectorB}`);
+    console.log(`[ConnectionService] Available cables:`, allCables.map(c => ({
+      id: c.id,
+      name: c.name,
+      connectorA: c.connectorA_Type,
+      connectorB: c.connectorB_Type,
+      mediaType: c.mediaType,
+      speed: c.speed
+    })));
+  }
+  
+  const candidates = allCables.filter(c => {
     const connectorMatch = (c.connectorA_Type === connectorA && c.connectorB_Type === connectorB) ||
                          (c.connectorA_Type === connectorB && c.connectorB_Type === connectorA);
     const mediaMatch = c.mediaType === requiredMediaType;
     const speedMatch = !requiredSpeed || c.speed === requiredSpeed || !c.speed; // If cable has no speed, it's generic
+    
+    // Debug individual match criteria for fiber cables
+    if (requiredMediaType === CableMediaType.FiberMMDuplex || requiredMediaType === CableMediaType.FiberSMDuplex) {
+      console.log(`[ConnectionService] Cable ${c.name}: connectorMatch=${connectorMatch}, mediaMatch=${mediaMatch}, speedMatch=${speedMatch}`);
+    }
+    
     return connectorMatch && mediaMatch && speedMatch;
   });
 
-  // console.log('[ConnectionService] Cable candidates for key', key, requiredMediaType, requiredSpeed, candidates);
-  // For now, return the first match. Could be enhanced to pick shortest/cheapest etc.
+  if (requiredMediaType === CableMediaType.FiberMMDuplex || requiredMediaType === CableMediaType.FiberSMDuplex) {
+    console.log(`[ConnectionService] Found ${candidates.length} matching cables:`, candidates.map(c => c.name));
+  }
+  
   return candidates[0];
 }
 
@@ -474,8 +508,32 @@ export function generateConnections(
                      connectionReasoning = (connectionReasoning ? connectionReasoning + "; " : "") + `Connection > 5m (${lengthMeters}m), attempting fiber optics.`;
                   }
                   
-                  const srcRequiredFiberMedia = effectiveSrcMediaType === MediaType.FiberMM || effectiveSrcMediaType === MediaType.FiberSM ? effectiveSrcMediaType : undefined;
-                  const dstRequiredFiberMedia = effectiveDstMediaType === MediaType.FiberMM || effectiveDstMediaType === MediaType.FiberSM ? effectiveDstMediaType : undefined;
+                  // Enhanced fiber media type determination logic
+                  let srcRequiredFiberMedia = effectiveSrcMediaType === MediaType.FiberMM || effectiveSrcMediaType === MediaType.FiberSM ? effectiveSrcMediaType : undefined;
+                  let dstRequiredFiberMedia = effectiveDstMediaType === MediaType.FiberMM || effectiveDstMediaType === MediaType.FiberSM ? effectiveDstMediaType : undefined;
+
+                  // If ports don't have explicit fiber types, try to infer from available transceivers
+                  if (!srcRequiredFiberMedia || !dstRequiredFiberMedia) {
+                    // Find transceivers that could work with these ports
+                    const compatibleSrcTransceivers = allTransceiverTemplates.filter(t =>
+                      t.connectorType === currentSrcPort.connectorType && t.speed === currentSrcPort.speed
+                    );
+                    const compatibleDstTransceivers = allTransceiverTemplates.filter(t =>
+                      t.connectorType === currentDstPort.connectorType && t.speed === currentDstPort.speed
+                    );
+
+                    // Try to find common supported media types
+                    const srcSupportedMedia = compatibleSrcTransceivers.flatMap(t => t.mediaTypeSupported).filter(m => m === MediaType.FiberMM || m === MediaType.FiberSM);
+                    const dstSupportedMedia = compatibleDstTransceivers.flatMap(t => t.mediaTypeSupported).filter(m => m === MediaType.FiberMM || m === MediaType.FiberSM);
+                    
+                    // Find common media types (prefer MM, then SM)
+                    const commonMedia = srcSupportedMedia.filter(m => dstSupportedMedia.includes(m));
+                    if (commonMedia.length > 0) {
+                      const preferredMedia = commonMedia.includes(MediaType.FiberMM) ? MediaType.FiberMM : commonMedia[0];
+                      srcRequiredFiberMedia = srcRequiredFiberMedia || preferredMedia;
+                      dstRequiredFiberMedia = dstRequiredFiberMedia || preferredMedia;
+                    }
+                  }
 
                   if (srcRequiredFiberMedia && dstRequiredFiberMedia && srcRequiredFiberMedia === dstRequiredFiberMedia) {
                     selectedSrcTransceiver = findCompatibleTransceiverTemplate(allTransceiverTemplates, currentSrcPort, srcRequiredFiberMedia);
@@ -512,7 +570,17 @@ export function generateConnections(
                         connectionReasoning = (connectionReasoning ? connectionReasoning + "; " : "") + "Fiber attempt: " + fiberFailureReason.trim();
                     }
                   } else {
-                     connectionReasoning = (connectionReasoning ? connectionReasoning + "; " : "") + "Ports not compatible for fiber (mismatched Fiber SM/MM types or not specified as fiber). ";
+                     let detailedReason = "Ports not compatible for fiber: ";
+                     if (!srcRequiredFiberMedia && !dstRequiredFiberMedia) {
+                       detailedReason += "No fiber-capable transceivers found for these port types/speeds. ";
+                     } else if (!srcRequiredFiberMedia) {
+                       detailedReason += `Source port (${currentSrcPort.connectorType}/${currentSrcPort.speed}) has no fiber media type or compatible transceivers. `;
+                     } else if (!dstRequiredFiberMedia) {
+                       detailedReason += `Destination port (${currentDstPort.connectorType}/${currentDstPort.speed}) has no fiber media type or compatible transceivers. `;
+                     } else {
+                       detailedReason += `Mismatched fiber types (Src: ${srcRequiredFiberMedia}, Dst: ${dstRequiredFiberMedia}). `;
+                     }
+                     connectionReasoning = (connectionReasoning ? connectionReasoning + "; " : "") + detailedReason;
                   }
                 }
               }
