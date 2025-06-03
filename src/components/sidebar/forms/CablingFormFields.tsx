@@ -358,7 +358,6 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                       onChange={e => {
                         const value = Number(e.target.value) || 1;
                         field.onChange(value);
-                        onInputChange(e);
                       }}
                       value={field.value || 4}
                       min={1}

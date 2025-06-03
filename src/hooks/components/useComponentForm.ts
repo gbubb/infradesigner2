@@ -131,7 +131,8 @@ export const useComponentForm = () => {
     if (['cost', 'powerRequired', 'cpuSockets', 'cpuCoresPerSocket', 'memoryCapacity', 
          'diskSlotQuantity', 'ruSize', 'portsConsumedQuantity', 'portCount', 'portSpeed', 
          'portsProvidedQuantity', 'throughput', 'capacityTB', 'cassetteCapacity', 
-         'portQuantity', 'length', 'validRUStart', 'validRUEnd', 'preferredRU', 'preferredRack', 'rpm', 'iops', 'readSpeed', 'writeSpeed'].includes(name)) {
+         'portQuantity', 'length', 'validRUStart', 'validRUEnd', 'preferredRU', 'preferredRack', 
+         'rpm', 'iops', 'readSpeed', 'writeSpeed', 'connectorB_Quantity', 'maxDistanceMeters'].includes(name)) {
       parsedValue = value === '' ? 0 : parseFloat(value);
     }
     
