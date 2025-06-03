@@ -62,7 +62,6 @@ export const RackLayoutsTab: React.FC = () => {
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   const hasUnsavedChangesRef = useRef(false);
   const isNavigatingAwayRef = useRef(false);
-  const previousRequirementsHashRef = useRef<string | null>(null);
   
   // Store hooks
   const activeDesign = useDesignStore(state => state.activeDesign);
@@ -72,7 +71,7 @@ export const RackLayoutsTab: React.FC = () => {
   const requirementsHash = JSON.stringify(activeDesign?.requirements || {});
   
   // Initialize racks - now with proper dependencies
-  const { rackProfiles, availabilityZones } = useRackInitialization(resetTrigger, isNavigatingAwayRef.current) as {
+  const { rackProfiles, availabilityZones } = useRackInitialization(resetTrigger) as {
     rackProfiles: { id: string; name: string; azName?: string; availabilityZoneId?: string }[];
     availabilityZones: any; // keep as any for now, or string[] if known
   };
@@ -183,35 +182,14 @@ export const RackLayoutsTab: React.FC = () => {
     loadSavedLayout();
   }, [activeDesign?.id]); // Only trigger on design ID change
 
-  // Effect: On requirements change, clear racks and regenerate
-  // But on page mount, only regenerate if racks don't exist or are invalid
+  // Effect: On requirements change or page mount, ALWAYS clear racks and regenerate
   useEffect(() => {
     if (!activeDesign) return;
-    
-    // Check if we have valid saved racks that match current requirements
-    const hasValidSavedRacks = activeDesign.rackprofiles && 
-      Array.isArray(activeDesign.rackprofiles) && 
-      activeDesign.rackprofiles.length > 0;
-    
-    // If requirements changed or no valid racks exist, regenerate
-    if (previousRequirementsHashRef.current !== requirementsHash || !hasValidSavedRacks) {
-      // Clear racks and force regeneration
-      RackService.clearAllRackProfiles();
-      setResetTrigger(prev => prev + 1);
-      setSelectedRackId(null);
-      hasUnsavedChangesRef.current = false;
-      previousRequirementsHashRef.current = requirementsHash;
-    } else {
-      // Load existing racks from activeDesign without regenerating
-      if (activeDesign.rackprofiles) {
-        // Initialize RackService with saved racks
-        RackService.clearAllRackProfiles();
-        activeDesign.rackprofiles.forEach((rack: any) => {
-          RackService.createRackProfileFromData(rack);
-        });
-        setResetTrigger(prev => prev + 1); // Trigger UI update without redistribution
-      }
-    }
+    // Always CLEAR racks (from design & storage) and force regeneration by increasing resetTrigger
+    RackService.clearAllRackProfiles();
+    setResetTrigger(prev => prev + 1);
+    setSelectedRackId(null);
+    hasUnsavedChangesRef.current = false; // Reset unsaved changes flag
   }, [activeDesign?.id, requirementsHash]);
 
   // --- EFFECT TO LOAD SAVED RACK LAYOUTS ONLY WHEN USER EXPLICITLY ASKS ---

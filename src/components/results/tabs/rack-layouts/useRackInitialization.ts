@@ -13,7 +13,7 @@ export interface RackProfileInitializationData {
   rackType?: 'Core' | 'ComputeStorage';
 }
 
-export const useRackInitialization = (resetTrigger: number = 0, skipRedistribution: boolean = false) => {
+export const useRackInitialization = (resetTrigger: number = 0) => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const [rackProfiles, setRackProfiles] = useState<RackProfileInitializationData[]>([]);
   const [availabilityZones, setAvailabilityZones] = useState<string[]>([]);
@@ -32,14 +32,8 @@ export const useRackInitialization = (resetTrigger: number = 0, skipRedistributi
     
     // Check if racks exist already for this design
     const existingRacks = RackService.getAllRackProfiles();
-    
-    // Check if we have valid existing racks with devices already placed
-    const hasPlacedDevices = existingRacks.some(rack => 
-      rack.devices && rack.devices.length > 0
-    );
-    
     const shouldReinitialize =
-      (resetTrigger !== 0 && !skipRedistribution) || // Allow skipping redistribution
+      resetTrigger !== 0 || // new dependency: any change to trigger
       prevDesignIdRef.current !== activeDesign.id ||
       existingRacks.length === 0;
     
@@ -114,13 +108,17 @@ export const useRackInitialization = (resetTrigger: number = 0, skipRedistributi
       setAvailabilityZones(newAvailabilityZones);
       
       // Only distribute components if we have racks and components to distribute
-      // AND if we don't already have placed devices (avoid redistribution)
-      if (newRacks.length > 0 && activeDesign.components && activeDesign.components.length > 0 && !hasPlacedDevices) {
+      // Skip if we already have racks with placed devices in the activeDesign
+      const existingPlacedDevices = activeDesign.rackprofiles?.some((rack: any) => 
+        rack.devices && rack.devices.length > 0
+      );
+      
+      if (newRacks.length > 0 && activeDesign.components && activeDesign.components.length > 0 && !existingPlacedDevices) {
         distributeComponentsAcrossRacks(newRacks);
         // Commented out to reduce noise - initialization happens automatically
         // toast.success('Rack layouts initialized');
-      } else if (hasPlacedDevices) {
-        console.log('Skipping component distribution - devices already placed');
+      } else if (existingPlacedDevices) {
+        console.log('Skipping component distribution - devices already placed in saved racks');
       }
       
       initializedRef.current = true;

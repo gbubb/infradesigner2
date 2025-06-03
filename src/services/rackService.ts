@@ -75,35 +75,6 @@ export class RackService {
     return newProfile.id;
   }
 
-  static createRackProfileFromData(rackData: RackProfile): string {
-    const state = useDesignStore.getState();
-    const profiles = this.getAllRackProfiles();
-
-    // Check if rack with this ID already exists
-    const existingIndex = profiles.findIndex(p => p.id === rackData.id);
-    if (existingIndex !== -1) {
-      // Update existing rack
-      profiles[existingIndex] = rackData;
-    } else {
-      // Add new rack
-      profiles.push(rackData);
-    }
-
-    // Update in design if possible (without triggering toast)
-    if (state.activeDesign) {
-      // Note: This will trigger a design update, but we're loading saved data
-      // so it shouldn't show a toast
-      state.updateDesign(state.activeDesign.id, {
-        rackprofiles: profiles
-      });
-    }
-
-    // Also update in local storage as backup
-    const storageKey = this.getStorageKey();
-    localStorage.setItem(storageKey, JSON.stringify(profiles));
-
-    return rackData.id;
-  }
 
   static clearAllRackProfiles(): void {
     const state = useDesignStore.getState();
