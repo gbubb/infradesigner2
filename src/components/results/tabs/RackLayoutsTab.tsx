@@ -63,6 +63,7 @@ export const RackLayoutsTab: React.FC = () => {
   const hasUnsavedChangesRef = useRef(false);
   const isNavigatingAwayRef = useRef(false);
   const previousRequirementsHashRef = useRef<string | null>(null);
+  const isResettingRef = useRef(false);
   
   // Store hooks
   const activeDesign = useDesignStore(state => state.activeDesign);
@@ -85,7 +86,7 @@ export const RackLayoutsTab: React.FC = () => {
   
   // Effect: Auto-save when devices are placed (with 2s debounce)
   useEffect(() => {
-    if (!activeDesign) return;
+    if (!activeDesign || isResettingRef.current) return;
     
     // Serialize current rack profiles for comparison
     const currentRackProfilesStr = JSON.stringify(activeDesign.rackprofiles || []);
@@ -189,7 +190,7 @@ export const RackLayoutsTab: React.FC = () => {
 
   // Effect: Only clear and regenerate racks when requirements actually change
   useEffect(() => {
-    if (!activeDesign) return;
+    if (!activeDesign || isResettingRef.current) return;
     
     // Check if requirements actually changed
     if (previousRequirementsHashRef.current !== null && 
@@ -253,15 +254,26 @@ export const RackLayoutsTab: React.FC = () => {
   // --- RESET: Always clear and re-generate from requirements, never reload from DB
   const handleResetLayout = async () => {
     setIsResetting(true);
+    isResettingRef.current = true;
     try {
-      // Just clear all racks and trigger re-init from requirements
-      RackService.clearAllRackProfiles();
+      // Clear all racks without triggering design update (we'll update after re-init)
+      RackService.clearAllRackProfiles(true); // Skip design update
+      
+      // Force re-initialization from requirements
       setResetTrigger(prev => prev + 1); // will cause useRackInitialization to re-create the racks
+      
       toast.success('Rack layout reset!');
       setSelectedRackId(null);
+      hasUnsavedChangesRef.current = false; // Reset unsaved changes
+      
+      // Allow auto-save to resume after a delay
+      setTimeout(() => {
+        isResettingRef.current = false;
+      }, 100);
     } catch (error) {
       console.error("Error resetting rack layout:", error);
       toast.error("Failed to reset rack layout");
+      isResettingRef.current = false;
     } finally {
       setIsResetting(false);
     }

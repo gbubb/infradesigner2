@@ -44,8 +44,8 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       initializedRef.current = false;
       prevDesignIdRef.current = activeDesign.id;
       
-      // Clear existing racks
-      RackService.clearAllRackProfiles();
+      // Clear existing racks (skip design update - we'll update after creating new racks)
+      RackService.clearAllRackProfiles(true);
       
       // Determine availability zones
       const definedAZs = activeDesign.requirements.physicalConstraints.availabilityZones || [];

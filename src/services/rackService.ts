@@ -76,11 +76,11 @@ export class RackService {
   }
 
 
-  static clearAllRackProfiles(): void {
+  static clearAllRackProfiles(skipDesignUpdate: boolean = false): void {
     const state = useDesignStore.getState();
 
-    // Update in design if possible
-    if (state.activeDesign) {
+    // Update in design if possible (unless explicitly skipped)
+    if (state.activeDesign && !skipDesignUpdate) {
       state.updateDesign(state.activeDesign.id, {
         rackprofiles: []
       });
