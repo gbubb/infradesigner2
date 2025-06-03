@@ -43,7 +43,8 @@ export class RackService {
     name?: string,
     uHeight: number = 42, 
     availabilityZoneId?: string,
-    rackType: RackType = RackType.ComputeStorage
+    rackType: RackType = RackType.ComputeStorage,
+    skipUpdate: boolean = false
   ): string {
     const state = useDesignStore.getState();
     const profiles = this.getAllRackProfiles();
@@ -61,8 +62,8 @@ export class RackService {
 
     profiles.push(newProfile);
 
-    // Update in design if possible
-    if (state.activeDesign) {
+    // Update in design if possible (unless batch creating)
+    if (state.activeDesign && !skipUpdate) {
       state.updateDesign(state.activeDesign.id, {
         rackprofiles: profiles
       });
@@ -73,6 +74,18 @@ export class RackService {
     localStorage.setItem(storageKey, JSON.stringify(profiles));
 
     return newProfile.id;
+  }
+  
+  static batchUpdateRackProfiles(): void {
+    const state = useDesignStore.getState();
+    const profiles = this.getAllRackProfiles();
+    
+    // Update design with all current profiles
+    if (state.activeDesign) {
+      state.updateDesign(state.activeDesign.id, {
+        rackprofiles: profiles
+      });
+    }
   }
 
 

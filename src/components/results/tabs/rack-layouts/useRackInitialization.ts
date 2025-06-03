@@ -38,7 +38,6 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       existingRacks.length === 0;
     
     if (shouldReinitialize) {
-      console.log("Initializing racks for design:", activeDesign.id);
       
       // Update refs
       initializedRef.current = false;
@@ -69,7 +68,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
           for (let rackNumInAZ = 1; rackNumInAZ <= computeRacksPerAZ; rackNumInAZ++) {
             if (newRacks.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
             const simpleRackName = `Rack ${globalRackCounter}`;
-            const rackId = RackService.createRackProfile(simpleRackName, 42, az.id, RackType.ComputeStorage);
+            const rackId = RackService.createRackProfile(simpleRackName, 42, az.id, RackType.ComputeStorage, true); // Skip update during batch
             newRacks.push({ id: rackId, name: simpleRackName, azName: az.name, availabilityZoneId: az.id, rackType: 'ComputeStorage' });
             globalRackCounter++;
           }
@@ -82,7 +81,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
           for (let rackNumInAZ = 1; rackNumInAZ <= computeRacksPerAZ; rackNumInAZ++) {
             if (newRacks.filter(r => r.rackType === 'ComputeStorage').length >= computeStorageRackTotalQuantity) break;
             const simpleRackName = `Rack ${globalRackCounter}`;
-            const rackId = RackService.createRackProfile(simpleRackName, 42, azId, RackType.ComputeStorage);
+            const rackId = RackService.createRackProfile(simpleRackName, 42, azId, RackType.ComputeStorage, true); // Skip update during batch
             newRacks.push({ id: rackId, name: simpleRackName, azName: azName, availabilityZoneId: azId, rackType: 'ComputeStorage' });
             globalRackCounter++;
           }
@@ -98,11 +97,14 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
         }
         for (let i = 1; i <= networkCoreRackQuantity; i++) {
           const simpleCoreRackName = `Core Rack ${coreRackCounter}`;
-          const rackId = RackService.createRackProfile(simpleCoreRackName, 42, coreAzId, RackType.Core);
+          const rackId = RackService.createRackProfile(simpleCoreRackName, 42, coreAzId, RackType.Core, true); // Skip update during batch
           newRacks.push({ id: rackId, name: simpleCoreRackName, azName: coreAzName, availabilityZoneId: coreAzId, rackType: 'Core' });
           coreRackCounter++;
         }
       }
+      
+      // Batch update all rack profiles at once
+      RackService.batchUpdateRackProfiles();
       
       setRackProfiles(newRacks);
       setAvailabilityZones(newAvailabilityZones);
