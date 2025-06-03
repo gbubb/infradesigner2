@@ -888,8 +888,8 @@ export function generateConnections(
                   lengthMeters,
                   mediaType: finalCableMediaType,
                   speed: currentSrcPort.speed, // Use currentSrcPort which is confirmed
-                  transceiverSourceModel: selectedSrcTransceiver?.transceiverModel,
-                  transceiverDestinationModel: selectedDstTransceiver?.transceiverModel,
+                  transceiverSourceId: selectedSrcTransceiver?.id,
+                  transceiverDestinationId: selectedDstTransceiver?.id,
                   status: "planned",
                 };
                 connectionAttempts.push({

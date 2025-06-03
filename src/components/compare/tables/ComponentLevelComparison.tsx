@@ -3,13 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ArrowUp, ArrowDown, Minus, ArrowRight } from 'lucide-react';
-import { Component, ComponentType } from '@/types/infrastructure';
+import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 
 interface ComponentLevelComparisonProps {
   designAName: string;
   designBName: string;
-  designAComponents: Component[];
-  designBComponents: Component[];
+  designAComponents: InfrastructureComponent[];
+  designBComponents: InfrastructureComponent[];
 }
 
 interface RoleComparison {
@@ -99,6 +99,7 @@ export const ComponentLevelComparison: React.FC<ComponentLevelComparisonProps> =
         [ComponentType.FiberPatchPanel]: 'fiberPatchPanel',
         [ComponentType.CopperPatchPanel]: 'copperPatchPanel',
         [ComponentType.Cassette]: 'cassette',
+        [ComponentType.Cable]: 'cable',
         [ComponentType.FiberCable]: 'fiberCable',
         [ComponentType.CopperCable]: 'copperCable',
         [ComponentType.Transceiver]: 'transceiver',

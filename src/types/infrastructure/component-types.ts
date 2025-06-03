@@ -10,6 +10,9 @@ export enum ComponentType {
   CopperPatchPanel = 'CopperPatchPanel',
   Cassette = 'Cassette',
   Cable = 'Cable',
+  FiberCable = 'FiberCable',
+  CopperCable = 'CopperCable',
+  PDU = 'PDU',
   Transceiver = 'Transceiver' // NEW
 }
 
@@ -35,6 +38,9 @@ export const componentTypeToCategory: Record<ComponentType, ComponentCategory> =
   [ComponentType.CopperPatchPanel]: ComponentCategory.Cabling,
   [ComponentType.Cassette]: ComponentCategory.Cabling,
   [ComponentType.Cable]: ComponentCategory.Cables,
+  [ComponentType.FiberCable]: ComponentCategory.Cables,
+  [ComponentType.CopperCable]: ComponentCategory.Cables,
+  [ComponentType.PDU]: ComponentCategory.Network,
   [ComponentType.Transceiver]: ComponentCategory.Optics // NEW
 };
 
