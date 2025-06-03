@@ -5,7 +5,7 @@ import { generateConnections } from "@/services/connectionService";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Save, Trash2, Plus, Network } from "lucide-react";
+import { Save, Trash2, Plus, Network, Download } from "lucide-react";
 import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable, Port, Transceiver } from "@/types/infrastructure";
 import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
 import ConnectionReportModal from "./ConnectionReportModal";
@@ -264,6 +264,51 @@ const NetworkConnectionsTab: React.FC = () => {
     toast.info("BOM function not yet implemented. (Call your network BOM handler here.)");
   };
 
+  // Export connections to CSV
+  const handleExportCSV = () => {
+    if (displayedRows.length === 0) {
+      toast.error("No connections to export");
+      return;
+    }
+
+    // Create CSV header
+    const header = columns.map(col => col.label).join(',');
+    
+    // Create CSV rows
+    const rows = displayedRows.map(row => {
+      return columns.map(col => {
+        const value = row[col.key as keyof NetworkConnectionTableRow];
+        // Escape values that contain commas or quotes
+        const stringValue = String(value || '');
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+      }).join(',');
+    });
+    
+    // Combine header and rows
+    const csv = [header, ...rows].join('\n');
+    
+    // Create blob and download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `network_connections_${timestamp}.csv`;
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success(`Exported ${displayedRows.length} connections to ${filename}`);
+  };
+
   // Handle column header sort
   const handleSort = (col: string) => {
     if (sortCol === col) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -283,6 +328,9 @@ const NetworkConnectionsTab: React.FC = () => {
           </Button>
           <Button size="sm" variant="outline" onClick={handleSave}><Save className="w-4 h-4" /> Save</Button>
           <Button size="sm" variant="outline" onClick={handleReset}><Trash2 className="w-4 h-4" /> Reset</Button>
+          <Button size="sm" variant="outline" onClick={handleExportCSV} disabled={displayedRows.length === 0}>
+            <Download className="w-4 h-4" /> Export CSV
+          </Button>
           <Button size="sm" variant="secondary" onClick={handleBOM}>Send to Bill of Materials</Button>
         </div>
       </div>
