@@ -31,24 +31,36 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
       }
     }
     
-    // Ensure placement is properly set
+    // Ensure placement is properly set for rack-mountable components
+    // Note: processFormForSubmission may have already created the placement object
     if (!component.placement && ['Server', 'Switch', 'Router', 'Firewall', 'FiberPatchPanel', 'CopperPatchPanel'].includes(component.type)) {
       const physicalConstraints = get().activeDesign?.requirements?.physicalConstraints;
       const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
       
-      component.placement = {
-        validRUStart: component.validRUStart || 1,
-        validRUEnd: component.validRUEnd || maxRackUnits,
-        preferredRU: component.preferredRU || 1,
-        preferredRack: component.preferredRack || 1
-      };
-      
-      // Remove temporary form fields
-      delete component.validRUStart;
-      delete component.validRUEnd;
-      delete component.preferredRU;
-      delete component.preferredRack;
+      // Only create placement if individual fields exist (legacy handling)
+      if ('validRUStart' in component || 'validRUEnd' in component) {
+        component.placement = {
+          validRUStart: component.validRUStart || 1,
+          validRUEnd: component.validRUEnd || maxRackUnits,
+          preferredRU: component.preferredRU || 1,
+          preferredRack: component.preferredRack || 1
+        };
+      } else {
+        // Default placement if no placement data provided
+        component.placement = {
+          validRUStart: 1,
+          validRUEnd: maxRackUnits,
+          preferredRU: 1,
+          preferredRack: 1
+        };
+      }
     }
+    
+    // Always remove temporary form fields if they exist
+    delete component.validRUStart;
+    delete component.validRUEnd;
+    delete component.preferredRU;
+    delete component.preferredRack;
     
     // Set default ruHeight if it's a rack-mountable device and doesn't have ruHeight already
     if (!component.ruHeight && ['Server', 'Switch', 'Router', 'Firewall'].includes(component.type)) {
@@ -103,19 +115,30 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
       console.log('Updates to apply:', updates);
       
       // Process placement fields if they exist in the form data
-      if ('validRUStart' in updates || 'validRUEnd' in updates || 'preferredRU' in updates || 'preferredRack' in updates) {
-        updates.placement = {
-          validRUStart: updates.validRUStart || existingComponent.placement?.validRUStart || 1,
-          validRUEnd: updates.validRUEnd || existingComponent.placement?.validRUEnd || 42,
-          preferredRU: updates.preferredRU || existingComponent.placement?.preferredRU,
-          preferredRack: updates.preferredRack || existingComponent.placement?.preferredRack
-        };
+      if ('validRUStart' in updates || 'validRUEnd' in updates || 'preferredRU' in updates || 'preferredRack' in updates || 'placement' in updates) {
+        // If placement object is already provided (from processFormForSubmission), use it
+        if (updates.placement) {
+          console.log('Using placement object from updates:', updates.placement);
+        } else {
+          // Otherwise create from individual fields
+          updates.placement = {
+            validRUStart: updates.validRUStart || existingComponent.placement?.validRUStart || 1,
+            validRUEnd: updates.validRUEnd || existingComponent.placement?.validRUEnd || 42,
+            preferredRU: updates.preferredRU || existingComponent.placement?.preferredRU || 1,
+            preferredRack: updates.preferredRack || existingComponent.placement?.preferredRack || 1
+          };
+          console.log('Created placement from individual fields:', updates.placement);
+        }
         
         // Remove temporary form fields
         delete updates.validRUStart;
         delete updates.validRUEnd;
         delete updates.preferredRU;
         delete updates.preferredRack;
+      } else if (existingComponent.placement) {
+        // Ensure existing placement is preserved if no updates
+        updates.placement = existingComponent.placement;
+        console.log('Preserving existing placement:', existingComponent.placement);
       }
 
       // Create the updated component with all properties preserved

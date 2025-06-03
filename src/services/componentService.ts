@@ -69,6 +69,17 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
           (typeof component.details === 'string' ? 
             JSON.parse(component.details) : component.details) : {};
         
+        // Extract common fields from details
+        const commonFields: any = {
+          namingPrefix: details.namingPrefix,
+          placement: details.placement,
+        };
+        
+        // Debug log for placement data
+        if (details.placement) {
+          console.log(`Loading component ${component.name} with placement:`, details.placement);
+        }
+        
         // Ensure we correctly assign ports array where present
         switch (component.type) {
           case ComponentType.Server:
@@ -81,6 +92,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
                 details.cores || details.totalCores || 0;
             return {
               ...baseComponent,
+              ...commonFields,
               serverRole: component.serverrole,
               rackUnitsConsumed: details.rackUnitsConsumed || details.ruSize || 1,
               cpuModel: details.cpuModel || '',
@@ -104,6 +116,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
           case ComponentType.Switch:
             return {
               ...baseComponent,
+              ...commonFields,
               switchRole: component.switchrole,
               rackUnitsConsumed: details.rackUnitsConsumed || details.ruSize || 1,
               portCount: details.portCount || 0,
@@ -119,6 +132,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
           case ComponentType.Disk:
             return {
               ...baseComponent,
+              ...commonFields,
               capacityTB: details.capacityTB || 0,
               formFactor: details.formFactor || '',
               interface: details.interface || '',
@@ -129,23 +143,43 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               writeSpeed: details.writeSpeed || 0,
             } as Disk;
 
+          case ComponentType.Router:
+          case ComponentType.Firewall:
+            return {
+              ...baseComponent,
+              ...commonFields,
+              rackUnitsConsumed: details.rackUnitsConsumed || details.ruSize || 1,
+              ruSize: details.ruSize || details.rackUnitsConsumed || 1,
+              throughput: details.throughput || 0,
+              connectionPerSecond: details.connectionPerSecond || 0,
+              concurrentConnections: details.concurrentConnections || 0,
+              features: details.features || [],
+              supportedProtocols: details.supportedProtocols || [],
+              ports: Array.isArray(details.ports) ? details.ports : [],
+            };
+
           case ComponentType.FiberPatchPanel:
             return {
               ...baseComponent,
+              ...commonFields,
               ruSize: details.ruSize || 1,
               cassetteCapacity: details.cassetteCapacity || 0,
+              ports: Array.isArray(details.ports) ? details.ports : [],
             } as FiberPatchPanel;
             
           case ComponentType.CopperPatchPanel:
             return {
               ...baseComponent,
+              ...commonFields,
               ruSize: details.ruSize || 1,
               portQuantity: details.portQuantity || 0,
+              ports: Array.isArray(details.ports) ? details.ports : [],
             } as CopperPatchPanel;
             
           case ComponentType.Cassette:
             return {
               ...baseComponent,
+              ...commonFields,
               portType: details.portType,
               portQuantity: details.portQuantity || 0,
             } as Cassette;
@@ -155,6 +189,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
             if (details.connectorType && !details.connectorA_Type) {
               return {
                 ...baseComponent,
+                ...commonFields,
                 length: details.length || 0,
                 connectorA_Type: details.connectorType || ConnectorType.RJ45,
                 connectorB_Type: details.connectorType || ConnectorType.RJ45,
@@ -163,6 +198,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
             }
             return {
               ...baseComponent,
+              ...commonFields,
               length: details.length || 0,
               connectorA_Type: details.connectorA_Type || ConnectorType.RJ45,
               connectorB_Type: details.connectorB_Type || ConnectorType.RJ45,
@@ -172,6 +208,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
           default:
             return {
               ...baseComponent,
+              ...commonFields,
               ...details, // Include all other properties for other component types
             };
         }
@@ -270,6 +307,9 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
     };
     
     console.log('Saving component to database:', componentToSave);
+    if (specializedFields.placement) {
+      console.log('Component includes placement data:', specializedFields.placement);
+    }
     
     const { error } = await supabase
       .from(TABLES.COMPONENTS)

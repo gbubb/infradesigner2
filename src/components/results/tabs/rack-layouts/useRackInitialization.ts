@@ -103,11 +103,12 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
         }
       }
       
-      // Batch update all rack profiles at once
-      RackService.batchUpdateRackProfiles();
-      
+      // Update local state first
       setRackProfiles(newRacks);
       setAvailabilityZones(newAvailabilityZones);
+      
+      // Then batch update all rack profiles at once
+      RackService.batchUpdateRackProfiles();
       
       // Only distribute components if we have racks and components to distribute
       // Skip if we already have racks with placed devices in the activeDesign
@@ -119,8 +120,6 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
         distributeComponentsAcrossRacks(newRacks);
         // Commented out to reduce noise - initialization happens automatically
         // toast.success('Rack layouts initialized');
-      } else if (existingPlacedDevices) {
-        console.log('Skipping component distribution - devices already placed in saved racks');
       }
       
       initializedRef.current = true;
@@ -207,6 +206,9 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       }
     });
     
+    // Batch update after all components are placed
+    RackService.batchUpdateRackProfiles();
+    
     // Commented out to reduce noise - distribution happens automatically
     // toast.success('Components distributed across racks');
   };
@@ -227,7 +229,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       
       if (targetRacks && targetRacks.length) {
         const rackIndex = index % targetRacks.length;
-        const result = RackService.placeDevice(targetRacks[rackIndex].id, component.id);
+        const result = RackService.placeDevice(targetRacks[rackIndex].id, component.id, undefined, true); // Skip individual updates
         if (!result.success) {
           console.warn(`Failed to place ${component.name}: ${result.error}`);
         }
@@ -271,7 +273,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
         
         if (targetRacks && targetRacks.length) {
           const rackIndex = index % targetRacks.length;
-          const result = RackService.placeDevice(targetRacks[rackIndex].id, node.id);
+          const result = RackService.placeDevice(targetRacks[rackIndex].id, node.id, undefined, true); // Skip individual updates
           if (!result.success) {
             console.warn(`Failed to place storage node ${node.name}: ${result.error}`);
           }
@@ -313,12 +315,13 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
         const result = RackService.placeDevice(
           targetRacks[rackIndex].id, 
           component.id, 
-          ruStartPosition - (index % 4) * (component.ruHeight || 1)
+          ruStartPosition - (index % 4) * (component.ruHeight || 1),
+          true // Skip individual updates
         );
         
         if (!result.success) {
           // Try auto-placement if specific placement fails
-          const fallbackResult = RackService.placeDevice(targetRacks[rackIndex].id, component.id);
+          const fallbackResult = RackService.placeDevice(targetRacks[rackIndex].id, component.id, undefined, true); // Skip individual updates
           if (!fallbackResult.success) {
             console.warn(`Failed to place network device ${component.name}: ${fallbackResult.error}`);
           }
@@ -337,12 +340,13 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       const result = RackService.placeDevice(
         coreRacks[rackIndex].id, 
         component.id,
-        ruStartPosition - (index % 10) * (component.ruHeight || 1)
+        ruStartPosition - (index % 10) * (component.ruHeight || 1),
+        true // Skip individual updates
       );
       
       if (!result.success) {
         // Try auto-placement if specific placement fails
-        const fallbackResult = RackService.placeDevice(coreRacks[rackIndex].id, component.id);
+        const fallbackResult = RackService.placeDevice(coreRacks[rackIndex].id, component.id, undefined, true); // Skip individual updates
         if (!fallbackResult.success) {
           console.warn(`Failed to place core network device ${component.name}: ${fallbackResult.error}`);
         }

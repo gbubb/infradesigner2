@@ -381,8 +381,11 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                 getDefaultPrefix={getDefaultPrefix}
               />
 
-              {/* Placement Section - Not for Transceivers */}
-              {formValues.type !== ComponentType.Transceiver && (
+              {/* Placement Section - Not for Transceivers, Cables, Disks, or GPUs */}
+              {formValues.type !== ComponentType.Transceiver && 
+               formValues.type !== ComponentType.Cable &&
+               formValues.type !== ComponentType.Disk &&
+               formValues.type !== ComponentType.GPU && (
                 <PlacementSection
                   control={control}
                   formValues={formValues}

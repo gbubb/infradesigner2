@@ -104,7 +104,7 @@ export class RackService {
     localStorage.removeItem(storageKey);
   }
 
-  static updateRackProfile(rackId: string, updates: Partial<RackProfile>): boolean {
+  static updateRackProfile(rackId: string, updates: Partial<RackProfile>, skipDesignUpdate: boolean = false): boolean {
     const state = useDesignStore.getState();
     const profiles = this.getAllRackProfiles();
 
@@ -118,8 +118,8 @@ export class RackService {
       ...updates
     };
 
-    // Update in design if possible
-    if (state.activeDesign) {
+    // Update in design if possible (unless batch updating)
+    if (state.activeDesign && !skipDesignUpdate) {
       state.updateDesign(state.activeDesign.id, {
         rackprofiles: profiles
       });
@@ -166,7 +166,7 @@ export class RackService {
     return allRacks.find(rack => rack.devices.some(device => device.deviceId === deviceId));
   }
 
-  static placeDevice(rackId: string, deviceId: string, targetRuPosition?: number): PlacementResult {
+  static placeDevice(rackId: string, deviceId: string, targetRuPosition?: number, skipUpdate: boolean = false): PlacementResult {
     const state = useDesignStore.getState();
     const rack = this.getRackProfile(rackId);
 
@@ -251,7 +251,7 @@ export class RackService {
     rack.devices.push(placedDevice);
 
     // Save the updated rack
-    const updated = this.updateRackProfile(rackId, { devices: rack.devices });
+    const updated = this.updateRackProfile(rackId, { devices: rack.devices }, skipUpdate);
 
     if (!updated) {
       return { success: false, error: "Failed to update rack profile" };
