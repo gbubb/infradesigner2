@@ -336,10 +336,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                 <FormControl>
                   <Switch
                     checked={field.value || false}
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked);
-                      onSelectChange('isBreakout', checked.toString());
-                    }}
+                    onCheckedChange={field.onChange}
                   />
                 </FormControl>
               </FormItem>
