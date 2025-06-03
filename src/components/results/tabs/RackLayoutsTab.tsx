@@ -62,13 +62,17 @@ export const RackLayoutsTab: React.FC = () => {
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   const hasUnsavedChangesRef = useRef(false);
   const isNavigatingAwayRef = useRef(false);
+  const previousRequirementsHashRef = useRef<string | null>(null);
   
   // Store hooks
   const activeDesign = useDesignStore(state => state.activeDesign);
   const updateDesign = useDesignStore(state => state.updateDesign);
   
   // Listen for requirements changes (as in Results) for rack re-init
-  const requirementsHash = JSON.stringify(activeDesign?.requirements || {});
+  const requirementsHash = React.useMemo(
+    () => JSON.stringify(activeDesign?.requirements || {}),
+    [activeDesign?.requirements]
+  );
   
   // Initialize racks - now with proper dependencies
   const { rackProfiles, availabilityZones } = useRackInitialization(resetTrigger) as {
@@ -168,7 +172,8 @@ export const RackLayoutsTab: React.FC = () => {
             
             if (isValid) {
               updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
-              setResetTrigger(prev => prev + 1);
+              // Don't increment resetTrigger here - we're loading existing racks, not regenerating
+              // setResetTrigger(prev => prev + 1);
               setSelectedRackId(null);
               hasUnsavedChangesRef.current = false;
             }
@@ -182,14 +187,22 @@ export const RackLayoutsTab: React.FC = () => {
     loadSavedLayout();
   }, [activeDesign?.id]); // Only trigger on design ID change
 
-  // Effect: On requirements change or page mount, ALWAYS clear racks and regenerate
+  // Effect: Only clear and regenerate racks when requirements actually change
   useEffect(() => {
     if (!activeDesign) return;
-    // Always CLEAR racks (from design & storage) and force regeneration by increasing resetTrigger
-    RackService.clearAllRackProfiles();
-    setResetTrigger(prev => prev + 1);
-    setSelectedRackId(null);
-    hasUnsavedChangesRef.current = false; // Reset unsaved changes flag
+    
+    // Check if requirements actually changed
+    if (previousRequirementsHashRef.current !== null && 
+        previousRequirementsHashRef.current !== requirementsHash) {
+      // Requirements changed - clear racks and force regeneration
+      RackService.clearAllRackProfiles();
+      setResetTrigger(prev => prev + 1);
+      setSelectedRackId(null);
+      hasUnsavedChangesRef.current = false;
+    }
+    
+    // Update the previous hash
+    previousRequirementsHashRef.current = requirementsHash;
   }, [activeDesign?.id, requirementsHash]);
 
   // --- EFFECT TO LOAD SAVED RACK LAYOUTS ONLY WHEN USER EXPLICITLY ASKS ---
@@ -220,8 +233,8 @@ export const RackLayoutsTab: React.FC = () => {
         if (activeDesign) {
           updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
           toast.success("Rack layout loaded from database!");
-          // Make sure to re-initialize to show loaded racks
-          setResetTrigger(prev => prev + 1);
+          // Don't increment resetTrigger - we want to preserve the loaded layout
+          // setResetTrigger(prev => prev + 1);
           setSelectedRackId(null);
         }
       } else {
