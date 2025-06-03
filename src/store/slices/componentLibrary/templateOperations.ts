@@ -31,6 +31,17 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
       }
     }
     
+    // Debug log for Switch components
+    if (component.type === ComponentType.Switch) {
+      console.log('Processing Switch component:', {
+        name: component.name,
+        hasPlacement: !!component.placement,
+        placement: component.placement,
+        validRUStart: component.validRUStart,
+        validRUEnd: component.validRUEnd
+      });
+    }
+    
     // Ensure placement is properly set for rack-mountable components
     // Note: processFormForSubmission may have already created the placement object
     if (!component.placement && ['Server', 'Switch', 'Router', 'Firewall', 'FiberPatchPanel', 'CopperPatchPanel'].includes(component.type)) {
@@ -113,6 +124,16 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
       const existingComponent = state.componentTemplates[index];
       console.log('Existing component before update:', existingComponent);
       console.log('Updates to apply:', updates);
+      
+      // Special debugging for Switch components
+      if (existingComponent.type === ComponentType.Switch) {
+        console.log('Updating Switch component placement:', {
+          existingPlacement: existingComponent.placement,
+          updateHasPlacement: 'placement' in updates,
+          updatePlacement: updates.placement,
+          hasIndividualFields: 'validRUStart' in updates || 'validRUEnd' in updates
+        });
+      }
       
       // Process placement fields if they exist in the form data
       if ('validRUStart' in updates || 'validRUEnd' in updates || 'preferredRU' in updates || 'preferredRack' in updates || 'placement' in updates) {

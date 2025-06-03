@@ -256,8 +256,11 @@ export const RackLayoutsTab: React.FC = () => {
     setIsResetting(true);
     isResettingRef.current = true;
     try {
-      // Clear all racks without triggering design update (we'll update after re-init)
-      RackService.clearAllRackProfiles(true); // Skip design update
+      // Clear all racks WITH design update to ensure clean state
+      RackService.clearAllRackProfiles(false); // Don't skip - we need clean state
+      
+      // Wait a tick for the clear to propagate
+      await new Promise(resolve => setTimeout(resolve, 0));
       
       // Force re-initialization from requirements
       setResetTrigger(prev => prev + 1); // will cause useRackInitialization to re-create the racks
@@ -269,7 +272,7 @@ export const RackLayoutsTab: React.FC = () => {
       // Allow auto-save to resume after a delay
       setTimeout(() => {
         isResettingRef.current = false;
-      }, 100);
+      }, 500); // Increased delay to ensure initialization completes
     } catch (error) {
       console.error("Error resetting rack layout:", error);
       toast.error("Failed to reset rack layout");

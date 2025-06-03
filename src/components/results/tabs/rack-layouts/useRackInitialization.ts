@@ -22,6 +22,8 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
   const initializedRef = useRef(false);
   // Store the previous design ID to detect design changes
   const prevDesignIdRef = useRef<string | null>(null);
+  // Store previous reset trigger to detect actual changes
+  const prevResetTriggerRef = useRef<number>(0);
 
   // Initialize racks based on requirements
   useEffect(() => {
@@ -30,10 +32,16 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       return;
     }
     
+    // Check if this is an actual reset trigger change
+    const isResetTriggered = resetTrigger !== prevResetTriggerRef.current && resetTrigger !== 0;
+    if (isResetTriggered) {
+      prevResetTriggerRef.current = resetTrigger;
+    }
+    
     // Check if racks exist already for this design
     const existingRacks = RackService.getAllRackProfiles();
     const shouldReinitialize =
-      resetTrigger !== 0 || // new dependency: any change to trigger
+      isResetTriggered || // Only when reset actually changes
       prevDesignIdRef.current !== activeDesign.id ||
       existingRacks.length === 0;
     
@@ -43,8 +51,8 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       initializedRef.current = false;
       prevDesignIdRef.current = activeDesign.id;
       
-      // Clear existing racks (skip design update - we'll update after creating new racks)
-      RackService.clearAllRackProfiles(true);
+      // Clear existing racks completely
+      RackService.clearAllRackProfiles(false);
       
       // Determine availability zones
       const definedAZs = activeDesign.requirements.physicalConstraints.availabilityZones || [];

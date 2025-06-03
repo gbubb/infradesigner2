@@ -114,7 +114,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
             } as Server;
             
           case ComponentType.Switch:
-            return {
+            const switchComponent = {
               ...baseComponent,
               ...commonFields,
               switchRole: component.switchrole,
@@ -128,6 +128,15 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               managementInterface: details.managementInterface || '',
               ports: Array.isArray(details.ports) ? details.ports : [],
             } as Switch;
+            
+            // Debug log for Switch loading
+            console.log('Loaded Switch component:', {
+              name: switchComponent.name,
+              placement: switchComponent.placement,
+              switchRole: switchComponent.switchRole
+            });
+            
+            return switchComponent;
             
           case ComponentType.Disk:
             return {
@@ -309,6 +318,16 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
     console.log('Saving component to database:', componentToSave);
     if (specializedFields.placement) {
       console.log('Component includes placement data:', specializedFields.placement);
+    }
+    
+    // Special debugging for Switch components
+    if (componentWithValidID.type === ComponentType.Switch) {
+      console.log('Saving Switch component with details:', {
+        name: componentWithValidID.name,
+        placement: specializedFields.placement,
+        switchRole: baseComponent.switchrole,
+        allSpecializedFields: specializedFields
+      });
     }
     
     const { error } = await supabase
