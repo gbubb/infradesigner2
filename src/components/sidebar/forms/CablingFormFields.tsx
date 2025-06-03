@@ -1,4 +1,5 @@
 import React from 'react';
+import { useWatch } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,6 +15,11 @@ interface CablingFormFieldsProps {
 }
 
 export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, componentType, onInputChange, onSelectChange }) => {
+  const isBreakout = useWatch({
+    control: register.control,
+    name: 'isBreakout',
+    defaultValue: false
+  });
   return (
     <>
       {componentType === 'FiberPatchPanel' && (
@@ -340,7 +346,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
             )}
           />
           
-          {register.watch('isBreakout') && (
+          {isBreakout && (
             <FormField
               control={register.control}
               name="connectorB_Quantity"
