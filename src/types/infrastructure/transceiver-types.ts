@@ -22,4 +22,5 @@ export interface Transceiver extends InfrastructureComponent {
   maxDistanceMeters: number;
   wavelengthNm?: number; // Optional, e.g. 850nm
   ruSize?: 0; // Transceivers do not consume rack space
+  breakoutCompatible?: boolean; // NEW: Indicates if this transceiver supports breakout connections
 }

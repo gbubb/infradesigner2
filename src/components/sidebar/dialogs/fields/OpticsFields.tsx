@@ -4,6 +4,7 @@ import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessa
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox'; // For multi-select mediaTypeSupported
+import { Switch } from '@/components/ui/switch';
 import { ComponentType, ConnectorType, TransceiverModel } from '@/types/infrastructure';
 import { PortSpeed, MediaType } from '@/types/infrastructure/port-types';
 
@@ -73,7 +74,7 @@ export const OpticsFields: React.FC<OpticsFieldsProps> = ({ control }) => {
                 <SelectTrigger><SelectValue placeholder="Select port-side connector" /></SelectTrigger>
               </FormControl>
               <SelectContent>
-                {Object.values(ConnectorType).filter(ct => ct === ConnectorType.SFP || ct === ConnectorType.QSFP).map(type => (
+                {Object.values(ConnectorType).filter(ct => ct === ConnectorType.SFP || ct === ConnectorType.QSFP || ct === ConnectorType.QSFP_DD).map(type => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
               </SelectContent>
@@ -152,6 +153,27 @@ export const OpticsFields: React.FC<OpticsFieldsProps> = ({ control }) => {
         />
         <FormMessage />
       </FormItem>
+
+      <FormField
+        control={control}
+        name="breakoutCompatible"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <FormLabel className="text-base">Breakout Compatible</FormLabel>
+              <FormDescription>
+                Enable if this transceiver supports breakout connections (e.g., 1x400G to 4x100G)
+              </FormDescription>
+            </div>
+            <FormControl>
+              <Switch
+                checked={field.value || false}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
 
       <FormField
         control={control}

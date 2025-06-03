@@ -44,7 +44,8 @@ export enum ConnectorType {
   MPO12 = 'MPO-12',
   LC = 'LC',
   SFP = 'SFP',
-  QSFP = 'QSFP'
+  QSFP = 'QSFP',
+  QSFP_DD = 'QSFP-DD'
 }
 
 // Forward import types to avoid circular references
@@ -110,4 +111,6 @@ export interface Cable extends InfrastructureComponent {
   connectorB_Type: ConnectorType;
   mediaType: CableMediaType;
   speed?: PortSpeed; // Added for speed-specific cables like DACs
+  isBreakout?: boolean; // NEW: Indicates if this is a breakout cable
+  connectorB_Quantity?: number; // NEW: Number of connectors on the B side for breakout cables
 }

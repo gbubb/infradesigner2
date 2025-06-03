@@ -45,4 +45,5 @@ export interface ConnectionRule {
   maxConnections?: number;
   connectionStrategy?: 'all' | 'first' | 'random';
   tags?: string[];
+  useBreakout?: boolean; // NEW: Enable breakout connections for this rule
 }

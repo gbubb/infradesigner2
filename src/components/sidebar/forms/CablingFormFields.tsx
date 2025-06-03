@@ -2,6 +2,7 @@ import React from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { ConnectorType } from '@/types/infrastructure';
 import { PortSpeed, CableMediaType } from '@/types/infrastructure/port-types';
 
@@ -141,6 +142,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                     <SelectItem value={ConnectorType.LC}>LC</SelectItem>
                     <SelectItem value={ConnectorType.SFP}>SFP</SelectItem>
                     <SelectItem value={ConnectorType.QSFP}>QSFP</SelectItem>
+                    <SelectItem value={ConnectorType.QSFP_DD}>QSFP-DD</SelectItem>
                   </SelectContent>
                 </Select>
               </FormItem>
@@ -221,6 +223,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                     <SelectItem value={ConnectorType.LC}>LC</SelectItem>
                     <SelectItem value={ConnectorType.SFP}>SFP</SelectItem>
                     <SelectItem value={ConnectorType.QSFP}>QSFP</SelectItem>
+                    <SelectItem value={ConnectorType.QSFP_DD}>QSFP-DD</SelectItem>
                   </SelectContent>
                 </Select>
               </FormItem>
@@ -250,6 +253,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                     <SelectItem value={ConnectorType.LC}>LC</SelectItem>
                     <SelectItem value={ConnectorType.SFP}>SFP</SelectItem>
                     <SelectItem value={ConnectorType.QSFP}>QSFP</SelectItem>
+                    <SelectItem value={ConnectorType.QSFP_DD}>QSFP-DD</SelectItem>
                   </SelectContent>
                 </Select>
               </FormItem>
@@ -311,6 +315,57 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
               </FormItem>
             )}
           />
+          
+          <FormField
+            control={register.control}
+            name="isBreakout"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Breakout Cable</FormLabel>
+                  <div className="text-sm text-muted-foreground">
+                    Enable for cables that split one high-speed port into multiple lower-speed ports
+                  </div>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value || false}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      onSelectChange('isBreakout', checked.toString());
+                    }}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          
+          {register.watch('isBreakout') && (
+            <FormField
+              control={register.control}
+              name="connectorB_Quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Connector B Quantity</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      {...field} 
+                      name="connectorB_Quantity"
+                      onChange={e => {
+                        const value = Number(e.target.value) || 1;
+                        field.onChange(value);
+                        onInputChange(e);
+                      }}
+                      value={field.value || 4}
+                      min={1}
+                      max={4}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          )}
         </>
       )}
     </>

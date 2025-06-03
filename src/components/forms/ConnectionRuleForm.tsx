@@ -98,6 +98,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
     maxConnections: rule?.maxConnections,
     connectionStrategy: rule?.connectionStrategy || 'all',
     tags: rule?.tags || [],
+    useBreakout: rule?.useBreakout || false,
   });
 
   const [newTag, setNewTag] = useState('');
@@ -287,6 +288,21 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
             }
           />
           <p className="text-xs text-muted-foreground">0 means unlimited</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="useBreakout"
+            checked={formData.useBreakout || false}
+            onCheckedChange={checked =>
+              setFormData(prev => ({
+                ...prev,
+                useBreakout: checked,
+              }))
+            }
+          />
+          <Label htmlFor="useBreakout" className="cursor-pointer">
+            Use Breakout ports
+          </Label>
         </div>
       </div>
       {/* Tags UI stays unchanged */}
