@@ -5,6 +5,7 @@ import { TransceiverModel } from './transceiver-types';
 // An entity for a physical network link between two ports/devices
 export interface NetworkConnection {
   id: string;
+  connectionId?: string;
   sourceDeviceId: string;
   sourcePortId: string;
   destinationDeviceId: string;

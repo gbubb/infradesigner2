@@ -183,6 +183,7 @@ export function generateConnections(
 ): ConnectionAttempt[] {
   const { components, rackprofiles } = design;
   const connectionAttempts: ConnectionAttempt[] = [];
+  let connectionCounter = 1;
   if (!components || !components.length) {
     // This checks for placed devices. If no devices, no connections can be made.
     connectionAttempts.push({
@@ -593,6 +594,7 @@ export function generateConnections(
               if (cable && currentSrcPort && currentDstPort) {
                 const connection: NetworkConnection = {
                   id: `${srcDevice.id}-${currentSrcPort.id}__${targetDevice.id}-${currentDstPort.id}-${connectionsMadeForThisPair}`,
+                  connectionId: connectionCounter.toString().padStart(4, '0'),
                   sourceDeviceId: srcDevice.id,
                   sourcePortId: currentSrcPort.id,
                   destinationDeviceId: targetDevice.id,
@@ -625,6 +627,7 @@ export function generateConnections(
                 
                 connectionsMadeForThisPair++;
                 connectionsMadeForThisSrcDeviceOverall++;
+                connectionCounter++;
                 foundPortPairThisAttempt = true; // Set this flag AFTER successful assignment of currentSrcPort and currentDstPort
                 break; // Found a dstPort, break from dstPort loop for this srcPort
               } else {

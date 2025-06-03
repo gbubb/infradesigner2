@@ -13,6 +13,7 @@ import ConnectionReportModal from "./ConnectionReportModal";
 // Table display row type for formatted data
 type NetworkConnectionTableRow = {
   id: string;
+  connectionId: string;
   sourceDeviceId: string;
   sourcePortId: string;
   srcRack: string;
@@ -70,6 +71,7 @@ const getRackAndRU = (rackprofiles: RackProfile[] | undefined, deviceId: string)
 };
 
 const columns = [
+  { key: 'connectionId', label: 'Connection ID' },
   { key: 'sourceDeviceId', label: 'Source Device' },
   { key: 'sourcePortId', label: 'Source Port' },
   { key: 'srcRack', label: 'Source Rack' },
@@ -99,6 +101,7 @@ const formatConnectionRow = (
   const dstRackObj = getRackAndRU(racks, row.destinationDeviceId);
   return {
     id: row.id,
+    connectionId: row.connectionId || "-",
     sourceDeviceId: srcDeviceName,
     sourcePortId: srcPortName,
     srcRack: srcRackObj.rack,
