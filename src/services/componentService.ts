@@ -220,7 +220,6 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
             return {
               ...baseComponent,
               ...commonFields,
-              transceiverModel: details.transceiverModel,
               mediaTypeSupported: details.mediaTypeSupported || [],
               connectorType: details.connectorType,
               mediaConnectorType: details.mediaConnectorType,
@@ -323,7 +322,6 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
         break;
       case ComponentType.Transceiver:
         const transceiver = componentWithValidID as Transceiver;
-        specializedFields.transceiverModel = transceiver.transceiverModel;
         specializedFields.mediaTypeSupported = transceiver.mediaTypeSupported || [];
         specializedFields.connectorType = transceiver.connectorType;
         specializedFields.mediaConnectorType = transceiver.mediaConnectorType;

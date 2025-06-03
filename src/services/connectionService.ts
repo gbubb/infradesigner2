@@ -659,8 +659,8 @@ export function generateConnections(
                     lengthMeters,
                     mediaType: finalCableMediaType,
                     speed: currentSrcPort.speed,
-                    transceiverSourceModel: selectedSrcTransceiver?.transceiverModel,
-                    transceiverDestinationModel: selectedDstTransceiver?.transceiverModel,
+                    transceiverSourceId: selectedSrcTransceiver?.id,
+                    transceiverDestinationId: selectedDstTransceiver?.id,
                     status: "planned",
                   };
                   
@@ -841,7 +841,7 @@ export function generateConnections(
                           cable = findCompatibleCableTemplate(cableLookup, selectedSrcTransceiver.mediaConnectorType, selectedDstTransceiver.mediaConnectorType, fiberCableType);
                           if (cable) {
                             finalCableMediaType = cable.mediaType;
-                            connectionReasoning = `Fiber with ${selectedSrcTransceiver.transceiverModel} to ${selectedDstTransceiver.transceiverModel}.`;
+                            connectionReasoning = `Fiber with ${selectedSrcTransceiver.name} to ${selectedDstTransceiver.name}.`;
                           } else {
                             fiberFailureReason += `No ${fiberCableType} cable with ${selectedSrcTransceiver.mediaConnectorType} connectors found.`;
                           }

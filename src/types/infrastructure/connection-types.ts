@@ -1,6 +1,5 @@
 
 import { CableMediaType, PortSpeed } from './port-types';
-import { TransceiverModel } from './transceiver-types';
 
 // An entity for a physical network link between two ports/devices
 export interface NetworkConnection {
@@ -15,8 +14,8 @@ export interface NetworkConnection {
   lengthMeters?: number;
   mediaType?: CableMediaType;
   speed?: PortSpeed;
-  transceiverSourceModel?: TransceiverModel;
-  transceiverDestinationModel?: TransceiverModel;
+  transceiverSourceId?: string; // ID of the transceiver component from library
+  transceiverDestinationId?: string; // ID of the transceiver component from library
   status: 'planned' | 'provisioned' | 'decommissioned';
   notes?: string;
 }

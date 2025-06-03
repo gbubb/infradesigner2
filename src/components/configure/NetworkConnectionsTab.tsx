@@ -89,7 +89,8 @@ const columns = [
 const formatConnectionRow = (
   row: NetworkConnection,
   allDesignComponents: InfrastructureComponent[],
-  racks: RackProfile[] | undefined
+  racks: RackProfile[] | undefined,
+  allTransceiverTemplates: Transceiver[]
 ): NetworkConnectionTableRow => {
   const srcDeviceName = getDeviceName(allDesignComponents, row.sourceDeviceId);
   const dstDeviceName = getDeviceName(allDesignComponents, row.destinationDeviceId);
@@ -99,6 +100,15 @@ const formatConnectionRow = (
 
   const srcRackObj = getRackAndRU(racks, row.sourceDeviceId);
   const dstRackObj = getRackAndRU(racks, row.destinationDeviceId);
+  
+  // Get transceiver names from IDs
+  const srcTransceiverName = row.transceiverSourceId 
+    ? allTransceiverTemplates.find(t => t.id === row.transceiverSourceId)?.name || "-"
+    : "-";
+  const dstTransceiverName = row.transceiverDestinationId
+    ? allTransceiverTemplates.find(t => t.id === row.transceiverDestinationId)?.name || "-"
+    : "-";
+  
   return {
     id: row.id,
     connectionId: row.connectionId || "-",
@@ -112,8 +122,8 @@ const formatConnectionRow = (
     dstRU: dstRackObj.ru,
     cableType: row.mediaType || "-",
     lengthMeters: typeof row.lengthMeters === "number" && !isNaN(row.lengthMeters) ? row.lengthMeters.toFixed(1) : "-",
-    transceiverSourceModel: row.transceiverSourceModel || "-",
-    transceiverDestinationModel: row.transceiverDestinationModel || "-",
+    transceiverSourceModel: srcTransceiverName,
+    transceiverDestinationModel: dstTransceiverName,
     status: row.status,
     notes: row.notes,
   };
@@ -131,8 +141,11 @@ const NetworkConnectionsTab: React.FC = () => {
 
   const displayedRows = useMemo(() => {
     const designComponents = activeDesign?.components || [];
+    const allTransceiverTemplates = componentTemplates.filter(
+      (c): c is Transceiver => c.type === ComponentType.Transceiver
+    );
     const rows: NetworkConnectionTableRow[] = (networkConnections || []).map(r =>
-      formatConnectionRow(r, designComponents, activeDesign?.rackprofiles)
+      formatConnectionRow(r, designComponents, activeDesign?.rackprofiles, allTransceiverTemplates)
     );
     let filtered = filterConnections(rows, searchQuery);
 

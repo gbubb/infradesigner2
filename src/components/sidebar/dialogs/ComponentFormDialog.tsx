@@ -25,7 +25,6 @@ import {
   SwitchRole,
   DiskType,
   ConnectorType,
-  TransceiverModel,
   CableMediaType
 } from '@/types/infrastructure';
 import { PortSpeed, PortRole, MediaType } from '@/types/infrastructure/port-types';
@@ -117,10 +116,6 @@ const formSchema = z.object({
   mediaType: z.nativeEnum(CableMediaType).optional(),
   cableSpeed: z.nativeEnum(PortSpeed).optional(),
   // Transceiver specific fields
-  transceiverModel: z.preprocess(
-    (val) => (val === "" || val === undefined) ? undefined : val,
-    z.nativeEnum(TransceiverModel).optional()
-  ),
   mediaTypeSupported: z.array(z.nativeEnum(MediaType)).optional(),
   connectorType: z.preprocess(
     (val) => (val === "" || val === undefined) ? undefined : val,
@@ -250,7 +245,6 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       mediaType: formValues.type === ComponentType.Cable ? (formValues.mediaType || CableMediaType.CopperCat6a) : undefined,
       cableSpeed: formValues.type === ComponentType.Cable ? formValues.cableSpeed : undefined,
       // Transceiver specific defaults - using direct field names from Transceiver interface
-      transceiverModel: formValues.transceiverModel || undefined,
       mediaTypeSupported: formValues.mediaTypeSupported || [],
       // For Transceiver, 'connectorType' is its port-side connector, 'speed' is its speed.
       // These will be conditionally relevant based on formValues.type when form loads.

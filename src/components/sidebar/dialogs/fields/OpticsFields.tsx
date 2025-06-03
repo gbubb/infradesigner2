@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox'; // For multi-select mediaTypeSupported
 import { Switch } from '@/components/ui/switch';
-import { ComponentType, ConnectorType, TransceiverModel } from '@/types/infrastructure';
+import { ComponentType, ConnectorType } from '@/types/infrastructure';
 import { PortSpeed, MediaType } from '@/types/infrastructure/port-types';
 
 interface OpticsFieldsProps {
@@ -21,26 +21,6 @@ export const OpticsFields: React.FC<OpticsFieldsProps> = ({ control }) => {
   return (
     <div className="space-y-4 border p-4 rounded-lg">
       <h3 className="text-lg font-medium">Optical Properties</h3>
-      <FormField
-        control={control}
-        name="transceiverModel"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Transceiver Model</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl>
-                <SelectTrigger><SelectValue placeholder="Select a model" /></SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {Object.values(TransceiverModel).map(model => (
-                  <SelectItem key={model} value={model}>{model}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
 
       <FormField
         control={control}
