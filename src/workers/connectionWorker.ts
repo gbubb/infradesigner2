@@ -21,17 +21,7 @@ self.onmessage = (event: MessageEvent<{
     const safeAllCableTemplates = allCableTemplates || [];
     const safeAllTransceiverTemplates = allTransceiverTemplates || [];
 
-    console.log('[ConnectionWorker] Received allCableTemplates count:', safeAllCableTemplates.length);
-    console.log('[ConnectionWorker] Received allTransceiverTemplates count:', safeAllTransceiverTemplates.length);
-    console.log('[ConnectionWorker] Sample of received cable templates:', 
-      safeAllCableTemplates.slice(0, 5).map(c => ({ 
-        id: c.id, 
-        name: c.name, 
-        type: c.type, 
-        connectorA: (c as any).connectorA_Type,
-        connectorB: (c as any).connectorB_Type
-      }))
-    );
+    console.log('[ConnectionWorker] Processing connection generation with', safeAllCableTemplates.length, 'cables,', safeAllTransceiverTemplates.length, 'transceivers,', safeRules.length, 'rules');
 
     const attempts: ConnectionAttempt[] = generateConnections(safeDesign, safeRules, safeAllCableTemplates, safeAllTransceiverTemplates);
     self.postMessage({ status: 'success', attempts });

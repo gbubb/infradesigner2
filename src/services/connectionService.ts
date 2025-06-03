@@ -161,37 +161,18 @@ export function generateConnections(
   // Use the passed-in allCableTemplates instead of filtering from design.components
   const allCablesToProcess = allCableTemplates || [];
 
-  console.log('[ConnectionService] Cables being processed for lookup map (from allCableTemplates):', 
-    allCablesToProcess.map(c => ({ 
-      id: c.id, 
-      name: c.name, 
-      connectorA: (c as any).connectorA_Type, 
-      connectorB: (c as any).connectorB_Type,
-      type: c.type 
-    }))
-  );
+  // Reduced logging for performance
+  console.log('[ConnectionService] Processing', allCablesToProcess.length, 'cable templates for lookup map');
 
   // Pre-build cable lookup map for efficiency
   const cableLookup = new Map<string, Cable>();
   allCablesToProcess.forEach(cable => {
-    // Warn about cable data issues during lookup construction
+    // Quick validation with minimal logging
     if (typeof (cable as any).connectorA_Type === 'undefined' || typeof (cable as any).connectorB_Type === 'undefined') {
-      console.warn('[ConnectionService] Cable missing connector fields during lookup construction:', {
-        id: cable.id,
-        name: cable.name,
-        connectorA_Type: (cable as any).connectorA_Type,
-        connectorB_Type: (cable as any).connectorB_Type,
-        cableType: cable.type,
-      });
-      return; // Skip this cable as it cannot form a valid key
+      return; // Skip invalid cables
     }
     if (cable.type !== ComponentType.Cable) {
-      console.warn('[ConnectionService] Non-cable component found in cable list during lookup construction:', {
-        id: cable.id,
-        name: cable.name,
-        actualType: cable.type,
-      });
-      return; // Skip this as it's not a cable
+      return; // Skip non-cables
     }
 
     const typeA = cable.connectorA_Type;
@@ -202,21 +183,19 @@ export function generateConnections(
       if (!cableLookup.has(key1)) { // Store the first cable found for a given connector pair
         cableLookup.set(key1, cable);
       }
-    } else {
-      console.warn('[ConnectionService] Cable with missing connectorA_Type or connectorB_Type encountered in allCablesFromComponents:', {
-        cableId: cable.id,
-        cableName: cable.name
-      });
     }
   });
 
-  if (cableLookup.size === 0 && allCablesToProcess.length > 0) {
-    console.warn('[ConnectionService] Cable lookup map is empty, but cable templates were provided. Check connector types on cable data.');
-  } else if (allCablesToProcess.length === 0) {
-    console.info('[ConnectionService] No cable templates provided to build lookup map.');
+  // Early termination if no cables available
+  if (cableLookup.size === 0) {
+    connectionAttempts.push({
+      status: "Failed",
+      reason: "No valid cable templates available in component library for connection generation.",
+    });
+    return connectionAttempts;
   }
 
-  console.log('[ConnectionService] Constructed cableLookup map keys:', Array.from(cableLookup.keys()));
+  console.log('[ConnectionService] Cable lookup map constructed with', cableLookup.size, 'entries');
 
   // Transceivers are now passed in as templates, not sourced from design.components directly for generation.
   // const transceivers = design.components.filter((c) => c.type === ComponentType.Transceiver) as Transceiver[];
@@ -239,7 +218,29 @@ export function generateConnections(
     }
   }
 
-  rules.filter((r) => r.enabled).forEach((rule, ruleIndex) => {
+  const enabledRules = rules.filter((r) => r.enabled);
+  if (enabledRules.length === 0) {
+    connectionAttempts.push({
+      status: "Info",
+      reason: "No enabled connection rules found.",
+    });
+    return connectionAttempts;
+  }
+
+  // Add performance limit to prevent runaway generation
+  const MAX_CONNECTION_ATTEMPTS = 10000;
+  let totalAttempts = 0;
+
+  enabledRules.forEach((rule, ruleIndex) => {
+    if (totalAttempts >= MAX_CONNECTION_ATTEMPTS) {
+      connectionAttempts.push({
+        ruleId: rule.id,
+        ruleName: rule.name,
+        status: "Failed",
+        reason: `Connection generation stopped - maximum attempts (${MAX_CONNECTION_ATTEMPTS}) reached to prevent performance issues.`,
+      });
+      return;
+    }
     const sources = filterDevicesByCriteria(
       allDevices,
       rule.sourceDeviceCriteria.role,
@@ -368,26 +369,45 @@ export function generateConnections(
               .filter(p => !usedDstPorts.has(`${targetDevice.id}:${p.id}`) && !p.connectedToDeviceId);
 
             if (!availableDstPorts.length) {
-              // No destination ports available on this targetDevice for any of its ports
-              // This means this targetDevice cannot be connected to *at all* by any remaining srcPort
-              // So, we might as well break the outer loop for this targetDevice if no connections made yet.
-              // However, if some connections were made to this pair, we continue to try *other* srcPorts.
-              // For now, just note no dst ports for *this* srcPort.
-              continue; // Try next srcPort
+              // No destination ports available - skip to next source port
+              continue;
             }
             
             // Iterate through available destination ports
             for (const dstPort of availableDstPorts) {
+              totalAttempts++;
+              if (totalAttempts >= MAX_CONNECTION_ATTEMPTS) {
+                connectionAttempts.push({
+                  ruleId: rule.id,
+                  ruleName: rule.name,
+                  status: "Failed",
+                  reason: `Maximum connection attempts (${MAX_CONNECTION_ATTEMPTS}) reached. Generation stopped to prevent performance issues.`,
+                });
+                return connectionAttempts;
+              }
+              
               currentSrcPort = candidateSrcPort;
               currentDstPort = dstPort;
               
-              // Determine effective media types, inferring Copper for RJ45 if not set
+              // Early compatibility check before expensive operations
               const effectiveSrcMediaType = currentSrcPort.connectorType === ConnectorType.RJ45 && !currentSrcPort.mediaType 
                                           ? MediaType.Copper 
                                           : currentSrcPort.mediaType;
               const effectiveDstMediaType = currentDstPort.connectorType === ConnectorType.RJ45 && !currentDstPort.mediaType 
                                           ? MediaType.Copper 
                                           : currentDstPort.mediaType;
+              
+              // Quick compatibility check - skip incompatible port combinations early
+              const bothCopper = effectiveSrcMediaType === MediaType.Copper && effectiveDstMediaType === MediaType.Copper;
+              const bothFiber = (effectiveSrcMediaType === MediaType.FiberMM || effectiveSrcMediaType === MediaType.FiberSM) &&
+                               (effectiveDstMediaType === MediaType.FiberMM || effectiveDstMediaType === MediaType.FiberSM);
+              const bothOptical = (!effectiveSrcMediaType || effectiveSrcMediaType !== MediaType.Copper) &&
+                                 (!effectiveDstMediaType || effectiveDstMediaType !== MediaType.Copper);
+              
+              if (!bothCopper && !bothFiber && !bothOptical) {
+                // Skip this combination early if clearly incompatible
+                continue;
+              }
 
               let cable: Cable | undefined = undefined;
               let selectedSrcTransceiver: Transceiver | undefined = undefined;

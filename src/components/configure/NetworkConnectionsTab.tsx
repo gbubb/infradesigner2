@@ -159,15 +159,7 @@ const NetworkConnectionsTab: React.FC = () => {
       (c): c is Transceiver => c.type === ComponentType.Transceiver
     );
 
-    console.log('[NetworkConnectionsTab] All cable templates from store being sent to worker:', 
-      allCableTemplates.map(c => ({ 
-        id: c.id, 
-        name: c.name, 
-        type: c.type, 
-        connectorA: (c as any).connectorA_Type,
-        connectorB: (c as any).connectorB_Type
-      }))
-    );
+    console.log('[NetworkConnectionsTab] Sending', allCableTemplates.length, 'cable templates to worker');
 
     if (allCableTemplates.length === 0) {
       console.warn("[NetworkConnectionsTab] No cable templates found in the component library. Connection generation will likely fail to find cables.");
@@ -177,10 +169,25 @@ const NetworkConnectionsTab: React.FC = () => {
       // return;
     }
 
-    // Create a new worker
+    // Create a new worker with timeout protection
     const worker = new Worker(new URL('@/workers/connectionWorker.ts', import.meta.url), { type: 'module' });
+    
+    // Set up timeout to prevent infinite waiting
+    const timeoutId = setTimeout(() => {
+      console.warn('[NetworkConnectionsTab] Connection generation timed out after 30 seconds');
+      worker.terminate();
+      setGenerating(false);
+      const timeoutAttempt: ConnectionAttempt = {
+        status: "Failed",
+        reason: "Connection generation timed out after 30 seconds. This may indicate a performance issue with your design complexity.",
+      };
+      setGenerationReport([timeoutAttempt]);
+      setShowReport(true);
+      toast.error("Connection generation timed out. Try reducing design complexity.");
+    }, 30000); // 30 second timeout
 
     worker.onmessage = (event: MessageEvent<{ status: string, attempts?: ConnectionAttempt[], error?: string }>) => {
+      clearTimeout(timeoutId); // Clear timeout on successful response
       if (event.data.status === 'success' && event.data.attempts) {
         const attempts = event.data.attempts;
         setGenerationReport(attempts);
@@ -207,6 +214,7 @@ const NetworkConnectionsTab: React.FC = () => {
     };
 
     worker.onerror = (error) => {
+      clearTimeout(timeoutId); // Clear timeout on error
       console.error("Worker error:", error);
       const errorAttempt: ConnectionAttempt = {
         status: "Failed",
@@ -268,7 +276,7 @@ const NetworkConnectionsTab: React.FC = () => {
         <div className="text-xl font-semibold flex items-center gap-2"><Network size={20} />Network Connections</div>
         <div className="flex gap-2 mt-2 sm:mt-0 flex-wrap">
           <Button size="sm" variant="outline" onClick={handleGenerate} disabled={generating}>
-            <Plus className="w-4 h-4" /> Generate
+            <Plus className="w-4 h-4" /> {generating ? 'Generating...' : 'Generate'}
           </Button>
           <Button size="sm" variant="outline" onClick={handleSave}><Save className="w-4 h-4" /> Save</Button>
           <Button size="sm" variant="outline" onClick={handleReset}><Trash2 className="w-4 h-4" /> Reset</Button>
