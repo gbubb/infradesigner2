@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   PlusCircle, 
@@ -83,7 +84,7 @@ export const HeaderActions = () => {
   };
 
   const buttonBase =
-    "flex items-center gap-2 bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] shadow rounded-md border border-gray-300 transition-all focus:outline-none p-0 relative overflow-visible";
+    "flex items-center gap-2 bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] shadow rounded-md border border-gray-300 focus:outline-none p-0 relative overflow-hidden";
   const buttonCompact = "w-10 h-10 px-0 justify-center";
   const buttonExpanded = "px-4 h-10";
 
@@ -106,7 +107,8 @@ export const HeaderActions = () => {
       style={{
         minWidth: hoveredButton === buttonKey ? 80 : 40,
         maxWidth: 200,
-        transition: "all 0.16s cubic-bezier(.4,1,.3,1)",
+        transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+        transform: hoveredButton === buttonKey ? "scale(1.02)" : "scale(1)",
       }}
       onClick={onClick}
       onMouseEnter={() => setHoveredButton(buttonKey)}
@@ -114,11 +116,25 @@ export const HeaderActions = () => {
       disabled={disabled}
       aria-label={label}
     >
-      {icon}
-      <span
-        className={`${hoveredButton === buttonKey ? "inline" : "hidden"} whitespace-nowrap font-medium text-sm pl-1`}
+      <div 
+        className="flex items-center justify-center"
         style={{
-          transition: "opacity 0.15s cubic-bezier(.4,1,.3,1)",
+          transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+          transform: hoveredButton === buttonKey ? "translateX(-2px)" : "translateX(0)",
+        }}
+      >
+        {icon}
+      </div>
+      <span
+        className={`whitespace-nowrap font-medium text-sm transition-all duration-300 ease-out ${
+          hoveredButton === buttonKey 
+            ? "opacity-100 translate-x-0 max-w-[120px]" 
+            : "opacity-0 translate-x-2 max-w-0"
+        }`}
+        style={{
+          transitionProperty: "opacity, transform, max-width",
+          transitionDuration: "0.3s, 0.3s, 0.25s",
+          transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
         {label}
@@ -189,7 +205,7 @@ export const HeaderActions = () => {
       )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="rounded-full bg-[#e9eaf3] w-10 h-10 flex items-center justify-center shadow border border-gray-300 hover:bg-gray-200">
+          <button className="rounded-full bg-[#e9eaf3] w-10 h-10 flex items-center justify-center shadow border border-gray-300 hover:bg-gray-200 transition-all duration-200 hover:scale-105">
             <Avatar className="h-7 w-7">
               <AvatarFallback>{getUserInitials()}</AvatarFallback>
             </Avatar>
@@ -223,5 +239,3 @@ export const HeaderActions = () => {
     </div>
   );
 };
-// File length note:
-/// NOTE: This file is now over 200 lines. Consider asking to refactor it into smaller files for maintainability.
