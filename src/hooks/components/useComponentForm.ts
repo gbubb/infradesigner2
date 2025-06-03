@@ -58,11 +58,11 @@ export const useComponentForm = () => {
     validRUEnd: maxRackUnits,
     preferredRU: 1,
     preferredRack: 1,
-    // Default values for switches
-    switchRole: '',
-    portSpeedType: '',
-    portsProvidedQuantity: 0,
-    layer: 2,
+    // Component-specific defaults will be set conditionally
+    switchRole: undefined,
+    portSpeedType: undefined,
+    portsProvidedQuantity: undefined,
+    layer: undefined,
     // Disk-specific fields
     capacityTB: 1,
     formFactor: '',
@@ -148,9 +148,19 @@ export const useComponentForm = () => {
 
   const handleTypeChange = (value: string) => {
     console.log(`Changing type to ${value}`);
+    // Reset form to defaults when type changes to prevent cross-contamination
+    const newDefaults = {...defaultFormState};
     setComponentForm(prev => ({
-      ...prev,
-      type: value as ComponentType
+      ...newDefaults,
+      type: value as ComponentType,
+      // Preserve basic fields that apply to all components
+      name: prev.name,
+      manufacturer: prev.manufacturer,
+      model: prev.model,
+      cost: prev.cost,
+      powerRequired: prev.powerRequired,
+      isDefault: prev.isDefault,
+      namingPrefix: prev.namingPrefix,
     }));
   };
 

@@ -62,7 +62,10 @@ const formSchema = z.object({
   preferredRU: z.number().optional(),
   // preferredRack: z.number().optional(), // Removed as per request
   // Server specific fields
-  serverRole: z.nativeEnum(ServerRole).optional(),
+  serverRole: z.preprocess(
+    (val) => (val === "" || val === undefined) ? undefined : val,
+    z.nativeEnum(ServerRole).optional()
+  ),
   cpuModel: z.string().optional(),
   cpuCount: z.number().optional(),
   cpuSockets: z.number().optional(),
@@ -74,7 +77,10 @@ const formSchema = z.object({
   networkPortType: z.nativeEnum(NetworkPortType).optional(),
   portsConsumedQuantity: z.number().optional(),
   // Switch specific fields
-  switchRole: z.nativeEnum(SwitchRole).optional(),
+  switchRole: z.preprocess(
+    (val) => (val === "" || val === undefined) ? undefined : val,
+    z.nativeEnum(SwitchRole).optional()
+  ),
   // portCount: z.number().optional(), // Commented out as per request
   // portSpeed: z.string().optional(), // Commented out as per request
   portSpeedType: z.preprocess(
@@ -88,7 +94,7 @@ const formSchema = z.object({
   formFactor: z.string().optional(),
   interface: z.string().optional(),
   diskType: z.preprocess(
-    (val) => (val === "" ? undefined : val),
+    (val) => (val === "" || val === undefined) ? undefined : val,
     z.nativeEnum(DiskType).optional()
   ),
   rpm: z.number().optional(),
@@ -112,11 +118,23 @@ const formSchema = z.object({
   mediaType: z.nativeEnum(CableMediaType).optional(),
   cableSpeed: z.nativeEnum(PortSpeed).optional(),
   // Transceiver specific fields
-  transceiverModel: z.nativeEnum(TransceiverModel).optional(),
+  transceiverModel: z.preprocess(
+    (val) => (val === "" || val === undefined) ? undefined : val,
+    z.nativeEnum(TransceiverModel).optional()
+  ),
   mediaTypeSupported: z.array(z.nativeEnum(MediaType)).optional(),
-  connectorType: z.nativeEnum(ConnectorType).optional(),
-  mediaConnectorType: z.nativeEnum(ConnectorType).optional(),
-  speed: z.nativeEnum(PortSpeed).optional(),
+  connectorType: z.preprocess(
+    (val) => (val === "" || val === undefined) ? undefined : val,
+    z.nativeEnum(ConnectorType).optional()
+  ),
+  mediaConnectorType: z.preprocess(
+    (val) => (val === "" || val === undefined) ? undefined : val,
+    z.nativeEnum(ConnectorType).optional()
+  ),
+  speed: z.preprocess(
+    (val) => (val === "" || val === undefined) ? undefined : val,
+    z.nativeEnum(PortSpeed).optional()
+  ),
   maxDistanceMeters: z.number().optional()
 });
 
@@ -190,45 +208,45 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       validRUEnd: formValues.placement?.validRUEnd || maxRackUnits,
       preferredRU: formValues.placement?.preferredRU || 1,
       // preferredRack: formValues.placement?.preferredRack || 1, // Removed
-      serverRole: formValues.serverRole || ServerRole.Compute,
-      cpuModel: formValues.cpuModel || '',
-      cpuCount: formValues.cpuCount || 1,
-      cpuSockets: formValues.cpuSockets || 1,
-      cpuCoresPerSocket: formValues.cpuCoresPerSocket || 4,
-      memoryCapacity: formValues.memoryCapacity || 0,
-      diskSlotType: formValues.diskSlotType || DiskSlotType.TwoPointFive,
-      diskSlotQuantity: formValues.diskSlotQuantity || 8,
-      ruSize: formValues.ruSize || 1,
-      networkPortType: formValues.networkPortType || NetworkPortType.SFP,
-      portsConsumedQuantity: formValues.portsConsumedQuantity || 2,
-      switchRole: formValues.switchRole || SwitchRole.Access,
+      serverRole: formValues.type === ComponentType.Server ? (formValues.serverRole || ServerRole.Compute) : undefined,
+      cpuModel: formValues.type === ComponentType.Server ? (formValues.cpuModel || '') : undefined,
+      cpuCount: formValues.type === ComponentType.Server ? (formValues.cpuCount || 1) : undefined,
+      cpuSockets: formValues.type === ComponentType.Server ? (formValues.cpuSockets || 1) : undefined,
+      cpuCoresPerSocket: formValues.type === ComponentType.Server ? (formValues.cpuCoresPerSocket || 4) : undefined,
+      memoryCapacity: formValues.type === ComponentType.Server ? (formValues.memoryCapacity || 0) : undefined,
+      diskSlotType: formValues.type === ComponentType.Server ? (formValues.diskSlotType || DiskSlotType.TwoPointFive) : undefined,
+      diskSlotQuantity: formValues.type === ComponentType.Server ? (formValues.diskSlotQuantity || 8) : undefined,
+      ruSize: formValues.type === ComponentType.Server ? (formValues.ruSize || 1) : undefined,
+      networkPortType: formValues.type === ComponentType.Server ? (formValues.networkPortType || NetworkPortType.SFP) : undefined,
+      portsConsumedQuantity: formValues.type === ComponentType.Server ? (formValues.portsConsumedQuantity || 2) : undefined,
+      switchRole: formValues.type === ComponentType.Switch ? (formValues.switchRole || SwitchRole.Access) : undefined,
       // portCount: formValues.portCount || 24, // Commented out
       // portSpeed: formValues.portSpeed || '10', // Commented out
-      portSpeedType: formValues.portSpeedType || PortSpeed.Speed10G,
-      portsProvidedQuantity: formValues.portsProvidedQuantity || 24,
+      portSpeedType: formValues.type === ComponentType.Switch ? (formValues.portSpeedType || PortSpeed.Speed10G) : undefined,
+      portsProvidedQuantity: formValues.type === ComponentType.Switch ? (formValues.portsProvidedQuantity || 24) : undefined,
       // layer: formValues.layer || 3, // Commented out
-      capacityTB: formValues.capacityTB || 1,
-      formFactor: formValues.formFactor || '2.5"',
-      interface: formValues.interface || 'SATA',
-      diskType: formValues.diskType || DiskType.SATASSD,
-      rpm: formValues.rpm || 7200,
-      iops: formValues.iops || 10000,
-      readSpeed: formValues.readSpeed || 1000,
-      writeSpeed: formValues.writeSpeed || 1000,
-      throughput: formValues.throughput || 10,
-      connectionPerSecond: formValues.connectionPerSecond || 10000,
-      concurrentConnections: formValues.concurrentConnections || 100000,
-      features: formValues.features || [],
-      supportedProtocols: formValues.supportedProtocols || [],
-      cassetteCapacity: formValues.cassetteCapacity || 12,
-      portQuantity: formValues.portQuantity || 24,
-      length: formValues.length || 3,
-      portType: formValues.portType || ConnectorType.RJ45,
+      capacityTB: formValues.type === ComponentType.Disk ? (formValues.capacityTB || 1) : undefined,
+      formFactor: formValues.type === ComponentType.Disk ? (formValues.formFactor || '2.5"') : undefined,
+      interface: formValues.type === ComponentType.Disk ? (formValues.interface || 'SATA') : undefined,
+      diskType: formValues.type === ComponentType.Disk ? (formValues.diskType || DiskType.SATASSD) : undefined,
+      rpm: formValues.type === ComponentType.Disk ? (formValues.rpm || 7200) : undefined,
+      iops: formValues.type === ComponentType.Disk ? (formValues.iops || 10000) : undefined,
+      readSpeed: formValues.type === ComponentType.Disk ? (formValues.readSpeed || 1000) : undefined,
+      writeSpeed: formValues.type === ComponentType.Disk ? (formValues.writeSpeed || 1000) : undefined,
+      throughput: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? (formValues.throughput || 10) : undefined,
+      connectionPerSecond: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? (formValues.connectionPerSecond || 10000) : undefined,
+      concurrentConnections: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? (formValues.concurrentConnections || 100000) : undefined,
+      features: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? (formValues.features || []) : undefined,
+      supportedProtocols: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? (formValues.supportedProtocols || []) : undefined,
+      cassetteCapacity: (formValues.type === ComponentType.Cassette) ? (formValues.cassetteCapacity || 12) : undefined,
+      portQuantity: (formValues.type === ComponentType.FiberPatchPanel || formValues.type === ComponentType.CopperPatchPanel) ? (formValues.portQuantity || 24) : undefined,
+      length: formValues.type === ComponentType.Cable ? (formValues.length || 3) : undefined,
+      portType: (formValues.type === ComponentType.FiberPatchPanel || formValues.type === ComponentType.CopperPatchPanel) ? (formValues.portType || ConnectorType.RJ45) : undefined,
       // Cable specific defaults
-      connectorA_Type: formValues.connectorA_Type || ConnectorType.RJ45,
-      connectorB_Type: formValues.connectorB_Type || ConnectorType.RJ45,
-      mediaType: formValues.mediaType || CableMediaType.CopperCat6a,
-      cableSpeed: formValues.cableSpeed || undefined,
+      connectorA_Type: formValues.type === ComponentType.Cable ? (formValues.connectorA_Type || ConnectorType.RJ45) : undefined,
+      connectorB_Type: formValues.type === ComponentType.Cable ? (formValues.connectorB_Type || ConnectorType.RJ45) : undefined,
+      mediaType: formValues.type === ComponentType.Cable ? (formValues.mediaType || CableMediaType.CopperCat6a) : undefined,
+      cableSpeed: formValues.type === ComponentType.Cable ? formValues.cableSpeed : undefined,
       // Transceiver specific defaults - using direct field names from Transceiver interface
       transceiverModel: formValues.transceiverModel || undefined,
       mediaTypeSupported: formValues.mediaTypeSupported || [],
