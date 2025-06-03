@@ -39,7 +39,6 @@ const formSchema = z.object({
   preferredRack: z.number().optional(),
   serverRole: z.nativeEnum(ServerRole).optional(),
   cpuModel: z.string().optional(),
-  cpuCount: z.number().optional(),
   cpuSockets: z.number().optional(),
   cpuCoresPerSocket: z.number().optional(),
   memoryCapacity: z.number().optional(),

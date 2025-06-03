@@ -87,28 +87,7 @@ export const ServerFields: React.FC<Props> = ({
         )}
       />
     </div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <FormField
-        control={control}
-        name="cpuCount"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>CPU Count</FormLabel>
-            <FormControl>
-              <Input 
-                type="number" 
-                {...field} 
-                name="cpuCount"
-                onChange={e => {
-                  const value = Number(e.target.value) || 0;
-                  field.onChange(value);
-                  onInputChange(e);
-                }}
-              />
-            </FormControl>
-          </FormItem>
-        )}
-      />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormField
         control={control}
         name="cpuSockets"

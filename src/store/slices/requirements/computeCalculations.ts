@@ -33,9 +33,9 @@ export const calculateComputeNodeQuantity = (
   if (typeof component.cpuSockets === 'number' && typeof component.cpuCoresPerSocket === 'number') {
     coresPerNode = component.cpuSockets * component.cpuCoresPerSocket;
     console.log(`CPU cores calculated from cpuSockets(${component.cpuSockets}) * cpuCoresPerSocket(${component.cpuCoresPerSocket}) = ${coresPerNode}`);
-  } else if (typeof component.cpuCount === 'number' && typeof component.coreCount === 'number') {
-    coresPerNode = component.cpuCount * component.coreCount;
-    console.log(`CPU cores calculated from cpuCount(${component.cpuCount}) * coreCount(${component.coreCount}) = ${coresPerNode}`);
+  } else if (typeof component.coreCount === 'number') {
+    coresPerNode = component.coreCount;
+    console.log(`CPU cores from coreCount(${component.coreCount}) = ${coresPerNode}`);
   } else {
     // Try additional property patterns
     if (typeof component.cores === 'number') {

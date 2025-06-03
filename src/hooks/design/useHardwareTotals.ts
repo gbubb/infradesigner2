@@ -37,8 +37,8 @@ export const useHardwareTotals = () => {
       
       if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
         coresPerServer = (component.cpuSockets || 0) * (component.cpuCoresPerSocket || 0);
-      } else if ('cpuCount' in component && 'coreCount' in component) {
-        coresPerServer = (component.cpuCount || 0) * (component.coreCount || 0);
+      } else if ('coreCount' in component) {
+        coresPerServer = component.coreCount || 0;
       } else if ('cores' in component) {
         coresPerServer = component.cores || 0;
       } else if ('totalCores' in component) {

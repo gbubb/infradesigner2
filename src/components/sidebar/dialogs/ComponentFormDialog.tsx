@@ -67,7 +67,6 @@ const formSchema = z.object({
     z.nativeEnum(ServerRole).optional()
   ),
   cpuModel: z.string().optional(),
-  cpuCount: z.number().optional(),
   cpuSockets: z.number().optional(),
   cpuCoresPerSocket: z.number().optional(),
   memoryCapacity: z.number().optional(),
@@ -210,7 +209,6 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       // preferredRack: formValues.placement?.preferredRack || 1, // Removed
       serverRole: formValues.type === ComponentType.Server ? (formValues.serverRole || ServerRole.Compute) : undefined,
       cpuModel: formValues.type === ComponentType.Server ? (formValues.cpuModel || '') : undefined,
-      cpuCount: formValues.type === ComponentType.Server ? (formValues.cpuCount || 1) : undefined,
       cpuSockets: formValues.type === ComponentType.Server ? (formValues.cpuSockets || 1) : undefined,
       cpuCoresPerSocket: formValues.type === ComponentType.Server ? (formValues.cpuCoresPerSocket || 4) : undefined,
       memoryCapacity: formValues.type === ComponentType.Server ? (formValues.memoryCapacity || 0) : undefined,

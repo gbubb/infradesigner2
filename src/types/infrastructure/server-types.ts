@@ -36,7 +36,6 @@ export interface Server extends InfrastructureComponent {
   cpuModel: string;
   cpuCoresPerSocket: number;
   coreCount?: number;  // Legacy support
-  cpuCount?: number;   // Legacy support
   memoryCapacity: number;  // Primary memory field, connected to UI
   memoryGB?: number;      // Legacy field
   ruSize: number;

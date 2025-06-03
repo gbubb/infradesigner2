@@ -55,8 +55,8 @@ export const calculateRequiredQuantity = (
         let coresPerServer = 0;
         if ('cpuSockets' in serverComponent && 'cpuCoresPerSocket' in serverComponent) {
           coresPerServer = serverComponent.cpuSockets * serverComponent.cpuCoresPerSocket;
-        } else if ('cpuCount' in serverComponent && 'coreCount' in serverComponent) {
-          coresPerServer = serverComponent.cpuCount * serverComponent.coreCount;
+        } else if ('coreCount' in serverComponent) {
+          coresPerServer = serverComponent.coreCount;
         } else if ('cores' in serverComponent) {
           coresPerServer = serverComponent.cores;
         } else if ('totalCores' in serverComponent) {

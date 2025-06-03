@@ -87,16 +87,13 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               (details.memoryTB ? details.memoryTB * 1024 : 0);
             const coreCount = details.cpuSockets && details.cpuCoresPerSocket ?
               details.cpuSockets * details.cpuCoresPerSocket :
-              details.cpuCount && details.coreCount ?
-                details.cpuCount * details.coreCount :
-                details.cores || details.totalCores || 0;
+              details.coreCount || details.cores || details.totalCores || 0;
             return {
               ...baseComponent,
               ...commonFields,
               serverRole: component.serverrole,
               rackUnitsConsumed: details.rackUnitsConsumed || details.ruSize || 1,
               cpuModel: details.cpuModel || '',
-              cpuCount: details.cpuCount || 1,
               coreCount: coreCount,
               memoryGB: memoryCapacity,
               cpuSockets: details.cpuSockets || 1,
