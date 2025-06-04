@@ -23,7 +23,9 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
     for (const rack of rackProfiles) {
       const deviceInRack = rack.devices.find(d => d.deviceId === devId);
       if (deviceInRack) {
-        return `Rack: ${rack.name}, RU: ${deviceInRack.ruPosition}`;
+        // Use Row Layout friendly name as the authoritative source
+        const rackName = activeDesign?.rowLayout?.rackProperties?.[rack.id]?.friendlyName || rack.name;
+        return `Rack: ${rackName}, RU: ${deviceInRack.ruPosition}`;
       }
     }
     return 'Unplaced';

@@ -405,7 +405,19 @@ export const RackLayoutsTab: React.FC = () => {
     return orderedRacks;
   }, [baseFilteredRacks, activeDesign?.rowLayout]);
   
-  const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
+  const selectedRack = selectedRackId ? (() => {
+    const rack = rackProfiles.find(r => r.id === selectedRackId);
+    if (!rack) return undefined;
+    
+    // Use Row Layout friendly name as the authoritative source
+    const rowLayoutProperties = activeDesign?.rowLayout?.rackProperties?.[rack.id];
+    const displayName = rowLayoutProperties?.friendlyName || rack.name;
+    
+    return {
+      ...rack,
+      name: displayName
+    };
+  })() : undefined;
 
   const handleAutoPlaceDevices = () => {
     // Get saved placement rules from active design

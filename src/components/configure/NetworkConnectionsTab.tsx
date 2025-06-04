@@ -58,12 +58,18 @@ const getPortName = (
   return portId.substring(0, 6);
 };
 
-const getRackAndRU = (rackprofiles: RackProfile[] | undefined, deviceId: string) => {
+const getRackAndRU = (
+  rackprofiles: RackProfile[] | undefined, 
+  deviceId: string, 
+  rowLayoutProperties?: Record<string, { friendlyName: string }> | null
+) => {
   if (!rackprofiles) return { rack: "-", ru: "-" };
   for (const rack of rackprofiles) {
     for (const d of rack.devices) {
       if (d.deviceId === deviceId) {
-        return { rack: rack.name || rack.id.substring(0, 6), ru: d.ruPosition ?? "-" };
+        // Use Row Layout friendly name as the authoritative source
+        const rackName = rowLayoutProperties?.[rack.id]?.friendlyName || rack.name || rack.id.substring(0, 6);
+        return { rack: rackName, ru: d.ruPosition ?? "-" };
       }
     }
   }
@@ -90,7 +96,8 @@ const formatConnectionRow = (
   row: NetworkConnection,
   allDesignComponents: InfrastructureComponent[],
   racks: RackProfile[] | undefined,
-  allTransceiverTemplates: Transceiver[]
+  allTransceiverTemplates: Transceiver[],
+  rowLayoutProperties?: Record<string, { friendlyName: string }> | null
 ): NetworkConnectionTableRow => {
   const srcDeviceName = getDeviceName(allDesignComponents, row.sourceDeviceId);
   const dstDeviceName = getDeviceName(allDesignComponents, row.destinationDeviceId);
@@ -98,8 +105,8 @@ const formatConnectionRow = (
   const srcPortName = getPortName(row.sourceDeviceId, row.sourcePortId, allDesignComponents);
   const dstPortName = getPortName(row.destinationDeviceId, row.destinationPortId, allDesignComponents);
 
-  const srcRackObj = getRackAndRU(racks, row.sourceDeviceId);
-  const dstRackObj = getRackAndRU(racks, row.destinationDeviceId);
+  const srcRackObj = getRackAndRU(racks, row.sourceDeviceId, rowLayoutProperties);
+  const dstRackObj = getRackAndRU(racks, row.destinationDeviceId, rowLayoutProperties);
   
   // Get transceiver names from IDs
   const srcTransceiverName = row.transceiverSourceId 
@@ -145,7 +152,7 @@ const NetworkConnectionsTab: React.FC = () => {
       (c): c is Transceiver => c.type === ComponentType.Transceiver
     );
     const rows: NetworkConnectionTableRow[] = (networkConnections || []).map(r =>
-      formatConnectionRow(r, designComponents, activeDesign?.rackprofiles, allTransceiverTemplates)
+      formatConnectionRow(r, designComponents, activeDesign?.rackprofiles, allTransceiverTemplates, activeDesign?.rowLayout?.rackProperties)
     );
     let filtered = filterConnections(rows, searchQuery);
 
