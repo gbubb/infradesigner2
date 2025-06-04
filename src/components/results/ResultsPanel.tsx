@@ -17,7 +17,7 @@ export const ResultsPanel: React.FC = () => {
   // Use memoized design calculations through dedicated hook
   const { designErrors, hasValidDesign } = useDesignCalculations();
   
-  // Force recalculation when the component mounts, but only once
+  // Only recalculate when the design is invalid or missing components
   useEffect(() => {
     if (!hasCalculated) {
       setIsLoading(true);
@@ -25,12 +25,25 @@ export const ResultsPanel: React.FC = () => {
       // Use a short delay to ensure store is fully initialized
       const timer = setTimeout(() => {
         try {
-          // Force recalculation of the design
-          manualRecalculateDesign();
+          // Only recalculate if the design is invalid (no components or component roles)
+          // Also check if we have rack profiles with devices - if so, avoid recalculation to preserve layouts
+          const hasRackLayouts = activeDesign?.rackprofiles && 
+            Array.isArray(activeDesign.rackprofiles) && 
+            activeDesign.rackprofiles.some((rack: any) => rack.devices && rack.devices.length > 0);
           
-          // Save the design to ensure it's persisted, but only if it exists
-          if (activeDesign) {
-            saveDesign();
+          const needsRecalculation = (!hasValidDesign || !componentRoles || componentRoles.length === 0) && !hasRackLayouts;
+          
+          if (needsRecalculation) {
+            console.log("Results: Recalculating design because it's invalid or missing components");
+            // Force recalculation of the design
+            manualRecalculateDesign();
+            
+            // Save the design to ensure it's persisted
+            if (activeDesign) {
+              saveDesign();
+            }
+          } else {
+            console.log("Results: Design is already valid, skipping recalculation to preserve rack layouts and Row Layout configurations");
           }
           
           setHasCalculated(true);
@@ -44,7 +57,7 @@ export const ResultsPanel: React.FC = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [activeDesign?.id, hasCalculated, saveDesign]);
+  }, [activeDesign?.id, hasCalculated, hasValidDesign, componentRoles, saveDesign]);
   
   // Handle manual recalculation
   const handleRecalculate = useCallback(() => {
