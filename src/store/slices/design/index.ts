@@ -20,6 +20,7 @@ import {
 } from './designOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
+import { ClusterAZAssignment } from '@/types/infrastructure';
 
 export const createDesignSlice: StateCreator<
   StoreState,
@@ -401,6 +402,45 @@ export const createDesignSlice: StateCreator<
     } catch (error) {
       console.error("Error purging designs from database:", error);
       toast.error("Failed to purge designs");
+    }
+  },
+  
+  updatePlacementRules: async (rules: ClusterAZAssignment[]) => {
+    const state = get();
+    
+    if (!state.activeDesign) {
+      toast.error("No active design to update");
+      return;
+    }
+    
+    const updatedDesign = {
+      ...state.activeDesign,
+      placementRules: rules,
+      updatedAt: new Date()
+    };
+    
+    const updatedDesigns = state.savedDesigns.map(design => 
+      design.id === updatedDesign.id ? updatedDesign : design
+    );
+    
+    set({
+      savedDesigns: updatedDesigns,
+      activeDesign: updatedDesign
+    });
+    
+    // Get the current user's ID
+    try {
+      const { data } = await supabase.auth.getUser();
+      const userId = data?.user?.id;
+      
+      // Save with user ID if available
+      const success = await saveDesignToDB(updatedDesign, userId);
+      if (!success) {
+        toast.error("Failed to save placement rules");
+      }
+    } catch (error) {
+      console.error("Error saving placement rules:", error);
+      toast.error("Failed to save placement rules");
     }
   }
 });

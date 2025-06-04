@@ -1,5 +1,5 @@
 
-import { InfrastructureComponent, InfrastructureDesign } from '@/types/infrastructure';
+import { InfrastructureComponent, InfrastructureDesign, ClusterAZAssignment } from '@/types/infrastructure';
 import { StoreState } from '../../types';
 
 export interface DesignSlice {
@@ -17,4 +17,5 @@ export interface DesignSlice {
   loadSharedDesign: (sharingId: string) => Promise<boolean>;
   togglePublicAccess: (id: string) => Promise<void>;
   purgeAllDesigns: () => Promise<void>;
+  updatePlacementRules: (rules: ClusterAZAssignment[]) => Promise<void>;
 }

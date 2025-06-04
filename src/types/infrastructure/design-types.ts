@@ -1,7 +1,7 @@
 import { InfrastructureComponent } from './component-types';
 import { DesignRequirements } from './requirements-types';
 import { ComponentRole } from './roles-types';
-import { RackProfile } from './rack-types';
+import { RackProfile, ClusterAZAssignment } from './rack-types';
 import { ConnectionRule } from './connection-rule-types';
 import { NetworkConnection } from './connection-types';
 
@@ -30,6 +30,8 @@ export interface InfrastructureDesign {
   connectionRules?: ConnectionRule[];
   // Physical network connections
   networkConnections?: NetworkConnection[]; // NEW
+  // Placement rules for auto-placement
+  placementRules?: ClusterAZAssignment[];
 }
 
 // Workspace types for component positioning

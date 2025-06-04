@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { AutomatedPlacementService, PlacementReport } from '@/services/automatedPlacementService';
 import { ClusterAZAssignmentDialog } from './rack-layouts/ClusterAZAssignmentDialog';
+import { PlacementRulesDialog } from './rack-layouts/PlacementRulesDialog';
 import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
 import { LayoutPersistenceService } from '@/services/layoutPersistenceService';
 import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
@@ -48,6 +49,7 @@ export const RackLayoutsTab: React.FC = () => {
   const [isPlacing, setIsPlacing] = useState(false);
   const [isAZAssignmentDialogOpen, setIsAZAssignmentDialogOpen] = useState(false);
   const [clusterAZAssignments, setClusterAZAssignments] = useState<ClusterAZAssignment[]>([]);
+  const [isPlacementRulesDialogOpen, setIsPlacementRulesDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [scrollStep, setScrollStep] = useState(300);
@@ -78,8 +80,15 @@ export const RackLayoutsTab: React.FC = () => {
   // Initialize racks - now with proper dependencies
   const { rackProfiles, availabilityZones } = useRackInitialization(resetTrigger) as {
     rackProfiles: { id: string; name: string; azName?: string; availabilityZoneId?: string }[];
-    availabilityZones: any; // keep as any for now, or string[] if known
+    availabilityZones: string[]; // Array of availability zone IDs
   };
+  
+  // Load placement rules from active design
+  useEffect(() => {
+    if (activeDesign && activeDesign.placementRules) {
+      setClusterAZAssignments(activeDesign.placementRules);
+    }
+  }, [activeDesign]);
   
   // Track previous rack profiles to detect real changes
   const previousRackProfilesRef = useRef<string | null>(null);
@@ -128,7 +137,7 @@ export const RackLayoutsTab: React.FC = () => {
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [activeDesign?.rackprofiles]); // Only trigger on rack profile changes
+  }, [activeDesign]); // Only trigger on rack profile changes
 
   // Effect: Auto-save when navigating away
   useEffect(() => {
@@ -368,7 +377,46 @@ export const RackLayoutsTab: React.FC = () => {
   const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
 
   const handleAutoPlaceDevices = () => {
-    setIsAZAssignmentDialogOpen(true);
+    // Get saved placement rules from active design
+    const activeDesign = useDesignStore.getState().activeDesign;
+    
+    if (!activeDesign || !activeDesign.placementRules || activeDesign.placementRules.length === 0) {
+      toast.error("Please configure placement rules first");
+      setIsPlacementRulesDialogOpen(true);
+      return;
+    }
+    
+    // Use saved placement rules directly
+    setClusterAZAssignments(activeDesign.placementRules);
+    
+    // Execute auto-placement immediately
+    setIsPlacing(true);
+    
+    const report = AutomatedPlacementService.placeAllDesignDevices(undefined, activeDesign.placementRules);
+    console.log('Generated placement report in RackLayoutsTab:', report);
+    
+    setPlacementReport(report);
+    setSnapshotAzNameMap(azNameMap);
+    setSnapshotRackNameMap({});
+    
+    setIsPlacing(false);
+    setReadyToOpenReportDialog(true);
+    
+    // Show toast if any failed placements
+    if (report.failedDevices > 0) {
+      toast.error(
+        `Auto-placement could not place ${report.failedDevices} device(s). See the Placement Report for details.`
+      );
+    }
+    
+    if (selectedRackId) {
+      try {
+        const updatedStats = analyzeRackLayout(selectedRackId);
+        setRackStats(updatedStats);
+      } catch (error) {
+        console.error("Error updating rack stats:", error);
+      }
+    }
   };
 
   const handleConfirmAutoPlacement = () => {
@@ -453,6 +501,12 @@ export const RackLayoutsTab: React.FC = () => {
         {/* Actions Row */}
         <div className="flex flex-wrap justify-between items-center gap-2">
           <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => setIsPlacementRulesDialogOpen(true)}
+            >
+              Placement Rules
+            </Button>
             <Button 
               variant="default"
               onClick={handleAutoPlaceDevices}
@@ -581,6 +635,13 @@ export const RackLayoutsTab: React.FC = () => {
           clusterAssignments={clusterAZAssignments}
           setClusterAssignments={setClusterAZAssignments}
           onConfirm={handleConfirmAutoPlacement}
+        />
+        
+        {/* Placement Rules Dialog */}
+        <PlacementRulesDialog
+          open={isPlacementRulesDialogOpen}
+          onOpenChange={setIsPlacementRulesDialogOpen}
+          availabilityZones={friendlyAzNames}
         />
 
         {/* Add auto-save indicator */}

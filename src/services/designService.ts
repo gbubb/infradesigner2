@@ -32,6 +32,9 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
           const parsedConnectionRules = ('connection_rules' in design && design['connection_rules'])
             ? JSON.parse(String(design['connection_rules']) || '[]')
             : [];
+          const parsedPlacementRules = ('placement_rules' in design && design['placement_rules'])
+            ? JSON.parse(String(design['placement_rules']) || '[]')
+            : [];
 
           return {
             id: design.id,
@@ -43,6 +46,7 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
             selectedDisksByRole: parsedDisksByRole,
             selectedGPUsByRole: parsedGPUsByRole,
             connectionRules: parsedConnectionRules,
+            placementRules: parsedPlacementRules,
             createdAt: new Date(design.createdat),
             updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat),
             user_id: design.user_id || null,
@@ -95,6 +99,9 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
       const parsedConnectionRules = ('connection_rules' in data && data['connection_rules'])
         ? JSON.parse(String(data['connection_rules']) || '[]')
         : [];
+      const parsedPlacementRules = ('placement_rules' in data && data['placement_rules'])
+        ? JSON.parse(String(data['placement_rules']) || '[]')
+        : [];
 
       return {
         id: data.id,
@@ -106,6 +113,7 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
         selectedDisksByRole: parsedDisksByRole,
         selectedGPUsByRole: parsedGPUsByRole,
         connectionRules: parsedConnectionRules,
+        placementRules: parsedPlacementRules,
         createdAt: new Date(data.createdat),
         updatedAt: data.updatedat ? new Date(data.updatedat) : new Date(data.createdat),
         user_id: data.user_id || null,
@@ -136,6 +144,7 @@ export const saveDesign = async (design: InfrastructureDesign, userId?: string):
       selected_disks_by_role: JSON.stringify(design.selectedDisksByRole || {}),
       selected_gpus_by_role: JSON.stringify(design.selectedGPUsByRole || {}),
       connection_rules: JSON.stringify(design.connectionRules || []),
+      placement_rules: JSON.stringify(design.placementRules || []),
       createdat: design.createdAt.toISOString(),
       updatedat: new Date().toISOString(),
       user_id: userId || design.user_id,
