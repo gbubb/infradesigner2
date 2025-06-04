@@ -370,9 +370,40 @@ export const RackLayoutsTab: React.FC = () => {
     setIsConnectionDialogOpen(false);
   }, []);
   
-  const filteredRacks = rackProfiles.filter(
+  // Filter racks by selected AZ
+  const baseFilteredRacks = rackProfiles.filter(
     rack => selectedAZ === 'all' || azNameMap[rack.availabilityZoneId ?? ""] === selectedAZ || rack.azName === selectedAZ
   );
+
+  // Sort racks according to row layout order if available
+  const filteredRacks = React.useMemo(() => {
+    const rowLayout = activeDesign?.rowLayout;
+    
+    if (!rowLayout || !rowLayout.rackOrder || rowLayout.rackOrder.length === 0) {
+      // No row layout defined, return racks in their original order
+      return baseFilteredRacks;
+    }
+    
+    // Create a map for efficient lookup
+    const rackMap = new Map(baseFilteredRacks.map(rack => [rack.id, rack]));
+    const orderedRacks: typeof baseFilteredRacks = [];
+    
+    // Add racks in the order defined by row layout
+    rowLayout.rackOrder.forEach(rackId => {
+      const rack = rackMap.get(rackId);
+      if (rack) {
+        orderedRacks.push(rack);
+        rackMap.delete(rackId); // Remove from map to avoid duplicates
+      }
+    });
+    
+    // Add any remaining racks that weren't in the row layout order
+    rackMap.forEach(rack => {
+      orderedRacks.push(rack);
+    });
+    
+    return orderedRacks;
+  }, [baseFilteredRacks, activeDesign?.rowLayout]);
   
   const selectedRack = selectedRackId ? rackProfiles.find(r => r.id === selectedRackId) : undefined;
 
@@ -555,17 +586,32 @@ export const RackLayoutsTab: React.FC = () => {
           availabilityZones={friendlyAzNames} // Pass array of friendly names, not IDs
           selectedRackId={selectedRackId}
           setSelectedRackId={setSelectedRackId}
-          filteredRacks={filteredRacks}
+          filteredRacks={filteredRacks.map(rack => {
+            // Use friendly name from row layout if available
+            const rowLayoutProperties = activeDesign?.rowLayout?.rackProperties?.[rack.id];
+            const displayName = rowLayoutProperties?.friendlyName || rack.name;
+            
+            return {
+              ...rack,
+              name: displayName
+            };
+          })}
         />
         
         {/* Horizontal Rack Layout with Scrolling */}
         <RackHorizontalScroller
-          racks={filteredRacks.map(rack => ({
-            id: rack.id,
-            name: rack.name,
-            azName: rack.azName,
-            availabilityZoneId: rack.availabilityZoneId
-          }))}
+          racks={filteredRacks.map(rack => {
+            // Use friendly name from row layout if available
+            const rowLayoutProperties = activeDesign?.rowLayout?.rackProperties?.[rack.id];
+            const displayName = rowLayoutProperties?.friendlyName || rack.name;
+            
+            return {
+              id: rack.id,
+              name: displayName,
+              azName: rack.azName,
+              availabilityZoneId: rack.availabilityZoneId
+            };
+          })}
           selectedRackId={selectedRackId}
           setSelectedRackId={setSelectedRackId}
           scrollPosition={scrollPosition}
