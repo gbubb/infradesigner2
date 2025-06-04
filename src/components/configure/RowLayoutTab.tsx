@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,15 +33,7 @@ const RackItem: React.FC<RackItemProps> = ({
   onUpdateProperties,
   onMoveRack
 }) => {
-  const [, ref] = useDrop({
-    accept: RACK_ITEM_TYPE,
-    hover: (item: DragItem) => {
-      if (item.index !== index) {
-        onMoveRack(item.index, index);
-        item.index = index;
-      }
-    }
-  });
+  const ref = useRef<HTMLDivElement>(null);
 
   const [{ isDragging }, drag] = useDrag({
     type: RACK_ITEM_TYPE,
@@ -51,7 +43,22 @@ const RackItem: React.FC<RackItemProps> = ({
     })
   });
 
-  drag(ref);
+  const [, drop] = useDrop({
+    accept: RACK_ITEM_TYPE,
+    hover: (item: DragItem) => {
+      if (item.index !== index) {
+        onMoveRack(item.index, index);
+        item.index = index;
+      }
+    }
+  });
+
+  useEffect(() => {
+    if (ref.current) {
+      drag(ref.current);
+      drop(ref.current);
+    }
+  }, [drag, drop]);
 
   return (
     <div
