@@ -214,6 +214,14 @@ export class ChangeManager {
     }
 
     const changes = {
+      // Check actual field names from the data structure
+      averageVMVCPUs: oldCompute.averageVMVCPUs !== newCompute.averageVMVCPUs,
+      averageVMMemoryGB: oldCompute.averageVMMemoryGB !== newCompute.averageVMMemoryGB,
+      controllerNodeCount: oldCompute.controllerNodeCount !== newCompute.controllerNodeCount,
+      infrastructureNodeCount: oldCompute.infrastructureNodeCount !== newCompute.infrastructureNodeCount,
+      infrastructureClusterRequired: oldCompute.infrastructureClusterRequired !== newCompute.infrastructureClusterRequired,
+      computeClusters: JSON.stringify(oldCompute.computeClusters || []) !== JSON.stringify(newCompute.computeClusters || []),
+      // Legacy field support for backward compatibility
       totalClusters: oldCompute.totalClusters !== newCompute.totalClusters,
       cpuPerVM: oldCompute.cpuPerVM !== newCompute.cpuPerVM,
       memoryPerVMGB: oldCompute.memoryPerVMGB !== newCompute.memoryPerVMGB,
@@ -244,6 +252,10 @@ export class ChangeManager {
     }
 
     const changes = {
+      // Check actual field names from the data structure
+      storageClusters: JSON.stringify(oldStorage.storageClusters || []) !== JSON.stringify(newStorage.storageClusters || []),
+      deviceLifespanYears: oldStorage.deviceLifespanYears !== newStorage.deviceLifespanYears,
+      // Legacy field support for backward compatibility
       totalCapacityTB: oldStorage.totalCapacityTB !== newStorage.totalCapacityTB,
       storageEfficiencyPercent: oldStorage.storageEfficiencyPercent !== newStorage.storageEfficiencyPercent,
       clusters: JSON.stringify(oldStorage.clusters || []) !== JSON.stringify(newStorage.clusters || [])
@@ -272,9 +284,22 @@ export class ChangeManager {
     }
 
     const changes = {
+      // Check actual field names from the data structure
+      networkTopology: oldNetwork.networkTopology !== newNetwork.networkTopology,
+      managementNetwork: oldNetwork.managementNetwork !== newNetwork.managementNetwork,
+      ipmiNetwork: oldNetwork.ipmiNetwork !== newNetwork.ipmiNetwork,
+      physicalFirewalls: oldNetwork.physicalFirewalls !== newNetwork.physicalFirewalls,
+      leafSwitchesPerAZ: oldNetwork.leafSwitchesPerAZ !== newNetwork.leafSwitchesPerAZ,
+      dedicatedStorageNetwork: oldNetwork.dedicatedStorageNetwork !== newNetwork.dedicatedStorageNetwork,
+      dedicatedNetworkCoreRacks: oldNetwork.dedicatedNetworkCoreRacks !== newNetwork.dedicatedNetworkCoreRacks,
+      deviceLifespanYears: oldNetwork.deviceLifespanYears !== newNetwork.deviceLifespanYears,
+      copperPatchPanelsPerAZ: oldNetwork.copperPatchPanelsPerAZ !== newNetwork.copperPatchPanelsPerAZ,
+      fiberPatchPanelsPerAZ: oldNetwork.fiberPatchPanelsPerAZ !== newNetwork.fiberPatchPanelsPerAZ,
+      copperPatchPanelsPerCoreRack: oldNetwork.copperPatchPanelsPerCoreRack !== newNetwork.copperPatchPanelsPerCoreRack,
+      fiberPatchPanelsPerCoreRack: oldNetwork.fiberPatchPanelsPerCoreRack !== newNetwork.fiberPatchPanelsPerCoreRack,
+      // Legacy field support for backward compatibility
       topology: oldNetwork.topology !== newNetwork.topology,
       redundancy: oldNetwork.redundancy !== newNetwork.redundancy,
-      dedicatedNetworkCoreRacks: oldNetwork.dedicatedNetworkCoreRacks !== newNetwork.dedicatedNetworkCoreRacks,
       firewallEnabled: oldNetwork.firewallEnabled !== newNetwork.firewallEnabled
     };
     
@@ -287,14 +312,42 @@ export class ChangeManager {
   }
 
   private static hasPhysicalChanges(oldPhysical: any, newPhysical: any): boolean {
-    if (!oldPhysical && !newPhysical) return false;
-    if (!oldPhysical || !newPhysical) return true;
+    console.log('ChangeManager: Checking physical changes...');
+    console.log('ChangeManager: Old physical:', oldPhysical);
+    console.log('ChangeManager: New physical:', newPhysical);
+    
+    if (!oldPhysical && !newPhysical) {
+      console.log('ChangeManager: Both physical configs are null/undefined');
+      return false;
+    }
+    if (!oldPhysical || !newPhysical) {
+      console.log('ChangeManager: One physical config is null/undefined');
+      return true;
+    }
 
-    return (
-      JSON.stringify(oldPhysical.availabilityZones || []) !== JSON.stringify(newPhysical.availabilityZones || []) ||
-      oldPhysical.rackUHeight !== newPhysical.rackUHeight ||
-      oldPhysical.powerRedundancy !== newPhysical.powerRedundancy
-    );
+    const changes = {
+      // Check actual field names from the data structure
+      computeStorageRackQuantity: oldPhysical.computeStorageRackQuantity !== newPhysical.computeStorageRackQuantity,
+      availabilityZones: JSON.stringify(oldPhysical.availabilityZones || []) !== JSON.stringify(newPhysical.availabilityZones || []),
+      totalAvailabilityZones: oldPhysical.totalAvailabilityZones !== newPhysical.totalAvailabilityZones,
+      rackUnitsPerRack: oldPhysical.rackUnitsPerRack !== newPhysical.rackUnitsPerRack,
+      powerPerRackWatts: oldPhysical.powerPerRackWatts !== newPhysical.powerPerRackWatts,
+      useColoRacks: oldPhysical.useColoRacks !== newPhysical.useColoRacks,
+      rackCostPerMonthEuros: oldPhysical.rackCostPerMonthEuros !== newPhysical.rackCostPerMonthEuros,
+      electricityPricePerKwh: oldPhysical.electricityPricePerKwh !== newPhysical.electricityPricePerKwh,
+      operationalLoadPercentage: oldPhysical.operationalLoadPercentage !== newPhysical.operationalLoadPercentage,
+      networkCoreRackQuantity: oldPhysical.networkCoreRackQuantity !== newPhysical.networkCoreRackQuantity,
+      // Legacy field support for backward compatibility
+      rackUHeight: oldPhysical.rackUHeight !== newPhysical.rackUHeight,
+      powerRedundancy: oldPhysical.powerRedundancy !== newPhysical.powerRedundancy
+    };
+    
+    console.log('ChangeManager: Physical field changes:', changes);
+    
+    const hasChanges = Object.values(changes).some(changed => changed);
+    console.log('ChangeManager: Has physical changes:', hasChanges);
+    
+    return hasChanges;
   }
 
   private static hasGPUChanges(oldCompute: any, newCompute: any): boolean {
