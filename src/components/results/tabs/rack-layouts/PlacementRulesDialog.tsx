@@ -88,8 +88,13 @@ const getAllConfigurableRoles = (activeDesign: InfrastructureDesign | null, avai
       }
     }
 
+    // For cluster-based roles, use the actual cluster ID, otherwise use role ID
+    const clusterId = (['storage', 'storagenode', 'compute', 'computenode', 'controller', 'gpunode'].some(type => roleKey.includes(type)) && role.clusterInfo?.clusterId)
+      ? role.clusterInfo.clusterId
+      : role.id;
+
     lines.push({
-      id: role.id,
+      id: clusterId,
       name: finalDisplayName,
       clusterType: role.role, 
       autoDefaultTo,
@@ -113,7 +118,20 @@ export const PlacementRulesDialog: React.FC<PlacementRulesDialogProps> = ({
       const savedRules = activeDesign.placementRules || [];
       
       const initialRules = allRoles.map(role => {
-        const existingRule = savedRules.find(rule => rule.clusterId === role.id);
+        // Try to find existing rule by the current cluster ID first
+        let existingRule = savedRules.find(rule => rule.clusterId === role.id);
+        
+        // If not found and this is a cluster-based role, try to find by role ID (for backwards compatibility)
+        if (!existingRule && role.id !== role.name) {
+          // Try to find by the component role ID for backward compatibility
+          const matchingRole = activeDesign.componentRoles?.find(r => 
+            r.clusterInfo?.clusterId === role.id
+          );
+          if (matchingRole) {
+            existingRule = savedRules.find(rule => rule.clusterId === matchingRole.id);
+          }
+        }
+        
         return {
           clusterId: role.id,
           clusterName: role.name,

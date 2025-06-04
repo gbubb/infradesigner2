@@ -386,13 +386,23 @@ export const RackLayoutsTab: React.FC = () => {
       return;
     }
     
+    // Convert friendly AZ names back to AZ IDs for placement service
+    const placementRulesWithAzIds = activeDesign.placementRules.map(rule => ({
+      ...rule,
+      selectedAZs: rule.selectedAZs.map(friendlyName => {
+        // Find the actual AZ ID that corresponds to this friendly name
+        const azEntry = Object.entries(azNameMap).find(([id, name]) => name === friendlyName);
+        return azEntry ? azEntry[0] : friendlyName; // fallback to friendly name if not found
+      })
+    }));
+    
     // Use saved placement rules directly
     setClusterAZAssignments(activeDesign.placementRules);
     
     // Execute auto-placement immediately
     setIsPlacing(true);
     
-    const report = AutomatedPlacementService.placeAllDesignDevices(undefined, activeDesign.placementRules);
+    const report = AutomatedPlacementService.placeAllDesignDevices(undefined, placementRulesWithAzIds);
     console.log('Generated placement report in RackLayoutsTab:', report);
     
     setPlacementReport(report);

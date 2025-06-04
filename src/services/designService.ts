@@ -134,7 +134,7 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
 // Save a design to Supabase
 export const saveDesign = async (design: InfrastructureDesign, userId?: string): Promise<boolean> => {
   try {
-    const designToSave = {
+    const designToSave: any = {
       id: design.id,
       name: design.name,
       description: design.description,
@@ -144,12 +144,16 @@ export const saveDesign = async (design: InfrastructureDesign, userId?: string):
       selected_disks_by_role: JSON.stringify(design.selectedDisksByRole || {}),
       selected_gpus_by_role: JSON.stringify(design.selectedGPUsByRole || {}),
       connection_rules: JSON.stringify(design.connectionRules || []),
-      placement_rules: JSON.stringify(design.placementRules || []),
       createdat: design.createdAt.toISOString(),
       updatedat: new Date().toISOString(),
       user_id: userId || design.user_id,
       is_public: design.is_public || false
     };
+    
+    // Only include placement_rules if they exist (temporary until DB is updated)
+    if (design.placementRules && design.placementRules.length > 0) {
+      designToSave.placement_rules = JSON.stringify(design.placementRules);
+    }
     
     const { error } = await supabase
       .from(TABLES.DESIGNS)
