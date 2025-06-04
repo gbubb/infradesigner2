@@ -89,9 +89,6 @@ export class ChangeManager {
   static detectChanges(oldRequirements: DesignRequirements, newRequirements: DesignRequirements): ChangeType[] {
     const changes: ChangeType[] = [];
     
-    console.log('ChangeManager: Analyzing requirements changes...');
-    console.log('ChangeManager: Old requirements:', JSON.stringify(oldRequirements, null, 2));
-    console.log('ChangeManager: New requirements:', JSON.stringify(newRequirements, null, 2));
 
     // Check compute capacity changes
     if (this.hasComputeChanges(oldRequirements.computeRequirements, newRequirements.computeRequirements)) {
@@ -200,16 +197,11 @@ export class ChangeManager {
 
   // Helper methods to detect specific types of changes
   private static hasComputeChanges(oldCompute: any, newCompute: any): boolean {
-    console.log('ChangeManager: Checking compute changes...');
-    console.log('ChangeManager: Old compute:', oldCompute);
-    console.log('ChangeManager: New compute:', newCompute);
     
     if (!oldCompute && !newCompute) {
-      console.log('ChangeManager: Both compute configs are null/undefined');
       return false;
     }
     if (!oldCompute || !newCompute) {
-      console.log('ChangeManager: One compute config is null/undefined');
       return true;
     }
 
@@ -229,25 +221,18 @@ export class ChangeManager {
       clusters: JSON.stringify(oldCompute.clusters || []) !== JSON.stringify(newCompute.clusters || [])
     };
     
-    console.log('ChangeManager: Compute field changes:', changes);
     
     const hasChanges = Object.values(changes).some(changed => changed);
-    console.log('ChangeManager: Has compute changes:', hasChanges);
     
     return hasChanges;
   }
 
   private static hasStorageChanges(oldStorage: any, newStorage: any): boolean {
-    console.log('ChangeManager: Checking storage changes...');
-    console.log('ChangeManager: Old storage:', oldStorage);
-    console.log('ChangeManager: New storage:', newStorage);
     
     if (!oldStorage && !newStorage) {
-      console.log('ChangeManager: Both storage configs are null/undefined');
       return false;
     }
     if (!oldStorage || !newStorage) {
-      console.log('ChangeManager: One storage config is null/undefined');
       return true;
     }
 
@@ -261,25 +246,18 @@ export class ChangeManager {
       clusters: JSON.stringify(oldStorage.clusters || []) !== JSON.stringify(newStorage.clusters || [])
     };
     
-    console.log('ChangeManager: Storage field changes:', changes);
     
     const hasChanges = Object.values(changes).some(changed => changed);
-    console.log('ChangeManager: Has storage changes:', hasChanges);
     
     return hasChanges;
   }
 
   private static hasNetworkChanges(oldNetwork: any, newNetwork: any): boolean {
-    console.log('ChangeManager: Checking network changes...');
-    console.log('ChangeManager: Old network:', oldNetwork);
-    console.log('ChangeManager: New network:', newNetwork);
     
     if (!oldNetwork && !newNetwork) {
-      console.log('ChangeManager: Both network configs are null/undefined');
       return false;
     }
     if (!oldNetwork || !newNetwork) {
-      console.log('ChangeManager: One network config is null/undefined');
       return true;
     }
 
@@ -303,25 +281,18 @@ export class ChangeManager {
       firewallEnabled: oldNetwork.firewallEnabled !== newNetwork.firewallEnabled
     };
     
-    console.log('ChangeManager: Network field changes:', changes);
     
     const hasChanges = Object.values(changes).some(changed => changed);
-    console.log('ChangeManager: Has network changes:', hasChanges);
     
     return hasChanges;
   }
 
   private static hasPhysicalChanges(oldPhysical: any, newPhysical: any): boolean {
-    console.log('ChangeManager: Checking physical changes...');
-    console.log('ChangeManager: Old physical:', oldPhysical);
-    console.log('ChangeManager: New physical:', newPhysical);
     
     if (!oldPhysical && !newPhysical) {
-      console.log('ChangeManager: Both physical configs are null/undefined');
       return false;
     }
     if (!oldPhysical || !newPhysical) {
-      console.log('ChangeManager: One physical config is null/undefined');
       return true;
     }
 
@@ -342,10 +313,8 @@ export class ChangeManager {
       powerRedundancy: oldPhysical.powerRedundancy !== newPhysical.powerRedundancy
     };
     
-    console.log('ChangeManager: Physical field changes:', changes);
     
     const hasChanges = Object.values(changes).some(changed => changed);
-    console.log('ChangeManager: Has physical changes:', hasChanges);
     
     return hasChanges;
   }

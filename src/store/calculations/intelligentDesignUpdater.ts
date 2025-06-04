@@ -32,15 +32,12 @@ export class IntelligentDesignUpdater {
     const changes = ChangeManager.detectChanges(previousRequirements, newRequirements);
     
     if (changes.length === 0) {
-      console.log('IntelligentUpdater: No changes detected, skipping update');
-      return;
+        return;
     }
     
     // Determine impact of changes
     const impact = ChangeManager.getChangeImpact(changes);
     
-    console.log('IntelligentUpdater: Detected changes:', changes);
-    console.log('IntelligentUpdater: Impact analysis:', impact);
     
     const context: UpdateContext = {
       previousRequirements,
@@ -73,7 +70,6 @@ export class IntelligentDesignUpdater {
     if (context.impact.requiresNewRacks || context.impact.requiresRackRebalancing) {
       this.updateRackConfiguration(context);
     } else {
-      console.log('IntelligentUpdater: Preserving existing rack configuration');
     }
     
     // Step 4: Save the updated design
@@ -89,11 +85,9 @@ export class IntelligentDesignUpdater {
     const state = useDesignStore.getState();
     
     if (context.impact.affectedRoles.length === 0) {
-      console.log('IntelligentUpdater: No role updates needed');
       return;
     }
     
-    console.log('IntelligentUpdater: Updating component roles for:', context.impact.affectedRoles);
     
     // Calculate new roles based on updated requirements
     const newRoles = calculateComponentRoles(
@@ -105,8 +99,8 @@ export class IntelligentDesignUpdater {
     const existingRoles = state.componentRoles || [];
     const preservedRoles = this.preserveRoleAssignments(existingRoles, newRoles, context);
     
-    // Update the store with new roles
-    state.setComponentRoles(preservedRoles);
+    // Update the store with new roles using setState
+    useDesignStore.setState({ componentRoles: preservedRoles });
   }
   
   /**
@@ -131,7 +125,6 @@ export class IntelligentDesignUpdater {
         );
         
         if (existingRole && existingRole.assignedComponentId) {
-          console.log(`IntelligentUpdater: Preserving assignment for role ${newRole.role}`);
           return {
             ...newRole,
             assignedComponentId: existingRole.assignedComponentId
@@ -150,12 +143,10 @@ export class IntelligentDesignUpdater {
     const state = useDesignStore.getState();
     
     if (!context.preserveExistingComponents) {
-      console.log('IntelligentUpdater: Regenerating all component instances');
       this.regenerateAllComponents();
       return;
     }
     
-    console.log('IntelligentUpdater: Updating component instances selectively');
     
     const existingComponents = state.activeDesign?.components || [];
     const componentRoles = state.componentRoles || [];
@@ -235,7 +226,6 @@ export class IntelligentDesignUpdater {
         updatedComponents.push(newComponent);
       }
       
-      console.log(`IntelligentUpdater: Role ${role.role}: preserved ${preservedCount}, created ${additionalNeeded} new`);
     });
     
     return updatedComponents;
@@ -250,14 +240,12 @@ export class IntelligentDesignUpdater {
     if (!state.activeDesign) return;
     
     if (context.impact.requiresNewRacks) {
-      console.log('IntelligentUpdater: Regenerating rack structure due to structural changes');
       // Force rack regeneration by clearing existing racks
       state.updateDesign(state.activeDesign.id, {
         rackprofiles: undefined
       });
       // The rack system will automatically regenerate on next access
     } else if (context.impact.requiresRackRebalancing) {
-      console.log('IntelligentUpdater: Rebalancing devices in existing racks');
       // TODO: Implement intelligent rebalancing that preserves rack structure
       // but adjusts device placements for new quantities
       this.rebalanceRackDevices(context);
@@ -270,7 +258,6 @@ export class IntelligentDesignUpdater {
   private static rebalanceRackDevices(context: UpdateContext): void {
     // This is a placeholder for intelligent rack rebalancing
     // For now, we'll let the existing rack system handle it
-    console.log('IntelligentUpdater: Rack rebalancing not yet implemented, using existing system');
   }
   
   /**

@@ -30,9 +30,6 @@ export const createRequirementsSliceOperations = (set: any, get: any): Requireme
       const currentState = get();
       const previousRequirements = { ...currentState.requirements };
       
-      console.log('OperationsDispatcher: Updating requirements...');
-      console.log('OperationsDispatcher: Previous requirements:', previousRequirements);
-      console.log('OperationsDispatcher: New requirements to merge:', newRequirements);
       
       // Update the requirements in the store first (deep merge)
       set((state: StoreState) => {
@@ -84,7 +81,6 @@ export const createRequirementsSliceOperations = (set: any, get: any): Requireme
           };
         }
         
-        console.log('OperationsDispatcher: Final merged requirements:', updatedRequirements);
         
         return { requirements: updatedRequirements };
       });
