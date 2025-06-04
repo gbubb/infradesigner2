@@ -88,42 +88,54 @@ const CHANGE_IMPACT_MAP: Record<ChangeType, ChangeImpact> = {
 export class ChangeManager {
   static detectChanges(oldRequirements: DesignRequirements, newRequirements: DesignRequirements): ChangeType[] {
     const changes: ChangeType[] = [];
+    
+    console.log('ChangeManager: Analyzing requirements changes...');
+    console.log('ChangeManager: Old requirements:', JSON.stringify(oldRequirements, null, 2));
+    console.log('ChangeManager: New requirements:', JSON.stringify(newRequirements, null, 2));
 
     // Check compute capacity changes
     if (this.hasComputeChanges(oldRequirements.computeRequirements, newRequirements.computeRequirements)) {
+      console.log('ChangeManager: Compute capacity changes detected');
       changes.push(ChangeType.COMPUTE_CAPACITY);
     }
 
     // Check storage capacity changes
     if (this.hasStorageChanges(oldRequirements.storageRequirements, newRequirements.storageRequirements)) {
+      console.log('ChangeManager: Storage capacity changes detected');
       changes.push(ChangeType.STORAGE_CAPACITY);
     }
 
     // Check network configuration changes
     if (this.hasNetworkChanges(oldRequirements.networkRequirements, newRequirements.networkRequirements)) {
+      console.log('ChangeManager: Network configuration changes detected');
       changes.push(ChangeType.NETWORK_CONFIG);
     }
 
     // Check physical constraint changes
     if (this.hasPhysicalChanges(oldRequirements.physicalConstraints, newRequirements.physicalConstraints)) {
+      console.log('ChangeManager: Physical constraint changes detected');
       changes.push(ChangeType.PHYSICAL_CONSTRAINTS);
     }
 
     // Check GPU requirement changes
     if (this.hasGPUChanges(oldRequirements.computeRequirements, newRequirements.computeRequirements)) {
+      console.log('ChangeManager: GPU requirement changes detected');
       changes.push(ChangeType.GPU_REQUIREMENTS);
     }
 
     // Check licensing changes
     if (this.hasLicensingChanges(oldRequirements.licensingRequirements, newRequirements.licensingRequirements)) {
+      console.log('ChangeManager: Licensing changes detected');
       changes.push(ChangeType.LICENSING);
     }
 
     // Check pricing changes
     if (this.hasPricingChanges(oldRequirements.pricingRequirements, newRequirements.pricingRequirements)) {
+      console.log('ChangeManager: Pricing changes detected');
       changes.push(ChangeType.PRICING);
     }
 
+    console.log('ChangeManager: Detected changes:', changes);
     return changes;
   }
 
@@ -188,38 +200,90 @@ export class ChangeManager {
 
   // Helper methods to detect specific types of changes
   private static hasComputeChanges(oldCompute: any, newCompute: any): boolean {
-    if (!oldCompute && !newCompute) return false;
-    if (!oldCompute || !newCompute) return true;
+    console.log('ChangeManager: Checking compute changes...');
+    console.log('ChangeManager: Old compute:', oldCompute);
+    console.log('ChangeManager: New compute:', newCompute);
+    
+    if (!oldCompute && !newCompute) {
+      console.log('ChangeManager: Both compute configs are null/undefined');
+      return false;
+    }
+    if (!oldCompute || !newCompute) {
+      console.log('ChangeManager: One compute config is null/undefined');
+      return true;
+    }
 
-    return (
-      oldCompute.totalClusters !== newCompute.totalClusters ||
-      oldCompute.cpuPerVM !== newCompute.cpuPerVM ||
-      oldCompute.memoryPerVMGB !== newCompute.memoryPerVMGB ||
-      oldCompute.vmDensityPercent !== newCompute.vmDensityPercent ||
-      JSON.stringify(oldCompute.clusters || []) !== JSON.stringify(newCompute.clusters || [])
-    );
+    const changes = {
+      totalClusters: oldCompute.totalClusters !== newCompute.totalClusters,
+      cpuPerVM: oldCompute.cpuPerVM !== newCompute.cpuPerVM,
+      memoryPerVMGB: oldCompute.memoryPerVMGB !== newCompute.memoryPerVMGB,
+      vmDensityPercent: oldCompute.vmDensityPercent !== newCompute.vmDensityPercent,
+      clusters: JSON.stringify(oldCompute.clusters || []) !== JSON.stringify(newCompute.clusters || [])
+    };
+    
+    console.log('ChangeManager: Compute field changes:', changes);
+    
+    const hasChanges = Object.values(changes).some(changed => changed);
+    console.log('ChangeManager: Has compute changes:', hasChanges);
+    
+    return hasChanges;
   }
 
   private static hasStorageChanges(oldStorage: any, newStorage: any): boolean {
-    if (!oldStorage && !newStorage) return false;
-    if (!oldStorage || !newStorage) return true;
+    console.log('ChangeManager: Checking storage changes...');
+    console.log('ChangeManager: Old storage:', oldStorage);
+    console.log('ChangeManager: New storage:', newStorage);
+    
+    if (!oldStorage && !newStorage) {
+      console.log('ChangeManager: Both storage configs are null/undefined');
+      return false;
+    }
+    if (!oldStorage || !newStorage) {
+      console.log('ChangeManager: One storage config is null/undefined');
+      return true;
+    }
 
-    return (
-      oldStorage.totalCapacityTB !== newStorage.totalCapacityTB ||
-      oldStorage.storageEfficiencyPercent !== newStorage.storageEfficiencyPercent ||
-      JSON.stringify(oldStorage.clusters || []) !== JSON.stringify(newStorage.clusters || [])
-    );
+    const changes = {
+      totalCapacityTB: oldStorage.totalCapacityTB !== newStorage.totalCapacityTB,
+      storageEfficiencyPercent: oldStorage.storageEfficiencyPercent !== newStorage.storageEfficiencyPercent,
+      clusters: JSON.stringify(oldStorage.clusters || []) !== JSON.stringify(newStorage.clusters || [])
+    };
+    
+    console.log('ChangeManager: Storage field changes:', changes);
+    
+    const hasChanges = Object.values(changes).some(changed => changed);
+    console.log('ChangeManager: Has storage changes:', hasChanges);
+    
+    return hasChanges;
   }
 
   private static hasNetworkChanges(oldNetwork: any, newNetwork: any): boolean {
-    if (!oldNetwork && !newNetwork) return false;
-    if (!oldNetwork || !newNetwork) return true;
+    console.log('ChangeManager: Checking network changes...');
+    console.log('ChangeManager: Old network:', oldNetwork);
+    console.log('ChangeManager: New network:', newNetwork);
+    
+    if (!oldNetwork && !newNetwork) {
+      console.log('ChangeManager: Both network configs are null/undefined');
+      return false;
+    }
+    if (!oldNetwork || !newNetwork) {
+      console.log('ChangeManager: One network config is null/undefined');
+      return true;
+    }
 
-    return (
-      oldNetwork.topology !== newNetwork.topology ||
-      oldNetwork.redundancy !== newNetwork.redundancy ||
-      oldNetwork.dedicatedNetworkCoreRacks !== newNetwork.dedicatedNetworkCoreRacks
-    );
+    const changes = {
+      topology: oldNetwork.topology !== newNetwork.topology,
+      redundancy: oldNetwork.redundancy !== newNetwork.redundancy,
+      dedicatedNetworkCoreRacks: oldNetwork.dedicatedNetworkCoreRacks !== newNetwork.dedicatedNetworkCoreRacks,
+      firewallEnabled: oldNetwork.firewallEnabled !== newNetwork.firewallEnabled
+    };
+    
+    console.log('ChangeManager: Network field changes:', changes);
+    
+    const hasChanges = Object.values(changes).some(changed => changed);
+    console.log('ChangeManager: Has network changes:', hasChanges);
+    
+    return hasChanges;
   }
 
   private static hasPhysicalChanges(oldPhysical: any, newPhysical: any): boolean {

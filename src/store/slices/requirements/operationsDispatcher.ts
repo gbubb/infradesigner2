@@ -28,31 +28,66 @@ export const createRequirementsSliceOperations = (set: any, get: any): Requireme
     
     updateRequirements: (newRequirements) => {
       const currentState = get();
-      const previousRequirements = currentState.requirements;
+      const previousRequirements = { ...currentState.requirements };
       
-      // Update the requirements in the store first
-      set((state: StoreState) => ({
-        requirements: {
+      console.log('OperationsDispatcher: Updating requirements...');
+      console.log('OperationsDispatcher: Previous requirements:', previousRequirements);
+      console.log('OperationsDispatcher: New requirements to merge:', newRequirements);
+      
+      // Update the requirements in the store first (deep merge)
+      set((state: StoreState) => {
+        const updatedRequirements = {
           ...state.requirements,
-          ...newRequirements,
-          computeRequirements: {
+          ...newRequirements
+        };
+        
+        // Deep merge sub-objects if they exist in newRequirements
+        if (newRequirements.computeRequirements) {
+          updatedRequirements.computeRequirements = {
             ...state.requirements.computeRequirements,
             ...newRequirements.computeRequirements
-          },
-          storageRequirements: {
+          };
+        }
+        
+        if (newRequirements.storageRequirements) {
+          updatedRequirements.storageRequirements = {
             ...state.requirements.storageRequirements,
             ...newRequirements.storageRequirements
-          },
-          networkRequirements: {
+          };
+        }
+        
+        if (newRequirements.networkRequirements) {
+          updatedRequirements.networkRequirements = {
             ...state.requirements.networkRequirements,
             ...newRequirements.networkRequirements
-          },
-          physicalConstraints: {
+          };
+        }
+        
+        if (newRequirements.physicalConstraints) {
+          updatedRequirements.physicalConstraints = {
             ...state.requirements.physicalConstraints,
             ...newRequirements.physicalConstraints
-          }
+          };
         }
-      }));
+        
+        if (newRequirements.licensingRequirements) {
+          updatedRequirements.licensingRequirements = {
+            ...state.requirements.licensingRequirements,
+            ...newRequirements.licensingRequirements
+          };
+        }
+        
+        if (newRequirements.pricingRequirements) {
+          updatedRequirements.pricingRequirements = {
+            ...state.requirements.pricingRequirements,
+            ...newRequirements.pricingRequirements
+          };
+        }
+        
+        console.log('OperationsDispatcher: Final merged requirements:', updatedRequirements);
+        
+        return { requirements: updatedRequirements };
+      });
       
       // Get the updated state for the new requirements
       const updatedState = get();
