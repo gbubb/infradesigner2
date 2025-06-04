@@ -20,6 +20,7 @@ import { ComponentLibrary } from "@/components/sidebar/ComponentLibrary";
 import { DesignPanel } from "@/components/design/DesignPanel";
 import { ConfigurePanel } from "@/components/configure/ConfigurePanel";
 import { ResultsPanel } from "@/components/results/ResultsPanel";
+import { ProcurePanel } from "@/components/procure/ProcurePanel";
 import { ComparePanel } from "@/components/compare/ComparePanel";
 import { ModelPanel } from "@/components/model/ModelPanel";
 
@@ -56,6 +57,7 @@ const AppRoutes = () => {
         <Route path="design" element={<DesignPanel />} />
         <Route path="configure/*" element={<ConfigurePanel />} />
         <Route path="results" element={<ResultsPanel />} />
+        <Route path="procure" element={<ProcurePanel />} />
         <Route path="compare" element={<ComparePanel />} />
         <Route path="model" element={<ModelPanel />} />
       </Route>
