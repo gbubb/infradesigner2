@@ -103,16 +103,17 @@ export const HeaderActions = () => {
         type="button"
         className={`
           relative flex items-center bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] 
-          shadow rounded-md border border-gray-300 focus:outline-none
-          transition-all duration-300 ease-out overflow-hidden
-          ${disabled ? "opacity-60" : ""}
-          ${isExpanded ? "px-4 shadow-lg" : "px-0"}
+          shadow-sm hover:shadow rounded-md border border-gray-300 focus:outline-none
+          focus:ring-2 focus:ring-offset-1 focus:ring-blue-400
+          transition-all duration-200 ease-out overflow-hidden
+          ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
         `}
         style={{
           height: "40px",
-          minWidth: isExpanded ? "auto" : "40px",
+          minWidth: "40px",
           width: isExpanded ? "auto" : "40px",
-          transform: isExpanded ? "scale(1.05)" : "scale(1)",
+          paddingLeft: isExpanded ? "12px" : "0",
+          paddingRight: isExpanded ? "16px" : "0",
         }}
         onClick={onClick}
         onMouseEnter={() => setHoveredButton(buttonKey)}
@@ -120,49 +121,33 @@ export const HeaderActions = () => {
         disabled={disabled}
         aria-label={label}
       >
-        {/* Icon container */}
+        {/* Icon container - no movement or scaling */}
         <div 
-          className="flex items-center justify-center transition-all duration-300 ease-out"
+          className="flex items-center justify-center flex-shrink-0"
           style={{
             width: "40px",
             height: "40px",
-            transform: isExpanded ? "translateX(-8px)" : "translateX(0)",
           }}
         >
-          <div className={`transition-transform duration-300 ${isExpanded ? "scale-110" : "scale-100"}`}>
-            {icon}
-          </div>
+          {icon}
         </div>
         
-        {/* Text label */}
+        {/* Text label - smoother appearance */}
         <span
           className={`
-            whitespace-nowrap font-medium text-sm pr-2
-            transition-all duration-300 ease-out
+            whitespace-nowrap font-medium text-sm
+            transition-all duration-200 ease-out
             ${isExpanded 
-              ? "opacity-100 translate-x-0 max-w-[120px]" 
-              : "opacity-0 translate-x-4 max-w-0"
+              ? "opacity-100 max-w-[120px] ml-1" 
+              : "opacity-0 max-w-0 ml-0"
             }
           `}
           style={{
-            transitionProperty: "opacity, transform, max-width",
             overflow: "hidden",
           }}
         >
           {label}
         </span>
-        
-        {/* Subtle glow effect on hover */}
-        <div 
-          className={`
-            absolute inset-0 rounded-md pointer-events-none
-            transition-opacity duration-300
-            ${isExpanded ? "opacity-20" : "opacity-0"}
-          `}
-          style={{
-            background: "linear-gradient(45deg, rgba(26, 58, 95, 0.1), rgba(26, 58, 95, 0.05))",
-          }}
-        />
       </button>
     );
   };
@@ -230,9 +215,9 @@ export const HeaderActions = () => {
       )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="rounded-full bg-[#e9eaf3] w-10 h-10 flex items-center justify-center shadow border border-gray-300 hover:bg-gray-200 transition-all duration-200 hover:scale-105">
+          <button className="rounded-full bg-[#f0f1f5] w-10 h-10 flex items-center justify-center shadow-sm hover:shadow border border-gray-300 hover:bg-gray-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-400">
             <Avatar className="h-7 w-7">
-              <AvatarFallback>{getUserInitials()}</AvatarFallback>
+              <AvatarFallback className="bg-transparent">{getUserInitials()}</AvatarFallback>
             </Avatar>
           </button>
         </DropdownMenuTrigger>
