@@ -1,7 +1,7 @@
 import { InfrastructureComponent } from './component-types';
 import { DesignRequirements } from './requirements-types';
 import { ComponentRole } from './roles-types';
-import { RackProfile, ClusterAZAssignment } from './rack-types';
+import { RackProfile, ClusterAZAssignment, RowLayoutConfiguration } from './rack-types';
 import { ConnectionRule } from './connection-rule-types';
 import { NetworkConnection } from './connection-types';
 
@@ -23,7 +23,7 @@ export interface InfrastructureDesign {
   is_public?: boolean;
   sharing_id?: string | null;
   // Rack layout information - match DB: rackprofiles
-  rackprofiles?: any;
+  rackprofiles?: RackProfile[];
   // Connection information
   connections?: Connection[];
   // Connection rules
@@ -32,6 +32,8 @@ export interface InfrastructureDesign {
   networkConnections?: NetworkConnection[]; // NEW
   // Placement rules for auto-placement
   placementRules?: ClusterAZAssignment[];
+  // Row layout configuration for physical positioning
+  rowLayout?: RowLayoutConfiguration;
 }
 
 // Workspace types for component positioning

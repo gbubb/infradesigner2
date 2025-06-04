@@ -25,6 +25,10 @@ npm run lint
 npm run preview
 ```
 
+## Testing Environment
+
+**IMPORTANT**: No local development environment is available. Testing is only possible after commit and push to the repository. Always ensure code compiles and passes linting before committing.
+
 ## Architecture Overview
 
 ### Technology Stack

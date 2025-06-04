@@ -35,4 +35,22 @@ export interface ClusterAZAssignment {
   selectedAZs: string[];
 }
 
+// Row Layout types for physical rack positioning
+export interface RackPhysicalProperties {
+  id: string;
+  friendlyName: string;
+  widthMm: number;
+  gapAfterMm: number; // Gap after this rack (to the right)
+}
+
+export interface RowLayoutConfiguration {
+  id: string;
+  name: string;
+  cableHeightMm: number; // Vertical height above racks before cables traverse horizontally
+  rackOrder: string[]; // Array of rack IDs in order
+  rackProperties: Record<string, RackPhysicalProperties>; // Keyed by rack ID
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Additional rack-related types could be added here in the future
