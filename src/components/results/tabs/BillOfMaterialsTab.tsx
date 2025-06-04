@@ -46,8 +46,8 @@ export const BillOfMaterialsTab: React.FC = () => {
   const networkConnections = activeDesign?.networkConnections || [];
   
   // Build lookup dictionaries for cost and details from component library templates:
-  const cableTemplates = useMemo(() => componentLibrary.filter(c => c.type === ComponentType.Cable), [componentLibrary]);
-  const transceiverTemplates = useMemo(() => componentLibrary.filter(c => c.type === ComponentType.Transceiver), [componentLibrary]);
+  const cableTemplates = useMemo(() => (componentLibrary || []).filter(c => c.type === ComponentType.Cable), [componentLibrary]);
+  const transceiverTemplates = useMemo(() => (componentLibrary || []).filter(c => c.type === ComponentType.Transceiver), [componentLibrary]);
   const devices = components.filter(c =>
     [ComponentType.Switch, ComponentType.Router, ComponentType.Firewall, ComponentType.Server].includes(c.type as any)
   );
@@ -63,8 +63,8 @@ export const BillOfMaterialsTab: React.FC = () => {
   }> = {};
 
   // --- NEW: Use utility helpers for BOM cable/transceiver line items --- //
-  const cableLineItems = summarizeCablesFromConnections(networkConnections, componentLibrary);
-  const transceiverLineItems = summarizeTransceiversFromConnections(networkConnections, componentLibrary);
+  const cableLineItems = summarizeCablesFromConnections(networkConnections, componentLibrary || []);
+  const transceiverLineItems = summarizeTransceiversFromConnections(networkConnections, componentLibrary || []);
 
   // Updated grouping: Key storage nodes by template, cluster, and attachedDisks
   const summarizedComponentsByCategory = React.useMemo(() => {
