@@ -12,6 +12,7 @@ import { addDiskToStorageNode, removeDiskFromStorageNode } from './diskAndGPUOpe
 import { addGPUToComputeNode, removeGPUFromComputeNode } from './diskAndGPUOperations';
 import { assignComponentToRole, getRoleById, updateRoleRequiredCount } from './roleOperations';
 import { addCassetteToPanel, removeCassetteFromPanel } from './cassetteOperations';
+import { IntelligentDesignUpdater } from '../../calculations/intelligentDesignUpdater';
 
 /**
  * Creates the requirements slice with operations dispatched to specialized modules
@@ -26,6 +27,10 @@ export const createRequirementsSliceOperations = (set: any, get: any): Requireme
     calculationBreakdowns: {},
     
     updateRequirements: (newRequirements) => {
+      const currentState = get();
+      const previousRequirements = currentState.requirements;
+      
+      // Update the requirements in the store first
       set((state: StoreState) => ({
         requirements: {
           ...state.requirements,
@@ -49,8 +54,15 @@ export const createRequirementsSliceOperations = (set: any, get: any): Requireme
         }
       }));
       
-      const slice = get();
-      slice.calculateComponentRoles();
+      // Get the updated state for the new requirements
+      const updatedState = get();
+      const updatedRequirements = updatedState.requirements;
+      
+      // Use intelligent updater instead of full recalculation
+      IntelligentDesignUpdater.updateDesignFromRequirements(
+        previousRequirements,
+        updatedRequirements
+      );
     },
     
     calculateComponentRoles: () => {
