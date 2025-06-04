@@ -41,18 +41,46 @@ export function tryPlaceDeviceInRacksWithConstraints({
         }
       }
     }
-    // Try all in permitted range
-    for (
-      let ru = validRUStart; 
-      ru <= Math.min(rack.uHeight - ruHeight + 1, validRUEnd); 
-      ru++
-    ) {
-      if (preferredRU && ru === preferredRU) continue;
-      const available = isRUAvailableWithComponentRU(rack, ru, ruHeight, activeDesignState);
-      if (available) {
-        const result = RackService.placeDevice(rack.id, device.id, ru);
-        if (result.success) {
-          return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: ru };
+    // Try all in permitted range, prioritizing positions closest to preferred RU
+    if (typeof preferredRU === "number") {
+      // Generate positions sorted by distance from preferred RU
+      const positions: number[] = [];
+      for (
+        let ru = validRUStart; 
+        ru <= Math.min(rack.uHeight - ruHeight + 1, validRUEnd); 
+        ru++
+      ) {
+        if (ru !== preferredRU) { // Skip preferred RU as it was already tried
+          positions.push(ru);
+        }
+      }
+      
+      // Sort by distance from preferred RU (closest first)
+      positions.sort((a, b) => Math.abs(a - preferredRU) - Math.abs(b - preferredRU));
+      
+      // Try positions in order of proximity to preferred RU
+      for (const ru of positions) {
+        const available = isRUAvailableWithComponentRU(rack, ru, ruHeight, activeDesignState);
+        if (available) {
+          const result = RackService.placeDevice(rack.id, device.id, ru);
+          if (result.success) {
+            return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: ru };
+          }
+        }
+      }
+    } else {
+      // No preferred RU specified, use original sequential logic
+      for (
+        let ru = validRUStart; 
+        ru <= Math.min(rack.uHeight - ruHeight + 1, validRUEnd); 
+        ru++
+      ) {
+        const available = isRUAvailableWithComponentRU(rack, ru, ruHeight, activeDesignState);
+        if (available) {
+          const result = RackService.placeDevice(rack.id, device.id, ru);
+          if (result.success) {
+            return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: ru };
+          }
         }
       }
     }
