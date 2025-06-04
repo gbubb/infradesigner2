@@ -12,7 +12,7 @@ export class LayoutPersistenceService {
     // Save the rackprofiles to DB (patch the design)
     const { error } = await supabase
       .from("designs")
-      .update({ rackprofiles: activeDesign.rackprofiles }) // use rackprofiles, not rackProfiles
+      .update({ rackprofiles: JSON.stringify(activeDesign.rackprofiles || []) }) // use rackprofiles, not rackProfiles
       .eq("id", activeDesign.id);
     if (error) throw error;
   }
@@ -42,8 +42,10 @@ export class LayoutPersistenceService {
       }
     }
 
+    const parsedRackprofiles = data?.rackprofiles ? JSON.parse(String(data.rackprofiles) || '[]') : [];
+    
     return { 
-      rackprofiles: data?.rackprofiles,
+      rackprofiles: parsedRackprofiles,
       requirements: parsedRequirements
     };
   }

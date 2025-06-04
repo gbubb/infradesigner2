@@ -74,7 +74,7 @@ export const ComponentLevelComparison: React.FC<ComponentLevelComparisonProps> =
     const comparisons: RoleComparison[] = [];
 
     // Helper function to get role from component
-    const getComponentRole = (component: Component): string => {
+    const getComponentRole = (component: InfrastructureComponent): string => {
       // For servers, use the specific role
       if (component.type === ComponentType.Server && component.role) {
         return component.role;
@@ -113,8 +113,8 @@ export const ComponentLevelComparison: React.FC<ComponentLevelComparisonProps> =
     };
 
     // Group components by role for each design
-    const designARoleGroups: Record<string, Component[]> = {};
-    const designBRoleGroups: Record<string, Component[]> = {};
+    const designARoleGroups: Record<string, InfrastructureComponent[]> = {};
+    const designBRoleGroups: Record<string, InfrastructureComponent[]> = {};
 
     designAComponents.forEach(component => {
       const role = getComponentRole(component);

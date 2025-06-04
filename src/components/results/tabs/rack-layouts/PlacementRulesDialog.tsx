@@ -53,9 +53,9 @@ const getAllConfigurableRoles = (activeDesign: InfrastructureDesign | null, avai
       }
     } else {
       // For non-cluster types (firewalls, switches, etc.)
-      // Use role.name if available, otherwise role.role
-      userProvidedName = (role.name && typeof role.name === 'string' && role.name.trim() !== '') 
-        ? role.name.trim() 
+      // Use role.clusterInfo.clusterName if available, otherwise role.role
+      userProvidedName = (role.clusterInfo?.clusterName && typeof role.clusterInfo.clusterName === 'string' && role.clusterInfo.clusterName.trim() !== '') 
+        ? role.clusterInfo.clusterName.trim() 
         : null;
       finalDisplayName = userProvidedName || role.role; 
     }
