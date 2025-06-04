@@ -71,11 +71,11 @@ export const NetworkTable: React.FC<NetworkTableProps> = ({
         {Object.values(transceiverLineItems).map((item: any, idx: number) => (
           <TableRow key={`trxline-${item.transceiverTemplateId}-${idx}`}>
             <TableCell>Transceiver</TableCell>
-            <TableCell>-</TableCell>
-            <TableCell>-</TableCell>
+            <TableCell>{item.speed} {item.connectorType}</TableCell>
+            <TableCell>{item.manufacturer}</TableCell>
             <TableCell>{item.model}</TableCell>
             <TableCell>-</TableCell>
-            <TableCell>{item.name}</TableCell>
+            <TableCell>{item.mediaTypeSupported.join(', ')} ({item.maxDistance})</TableCell>
             <TableCell className="text-right">{item.count}</TableCell>
             <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
             <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>

@@ -64,11 +64,11 @@ export const CablingTable: React.FC<CablingTableProps> = ({
           <TableRow key={`cableline-${item.cableTemplateId}-${item.lengthMeters}-${idx}`}>
             <TableCell>
               <CableIcon className="inline-block mr-1" size={16}/>
-              Cable
+              {item.cableType}
             </TableCell>
-            <TableCell>-</TableCell>
+            <TableCell>{item.manufacturer}</TableCell>
             <TableCell>{item.model}</TableCell>
-            <TableCell>{item.details}</TableCell>
+            <TableCell>{item.connectorTypes}, {item.lengthMeters}m</TableCell>
             <TableCell className="text-right">{item.count}</TableCell>
             <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
             <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>

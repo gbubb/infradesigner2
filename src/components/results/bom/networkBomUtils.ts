@@ -2,28 +2,46 @@
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { NetworkConnection } from '@/types/infrastructure/connection-types';
 
+// Type for cable line items in BOM
+export interface CableLineItem {
+  cableTemplateId: string | undefined;
+  lengthMeters: number;
+  count: number;
+  type: string;
+  model: string;
+  details: string;
+  costPer: number;
+  total: number;
+  mediaType: string | undefined;
+  cableType: string;
+  connectorTypes: string;
+  manufacturer: string;
+}
+
+// Type for transceiver line items in BOM
+export interface TransceiverLineItem {
+  transceiverTemplateId: string;
+  count: number;
+  name: string;
+  model: string;
+  costPer: number;
+  total: number;
+  manufacturer: string;
+  speed: string;
+  connectorType: string;
+  mediaTypeSupported: string[];
+  maxDistance: string;
+}
+
 /**
- * Summarizes cable line items from network connections.
+ * Summarizes cable line items from network connections with detailed type and length breakdown.
  */
 export function summarizeCablesFromConnections(
   networkConnections: NetworkConnection[],
   components: InfrastructureComponent[]
-) {
+): Record<string, CableLineItem> {
   const cableTemplates = components.filter(c => c.type === ComponentType.Cable);
-  const cableLineItems: Record<
-    string,
-    {
-      cableTemplateId: string | undefined,
-      lengthMeters: number,
-      count: number,
-      type: string,
-      model: string,
-      details: string,
-      costPer: number,
-      total: number,
-      mediaType: string | undefined
-    }
-  > = {};
+  const cableLineItems: Record<string, CableLineItem> = {};
 
   networkConnections.forEach(conn => {
     if (conn.cableTemplateId) {
@@ -32,16 +50,20 @@ export function summarizeCablesFromConnections(
         (conn.cableTemplateId || 'unknown') + '-' + String(conn.lengthMeters || 0) + 'm';
 
       if (!cableLineItems[cableKey]) {
+        const connectorTypes = `${cableTemplate?.connectorA_Type || '-'} to ${cableTemplate?.connectorB_Type || '-'}`;
         cableLineItems[cableKey] = {
           cableTemplateId: conn.cableTemplateId,
           lengthMeters: conn.lengthMeters || 0,
           count: 0,
           type: cableTemplate?.type || "Cable",
           model: cableTemplate?.model || "-",
-          details: `${cableTemplate?.connectorA_Type || '-'} to ${cableTemplate?.connectorB_Type || '-'}, ${cableTemplate?.mediaType || '-'}, ${conn.lengthMeters || 0}m`,
+          details: `${connectorTypes}, ${cableTemplate?.mediaType || '-'}, ${conn.lengthMeters || 0}m`,
           costPer: cableTemplate?.cost ?? 0,
           total: 0,
-          mediaType: cableTemplate?.mediaType
+          mediaType: cableTemplate?.mediaType,
+          cableType: cableTemplate?.mediaType || "Unknown",
+          connectorTypes,
+          manufacturer: cableTemplate?.manufacturer || "-"
         };
       }
       cableLineItems[cableKey].count += 1;
@@ -53,29 +75,19 @@ export function summarizeCablesFromConnections(
 }
 
 /**
- * Summarizes transceiver line items from network connections.
+ * Summarizes transceiver line items from network connections with detailed specifications.
  */
 export function summarizeTransceiversFromConnections(
   networkConnections: NetworkConnection[],
   components: InfrastructureComponent[]
-) {
+): Record<string, TransceiverLineItem> {
   const transceiverTemplates = components.filter(c => c.type === ComponentType.Transceiver);
-  const transceiverLineItems: Record<
-    string,
-    {
-      transceiverTemplateId: string,
-      count: number,
-      name: string,
-      model: string,
-      costPer: number,
-      total: number
-    }
-  > = {};
+  const transceiverLineItems: Record<string, TransceiverLineItem> = {};
 
   networkConnections.forEach(conn => {
-    // Source
+    // Source transceiver
     if (conn.transceiverSourceId) {
-      const trans = transceiverTemplates.find(t => t.id === conn.transceiverSourceId);
+      const trans = transceiverTemplates.find(t => t.id === conn.transceiverSourceId) as any;
       const key = conn.transceiverSourceId;
       if (!transceiverLineItems[key]) {
         transceiverLineItems[key] = {
@@ -85,14 +97,19 @@ export function summarizeTransceiversFromConnections(
           model: trans?.model || '-',
           costPer: trans?.cost ?? 0,
           total: 0,
+          manufacturer: trans?.manufacturer || '-',
+          speed: trans?.speed || '-',
+          connectorType: trans?.connectorType || '-',
+          mediaTypeSupported: trans?.mediaTypeSupported || [],
+          maxDistance: trans?.maxDistanceMeters ? `${trans.maxDistanceMeters}m` : '-'
         };
       }
       transceiverLineItems[key].count += 1;
       transceiverLineItems[key].total += transceiverLineItems[key].costPer;
     }
-    // Destination
+    // Destination transceiver
     if (conn.transceiverDestinationId) {
-      const trans = transceiverTemplates.find(t => t.id === conn.transceiverDestinationId);
+      const trans = transceiverTemplates.find(t => t.id === conn.transceiverDestinationId) as any;
       const key = conn.transceiverDestinationId;
       if (!transceiverLineItems[key]) {
         transceiverLineItems[key] = {
@@ -102,6 +119,11 @@ export function summarizeTransceiversFromConnections(
           model: trans?.model || '-',
           costPer: trans?.cost ?? 0,
           total: 0,
+          manufacturer: trans?.manufacturer || '-',
+          speed: trans?.speed || '-',
+          connectorType: trans?.connectorType || '-',
+          mediaTypeSupported: trans?.mediaTypeSupported || [],
+          maxDistance: trans?.maxDistanceMeters ? `${trans.maxDistanceMeters}m` : '-'
         };
       }
       transceiverLineItems[key].count += 1;

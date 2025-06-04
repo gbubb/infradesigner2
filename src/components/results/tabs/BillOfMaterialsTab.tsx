@@ -146,7 +146,7 @@ export const BillOfMaterialsTab: React.FC = () => {
   
   // --- ENHANCED CSV Export logic including cables and transceivers --- //
   const generateCSVData = (category?: string) => {
-    let csvContent = "data:text/csv;charset=utf-8,Category,Type,Role/Model,Manufacturer,Model,Details,Quantity,Unit Cost,Total Cost\r\n";
+    let csvContent = "data:text/csv;charset=utf-8,Category,Type,Role/Model,Manufacturer,Model,Details,Quantity,Unit Cost,Total Cost,Cable Type,Length,Connector Types,Speed,Media Support,Max Distance\r\n";
     let dataToExport: any[] = [];
     // --- Standard hardware/export
     if (!category || ["Compute", "Storage", "Acceleration", "Network", "Cabling", "Cables"].includes(category)) {
@@ -175,12 +175,21 @@ export const BillOfMaterialsTab: React.FC = () => {
       const quantity = component.summarizedQuantity ?? component.quantity ?? component.count ?? 1;
       const totalCost = component.totalDiskCost ?? component.total ?? component.cost * quantity;
       let details = component.details ?? '-';
-      if (component.type === ComponentType.Cable || component.type === "Cable") details = component.details;
-      else if (component.type === "Transceiver") details = component.model;
+      if (component.type === ComponentType.Cable || component.type === "Cable") details = `${component.connectorTypes}, ${component.lengthMeters}m`;
+      else if (component.type === "Transceiver") details = `${component.speed} ${component.connectorType}, ${component.mediaTypeSupported?.join(', ')} (${component.maxDistance})`;
       else if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${component.cassetteCapacity} cassettes`;
       else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${component.portQuantity} ports`;
       else if (component.type === ComponentType.Cassette) details = `${component.portType}, ${component.portQuantity} ports`;
-      csvContent += `${categoryName},${component.type},${component.role || component.name || "-"},${component.manufacturer || "-"},${component.model || "-"},"${details}",${quantity},${component.costPer ?? component.cost},${totalCost}\r\n`;
+      
+      // Enhanced CSV with additional columns for cables and transceivers
+      const cableType = component.cableType || component.mediaType || '-';
+      const length = component.lengthMeters ? `${component.lengthMeters}m` : '-';
+      const connectorTypes = component.connectorTypes || '-';
+      const speed = component.speed || '-';
+      const mediaSupport = component.mediaTypeSupported ? component.mediaTypeSupported.join(', ') : '-';
+      const maxDistance = component.maxDistance || '-';
+      
+      csvContent += `${categoryName},${component.type},${component.role || component.name || "-"},${component.manufacturer || "-"},${component.model || "-"},"${details}",${quantity},${component.costPer ?? component.cost},${totalCost},"${cableType}","${length}","${connectorTypes}","${speed}","${mediaSupport}","${maxDistance}"\r\n`;
     });
     return encodeURI(csvContent);
   };
