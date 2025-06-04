@@ -41,12 +41,13 @@ const getStorageNodeGroupKey = (component: InfrastructureComponent): string => {
 
 export const BillOfMaterialsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
+  const componentLibrary = useDesignStore(state => state.componentLibrary);
   const components = activeDesign?.components || [];
   const networkConnections = activeDesign?.networkConnections || [];
   
-  // Build lookup dictionaries for cost and details:
-  const cableTemplates = useMemo(() => components.filter(c => c.type === ComponentType.Cable), [components]);
-  const transceiverTemplates = useMemo(() => components.filter(c => c.type === ComponentType.Transceiver), [components]);
+  // Build lookup dictionaries for cost and details from component library templates:
+  const cableTemplates = useMemo(() => componentLibrary.filter(c => c.type === ComponentType.Cable), [componentLibrary]);
+  const transceiverTemplates = useMemo(() => componentLibrary.filter(c => c.type === ComponentType.Transceiver), [componentLibrary]);
   const devices = components.filter(c =>
     [ComponentType.Switch, ComponentType.Router, ComponentType.Firewall, ComponentType.Server].includes(c.type as any)
   );
@@ -62,8 +63,8 @@ export const BillOfMaterialsTab: React.FC = () => {
   }> = {};
 
   // --- NEW: Use utility helpers for BOM cable/transceiver line items --- //
-  const cableLineItems = summarizeCablesFromConnections(networkConnections, components);
-  const transceiverLineItems = summarizeTransceiversFromConnections(networkConnections, components);
+  const cableLineItems = summarizeCablesFromConnections(networkConnections, componentLibrary);
+  const transceiverLineItems = summarizeTransceiversFromConnections(networkConnections, componentLibrary);
 
   // Updated grouping: Key storage nodes by template, cluster, and attachedDisks
   const summarizedComponentsByCategory = React.useMemo(() => {

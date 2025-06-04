@@ -279,10 +279,6 @@ const NetworkConnectionsTab: React.FC = () => {
     toast.success("All network connections cleared");
   };
 
-  // Send BOM to Bill of Materials
-  const handleBOM = () => {
-    toast.info("BOM function not yet implemented. (Call your network BOM handler here.)");
-  };
 
   // Export connections to CSV
   const handleExportCSV = () => {
@@ -351,7 +347,6 @@ const NetworkConnectionsTab: React.FC = () => {
           <Button size="sm" variant="outline" onClick={handleExportCSV} disabled={displayedRows.length === 0}>
             <Download className="w-4 h-4" /> Export CSV
           </Button>
-          <Button size="sm" variant="secondary" onClick={handleBOM}>Send to Bill of Materials</Button>
         </div>
       </div>
       <div className="mb-2 flex flex-col sm:flex-row sm:justify-between items-center gap-2">
