@@ -67,6 +67,7 @@ export type Database = {
           id: string
           is_public: boolean | null
           name: string
+          placement_rules: Json | null
           rackprofiles: Json | null
           requirements: Json | null
           row_layout: Json | null
@@ -85,6 +86,7 @@ export type Database = {
           id?: string
           is_public?: boolean | null
           name: string
+          placement_rules?: Json | null
           rackprofiles?: Json | null
           requirements?: Json | null
           row_layout?: Json | null
@@ -103,6 +105,7 @@ export type Database = {
           id?: string
           is_public?: boolean | null
           name?: string
+          placement_rules?: Json | null
           rackprofiles?: Json | null
           requirements?: Json | null
           row_layout?: Json | null
