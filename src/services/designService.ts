@@ -35,6 +35,9 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
           const parsedPlacementRules = ('placement_rules' in design && design['placement_rules'])
             ? JSON.parse(String(design['placement_rules']) || '[]')
             : [];
+          const parsedRowLayout = ('row_layout' in design && design['row_layout'])
+            ? JSON.parse(String(design['row_layout']) || 'null')
+            : null;
 
           return {
             id: design.id,
@@ -47,6 +50,7 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
             selectedGPUsByRole: parsedGPUsByRole,
             connectionRules: parsedConnectionRules,
             placementRules: parsedPlacementRules,
+            rowLayout: parsedRowLayout,
             createdAt: new Date(design.createdat),
             updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat),
             user_id: design.user_id || null,
@@ -102,6 +106,9 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
       const parsedPlacementRules = ('placement_rules' in data && data['placement_rules'])
         ? JSON.parse(String(data['placement_rules']) || '[]')
         : [];
+      const parsedRowLayout = ('row_layout' in data && data['row_layout'])
+        ? JSON.parse(String(data['row_layout']) || 'null')
+        : null;
 
       return {
         id: data.id,
@@ -114,6 +121,7 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
         selectedGPUsByRole: parsedGPUsByRole,
         connectionRules: parsedConnectionRules,
         placementRules: parsedPlacementRules,
+        rowLayout: parsedRowLayout,
         createdAt: new Date(data.createdat),
         updatedAt: data.updatedat ? new Date(data.updatedat) : new Date(data.createdat),
         user_id: data.user_id || null,
@@ -153,6 +161,11 @@ export const saveDesign = async (design: InfrastructureDesign, userId?: string):
     // Only include placement_rules if they exist (temporary until DB is updated)
     if (design.placementRules && design.placementRules.length > 0) {
       designToSave.placement_rules = JSON.stringify(design.placementRules);
+    }
+    
+    // Only include row_layout if it exists (temporary until DB is updated)
+    if (design.rowLayout) {
+      designToSave.row_layout = JSON.stringify(design.rowLayout);
     }
     
     const { error } = await supabase
