@@ -47,115 +47,16 @@ interface DeviceWithPorts {
 const PORT_TYPE_COLORS: Record<string, string> = {
   'RJ45': 'bg-blue-500 hover:bg-blue-600',
   'LC': 'bg-green-500 hover:bg-green-600',
-  'MPO-12': 'bg-purple-500 hover:bg-purple-600',
-  'MPO-24': 'bg-purple-600 hover:bg-purple-700',
+  'MPO12': 'bg-purple-500 hover:bg-purple-600',
+  'MPO24': 'bg-purple-600 hover:bg-purple-700',
   'SFP': 'bg-orange-500 hover:bg-orange-600',
   'SFP+': 'bg-orange-600 hover:bg-orange-700',
   'QSFP': 'bg-red-500 hover:bg-red-600',
   'QSFP+': 'bg-red-600 hover:bg-red-700',
   'QSFP28': 'bg-red-700 hover:bg-red-800',
-  'QSFP-DD': 'bg-pink-500 hover:bg-pink-600',
+  'QSFPDD': 'bg-pink-500 hover:bg-pink-600',
   'OSFP': 'bg-indigo-500 hover:bg-indigo-600',
   'default': 'bg-gray-500 hover:bg-gray-600'
-};
-
-// Generate ports from component metadata
-const generatePortsFromComponent = (component: InfrastructureComponent): Port[] => {
-  const ports: Port[] = [];
-  
-  if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
-    // For network devices, generate ports based on portCount
-    const portCount = (component as any).portCount || 0;
-    const portSpeed = (component as any).portSpeed;
-    const connectorType = (component as any).connectorType || 'RJ45';
-    
-    for (let i = 1; i <= portCount; i++) {
-      ports.push({
-        id: `${component.id}-port-${i}`,
-        name: `eth${i}`,
-        type: connectorType,
-        speed: portSpeed,
-        role: 'data' as const
-      });
-    }
-    
-    // Add management port if specified
-    if ((component as any).managementPorts) {
-      for (let i = 1; i <= (component as any).managementPorts; i++) {
-        ports.push({
-          id: `${component.id}-mgmt-${i}`,
-          name: `mgmt${i}`,
-          type: 'RJ45',
-          speed: PortSpeed['1G'],
-          role: 'management' as const
-        });
-      }
-    }
-  } else if (component.type === ComponentType.Server) {
-    // For servers, add network ports
-    const nicPorts = (component as any).nicPorts || 2;
-    const nicSpeed = (component as any).nicSpeed || PortSpeed['10G'];
-    
-    for (let i = 1; i <= nicPorts; i++) {
-      ports.push({
-        id: `${component.id}-nic-${i}`,
-        name: `nic${i}`,
-        type: nicSpeed >= PortSpeed['25G'] ? 'SFP+' : 'RJ45',
-        speed: nicSpeed,
-        role: 'data' as const
-      });
-    }
-    
-    // Add IPMI port
-    ports.push({
-      id: `${component.id}-ipmi`,
-      name: 'ipmi',
-      type: 'RJ45',
-      speed: PortSpeed['1G'],
-      role: 'management' as const
-    });
-  } else if (component.type === ComponentType.PatchPanel) {
-    // For patch panels, generate ports based on portQuantity and portType
-    const portQuantity = (component as any).portQuantity || 0;
-    const portType = (component as any).portType || 'RJ45';
-    
-    for (let i = 1; i <= portQuantity; i++) {
-      ports.push({
-        id: `${component.id}-port-${i}`,
-        name: `${i}`,
-        type: portType,
-        role: 'data' as const
-      });
-    }
-  } else if (component.type === ComponentType.Cassette) {
-    // For cassettes, generate front and back ports
-    const frontQuantity = (component as any).frontPortQuantity || 0;
-    const frontType = (component as any).frontPortType || 'LC';
-    const backQuantity = (component as any).backPortQuantity || 0;
-    const backType = (component as any).backPortType || 'MPO-12';
-    
-    // Front ports
-    for (let i = 1; i <= frontQuantity; i++) {
-      ports.push({
-        id: `${component.id}-front-${i}`,
-        name: `F${i}`,
-        type: frontType,
-        role: 'data' as const
-      });
-    }
-    
-    // Back ports
-    for (let i = 1; i <= backQuantity; i++) {
-      ports.push({
-        id: `${component.id}-back-${i}`,
-        name: `B${i}`,
-        type: backType,
-        role: 'data' as const
-      });
-    }
-  }
-  
-  return ports;
 };
 
 const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, onClose, onSave }) => {
@@ -187,14 +88,12 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
     
     const devices: DeviceWithPorts[] = [];
     activeDesign.components.forEach(component => {
-      // Generate ports from component metadata
-      const generatedPorts = generatePortsFromComponent(component);
-      
-      if (generatedPorts.length > 0) {
+      // Use existing ports if available, otherwise skip this component
+      if (component.ports && component.ports.length > 0) {
         const rackData = rackInfo.get(component.id);
         devices.push({
           device: component,
-          ports: generatedPorts,
+          ports: component.ports,
           az: rackData?.az
         });
       }
@@ -212,12 +111,13 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
     return Array.from(azs).sort();
   }, [devicesWithPorts]);
 
-  // Get unique port types
+  // Get unique port types from connectorType field
   const availablePortTypes = useMemo(() => {
     const types = new Set<string>();
     devicesWithPorts.forEach(({ ports }) => {
       ports.forEach(port => {
-        if (port.type) types.add(port.type);
+        // Use connectorType field which is the correct field for port types
+        if (port.connectorType) types.add(port.connectorType);
       });
     });
     return Array.from(types).sort();
@@ -257,7 +157,9 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
       
       // Check if device has ports matching the port type filter
       if (portTypeFilter !== "all") {
-        const hasMatchingPort = ports.some(port => port.type === portTypeFilter && !isPortConnected(device.id, port.id));
+        const hasMatchingPort = ports.some(port => 
+          port.connectorType === portTypeFilter && !isPortConnected(device.id, port.id)
+        );
         if (!hasMatchingPort) return false;
       }
       
@@ -286,8 +188,8 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
       deviceId: device.id,
       deviceName: device.name,
       portId: port.id,
-      portName: port.name,
-      portType: port.type || "Unknown",
+      portName: port.name || port.id,
+      portType: port.connectorType || "Unknown",
       portSpeed: port.speed,
       az
     };
@@ -332,7 +234,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
 
   // Determine media type based on port types
   const determineMediaType = (sourceType: string, destType: string): CableMediaType => {
-    if (sourceType.includes("RJ45") || destType.includes("RJ45")) {
+    if (sourceType === "RJ45" || destType === "RJ45") {
       return CableMediaType.Copper;
     }
     return CableMediaType.Fiber;
@@ -382,7 +284,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
     portTypeFilter: string
   ) => {
     const availablePorts = ports.filter(port => {
-      if (portTypeFilter !== "all" && port.type !== portTypeFilter) return false;
+      if (portTypeFilter !== "all" && port.connectorType !== portTypeFilter) return false;
       return true; // Show all ports, we'll style connected ones differently
     });
 
@@ -391,8 +293,8 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
     return (
       <div key={device.id} className="border rounded-lg p-2 mb-2 hover:bg-accent/50 transition-colors">
         <div className="flex items-center gap-2">
-          <div className="flex-shrink-0">
-            <div className="font-medium text-sm">{device.name}</div>
+          <div className="flex-shrink-0 min-w-0">
+            <div className="font-medium text-sm truncate">{device.name}</div>
             {az && <Badge variant="secondary" className="text-xs mt-1">{az}</Badge>}
           </div>
           <div className="flex-1 flex flex-wrap gap-1 justify-end">
@@ -402,16 +304,16 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
                 <button
                   key={port.id}
                   className={cn(
-                    "w-8 h-8 rounded-full text-xs text-white font-medium transition-all",
-                    "flex items-center justify-center",
+                    "w-8 h-8 rounded text-xs text-white font-medium transition-all",
+                    "flex items-center justify-center flex-shrink-0",
                     connected ? "opacity-50 cursor-not-allowed ring-4 ring-gray-600" : "cursor-pointer",
-                    connected ? "bg-gray-400" : getPortColor(port.type)
+                    connected ? "bg-gray-400" : getPortColor(port.connectorType)
                   )}
                   onClick={() => !connected && handlePortClick(device, port, az, side)}
                   disabled={connected}
-                  title={`${port.name} (${port.type || 'Unknown'})`}
+                  title={`${port.name || port.id} (${port.connectorType || 'Unknown'})`}
                 >
-                  {port.name}
+                  {port.name || port.id}
                 </button>
               );
             })}
@@ -423,18 +325,18 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 py-4 border-b">
+      <DialogContent className="max-w-7xl h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Create Manual Network Connections</DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col gap-2 min-h-0 overflow-hidden">
           {/* Top Half - Port Selection */}
-          <div className="flex-1 flex flex-col min-h-0 border-b">
+          <div className="flex-1 min-h-0 border rounded-lg overflow-hidden">
             <div className="grid grid-cols-2 gap-0 h-full">
               {/* Source Side */}
-              <div className="flex flex-col h-full border-r">
-                <div className="p-4 border-b bg-muted/50">
+              <div className="flex flex-col h-full border-r overflow-hidden">
+                <div className="p-3 border-b bg-muted/50 flex-shrink-0">
                   <Label className="text-sm font-medium mb-2 block">Source Ports</Label>
                   <div className="space-y-2">
                     <Input
@@ -475,20 +377,24 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
                   )}
                 </div>
                 
-                <ScrollArea className="flex-1 p-4">
-                  {filteredSourceDevices.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-8">No available devices/ports</div>
-                  ) : (
-                    filteredSourceDevices.map(deviceData => 
-                      renderDeviceWithPorts(deviceData, 'source', sourcePortTypeFilter)
-                    )
-                  )}
-                </ScrollArea>
+                <div className="flex-1 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <div className="p-3">
+                      {filteredSourceDevices.length === 0 ? (
+                        <div className="text-center text-muted-foreground py-8">No available devices/ports</div>
+                      ) : (
+                        filteredSourceDevices.map(deviceData => 
+                          renderDeviceWithPorts(deviceData, 'source', sourcePortTypeFilter)
+                        )
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
               
               {/* Destination Side */}
-              <div className="flex flex-col h-full">
-                <div className="p-4 border-b bg-muted/50">
+              <div className="flex flex-col h-full overflow-hidden">
+                <div className="p-3 border-b bg-muted/50 flex-shrink-0">
                   <Label className="text-sm font-medium mb-2 block">Destination Ports</Label>
                   <div className="space-y-2">
                     <Input
@@ -529,78 +435,88 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
                   )}
                 </div>
                 
-                <ScrollArea className="flex-1 p-4">
-                  {filteredDestinationDevices.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-8">No available devices/ports</div>
-                  ) : (
-                    filteredDestinationDevices.map(deviceData => 
-                      renderDeviceWithPorts(deviceData, 'destination', destinationPortTypeFilter)
-                    )
-                  )}
-                </ScrollArea>
+                <div className="flex-1 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <div className="p-3">
+                      {filteredDestinationDevices.length === 0 ? (
+                        <div className="text-center text-muted-foreground py-8">No available devices/ports</div>
+                      ) : (
+                        filteredDestinationDevices.map(deviceData => 
+                          renderDeviceWithPorts(deviceData, 'destination', destinationPortTypeFilter)
+                        )
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
             </div>
           </div>
           
           {/* Bottom Half - Connection Definitions */}
-          <div className="h-[40%] flex flex-col">
-            <div className="p-4 border-b bg-muted/50">
-              <Label className="text-sm font-medium">Connection Definitions ({connections.length})</Label>
-            </div>
-            
-            <ScrollArea className="flex-1 p-4">
-              {connections.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  <Cable className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Select ports above to create connections</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {connections.map((conn) => (
-                    <div key={conn.id} className="flex items-center gap-2 p-3 border rounded-lg">
-                      <div className="flex-1 grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
-                        <div className="text-sm">
-                          <div className="font-medium">{conn.source?.deviceName}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {conn.source?.portName} 
-                            {conn.source?.portType && (
-                              <Badge variant="outline" className="ml-1 text-xs h-4 px-1">
-                                {conn.source.portType}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        <div className="text-sm text-right">
-                          <div className="font-medium">{conn.destination?.deviceName}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {conn.destination?.portName}
-                            {conn.destination?.portType && (
-                              <Badge variant="outline" className="ml-1 text-xs h-4 px-1">
-                                {conn.destination.portType}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
+          <div className="h-[35%] min-h-0 border rounded-lg overflow-hidden">
+            <div className="h-full flex flex-col">
+              <div className="p-3 border-b bg-muted/50 flex-shrink-0">
+                <Label className="text-sm font-medium">Connection Definitions ({connections.length})</Label>
+              </div>
+              
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="p-3">
+                    {connections.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-8">
+                        <Cable className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>Select ports above to create connections</p>
                       </div>
-                      <Badge variant="secondary" className="text-xs">{conn.mediaType}</Badge>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0"
-                        onClick={() => removeConnection(conn.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
+                    ) : (
+                      <div className="space-y-2">
+                        {connections.map((conn) => (
+                          <div key={conn.id} className="flex items-center gap-2 p-3 border rounded-lg">
+                            <div className="flex-1 grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
+                              <div className="text-sm">
+                                <div className="font-medium">{conn.source?.deviceName}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {conn.source?.portName} 
+                                  {conn.source?.portType && (
+                                    <Badge variant="outline" className="ml-1 text-xs h-4 px-1">
+                                      {conn.source.portType}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              <div className="text-sm text-right">
+                                <div className="font-medium">{conn.destination?.deviceName}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {conn.destination?.portName}
+                                  {conn.destination?.portType && (
+                                    <Badge variant="outline" className="ml-1 text-xs h-4 px-1">
+                                      {conn.destination.portType}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="text-xs">{conn.mediaType}</Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0"
+                              onClick={() => removeConnection(conn.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
           </div>
         </div>
         
-        <DialogFooter className="px-6 py-4 border-t">
+        <DialogFooter className="flex-shrink-0 pt-4">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={connections.length === 0}>
             Save {connections.length} Connection{connections.length !== 1 ? 's' : ''}
