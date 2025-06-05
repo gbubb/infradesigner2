@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { X, Plus, Search, Cable } from "lucide-react";
+import { X, Cable, ChevronRight } from "lucide-react";
 import { InfrastructureComponent, Port, NetworkConnection, ComponentType } from "@/types/infrastructure";
 import { CableMediaType, PortSpeed } from "@/types/infrastructure/port-types";
 import { useDesignStore } from "@/store/designStore";
@@ -34,6 +34,12 @@ interface ConnectionDefinition {
   source?: PortSelection;
   destination?: PortSelection;
   mediaType?: CableMediaType;
+}
+
+interface DeviceWithPorts {
+  device: InfrastructureComponent;
+  ports: Port[];
+  az?: string;
 }
 
 const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, onClose, onSave }) => {
@@ -63,21 +69,26 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
       });
     });
     
-    return activeDesign.components
-      .filter(c => c.ports && c.ports.length > 0)
-      .map(component => ({
-        ...component,
-        rackProfile: rackInfo.get(component.id)
-      }));
+    const devices: DeviceWithPorts[] = [];
+    activeDesign.components.forEach(component => {
+      if (component.ports && component.ports.length > 0) {
+        const rackData = rackInfo.get(component.id);
+        devices.push({
+          device: component,
+          ports: component.ports,
+          az: rackData?.az
+        });
+      }
+    });
+    
+    return devices;
   }, [activeDesign]);
 
   // Get unique AZs
   const availableAZs = useMemo(() => {
     const azs = new Set<string>();
-    devicesWithPorts.forEach(device => {
-      if (device.rackProfile?.availabilityZone) {
-        azs.add(device.rackProfile.availabilityZone);
-      }
+    devicesWithPorts.forEach(({ az }) => {
+      if (az) azs.add(az);
     });
     return Array.from(azs).sort();
   }, [devicesWithPorts]);
@@ -85,8 +96,8 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
   // Get unique port types
   const availablePortTypes = useMemo(() => {
     const types = new Set<string>();
-    devicesWithPorts.forEach(device => {
-      device.ports?.forEach(port => {
+    devicesWithPorts.forEach(({ ports }) => {
+      ports.forEach(port => {
         if (port.type) types.add(port.type);
       });
     });
@@ -115,53 +126,54 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
     return isConnectedInDesign || isConnectedInPending || isInSelectedSource || isInSelectedDest;
   }, [activeDesign?.networkConnections, connections, selectedSourcePorts, selectedDestinationPorts]);
 
-  // Filter devices and ports
-  const filterPorts = useCallback((search: string, azFilter: string, portTypeFilter: string) => {
-    return devicesWithPorts.flatMap(device => {
-      const deviceAZ = device.rackProfile?.availabilityZone || "";
-      
+  // Filter devices based on criteria
+  const filterDevices = useCallback((search: string, azFilter: string, portTypeFilter: string): DeviceWithPorts[] => {
+    return devicesWithPorts.filter(({ device, ports, az }) => {
       // Check AZ filter
-      if (azFilter !== "all" && deviceAZ !== azFilter) return [];
+      if (azFilter !== "all" && az !== azFilter) return false;
       
       // Check search filter
       const searchLower = search.toLowerCase();
-      if (searchLower && !device.name.toLowerCase().includes(searchLower)) return [];
+      if (searchLower && !device.name.toLowerCase().includes(searchLower)) return false;
       
-      // Filter ports by type
-      const filteredPorts = (device.ports || []).filter(port => {
-        if (portTypeFilter !== "all" && port.type !== portTypeFilter) return false;
-        // Only show unconnected ports
-        return !isPortConnected(device.id, port.id);
-      });
+      // Check if device has ports matching the port type filter
+      if (portTypeFilter !== "all") {
+        const hasMatchingPort = ports.some(port => port.type === portTypeFilter && !isPortConnected(device.id, port.id));
+        if (!hasMatchingPort) return false;
+      }
       
-      return filteredPorts.map(port => ({
-        deviceId: device.id,
-        deviceName: device.name,
-        portId: port.id,
-        portName: port.name,
-        portType: port.type || "Unknown",
-        portSpeed: port.speed,
-        az: deviceAZ
-      }));
+      // Check if device has any available ports
+      const hasAvailablePorts = ports.some(port => !isPortConnected(device.id, port.id));
+      return hasAvailablePorts;
     });
   }, [devicesWithPorts, isPortConnected]);
 
-  const sourcePorts = useMemo(() => 
-    filterPorts(sourceSearch, sourceAZFilter, sourcePortTypeFilter),
-    [sourceSearch, sourceAZFilter, sourcePortTypeFilter, filterPorts]
+  const filteredSourceDevices = useMemo(() => 
+    filterDevices(sourceSearch, sourceAZFilter, sourcePortTypeFilter),
+    [sourceSearch, sourceAZFilter, sourcePortTypeFilter, filterDevices]
   );
 
-  const destinationPorts = useMemo(() => 
-    filterPorts(destinationSearch, destinationAZFilter, destinationPortTypeFilter),
-    [destinationSearch, destinationAZFilter, destinationPortTypeFilter, filterPorts]
+  const filteredDestinationDevices = useMemo(() => 
+    filterDevices(destinationSearch, destinationAZFilter, destinationPortTypeFilter),
+    [destinationSearch, destinationAZFilter, destinationPortTypeFilter, filterDevices]
   );
 
   // Handle port selection
-  const handlePortClick = (port: PortSelection, side: 'source' | 'destination') => {
+  const handlePortClick = (device: InfrastructureComponent, port: Port, az: string | undefined, side: 'source' | 'destination') => {
+    const portSelection: PortSelection = {
+      deviceId: device.id,
+      deviceName: device.name,
+      portId: port.id,
+      portName: port.name,
+      portType: port.type || "Unknown",
+      portSpeed: port.speed,
+      az
+    };
+
     if (side === 'source') {
-      setSelectedSourcePorts([...selectedSourcePorts, port]);
+      setSelectedSourcePorts([...selectedSourcePorts, portSelection]);
     } else {
-      setSelectedDestinationPorts([...selectedDestinationPorts, port]);
+      setSelectedDestinationPorts([...selectedDestinationPorts, portSelection]);
     }
     
     // Auto-create connections when both sides have selections
@@ -235,162 +247,175 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
     onClose();
   };
 
+  // Helper to render device with ports
+  const renderDeviceWithPorts = (
+    { device, ports, az }: DeviceWithPorts, 
+    side: 'source' | 'destination',
+    portTypeFilter: string
+  ) => {
+    const availablePorts = ports.filter(port => {
+      if (portTypeFilter !== "all" && port.type !== portTypeFilter) return false;
+      return !isPortConnected(device.id, port.id);
+    });
+
+    if (availablePorts.length === 0) return null;
+
+    return (
+      <div key={device.id} className="border rounded-lg p-3 mb-2">
+        <div className="flex items-center justify-between mb-2">
+          <div className="font-medium">{device.name}</div>
+          {az && <Badge variant="secondary" className="text-xs">{az}</Badge>}
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+          {availablePorts.map(port => (
+            <Button
+              key={port.id}
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs justify-start"
+              onClick={() => handlePortClick(device, port, az, side)}
+            >
+              <span className="truncate">{port.name}</span>
+              {port.type && (
+                <Badge variant="outline" className="ml-1 text-xs h-4 px-1">
+                  {port.type}
+                </Badge>
+              )}
+            </Button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>Create Manual Network Connections</DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0">
           {/* Top Half - Port Selection */}
-          <div className="flex-1 min-h-0">
-            <div className="grid grid-cols-2 gap-4 h-full">
+          <div className="flex-1 flex flex-col min-h-0 border-b">
+            <div className="grid grid-cols-2 gap-0 h-full">
               {/* Source Side */}
-              <div className="flex flex-col h-full">
-                <div className="space-y-2 mb-3">
-                  <Label>Source Ports</Label>
-                  <Input
-                    placeholder="Search devices..."
-                    value={sourceSearch}
-                    onChange={(e) => setSourceSearch(e.target.value)}
-                    className="h-8"
-                  />
-                  <div className="flex gap-2">
-                    <Select value={sourceAZFilter} onValueChange={setSourceAZFilter}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="All AZs" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All AZs</SelectItem>
-                        {availableAZs.map(az => (
-                          <SelectItem key={az} value={az}>{az}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={sourcePortTypeFilter} onValueChange={setSourcePortTypeFilter}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="All Port Types" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Port Types</SelectItem>
-                        {availablePortTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              <div className="flex flex-col h-full border-r">
+                <div className="p-4 border-b bg-muted/50">
+                  <Label className="text-sm font-medium mb-2 block">Source Ports</Label>
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Search devices..."
+                      value={sourceSearch}
+                      onChange={(e) => setSourceSearch(e.target.value)}
+                      className="h-8"
+                    />
+                    <div className="flex gap-2">
+                      <Select value={sourceAZFilter} onValueChange={setSourceAZFilter}>
+                        <SelectTrigger className="h-8 flex-1">
+                          <SelectValue placeholder="All AZs" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All AZs</SelectItem>
+                          {availableAZs.map(az => (
+                            <SelectItem key={az} value={az}>{az}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={sourcePortTypeFilter} onValueChange={setSourcePortTypeFilter}>
+                        <SelectTrigger className="h-8 flex-1">
+                          <SelectValue placeholder="All Port Types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Port Types</SelectItem>
+                          {availablePortTypes.map(type => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-                
-                <ScrollArea className="flex-1 border rounded-md p-2">
-                  {sourcePorts.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-4">No available ports</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {sourcePorts.map((port, idx) => (
-                        <div
-                          key={`${port.deviceId}-${port.portId}-${idx}`}
-                          className="p-2 border rounded cursor-pointer hover:bg-accent transition-colors"
-                          onClick={() => handlePortClick(port, 'source')}
-                        >
-                          <div className="font-medium text-sm">{port.deviceName}</div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{port.portName}</span>
-                            <Badge variant="outline" className="text-xs">{port.portType}</Badge>
-                            {port.az && <Badge variant="secondary" className="text-xs">{port.az}</Badge>}
-                          </div>
-                        </div>
-                      ))}
+                  {selectedSourcePorts.length > 0 && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Selected: {selectedSourcePorts.length} port{selectedSourcePorts.length !== 1 ? 's' : ''}
                     </div>
                   )}
-                </ScrollArea>
+                </div>
                 
-                {/* Selected source ports */}
-                {selectedSourcePorts.length > 0 && (
-                  <div className="mt-2 p-2 bg-muted rounded-md">
-                    <div className="text-xs font-medium mb-1">Selected: {selectedSourcePorts.length}</div>
-                  </div>
-                )}
+                <ScrollArea className="flex-1 p-4">
+                  {filteredSourceDevices.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">No available devices/ports</div>
+                  ) : (
+                    filteredSourceDevices.map(deviceData => 
+                      renderDeviceWithPorts(deviceData, 'source', sourcePortTypeFilter)
+                    )
+                  )}
+                </ScrollArea>
               </div>
               
               {/* Destination Side */}
               <div className="flex flex-col h-full">
-                <div className="space-y-2 mb-3">
-                  <Label>Destination Ports</Label>
-                  <Input
-                    placeholder="Search devices..."
-                    value={destinationSearch}
-                    onChange={(e) => setDestinationSearch(e.target.value)}
-                    className="h-8"
-                  />
-                  <div className="flex gap-2">
-                    <Select value={destinationAZFilter} onValueChange={setDestinationAZFilter}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="All AZs" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All AZs</SelectItem>
-                        {availableAZs.map(az => (
-                          <SelectItem key={az} value={az}>{az}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={destinationPortTypeFilter} onValueChange={setDestinationPortTypeFilter}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="All Port Types" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Port Types</SelectItem>
-                        {availablePortTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <div className="p-4 border-b bg-muted/50">
+                  <Label className="text-sm font-medium mb-2 block">Destination Ports</Label>
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Search devices..."
+                      value={destinationSearch}
+                      onChange={(e) => setDestinationSearch(e.target.value)}
+                      className="h-8"
+                    />
+                    <div className="flex gap-2">
+                      <Select value={destinationAZFilter} onValueChange={setDestinationAZFilter}>
+                        <SelectTrigger className="h-8 flex-1">
+                          <SelectValue placeholder="All AZs" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All AZs</SelectItem>
+                          {availableAZs.map(az => (
+                            <SelectItem key={az} value={az}>{az}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={destinationPortTypeFilter} onValueChange={setDestinationPortTypeFilter}>
+                        <SelectTrigger className="h-8 flex-1">
+                          <SelectValue placeholder="All Port Types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Port Types</SelectItem>
+                          {availablePortTypes.map(type => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-                
-                <ScrollArea className="flex-1 border rounded-md p-2">
-                  {destinationPorts.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-4">No available ports</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {destinationPorts.map((port, idx) => (
-                        <div
-                          key={`${port.deviceId}-${port.portId}-${idx}`}
-                          className="p-2 border rounded cursor-pointer hover:bg-accent transition-colors"
-                          onClick={() => handlePortClick(port, 'destination')}
-                        >
-                          <div className="font-medium text-sm">{port.deviceName}</div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{port.portName}</span>
-                            <Badge variant="outline" className="text-xs">{port.portType}</Badge>
-                            {port.az && <Badge variant="secondary" className="text-xs">{port.az}</Badge>}
-                          </div>
-                        </div>
-                      ))}
+                  {selectedDestinationPorts.length > 0 && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Selected: {selectedDestinationPorts.length} port{selectedDestinationPorts.length !== 1 ? 's' : ''}
                     </div>
                   )}
-                </ScrollArea>
+                </div>
                 
-                {/* Selected destination ports */}
-                {selectedDestinationPorts.length > 0 && (
-                  <div className="mt-2 p-2 bg-muted rounded-md">
-                    <div className="text-xs font-medium mb-1">Selected: {selectedDestinationPorts.length}</div>
-                  </div>
-                )}
+                <ScrollArea className="flex-1 p-4">
+                  {filteredDestinationDevices.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">No available devices/ports</div>
+                  ) : (
+                    filteredDestinationDevices.map(deviceData => 
+                      renderDeviceWithPorts(deviceData, 'destination', destinationPortTypeFilter)
+                    )
+                  )}
+                </ScrollArea>
               </div>
             </div>
           </div>
           
-          <Separator />
-          
           {/* Bottom Half - Connection Definitions */}
-          <div className="flex-1 min-h-0">
-            <div className="flex items-center justify-between mb-2">
-              <Label>Connection Definitions ({connections.length})</Label>
+          <div className="h-[40%] flex flex-col">
+            <div className="p-4 border-b bg-muted/50">
+              <Label className="text-sm font-medium">Connection Definitions ({connections.length})</Label>
             </div>
             
-            <ScrollArea className="h-full border rounded-md p-2">
+            <ScrollArea className="flex-1 p-4">
               {connections.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
                   <Cable className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -399,25 +424,37 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
               ) : (
                 <div className="space-y-2">
                   {connections.map((conn) => (
-                    <div key={conn.id} className="flex items-center gap-2 p-2 border rounded">
-                      <div className="flex-1 grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium">{conn.source?.deviceName}</div>
+                    <div key={conn.id} className="flex items-center gap-2 p-3 border rounded-lg">
+                      <div className="flex-1 grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
+                        <div className="text-sm">
+                          <div className="font-medium">{conn.source?.deviceName}</div>
                           <div className="text-xs text-muted-foreground">
-                            {conn.source?.portName} ({conn.source?.portType})
+                            {conn.source?.portName} 
+                            {conn.source?.portType && (
+                              <Badge variant="outline" className="ml-1 text-xs h-4 px-1">
+                                {conn.source.portType}
+                              </Badge>
+                            )}
                           </div>
                         </div>
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium">{conn.destination?.deviceName}</div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        <div className="text-sm text-right">
+                          <div className="font-medium">{conn.destination?.deviceName}</div>
                           <div className="text-xs text-muted-foreground">
-                            {conn.destination?.portName} ({conn.destination?.portType})
+                            {conn.destination?.portName}
+                            {conn.destination?.portType && (
+                              <Badge variant="outline" className="ml-1 text-xs h-4 px-1">
+                                {conn.destination.portType}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>
-                      <Badge variant="outline">{conn.mediaType}</Badge>
+                      <Badge variant="secondary" className="text-xs">{conn.mediaType}</Badge>
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="h-8 w-8 p-0"
                         onClick={() => removeConnection(conn.id)}
                       >
                         <X className="h-4 w-4" />
@@ -430,7 +467,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
           </div>
         </div>
         
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4 border-t">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={connections.length === 0}>
             Save {connections.length} Connection{connections.length !== 1 ? 's' : ''}
