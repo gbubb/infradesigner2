@@ -10,8 +10,9 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { X, Cable, ChevronRight } from "lucide-react";
 import { InfrastructureComponent, Port, NetworkConnection, ComponentType } from "@/types/infrastructure";
-import { CableMediaType, PortSpeed } from "@/types/infrastructure/port-types";
+import { CableMediaType, PortSpeed, ConnectorType } from "@/types/infrastructure/port-types";
 import { useDesignStore } from "@/store/designStore";
+import { cn } from "@/lib/utils";
 
 interface ManualConnectionDialogProps {
   open: boolean;
@@ -42,6 +43,121 @@ interface DeviceWithPorts {
   az?: string;
 }
 
+// Port type to color mapping
+const PORT_TYPE_COLORS: Record<string, string> = {
+  'RJ45': 'bg-blue-500 hover:bg-blue-600',
+  'LC': 'bg-green-500 hover:bg-green-600',
+  'MPO-12': 'bg-purple-500 hover:bg-purple-600',
+  'MPO-24': 'bg-purple-600 hover:bg-purple-700',
+  'SFP': 'bg-orange-500 hover:bg-orange-600',
+  'SFP+': 'bg-orange-600 hover:bg-orange-700',
+  'QSFP': 'bg-red-500 hover:bg-red-600',
+  'QSFP+': 'bg-red-600 hover:bg-red-700',
+  'QSFP28': 'bg-red-700 hover:bg-red-800',
+  'QSFP-DD': 'bg-pink-500 hover:bg-pink-600',
+  'OSFP': 'bg-indigo-500 hover:bg-indigo-600',
+  'default': 'bg-gray-500 hover:bg-gray-600'
+};
+
+// Generate ports from component metadata
+const generatePortsFromComponent = (component: InfrastructureComponent): Port[] => {
+  const ports: Port[] = [];
+  
+  if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
+    // For network devices, generate ports based on portCount
+    const portCount = (component as any).portCount || 0;
+    const portSpeed = (component as any).portSpeed;
+    const connectorType = (component as any).connectorType || 'RJ45';
+    
+    for (let i = 1; i <= portCount; i++) {
+      ports.push({
+        id: `${component.id}-port-${i}`,
+        name: `eth${i}`,
+        type: connectorType,
+        speed: portSpeed,
+        role: 'data' as const
+      });
+    }
+    
+    // Add management port if specified
+    if ((component as any).managementPorts) {
+      for (let i = 1; i <= (component as any).managementPorts; i++) {
+        ports.push({
+          id: `${component.id}-mgmt-${i}`,
+          name: `mgmt${i}`,
+          type: 'RJ45',
+          speed: PortSpeed['1G'],
+          role: 'management' as const
+        });
+      }
+    }
+  } else if (component.type === ComponentType.Server) {
+    // For servers, add network ports
+    const nicPorts = (component as any).nicPorts || 2;
+    const nicSpeed = (component as any).nicSpeed || PortSpeed['10G'];
+    
+    for (let i = 1; i <= nicPorts; i++) {
+      ports.push({
+        id: `${component.id}-nic-${i}`,
+        name: `nic${i}`,
+        type: nicSpeed >= PortSpeed['25G'] ? 'SFP+' : 'RJ45',
+        speed: nicSpeed,
+        role: 'data' as const
+      });
+    }
+    
+    // Add IPMI port
+    ports.push({
+      id: `${component.id}-ipmi`,
+      name: 'ipmi',
+      type: 'RJ45',
+      speed: PortSpeed['1G'],
+      role: 'management' as const
+    });
+  } else if (component.type === ComponentType.PatchPanel) {
+    // For patch panels, generate ports based on portQuantity and portType
+    const portQuantity = (component as any).portQuantity || 0;
+    const portType = (component as any).portType || 'RJ45';
+    
+    for (let i = 1; i <= portQuantity; i++) {
+      ports.push({
+        id: `${component.id}-port-${i}`,
+        name: `${i}`,
+        type: portType,
+        role: 'data' as const
+      });
+    }
+  } else if (component.type === ComponentType.Cassette) {
+    // For cassettes, generate front and back ports
+    const frontQuantity = (component as any).frontPortQuantity || 0;
+    const frontType = (component as any).frontPortType || 'LC';
+    const backQuantity = (component as any).backPortQuantity || 0;
+    const backType = (component as any).backPortType || 'MPO-12';
+    
+    // Front ports
+    for (let i = 1; i <= frontQuantity; i++) {
+      ports.push({
+        id: `${component.id}-front-${i}`,
+        name: `F${i}`,
+        type: frontType,
+        role: 'data' as const
+      });
+    }
+    
+    // Back ports
+    for (let i = 1; i <= backQuantity; i++) {
+      ports.push({
+        id: `${component.id}-back-${i}`,
+        name: `B${i}`,
+        type: backType,
+        role: 'data' as const
+      });
+    }
+  }
+  
+  return ports;
+};
+
 const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, onClose, onSave }) => {
   const { activeDesign } = useDesignStore();
   const [sourceSearch, setSourceSearch] = useState("");
@@ -71,11 +187,14 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
     
     const devices: DeviceWithPorts[] = [];
     activeDesign.components.forEach(component => {
-      if (component.ports && component.ports.length > 0) {
+      // Generate ports from component metadata
+      const generatedPorts = generatePortsFromComponent(component);
+      
+      if (generatedPorts.length > 0) {
         const rackData = rackInfo.get(component.id);
         devices.push({
           device: component,
-          ports: component.ports,
+          ports: generatedPorts,
           az: rackData?.az
         });
       }
@@ -160,6 +279,9 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
 
   // Handle port selection
   const handlePortClick = (device: InfrastructureComponent, port: Port, az: string | undefined, side: 'source' | 'destination') => {
+    // Don't allow selection of already connected ports
+    if (isPortConnected(device.id, port.id)) return;
+    
     const portSelection: PortSelection = {
       deviceId: device.id,
       deviceName: device.name,
@@ -247,6 +369,12 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
     onClose();
   };
 
+  // Get port button color
+  const getPortColor = (portType: string | undefined) => {
+    if (!portType) return PORT_TYPE_COLORS.default;
+    return PORT_TYPE_COLORS[portType] || PORT_TYPE_COLORS.default;
+  };
+
   // Helper to render device with ports
   const renderDeviceWithPorts = (
     { device, ports, az }: DeviceWithPorts, 
@@ -255,34 +383,39 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
   ) => {
     const availablePorts = ports.filter(port => {
       if (portTypeFilter !== "all" && port.type !== portTypeFilter) return false;
-      return !isPortConnected(device.id, port.id);
+      return true; // Show all ports, we'll style connected ones differently
     });
 
     if (availablePorts.length === 0) return null;
 
     return (
-      <div key={device.id} className="border rounded-lg p-3 mb-2">
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-medium">{device.name}</div>
-          {az && <Badge variant="secondary" className="text-xs">{az}</Badge>}
-        </div>
-        <div className="grid grid-cols-2 gap-1">
-          {availablePorts.map(port => (
-            <Button
-              key={port.id}
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs justify-start"
-              onClick={() => handlePortClick(device, port, az, side)}
-            >
-              <span className="truncate">{port.name}</span>
-              {port.type && (
-                <Badge variant="outline" className="ml-1 text-xs h-4 px-1">
-                  {port.type}
-                </Badge>
-              )}
-            </Button>
-          ))}
+      <div key={device.id} className="border rounded-lg p-2 mb-2 hover:bg-accent/50 transition-colors">
+        <div className="flex items-center gap-2">
+          <div className="flex-shrink-0">
+            <div className="font-medium text-sm">{device.name}</div>
+            {az && <Badge variant="secondary" className="text-xs mt-1">{az}</Badge>}
+          </div>
+          <div className="flex-1 flex flex-wrap gap-1 justify-end">
+            {availablePorts.map(port => {
+              const connected = isPortConnected(device.id, port.id);
+              return (
+                <button
+                  key={port.id}
+                  className={cn(
+                    "w-8 h-8 rounded-full text-xs text-white font-medium transition-all",
+                    "flex items-center justify-center",
+                    connected ? "opacity-50 cursor-not-allowed ring-4 ring-gray-600" : "cursor-pointer",
+                    connected ? "bg-gray-400" : getPortColor(port.type)
+                  )}
+                  onClick={() => !connected && handlePortClick(device, port, az, side)}
+                  disabled={connected}
+                  title={`${port.name} (${port.type || 'Unknown'})`}
+                >
+                  {port.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
