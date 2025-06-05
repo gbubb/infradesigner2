@@ -132,7 +132,8 @@ export const useComponentForm = () => {
          'diskSlotQuantity', 'ruSize', 'portsConsumedQuantity', 'portCount', 'portSpeed', 
          'portsProvidedQuantity', 'throughput', 'capacityTB', 'cassetteCapacity', 
          'portQuantity', 'length', 'validRUStart', 'validRUEnd', 'preferredRU', 'preferredRack', 
-         'rpm', 'iops', 'readSpeed', 'writeSpeed', 'connectorB_Quantity', 'maxDistanceMeters'].includes(name)) {
+         'rpm', 'iops', 'readSpeed', 'writeSpeed', 'connectorB_Quantity', 'maxDistanceMeters',
+         'frontPortQuantity', 'backPortQuantity', 'connectionPerSecond', 'concurrentConnections'].includes(name)) {
       parsedValue = value === '' ? 0 : parseFloat(value);
     }
     

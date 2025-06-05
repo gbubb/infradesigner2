@@ -84,6 +84,13 @@ const formSchema = z.object({
   mediaConnectorType: z.nativeEnum(ConnectorType).optional(),
   speed: z.nativeEnum(PortSpeed).optional(),
   maxDistanceMeters: z.number().optional(),
+  // Cassette and patch panel fields
+  frontPortType: z.nativeEnum(ConnectorType).optional(),
+  frontPortQuantity: z.number().optional(),
+  backPortType: z.nativeEnum(ConnectorType).optional(),
+  backPortQuantity: z.number().optional(),
+  isBreakout: z.boolean().optional(),
+  connectorB_Quantity: z.number().optional()
 });
 
 export const ComponentLibrary: React.FC = () => {
