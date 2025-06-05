@@ -55,12 +55,14 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
           speed: rule.sourcePortCriteria.speed,
           portNamePattern: rule.sourcePortCriteria.portNamePattern,
           excludePorts: rule.sourcePortCriteria.excludePorts,
+          side: rule.sourcePortCriteria.side,
         }
       : {
           portRole: [],
           speed: undefined,
           portNamePattern: '',
           excludePorts: [],
+          side: undefined,
         },
     targetDeviceCriteria: rule?.targetDeviceCriteria
       ? {
@@ -81,12 +83,14 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
           speed: rule.targetPortCriteria.speed,
           portNamePattern: rule.targetPortCriteria.portNamePattern,
           excludePorts: rule.targetPortCriteria.excludePorts,
+          side: rule.targetPortCriteria.side,
         }
       : {
           portRole: [],
           speed: undefined,
           portNamePattern: '',
           excludePorts: [],
+          side: undefined,
         },
     azScope: rule?.azScope || AZScope.AnyAZ,
     targetAZId: rule?.targetAZId || '',
@@ -301,7 +305,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
             }
           />
           <Label htmlFor="useBreakout" className="cursor-pointer">
-            Use Breakout ports
+            Use Breakout Cables
           </Label>
         </div>
       </div>

@@ -110,6 +110,11 @@ const formSchema = z.object({
   portQuantity: z.number().optional(),
   length: z.number().optional(),
   portType: z.nativeEnum(ConnectorType).optional(),
+  // New cassette fields
+  frontPortType: z.nativeEnum(ConnectorType).optional(),
+  frontPortQuantity: z.number().optional(),
+  backPortType: z.nativeEnum(ConnectorType).optional(),
+  backPortQuantity: z.number().optional(),
   // Cable specific fields
   connectorA_Type: z.nativeEnum(ConnectorType).optional(),
   connectorB_Type: z.nativeEnum(ConnectorType).optional(),
@@ -235,10 +240,19 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       concurrentConnections: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? (formValues.concurrentConnections || 100000) : undefined,
       features: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? (formValues.features || []) : undefined,
       supportedProtocols: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? (formValues.supportedProtocols || []) : undefined,
-      cassetteCapacity: (formValues.type === ComponentType.Cassette) ? (formValues.cassetteCapacity || 12) : undefined,
-      portQuantity: (formValues.type === ComponentType.FiberPatchPanel || formValues.type === ComponentType.CopperPatchPanel) ? (formValues.portQuantity || 24) : undefined,
+      cassetteCapacity: (formValues.type === ComponentType.FiberPatchPanel) ? (formValues.cassetteCapacity || 12) : undefined,
+      portQuantity: (formValues.type === ComponentType.FiberPatchPanel) ? (formValues.portQuantity || 24) : undefined,
       length: formValues.type === ComponentType.Cable ? (formValues.length || 3) : undefined,
-      portType: (formValues.type === ComponentType.FiberPatchPanel || formValues.type === ComponentType.CopperPatchPanel) ? (formValues.portType || ConnectorType.RJ45) : undefined,
+      portType: (formValues.type === ComponentType.Cassette) ? (formValues.portType || ConnectorType.LC) : undefined,
+      // New cassette fields
+      frontPortType: (formValues.type === ComponentType.Cassette || formValues.type === ComponentType.CopperPatchPanel) ? 
+        (formValues.frontPortType || (formValues.type === ComponentType.Cassette ? ConnectorType.LC : ConnectorType.RJ45)) : undefined,
+      frontPortQuantity: (formValues.type === ComponentType.Cassette || formValues.type === ComponentType.CopperPatchPanel) ? 
+        (formValues.frontPortQuantity || (formValues.type === ComponentType.Cassette ? 12 : 24)) : undefined,
+      backPortType: (formValues.type === ComponentType.Cassette || formValues.type === ComponentType.CopperPatchPanel) ? 
+        (formValues.backPortType || (formValues.type === ComponentType.Cassette ? ConnectorType.MPO12 : ConnectorType.RJ45)) : undefined,
+      backPortQuantity: (formValues.type === ComponentType.Cassette || formValues.type === ComponentType.CopperPatchPanel) ? 
+        (formValues.backPortQuantity || (formValues.type === ComponentType.Cassette ? 1 : 24)) : undefined,
       // Cable specific defaults
       connectorA_Type: formValues.type === ComponentType.Cable ? (formValues.connectorA_Type || ConnectorType.RJ45) : undefined,
       connectorB_Type: formValues.type === ComponentType.Cable ? (formValues.connectorB_Type || ConnectorType.RJ45) : undefined,
@@ -398,11 +412,12 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                 getDefaultPrefix={getDefaultPrefix}
               />
 
-              {/* Placement Section - Not for Transceivers, Cables, Disks, or GPUs */}
+              {/* Placement Section - Not for Transceivers, Cables, Disks, GPUs, or Cassettes */}
               {formValues.type !== ComponentType.Transceiver && 
                formValues.type !== ComponentType.Cable &&
                formValues.type !== ComponentType.Disk &&
-               formValues.type !== ComponentType.GPU && (
+               formValues.type !== ComponentType.GPU &&
+               formValues.type !== ComponentType.Cassette && (
                 <PlacementSection
                   control={control}
                   formValues={formValues}
@@ -546,34 +561,40 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                         className="border px-2 py-1 rounded w-full"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1" htmlFor="role">Role</label>
-                      <select
-                        name="role"
-                        value={bulkPort.role}
-                        onChange={handleBulkPortChange}
-                        className="border px-2 py-1 rounded w-full"
-                      >
-                        <option value="">--</option>
-                        {Object.values(PortRole).map(r => (
-                          <option value={r} key={r}>{r}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1" htmlFor="speed">Speed</label>
-                      <select
-                        name="speed"
-                        value={bulkPort.speed}
-                        onChange={handleBulkPortChange}
-                        className="border px-2 py-1 rounded w-full"
-                      >
-                        <option value="">--</option>
-                        {Object.values(PortSpeed).map(s => (
-                          <option value={s} key={s}>{s}</option>
-                        ))}
-                      </select>
-                    </div>
+                    {formValues.type !== ComponentType.Cassette && 
+                     formValues.type !== ComponentType.FiberPatchPanel && 
+                     formValues.type !== ComponentType.CopperPatchPanel && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium mb-1" htmlFor="role">Role</label>
+                          <select
+                            name="role"
+                            value={bulkPort.role}
+                            onChange={handleBulkPortChange}
+                            className="border px-2 py-1 rounded w-full"
+                          >
+                            <option value="">--</option>
+                            {Object.values(PortRole).map(r => (
+                              <option value={r} key={r}>{r}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1" htmlFor="speed">Speed</label>
+                          <select
+                            name="speed"
+                            value={bulkPort.speed}
+                            onChange={handleBulkPortChange}
+                            className="border px-2 py-1 rounded w-full"
+                          >
+                            <option value="">--</option>
+                            {Object.values(PortSpeed).map(s => (
+                              <option value={s} key={s}>{s}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
+                    )}
                     <div>
                       <label className="block text-xs font-medium mb-1" htmlFor="connectorType">Connector</label>
                       <select
@@ -622,62 +643,71 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                   </div>
                   {(formValues.ports && formValues.ports.length > 0) ? (
                     <div className="space-y-2">
-                      {formValues.ports.map((port: any, idx: number) => (
-                        <div key={port.id || idx} className="border rounded p-3 flex flex-col sm:flex-row gap-2 items-center flex-wrap">
-                          <Input
-                            type="text"
-                            placeholder="Name (e.g. eth0)"
-                            value={port.name || ''}
-                            onChange={e => handlePortChange(idx, 'name', e.target.value)}
-                            className="w-32"
-                          />
-                          <select
-                            value={port.role || ''}
-                            className="border rounded px-2 py-1"
-                            onChange={e => handlePortChange(idx, 'role', e.target.value)}
-                          >
-                            <option value="">Role</option>
-                            {Object.values(PortRole).map(r => (
-                              <option value={r} key={r}>{r}</option>
-                            ))}
-                          </select>
-                          <select
-                            value={port.speed || PortSpeed.Speed1G}
-                            className="border rounded px-2 py-1"
-                            onChange={e => handlePortChange(idx, 'speed', e.target.value)}
-                          >
-                            {Object.values(PortSpeed).map(s => (
-                              <option value={s} key={s}>{s}</option>
-                            ))}
-                          </select>
-                          <select
-                            value={port.connectorType || ConnectorType.RJ45}
-                            className="border rounded px-2 py-1"
-                            onChange={e => handlePortChange(idx, 'connectorType', e.target.value)}
-                          >
-                            {Object.values(ConnectorType).map(ct => (
-                              <option value={ct} key={ct}>{ct}</option>
-                            ))}
-                          </select>
-                          <select
-                            value={port.mediaType || ''}
-                            className="border rounded px-2 py-1"
-                            onChange={e => handlePortChange(idx, 'mediaType', e.target.value || undefined)}
-                          >
-                            <option value="">Media Type (Optional)</option>
-                            {Object.values(MediaType).map(mt => (
-                              <option value={mt} key={mt}>{mt}</option>
-                            ))}
-                          </select>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => removePort(idx)}
-                            data-testid={`remove-port-${idx}`}
-                          >Remove</Button>
-                        </div>
-                      ))}
+                      {formValues.ports.map((port: any, idx: number) => {
+                        const isPassiveDevice = formValues.type === ComponentType.Cassette || 
+                                               formValues.type === ComponentType.FiberPatchPanel || 
+                                               formValues.type === ComponentType.CopperPatchPanel;
+                        return (
+                          <div key={port.id || idx} className="border rounded p-3 flex flex-col sm:flex-row gap-2 items-center flex-wrap">
+                            <Input
+                              type="text"
+                              placeholder="Name (e.g. eth0)"
+                              value={port.name || ''}
+                              onChange={e => handlePortChange(idx, 'name', e.target.value)}
+                              className="w-32"
+                            />
+                            {!isPassiveDevice && (
+                              <>
+                                <select
+                                  value={port.role || ''}
+                                  className="border rounded px-2 py-1"
+                                  onChange={e => handlePortChange(idx, 'role', e.target.value)}
+                                >
+                                  <option value="">Role</option>
+                                  {Object.values(PortRole).map(r => (
+                                    <option value={r} key={r}>{r}</option>
+                                  ))}
+                                </select>
+                                <select
+                                  value={port.speed || PortSpeed.Speed1G}
+                                  className="border rounded px-2 py-1"
+                                  onChange={e => handlePortChange(idx, 'speed', e.target.value)}
+                                >
+                                  {Object.values(PortSpeed).map(s => (
+                                    <option value={s} key={s}>{s}</option>
+                                  ))}
+                                </select>
+                              </>
+                            )}
+                            <select
+                              value={port.connectorType || ConnectorType.RJ45}
+                              className="border rounded px-2 py-1"
+                              onChange={e => handlePortChange(idx, 'connectorType', e.target.value)}
+                            >
+                              {Object.values(ConnectorType).map(ct => (
+                                <option value={ct} key={ct}>{ct}</option>
+                              ))}
+                            </select>
+                            <select
+                              value={port.mediaType || ''}
+                              className="border rounded px-2 py-1"
+                              onChange={e => handlePortChange(idx, 'mediaType', e.target.value || undefined)}
+                            >
+                              <option value="">Media Type (Optional)</option>
+                              {Object.values(MediaType).map(mt => (
+                                <option value={mt} key={mt}>{mt}</option>
+                              ))}
+                            </select>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => removePort(idx)}
+                              data-testid={`remove-port-${idx}`}
+                            >Remove</Button>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-gray-500 my-2">No ports defined. Add at least one port for network rules.</div>

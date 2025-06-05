@@ -100,13 +100,25 @@ export interface FiberPatchPanel extends InfrastructureComponent {
 
 export interface CopperPatchPanel extends InfrastructureComponent {
   type: ComponentType.CopperPatchPanel;
-  portQuantity: number;
+  // Legacy field for backward compatibility
+  portQuantity?: number;
+  // New fields for front/back ports
+  frontPortType?: ConnectorType;
+  frontPortQuantity?: number;
+  backPortType?: ConnectorType;
+  backPortQuantity?: number;
 }
 
 export interface Cassette extends InfrastructureComponent {
   type: ComponentType.Cassette;
-  portType: ConnectorType;
-  portQuantity: number;
+  // Legacy fields for backward compatibility
+  portType?: ConnectorType;
+  portQuantity?: number;
+  // New fields for front/back ports
+  frontPortType?: ConnectorType;
+  frontPortQuantity?: number;
+  backPortType?: ConnectorType;
+  backPortQuantity?: number;
 }
 
 // Updated Cable interface with separate connector types for each end

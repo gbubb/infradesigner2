@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ConnectorType } from '@/types/infrastructure';
-import { PortSpeed, CableMediaType } from '@/types/infrastructure/port-types';
+import { PortSpeed, CableMediaType, PortSide } from '@/types/infrastructure/port-types';
 
 interface CablingFormFieldsProps {
   register: any;
@@ -20,6 +20,19 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
     name: 'isBreakout',
     defaultValue: false
   });
+  
+  // Filter connector types based on component type
+  const getAvailableConnectorTypes = (componentType: string) => {
+    if (componentType === 'Cassette' || componentType === 'FiberPatchPanel' || componentType === 'CopperPatchPanel') {
+      // Passive devices - only physical connectors, no active ports
+      return [ConnectorType.RJ45, ConnectorType.MPO12, ConnectorType.LC];
+    }
+    // Cables can have all connector types
+    return Object.values(ConnectorType);
+  };
+  
+  const availableConnectors = getAvailableConnectorTypes(componentType);
+  
   return (
     <>
       {componentType === 'FiberPatchPanel' && (
@@ -97,86 +110,225 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
             )}
           />
           
-          <FormField
-            control={register.control}
-            name="portQuantity"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Port Quantity</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    name="portQuantity"
-                    onChange={e => {
-                      const value = Number(e.target.value) || 0;
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm">Back-Side Ports (Input)</h4>
+            <FormField
+              control={register.control}
+              name="backPortType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Connector Type</FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
                       field.onChange(value);
-                      onInputChange(e);
+                      onSelectChange('backPortType', value);
                     }}
-                    value={field.value || 0}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+                    value={field.value || ''}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select connector type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableConnectors.map(connector => (
+                        <SelectItem key={connector} value={connector}>{connector}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={register.control}
+              name="backPortQuantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantity</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      {...field} 
+                      name="backPortQuantity"
+                      onChange={e => {
+                        const value = Number(e.target.value) || 0;
+                        field.onChange(value);
+                        onInputChange(e);
+                      }}
+                      value={field.value || 0}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm">Front-Side Ports (Output)</h4>
+            <FormField
+              control={register.control}
+              name="frontPortType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Connector Type</FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      onSelectChange('frontPortType', value);
+                    }}
+                    value={field.value || ''}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select connector type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableConnectors.map(connector => (
+                        <SelectItem key={connector} value={connector}>{connector}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={register.control}
+              name="frontPortQuantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantity</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      {...field} 
+                      name="frontPortQuantity"
+                      onChange={e => {
+                        const value = Number(e.target.value) || 0;
+                        field.onChange(value);
+                        onInputChange(e);
+                      }}
+                      value={field.value || 0}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
         </>
       )}
       
       {componentType === 'Cassette' && (
         <>
-          <FormField
-            control={register.control}
-            name="portType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Port Type</FormLabel>
-                <Select 
-                  onValueChange={(value) => {
-                    field.onChange(value);
-                    onSelectChange('portType', value);
-                  }}
-                  value={field.value || ''}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a port type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value={ConnectorType.RJ45}>RJ45</SelectItem>
-                    <SelectItem value={ConnectorType.MPO12}>MPO-12</SelectItem>
-                    <SelectItem value={ConnectorType.LC}>LC</SelectItem>
-                    <SelectItem value={ConnectorType.SFP}>SFP</SelectItem>
-                    <SelectItem value={ConnectorType.QSFP}>QSFP</SelectItem>
-                    <SelectItem value={ConnectorType.QSFP_DD}>QSFP-DD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={register.control}
-            name="portQuantity"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Port Quantity</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    name="portQuantity"
-                    onChange={e => {
-                      const value = Number(e.target.value) || 0;
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm">Back-Side Ports (Input)</h4>
+            <FormField
+              control={register.control}
+              name="backPortType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Connector Type</FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
                       field.onChange(value);
-                      onInputChange(e);
+                      onSelectChange('backPortType', value);
                     }}
-                    value={field.value || 0}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+                    value={field.value || ''}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select connector type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableConnectors.map(connector => (
+                        <SelectItem key={connector} value={connector}>{connector}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={register.control}
+              name="backPortQuantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantity</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      {...field} 
+                      name="backPortQuantity"
+                      onChange={e => {
+                        const value = Number(e.target.value) || 0;
+                        field.onChange(value);
+                        onInputChange(e);
+                      }}
+                      value={field.value || 0}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm">Front-Side Ports (Output)</h4>
+            <FormField
+              control={register.control}
+              name="frontPortType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Connector Type</FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      onSelectChange('frontPortType', value);
+                    }}
+                    value={field.value || ''}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select connector type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableConnectors.map(connector => (
+                        <SelectItem key={connector} value={connector}>{connector}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={register.control}
+              name="frontPortQuantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantity</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      {...field} 
+                      name="frontPortQuantity"
+                      onChange={e => {
+                        const value = Number(e.target.value) || 0;
+                        field.onChange(value);
+                        onInputChange(e);
+                      }}
+                      value={field.value || 0}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
         </>
       )}
       
@@ -224,12 +376,9 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={ConnectorType.RJ45}>RJ45</SelectItem>
-                    <SelectItem value={ConnectorType.MPO12}>MPO-12</SelectItem>
-                    <SelectItem value={ConnectorType.LC}>LC</SelectItem>
-                    <SelectItem value={ConnectorType.SFP}>SFP</SelectItem>
-                    <SelectItem value={ConnectorType.QSFP}>QSFP</SelectItem>
-                    <SelectItem value={ConnectorType.QSFP_DD}>QSFP-DD</SelectItem>
+                    {availableConnectors.map(connector => (
+                      <SelectItem key={connector} value={connector}>{connector}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </FormItem>
@@ -254,12 +403,9 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={ConnectorType.RJ45}>RJ45</SelectItem>
-                    <SelectItem value={ConnectorType.MPO12}>MPO-12</SelectItem>
-                    <SelectItem value={ConnectorType.LC}>LC</SelectItem>
-                    <SelectItem value={ConnectorType.SFP}>SFP</SelectItem>
-                    <SelectItem value={ConnectorType.QSFP}>QSFP</SelectItem>
-                    <SelectItem value={ConnectorType.QSFP_DD}>QSFP-DD</SelectItem>
+                    {availableConnectors.map(connector => (
+                      <SelectItem key={connector} value={connector}>{connector}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </FormItem>

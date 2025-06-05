@@ -2,7 +2,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PortRole, PortSpeed } from '@/types/infrastructure/port-types';
+import { PortRole, PortSpeed, PortSide } from '@/types/infrastructure/port-types';
 import { ConnectionRule } from '@/types/infrastructure/connection-rule-types';
 
 interface PortCriteriaFieldsProps {
@@ -66,6 +66,29 @@ export const PortCriteriaFields: React.FC<PortCriteriaFieldsProps> = ({
             <option key={speed} value={speed}>{speed}</option>
           ))}
         </select>
+      </div>
+      <div>
+        <Label htmlFor={`${prefix}-side`}>Port Side</Label>
+        <select
+          className="mt-1 block w-full border rounded px-3 py-2 bg-background"
+          id={`${prefix}-side`}
+          value={criteria.side || ''}
+          onChange={e => {
+            const value = e.target.value ? (e.target.value as PortSide) : undefined;
+            setFormData(prev => ({
+              ...prev,
+              [`${prefix}PortCriteria`]: {
+                ...prev[`${prefix}PortCriteria`],
+                side: value,
+              },
+            }));
+          }}
+        >
+          <option value="">Any (Default: Front)</option>
+          <option value={PortSide.Front}>Front Side</option>
+          <option value={PortSide.Back}>Back Side</option>
+        </select>
+        <p className="text-xs text-muted-foreground">For patch panels and cassettes</p>
       </div>
       <div className="md:col-span-2">
         <Label htmlFor={`${prefix}-portNamePattern`}>Port Name Pattern</Label>

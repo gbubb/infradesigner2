@@ -1,5 +1,5 @@
 import { ComponentType, ConnectorType } from './component-types';
-import { PortRole, PortSpeed, MediaType } from './port-types';
+import { PortRole, PortSpeed, MediaType, PortSide } from './port-types';
 
 export interface DeviceCriteria {
   componentType?: ComponentType;
@@ -13,6 +13,7 @@ export interface PortCriteria {
   speed?: PortSpeed;
   portNamePattern?: string;
   excludePorts?: string[];
+  side?: PortSide; // For specifying front or back side ports (relevant for cassettes and patch panels)
 }
 
 export enum AZScope {

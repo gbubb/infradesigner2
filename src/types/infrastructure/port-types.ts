@@ -39,12 +39,18 @@ export enum PortRole {
   Storage = 'storage'
 }
 
+export enum PortSide {
+  Front = 'front',
+  Back = 'back'
+}
+
 export interface Port {
   id: string;
   connectorType: ConnectorType;
   speed: PortSpeed;
   mediaType?: MediaType;
   role?: PortRole;
+  side?: PortSide; // For cassettes and patch panels to specify front or back side
   connectedToPortId?: string;
   connectedToDeviceId?: string;
   cableId?: string;

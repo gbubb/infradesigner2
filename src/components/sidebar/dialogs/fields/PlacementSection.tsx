@@ -20,7 +20,8 @@ export const PlacementSection: React.FC<Props> = ({
   if (
     formValues.type === ComponentType.Cable ||
     formValues.type === ComponentType.Disk ||
-    formValues.type === ComponentType.GPU
+    formValues.type === ComponentType.GPU ||
+    formValues.type === ComponentType.Cassette
   ) {
     return null;
   }
