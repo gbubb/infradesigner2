@@ -5,6 +5,7 @@ import {
   PlacedDevice,
   RackProfile,
   PortCriteria,
+  RowLayoutConfiguration,
   // ... keep existing code (other Infrastructure types) ...
 } from "@/types/infrastructure";
 import {
@@ -232,7 +233,8 @@ function findCompatibleCableTemplate(
 
 function estimateCableLength(
   srcPlaced: PlacedDevice, srcRack?: RackProfile,
-  dstPlaced?: PlacedDevice, dstRack?: RackProfile
+  dstPlaced?: PlacedDevice, dstRack?: RackProfile,
+  rowLayout?: RowLayoutConfiguration
 ): number {
   if (!srcPlaced || !dstPlaced) return DEFAULT_INTER_RACK_LENGTH_M;
 
@@ -244,7 +246,45 @@ function estimateCableLength(
     const totalCM = verticalCM + 2 * SLACK_PER_END_CM + INTRA_RACK_EXTRA_CM;
     return Math.ceil(totalCM / 100); // convert to meters, round up
   } else {
-    // Different racks
+    // Different racks - calculate using row layout if available
+    if (rowLayout && srcRack && dstRack) {
+      const srcIndex = rowLayout.rackOrder.indexOf(srcRack.id);
+      const dstIndex = rowLayout.rackOrder.indexOf(dstRack.id);
+      
+      if (srcIndex !== -1 && dstIndex !== -1) {
+        // Calculate horizontal distance between racks
+        let horizontalDistanceMm = 0;
+        const startIdx = Math.min(srcIndex, dstIndex);
+        const endIdx = Math.max(srcIndex, dstIndex);
+        
+        for (let i = startIdx; i < endIdx; i++) {
+          const rackId = rowLayout.rackOrder[i];
+          const rackProps = rowLayout.rackProperties[rackId];
+          if (rackProps) {
+            horizontalDistanceMm += rackProps.widthMm;
+            if (i < endIdx - 1) {
+              horizontalDistanceMm += rackProps.gapAfterMm;
+            }
+          }
+        }
+        
+        // Add vertical components
+        const srcRU = srcPlaced.ruPosition ?? 20; // Default to middle of rack
+        const dstRU = dstPlaced.ruPosition ?? 20;
+        
+        // Vertical distance from device to cable height
+        const srcVerticalMm = rowLayout.cableHeightMm + (srcRU * RU_HEIGHT_CM * 10);
+        const dstVerticalMm = rowLayout.cableHeightMm + (dstRU * RU_HEIGHT_CM * 10);
+        
+        // Total cable distance in mm
+        const totalDistanceMm = srcVerticalMm + horizontalDistanceMm + dstVerticalMm + (2 * SLACK_PER_END_CM * 10);
+        
+        // Convert to meters and round up
+        return Math.ceil(totalDistanceMm / 1000);
+      }
+    }
+    
+    // Fallback to default if row layout not available
     return DEFAULT_INTER_RACK_LENGTH_M;
   }
 }
@@ -554,7 +594,8 @@ export function generateConnections(
                   { deviceId: srcDevice.id, ruPosition: srcPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
                   srcRack,
                   { deviceId: targetDevice.id, ruPosition: dstPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
-                  dstRack
+                  dstRack,
+                  design.rowLayout
                 );
                 
                 let cable: Cable | undefined = undefined;
@@ -739,7 +780,8 @@ export function generateConnections(
                 { deviceId: srcDevice.id, ruPosition: srcPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
                 srcRack,
                 { deviceId: targetDevice.id, ruPosition: dstPlace.ruPosition || 0, orientation: DeviceOrientation.Front },
-                dstRack
+                dstRack,
+                design.rowLayout
               );
 
               // 1. Handle Copper to Copper connections

@@ -9,6 +9,7 @@ import { Save, Trash2, Plus, Network, Download } from "lucide-react";
 import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable, Port, Transceiver } from "@/types/infrastructure";
 import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
 import ConnectionReportModal from "./ConnectionReportModal";
+import { RowLayoutConfiguration } from "@/types/infrastructure/rack-types";
 
 // Table display row type for formatted data
 type NetworkConnectionTableRow = {
@@ -23,6 +24,7 @@ type NetworkConnectionTableRow = {
   dstRack: string;
   dstRU: string | number;
   cableType: string;
+  calculatedDistanceMm: string | number;
   lengthMeters: string | number;
   transceiverSourceModel: string;
   transceiverDestinationModel: string;
@@ -63,17 +65,78 @@ const getRackAndRU = (
   deviceId: string, 
   rowLayoutProperties?: Record<string, { friendlyName: string }> | null
 ) => {
-  if (!rackprofiles) return { rack: "-", ru: "-" };
+  if (!rackprofiles) return { rack: "-", ru: "-", rackId: null };
   for (const rack of rackprofiles) {
     for (const d of rack.devices) {
       if (d.deviceId === deviceId) {
         // Use Row Layout friendly name as the authoritative source
         const rackName = rowLayoutProperties?.[rack.id]?.friendlyName || rack.name || rack.id.substring(0, 6);
-        return { rack: rackName, ru: d.ruPosition ?? "-" };
+        return { rack: rackName, ru: d.ruPosition ?? "-", rackId: rack.id };
       }
     }
   }
-  return { rack: "-", ru: "-" };
+  return { rack: "-", ru: "-", rackId: null };
+};
+
+const calculateCableDistance = (
+  srcRackId: string | null,
+  srcRU: string | number,
+  dstRackId: string | null,
+  dstRU: string | number,
+  rowLayout?: RowLayoutConfiguration
+): number => {
+  const RU_HEIGHT_MM = 44.5; // 1 RU height in mm
+  const SLACK_PER_END_MM = 500; // 50cm slack per end
+  const INTRA_RACK_EXTRA_MM = 500; // Extra for routing within rack
+  const DEFAULT_INTER_RACK_LENGTH_MM = 10000; // 10m default
+
+  if (!srcRackId || !dstRackId) return DEFAULT_INTER_RACK_LENGTH_MM;
+
+  const srcRUNum = typeof srcRU === 'number' ? srcRU : 0;
+  const dstRUNum = typeof dstRU === 'number' ? dstRU : 0;
+
+  if (srcRackId === dstRackId) {
+    // Same rack
+    const ruDelta = Math.abs(srcRUNum - dstRUNum);
+    const verticalMm = ruDelta * RU_HEIGHT_MM;
+    // Add slack both ends and intra-rack routing
+    return verticalMm + 2 * SLACK_PER_END_MM + INTRA_RACK_EXTRA_MM;
+  } else {
+    // Different racks - calculate using row layout if available
+    if (rowLayout) {
+      const srcIndex = rowLayout.rackOrder.indexOf(srcRackId);
+      const dstIndex = rowLayout.rackOrder.indexOf(dstRackId);
+      
+      if (srcIndex !== -1 && dstIndex !== -1) {
+        // Calculate horizontal distance between racks
+        let horizontalDistanceMm = 0;
+        const startIdx = Math.min(srcIndex, dstIndex);
+        const endIdx = Math.max(srcIndex, dstIndex);
+        
+        for (let i = startIdx; i < endIdx; i++) {
+          const rackId = rowLayout.rackOrder[i];
+          const rackProps = rowLayout.rackProperties[rackId];
+          if (rackProps) {
+            horizontalDistanceMm += rackProps.widthMm;
+            if (i < endIdx - 1) {
+              horizontalDistanceMm += rackProps.gapAfterMm;
+            }
+          }
+        }
+        
+        // Add vertical components
+        // Vertical distance from device to cable height
+        const srcVerticalMm = rowLayout.cableHeightMm + (srcRUNum * RU_HEIGHT_MM);
+        const dstVerticalMm = rowLayout.cableHeightMm + (dstRUNum * RU_HEIGHT_MM);
+        
+        // Total cable distance in mm
+        return srcVerticalMm + horizontalDistanceMm + dstVerticalMm + (2 * SLACK_PER_END_MM);
+      }
+    }
+    
+    // Fallback to default if row layout not available
+    return DEFAULT_INTER_RACK_LENGTH_MM;
+  }
 };
 
 const columns = [
@@ -87,7 +150,8 @@ const columns = [
   { key: 'dstRack', label: 'Destination Rack' },
   { key: 'dstRU', label: 'Destination RU' },
   { key: 'cableType', label: 'Cable Type' },
-  { key: 'lengthMeters', label: 'Cable Length (m)' },
+  { key: 'calculatedDistanceMm', label: 'Calculated Distance (mm)' },
+  { key: 'lengthMeters', label: 'Selected Cable (m)' },
   { key: 'transceiverSourceModel', label: 'Src Transceiver' },
   { key: 'transceiverDestinationModel', label: 'Dst Transceiver' }
 ];
@@ -97,7 +161,8 @@ const formatConnectionRow = (
   allDesignComponents: InfrastructureComponent[],
   racks: RackProfile[] | undefined,
   allTransceiverTemplates: Transceiver[],
-  rowLayoutProperties?: Record<string, { friendlyName: string }> | null
+  rowLayoutProperties?: Record<string, { friendlyName: string }> | null,
+  rowLayout?: RowLayoutConfiguration
 ): NetworkConnectionTableRow => {
   const srcDeviceName = getDeviceName(allDesignComponents, row.sourceDeviceId);
   const dstDeviceName = getDeviceName(allDesignComponents, row.destinationDeviceId);
@@ -107,6 +172,15 @@ const formatConnectionRow = (
 
   const srcRackObj = getRackAndRU(racks, row.sourceDeviceId, rowLayoutProperties);
   const dstRackObj = getRackAndRU(racks, row.destinationDeviceId, rowLayoutProperties);
+  
+  // Calculate cable distance
+  const calculatedDistanceMm = calculateCableDistance(
+    srcRackObj.rackId,
+    srcRackObj.ru,
+    dstRackObj.rackId,
+    dstRackObj.ru,
+    rowLayout
+  );
   
   // Get transceiver names from IDs
   const srcTransceiverName = row.transceiverSourceId 
@@ -128,6 +202,7 @@ const formatConnectionRow = (
     dstRack: dstRackObj.rack,
     dstRU: dstRackObj.ru,
     cableType: row.mediaType || "-",
+    calculatedDistanceMm: calculatedDistanceMm.toFixed(0),
     lengthMeters: typeof row.lengthMeters === "number" && !isNaN(row.lengthMeters) ? row.lengthMeters.toFixed(1) : "-",
     transceiverSourceModel: srcTransceiverName,
     transceiverDestinationModel: dstTransceiverName,
@@ -152,9 +227,9 @@ const NetworkConnectionsTab: React.FC = () => {
       (c): c is Transceiver => c.type === ComponentType.Transceiver
     );
     const rows: NetworkConnectionTableRow[] = (networkConnections || []).map(r =>
-      formatConnectionRow(r, designComponents, activeDesign?.rackprofiles, allTransceiverTemplates, activeDesign?.rowLayout?.rackProperties)
+      formatConnectionRow(r, designComponents, activeDesign?.rackprofiles, allTransceiverTemplates, activeDesign?.rowLayout?.rackProperties, activeDesign?.rowLayout)
     );
-    let filtered = filterConnections(rows, searchQuery);
+    const filtered = filterConnections(rows, searchQuery);
 
     if (sortCol) {
       filtered.sort((a, b) => {
@@ -166,7 +241,7 @@ const NetworkConnectionsTab: React.FC = () => {
       });
     }
     return filtered;
-  }, [networkConnections, searchQuery, sortCol, sortDir, activeDesign]);
+  }, [networkConnections, searchQuery, sortCol, sortDir, activeDesign, componentTemplates]);
 
   const handleGenerate = () => {
     if (!activeDesign) return;
