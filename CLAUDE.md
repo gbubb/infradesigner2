@@ -9,20 +9,12 @@ This is a Network Infrastructure Design Tool that enables users to design, confi
 ## Development Commands
 
 ```bash
-# Install dependencies
-npm install
-
-# Run development server (port 8080)
-npm run dev
-
 # Build for production
 npm run build
 
 # Run linting
 npm run lint
 
-# Preview production build
-npm run preview
 ```
 
 ## Testing Environment
@@ -67,7 +59,7 @@ The system supports these infrastructure components:
 - **Network**: Switches, Routers, Firewalls with port configurations
 - **Storage**: Disk arrays and storage systems
 - **Cabling**: Fiber/Copper patch panels, cassettes, cables
-- **Accessories**: PDUs, Transceivers/Optics
+- **Accessories**: Transceivers/Optics
 
 ### Important Services
 
