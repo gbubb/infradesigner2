@@ -5,10 +5,11 @@ import { generateConnections } from "@/services/connectionService";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Save, Trash2, Plus, Network, Download } from "lucide-react";
-import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable, Port, Transceiver } from "@/types/infrastructure";
+import { Save, Trash2, Plus, Network, Download, Cable } from "lucide-react";
+import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable as CableType, Port, Transceiver } from "@/types/infrastructure";
 import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
 import ConnectionReportModal from "./ConnectionReportModal";
+import ManualConnectionDialog from "./ManualConnectionDialog";
 import { RowLayoutConfiguration } from "@/types/infrastructure/rack-types";
 
 // Table display row type for formatted data
@@ -220,6 +221,7 @@ const NetworkConnectionsTab: React.FC = () => {
   const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
   const [generationReport, setGenerationReport] = useState<ConnectionAttempt[] | null>(null);
   const [showReport, setShowReport] = useState(false);
+  const [showManualDialog, setShowManualDialog] = useState(false);
 
   const displayedRows = useMemo(() => {
     const designComponents = activeDesign?.components || [];
@@ -249,7 +251,7 @@ const NetworkConnectionsTab: React.FC = () => {
 
     // Get all cable templates from the component library store
     const allCableTemplates = componentTemplates.filter(
-      (c): c is Cable => c.type === ComponentType.Cable
+      (c): c is CableType => c.type === ComponentType.Cable
     );
 
     // Get all transceiver templates from the component library store
@@ -354,6 +356,11 @@ const NetworkConnectionsTab: React.FC = () => {
     toast.success("All network connections cleared");
   };
 
+  // Handle manual connections
+  const handleManualConnectionsSave = (newConnections: NetworkConnection[]) => {
+    setNetworkConnections([...networkConnections, ...newConnections]);
+  };
+
 
   // Export connections to CSV
   const handleExportCSV = () => {
@@ -414,6 +421,9 @@ const NetworkConnectionsTab: React.FC = () => {
       <div className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <div className="text-xl font-semibold flex items-center gap-2"><Network size={20} />Network Connections</div>
         <div className="flex gap-2 mt-2 sm:mt-0 flex-wrap">
+          <Button size="sm" variant="outline" onClick={() => setShowManualDialog(true)}>
+            <Cable className="w-4 h-4" /> New Connections
+          </Button>
           <Button size="sm" variant="outline" onClick={handleGenerate} disabled={generating}>
             <Plus className="w-4 h-4" /> {generating ? 'Generating...' : 'Generate'}
           </Button>
@@ -475,6 +485,13 @@ const NetworkConnectionsTab: React.FC = () => {
           report={generationReport}
         />
       )}
+      
+      {/* Manual Connection Dialog */}
+      <ManualConnectionDialog
+        open={showManualDialog}
+        onClose={() => setShowManualDialog(false)}
+        onSave={handleManualConnectionsSave}
+      />
     </div>
   );
 };
