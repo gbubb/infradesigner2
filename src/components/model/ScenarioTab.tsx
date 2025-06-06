@@ -769,6 +769,23 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
         </CardContent>
       </Card>
 
+      {/* Debug Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Debug Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 text-sm">
+            <p>Compute Pricing Length: {computePricing?.length || 0}</p>
+            <p>Storage Pricing Length: {storagePricing?.length || 0}</p>
+            <p>Cumulative Data Length: {cumulativeData?.length || 0}</p>
+            <p>First Data Point: {JSON.stringify(cumulativeData?.[0], null, 2)}</p>
+            <p>Margin Break-even: {marginBreakEvenMonth}</p>
+            <p>Profit Break-even: {profitBreakEvenMonth}</p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Break-even Indicators */}
       {(marginBreakEvenMonth !== null || profitBreakEvenMonth !== null) && (
         <Card>
@@ -777,7 +794,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {marginBreakEvenMonth !== null && (
+              {marginBreakEvenMonth !== null && isFinite(marginBreakEvenMonth) && (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-amber-500 rounded-full" />
                   <div>
@@ -786,7 +803,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                   </div>
                 </div>
               )}
-              {profitBreakEvenMonth !== null && (
+              {profitBreakEvenMonth !== null && isFinite(profitBreakEvenMonth) && (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-green-500 rounded-full" />
                   <div>
@@ -806,41 +823,8 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
           <CardTitle>Cluster Utilization Growth</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={cumulativeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="monthDisplay" 
-                  label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
-                  domain={['dataMin', 'dataMax']}
-                  ticks={Array.from({ length: Math.min(10, Math.ceil(scenarioMonths / 3) + 1) }, (_, i) => i * 3).filter(t => t <= scenarioMonths)}
-                />
-                <YAxis 
-                  label={{ value: 'Utilization %', angle: -90, position: 'insideLeft' }}
-                  domain={[0, 100]}
-                />
-                <Tooltip 
-                  formatter={(value: number) => `${Number(value).toFixed(1)}%`}
-                  labelFormatter={(label) => `Month ${label}`}
-                />
-                <Legend />
-                {[...(computePricing || []), ...(storagePricing || [])].map((cluster, index) => {
-                  const totalClusters = (computePricing?.length || 0) + (storagePricing?.length || 0);
-                  return (
-                  <Line
-                    key={cluster.clusterId}
-                    type="monotone"
-                    dataKey={`${cluster.clusterId}_utilization`}
-                    name={cluster.clusterName}
-                    stroke={`hsl(${index * 360 / totalClusters}, 70%, 50%)`}
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                  );
-                })}
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="h-[400px] w-full flex items-center justify-center">
+            <p className="text-muted-foreground">Chart temporarily disabled for debugging</p>
           </div>
         </CardContent>
       </Card>
@@ -851,87 +835,8 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
           <CardTitle>Financial Projections</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={cumulativeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="monthDisplay" 
-                  label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
-                  domain={['dataMin', 'dataMax']}
-                  ticks={Array.from({ length: Math.min(10, Math.ceil(scenarioMonths / 3) + 1) }, (_, i) => i * 3).filter(t => t <= scenarioMonths)}
-                />
-                <YAxis 
-                  yAxisId="left"
-                  label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft' }}
-                  tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
-                />
-                <YAxis 
-                  yAxisId="right"
-                  orientation="right"
-                  label={{ value: 'Margin %', angle: 90, position: 'insideRight' }}
-                  domain={[0, 100]}
-                  tickFormatter={(value) => `${Math.round(value)}%`}
-                />
-                {/* Break-even markers */}
-                {marginBreakEvenMonth !== null && (
-                  <ReferenceLine 
-                    x={Math.round(marginBreakEvenMonth)} 
-                    stroke="#f59e0b" 
-                    strokeDasharray="3 3" 
-                    label={{ value: "Margin +ve", position: "top" }}
-                  />
-                )}
-                {profitBreakEvenMonth !== null && (
-                  <ReferenceLine 
-                    x={Math.round(profitBreakEvenMonth)} 
-                    stroke="#10b981" 
-                    strokeDasharray="3 3" 
-                    label={{ value: "Profit +ve", position: "top" }}
-                  />
-                )}
-                <ReferenceLine yAxisId="left" y={0} stroke="#666" strokeDasharray="3 3" />
-                <ReferenceLine yAxisId="right" y={0} stroke="#666" strokeDasharray="3 3" />
-                <Tooltip 
-                  formatter={(value: number, name: string) => {
-                    if (name === 'Margin') {
-                      return `${Number(value).toFixed(1)}%`;
-                    }
-                    return formatCurrency(value);
-                  }}
-                  labelFormatter={(label) => `Month ${label}`}
-                />
-                <Legend />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="cumulativeRevenue"
-                  name="Cumulative Revenue"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="cumulativeProfit"
-                  name="Cumulative Profit"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="margin"
-                  name="Margin"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="h-[400px] w-full flex items-center justify-center">
+            <p className="text-muted-foreground">Chart temporarily disabled for debugging</p>
           </div>
         </CardContent>
       </Card>
