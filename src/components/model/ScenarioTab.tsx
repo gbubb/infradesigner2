@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 import { useDesignStore } from '@/store/designStore';
@@ -55,6 +56,12 @@ interface ScenarioTabProps {
   }>;
 }
 
+interface ClusterParams {
+  startUtilization: number;
+  growthRate: number;
+  overallocationRatio?: number;
+}
+
 export const ScenarioTab: React.FC<ScenarioTabProps> = ({
   clusterAnalysis,
   computePricing,
@@ -68,33 +75,67 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
 
   // Growth parameters
   const [scenarioMonths, setScenarioMonths] = useState(24);
-  const [monthlyGrowthRate, setMonthlyGrowthRate] = useState(2); // Monthly growth rate in %
-  const [clusterStartUtilization, setClusterStartUtilization] = useState<Record<string, number>>(() => {
+  
+  // Per-cluster parameters
+  const [clusterParameters, setClusterParameters] = useState<Record<string, ClusterParams>>(() => {
+    const initial: Record<string, ClusterParams> = {};
+    computePricing.forEach(cluster => {
+      initial[cluster.clusterId] = {
+        startUtilization: 10,
+        growthRate: 2
+      };
+    });
+    storagePricing.forEach(cluster => {
+      initial[cluster.clusterId] = {
+        startUtilization: 10,
+        growthRate: 2,
+        overallocationRatio: 1.0
+      };
+    });
+    return initial;
+  });
+  
+  // Pricing overrides
+  const [pricingOverrides, setPricingOverrides] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
-    [...computePricing, ...storagePricing].forEach(cluster => {
-      initial[cluster.clusterId] = 10; // Start at 10% utilization
+    computePricing.forEach(cluster => {
+      initial[cluster.clusterId] = cluster.pricePerMonth;
+    });
+    storagePricing.forEach(cluster => {
+      initial[cluster.clusterId] = cluster.pricePerMonth;
     });
     return initial;
   });
 
-  // Update start utilization for a specific cluster
-  const updateClusterStartUtilization = (clusterId: string, utilization: number) => {
-    setClusterStartUtilization(prev => ({
+  // Update cluster parameters
+  const updateClusterParameter = (clusterId: string, field: string, value: number) => {
+    setClusterParameters(prev => ({
       ...prev,
-      [clusterId]: utilization
+      [clusterId]: {
+        ...prev[clusterId],
+        [field]: value
+      }
     }));
   };
-
-  // Convert annual CAGR to weekly multiplier: (1 + annual_rate)^(1/52) - 1
-  const weeklyGrowthMultiplier = Math.pow(1 + (monthlyGrowthRate / 100), 1/4.33) - 1;
+  
+  // Update pricing override
+  const updatePricingOverride = (clusterId: string, price: number) => {
+    setPricingOverrides(prev => ({
+      ...prev,
+      [clusterId]: price
+    }));
+  };
 
   // Generate scenario data
   const scenarioData = useMemo(() => {
     const data = [];
     const totalWeeks = Math.ceil(scenarioMonths * 4.33); // ~4.33 weeks per month
     
-    // Initialize cluster utilizations
-    const clusterUtilizations: Record<string, number> = { ...clusterStartUtilization };
+    // Initialize cluster utilizations from parameters
+    const clusterUtilizations: Record<string, number> = {};
+    Object.entries(clusterParameters).forEach(([clusterId, params]) => {
+      clusterUtilizations[clusterId] = params.startUtilization;
+    });
     
     for (let week = 0; week <= totalWeeks; week++) {
       const month = week / 4.33;
@@ -126,7 +167,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
         const vmsByMemory = Math.floor(totalMemoryGB / averageVMMemoryGB);
         const maxVMs = Math.min(vmsByCPU, vmsByMemory);
         const currentVMs = Math.floor(utilization * maxVMs / 100);
-        const revenue = cluster.pricePerMonth * currentVMs;
+        const revenue = (pricingOverrides[cluster.clusterId] || cluster.pricePerMonth) * currentVMs;
         
         totalRevenue += revenue;
         totalCosts += baseAnalysis.costs.total;
@@ -138,8 +179,10 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
           units: currentVMs
         };
         
-        // Apply growth for next week (compound)
+        // Apply growth for next week (compound) using cluster-specific growth rate
         if (week < totalWeeks) {
+          const clusterGrowthRate = clusterParameters[cluster.clusterId]?.growthRate || 2;
+          const weeklyGrowthMultiplier = Math.pow(1 + (clusterGrowthRate / 100), 1/4.33) - 1;
           clusterUtilizations[cluster.clusterId] = Math.min(100, utilization * (1 + weeklyGrowthMultiplier));
         }
       });
@@ -156,7 +199,11 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
         const clusterMetricsData = storageClustersMetrics.find(m => m.id === cluster.clusterId);
         const usableStorageTiB = clusterMetricsData?.usableCapacityTiB || 0;
         const currentStorageTiB = utilization * usableStorageTiB / 100;
-        const revenue = cluster.pricePerMonth * currentStorageTiB * 1024; // Convert TiB to GiB
+        
+        // Apply overallocation ratio if set
+        const overallocationRatio = clusterParameters[cluster.clusterId]?.overallocationRatio || 1.0;
+        const overallocatedStorageTiB = currentStorageTiB * overallocationRatio;
+        const revenue = (pricingOverrides[cluster.clusterId] || cluster.pricePerMonth) * overallocatedStorageTiB * 1024; // Convert TiB to GiB
         
         totalRevenue += revenue;
         totalCosts += baseAnalysis.costs.total;
@@ -168,8 +215,10 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
           units: currentStorageTiB
         };
         
-        // Apply growth for next week
+        // Apply growth for next week using cluster-specific growth rate
         if (week < totalWeeks) {
+          const clusterGrowthRate = clusterParameters[cluster.clusterId]?.growthRate || 2;
+          const weeklyGrowthMultiplier = Math.pow(1 + (clusterGrowthRate / 100), 1/4.33) - 1;
           clusterUtilizations[cluster.clusterId] = Math.min(100, utilization * (1 + weeklyGrowthMultiplier));
         }
       });
@@ -179,7 +228,8 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
       
       data.push({
         week,
-        month: month.toFixed(1),
+        month: month,
+        monthDisplay: Math.round(month),
         totalRevenue,
         totalCosts,
         profit,
@@ -192,28 +242,30 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
     }
     
     return data;
-  }, [scenarioMonths, monthlyGrowthRate, clusterStartUtilization, clusterAnalysis, computePricing, storagePricing, requirements, actualHardwareTotals, storageClustersMetrics, weeklyGrowthMultiplier]);
+  }, [scenarioMonths, clusterParameters, pricingOverrides, clusterAnalysis, computePricing, storagePricing, requirements, actualHardwareTotals, storageClustersMetrics]);
 
   // Calculate cumulative metrics
   const cumulativeData = useMemo(() => {
     let cumulativeRevenue = 0;
     let cumulativeProfit = 0;
     
-    return scenarioData.map(point => {
-      // Weekly revenue/profit (divide monthly by 4.33)
-      const weeklyRevenue = point.totalRevenue / 4.33;
-      const weeklyProfit = point.profit / 4.33;
-      
-      cumulativeRevenue += weeklyRevenue;
-      cumulativeProfit += weeklyProfit;
-      
-      return {
-        ...point,
-        cumulativeRevenue,
-        cumulativeProfit
-      };
-    });
-  }, [scenarioData]);
+    return scenarioData
+      .filter(point => point.month <= scenarioMonths)
+      .map(point => {
+        // Weekly revenue/profit (divide monthly by 4.33)
+        const weeklyRevenue = point.totalRevenue / 4.33;
+        const weeklyProfit = point.profit / 4.33;
+        
+        cumulativeRevenue += weeklyRevenue;
+        cumulativeProfit += weeklyProfit;
+        
+        return {
+          ...point,
+          cumulativeRevenue,
+          cumulativeProfit
+        };
+      });
+  }, [scenarioData, scenarioMonths]);
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -227,64 +279,130 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Growth Parameters */}
+      {/* Scenario Parameters */}
       <Card>
         <CardHeader>
-          <CardTitle>Growth Parameters</CardTitle>
+          <CardTitle>Scenario Parameters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Scenario Length */}
-            <div className="space-y-2">
-              <Label htmlFor="scenario-months">Scenario Length (months)</Label>
-              <Input
-                id="scenario-months"
-                type="number"
-                min={1}
-                max={120}
-                value={scenarioMonths}
-                onChange={(e) => setScenarioMonths(Number(e.target.value))}
-              />
-            </div>
-            
-            {/* Monthly Growth Rate */}
-            <div className="space-y-2">
-              <Label htmlFor="monthly-growth">Monthly Growth Rate (%)</Label>
-              <Input
-                id="monthly-growth"
-                type="number"
-                min={0}
-                max={50}
-                step={0.1}
-                value={monthlyGrowthRate}
-                onChange={(e) => setMonthlyGrowthRate(Number(e.target.value))}
-              />
-              <p className="text-xs text-muted-foreground">
-                Compounds weekly ({(((1 + monthlyGrowthRate/100) ** 12 - 1) * 100).toFixed(1)}% annual)
-              </p>
-            </div>
+          <div className="mb-6">
+            <Label htmlFor="scenario-months">Scenario Length (months)</Label>
+            <Input
+              id="scenario-months"
+              type="number"
+              min={1}
+              max={120}
+              value={scenarioMonths}
+              onChange={(e) => setScenarioMonths(Number(e.target.value))}
+              className="w-48"
+            />
           </div>
           
-          {/* Starting Utilization per Cluster */}
-          <div className="mt-6">
-            <h4 className="text-sm font-medium mb-4">Starting Utilization by Cluster</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...computePricing, ...storagePricing].map(cluster => (
-                <div key={cluster.clusterId} className="space-y-2">
-                  <Label htmlFor={`start-util-${cluster.clusterId}`}>
-                    {cluster.clusterName} (%)
-                  </Label>
-                  <Input
-                    id={`start-util-${cluster.clusterId}`}
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={clusterStartUtilization[cluster.clusterId] || 10}
-                    onChange={(e) => updateClusterStartUtilization(cluster.clusterId, Number(e.target.value))}
-                  />
-                </div>
-              ))}
-            </div>
+          {/* Cluster Parameters Table */}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cluster Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Starting Utilization (%)</TableHead>
+                  <TableHead>Monthly Growth Rate (%)</TableHead>
+                  <TableHead>Price Override ($/month)</TableHead>
+                  <TableHead>Overallocation Ratio</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {/* Compute Clusters */}
+                {computePricing.map(cluster => (
+                  <TableRow key={cluster.clusterId}>
+                    <TableCell className="font-medium">{cluster.clusterName}</TableCell>
+                    <TableCell>Compute</TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={clusterParameters[cluster.clusterId]?.startUtilization || 10}
+                        onChange={(e) => updateClusterParameter(cluster.clusterId, 'startUtilization', Number(e.target.value))}
+                        className="w-20"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={50}
+                        step={0.1}
+                        value={clusterParameters[cluster.clusterId]?.growthRate || 2}
+                        onChange={(e) => updateClusterParameter(cluster.clusterId, 'growthRate', Number(e.target.value))}
+                        className="w-20"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={pricingOverrides[cluster.clusterId] || cluster.pricePerMonth}
+                        onChange={(e) => updatePricingOverride(cluster.clusterId, Number(e.target.value))}
+                        className="w-32"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Per VM</p>
+                    </TableCell>
+                    <TableCell>-</TableCell>
+                  </TableRow>
+                ))}
+                
+                {/* Storage Clusters */}
+                {storagePricing.map(cluster => (
+                  <TableRow key={cluster.clusterId}>
+                    <TableCell className="font-medium">{cluster.clusterName}</TableCell>
+                    <TableCell>Storage</TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={clusterParameters[cluster.clusterId]?.startUtilization || 10}
+                        onChange={(e) => updateClusterParameter(cluster.clusterId, 'startUtilization', Number(e.target.value))}
+                        className="w-20"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={50}
+                        step={0.1}
+                        value={clusterParameters[cluster.clusterId]?.growthRate || 2}
+                        onChange={(e) => updateClusterParameter(cluster.clusterId, 'growthRate', Number(e.target.value))}
+                        className="w-20"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={pricingOverrides[cluster.clusterId] || cluster.pricePerMonth}
+                        onChange={(e) => updatePricingOverride(cluster.clusterId, Number(e.target.value))}
+                        className="w-32"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Per GiB</p>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0.1}
+                        max={10}
+                        step={0.1}
+                        value={clusterParameters[cluster.clusterId]?.overallocationRatio || 1.0}
+                        onChange={(e) => updateClusterParameter(cluster.clusterId, 'overallocationRatio', Number(e.target.value))}
+                        className="w-20"
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
@@ -300,8 +418,10 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
               <LineChart data={cumulativeData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
-                  dataKey="month" 
+                  dataKey="monthDisplay" 
                   label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+                  domain={[0, scenarioMonths]}
+                  ticks={Array.from({ length: Math.ceil(scenarioMonths / 3) + 1 }, (_, i) => i * 3).filter(t => t <= scenarioMonths)}
                 />
                 <YAxis 
                   label={{ value: 'Utilization %', angle: -90, position: 'insideLeft' }}
@@ -340,8 +460,10 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
               <LineChart data={cumulativeData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
-                  dataKey="month" 
+                  dataKey="monthDisplay" 
                   label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+                  domain={[0, scenarioMonths]}
+                  ticks={Array.from({ length: Math.ceil(scenarioMonths / 3) + 1 }, (_, i) => i * 3).filter(t => t <= scenarioMonths)}
                 />
                 <YAxis 
                   yAxisId="left"
@@ -353,6 +475,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                   orientation="right"
                   label={{ value: 'Margin %', angle: 90, position: 'insideRight' }}
                   domain={[0, 100]}
+                  tickFormatter={(value) => `${Math.round(value)}%`}
                 />
                 <Tooltip 
                   formatter={(value: number, name: string) => {
