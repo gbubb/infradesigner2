@@ -95,7 +95,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
     if (computePricing) {
       computePricing.forEach(cluster => {
         initial[cluster.clusterId] = {
-          startUtilization: 10,
+          startUtilization: 2,
           targetUtilization: 85,
           growthModel: 'logistic',
           inflectionMonth: 12,
@@ -111,7 +111,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
     if (storagePricing) {
       storagePricing.forEach(cluster => {
         initial[cluster.clusterId] = {
-          startUtilization: 10,
+          startUtilization: 2,
           targetUtilization: 85,
           growthModel: 'logistic',
           inflectionMonth: 12,
@@ -179,7 +179,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
       case 'logistic': {
         // Logistic S-curve growth
         const K = targetUtilization || 85; // Carrying capacity
-        const P0 = Math.max(0.1, startUtilization || 10); // Initial value (avoid zero)
+        const P0 = Math.max(0.1, startUtilization || 2); // Initial value (avoid zero)
         const r = params.growthRate || 0.5; // Growth rate
         const t0 = params.inflectionMonth || 12; // Inflection point
         
@@ -314,7 +314,12 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
       }
       
       const profit = totalRevenue - totalCosts;
-      const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+      // Clamp margin to reasonable bounds to avoid display issues
+      let margin = 0;
+      if (totalRevenue > 100) { // Only calculate margin if revenue is meaningful
+        margin = (profit / totalRevenue) * 100;
+        margin = Math.max(-100, Math.min(100, margin)); // Clamp between -100% and 100%
+      }
       
       data.push({
         week,
@@ -924,8 +929,9 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                   label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
                 />
                 <YAxis 
-                  domain={[-100, 100]}
+                  domain={[-50, 50]}
                   label={{ value: 'Margin %', angle: -90, position: 'insideLeft' }}
+                  ticks={[-50, -25, 0, 25, 50]}
                   tickFormatter={(value) => `${value}%`}
                 />
                 <Tooltip 
