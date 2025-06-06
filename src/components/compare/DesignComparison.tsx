@@ -199,7 +199,8 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
 
     design.components.forEach(component => {
       const quantity = component.quantity || 1;
-      const totalCost = component.cost * quantity;
+      const componentCost = component.cost || 0;
+      const totalCost = componentCost * quantity;
 
       switch (component.type) {
         case ComponentType.Server:
@@ -231,7 +232,16 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
       }
     });
 
-    costs.operational = monthlyCost * 12; // Annual operational costs
+    costs.operational = (monthlyCost || 0) * 12; // Annual operational costs
+    
+    // Ensure all values are valid numbers
+    Object.keys(costs).forEach(key => {
+      const value = costs[key as keyof typeof costs];
+      if (!isFinite(value) || isNaN(value)) {
+        costs[key as keyof typeof costs] = 0;
+      }
+    });
+    
     return costs;
   };
 
