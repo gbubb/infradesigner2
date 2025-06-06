@@ -285,6 +285,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                 cableLineItems={cableLineItems}
                 getBomGroupKey={getBomGroupKey}
                 onExport={handleExport}
+                componentTemplates={componentTemplates}
               />
             </CardContent>
           </Card>

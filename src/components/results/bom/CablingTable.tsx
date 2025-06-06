@@ -4,20 +4,30 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { FileSpreadsheet, Cable as CableIcon } from 'lucide-react';
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { BomItemHoverCard } from './BomItemHoverCard';
 
 interface CablingTableProps {
   summarizedComponentsByCategory: Record<string, (InfrastructureComponent & { summarizedQuantity: number })[]>;
   cableLineItems: Record<string, any>;
   getBomGroupKey: (component: InfrastructureComponent) => string;
   onExport: (category: string) => void;
+  componentTemplates?: InfrastructureComponent[];
 }
 
 export const CablingTable: React.FC<CablingTableProps> = ({
   summarizedComponentsByCategory,
   cableLineItems,
   getBomGroupKey,
-  onExport
-}) => (
+  onExport,
+  componentTemplates = []
+}) => {
+  // Helper to find cable template
+  const getCableTemplate = (cableTemplateId: string | undefined) => {
+    if (!cableTemplateId) return null;
+    return componentTemplates.find(c => c.id === cableTemplateId && c.type === ComponentType.Cable);
+  };
+
+  return (
   <div>
     <div className="flex flex-row items-center justify-between mb-2">
       <h2 className="text-lg font-semibold">Cabling Components</h2>
@@ -48,35 +58,51 @@ export const CablingTable: React.FC<CablingTableProps> = ({
           else if (component.type === ComponentType.Cassette) details = `${(component as any).portType}, ${(component as any).portQuantity} ports`;
           else if (component.type === ComponentType.Cable) details = `${(component as any).length}m, ${(component as any).connectorA_Type} to ${(component as any).connectorB_Type}, ${(component as any).mediaType}`;
           return (
-            <TableRow key={`cabling-${getBomGroupKey(component)}`}>
-              <TableCell>{component.type}</TableCell>
-              <TableCell>{component.manufacturer}</TableCell>
-              <TableCell>{component.model}</TableCell>
-              <TableCell>{details}</TableCell>
-              <TableCell className="text-right">{quantity}</TableCell>
-              <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-              <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-            </TableRow>
+            <BomItemHoverCard key={`cabling-${getBomGroupKey(component)}`} component={component}>
+              <TableRow className="cursor-pointer">
+                <TableCell>{component.type}</TableCell>
+                <TableCell>{component.manufacturer}</TableCell>
+                <TableCell>{component.model}</TableCell>
+                <TableCell>{details}</TableCell>
+                <TableCell className="text-right">{quantity}</TableCell>
+                <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
+                <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+              </TableRow>
+            </BomItemHoverCard>
           );
         })}
         {/* Cable Line Items (from Network Connections) */}
-        {Object.values(cableLineItems).map((item: any, idx: number) => (
-          <TableRow key={`cableline-${item.cableTemplateId}-${item.lengthMeters}-${idx}`}>
-            <TableCell>
-              <CableIcon className="inline-block mr-1" size={16}/>
-              {item.cableType}
-            </TableCell>
-            <TableCell>{item.manufacturer}</TableCell>
-            <TableCell>{item.model}</TableCell>
-            <TableCell>{item.connectorTypes}, {item.lengthMeters}m</TableCell>
-            <TableCell className="text-right">{item.count}</TableCell>
-            <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
-            <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
-          </TableRow>
-        ))}
+        {Object.values(cableLineItems).map((item: any, idx: number) => {
+          const cableTemplate = getCableTemplate(item.cableTemplateId);
+          const rowContent = (
+            <TableRow className={cableTemplate ? "cursor-pointer" : ""}>
+              <TableCell>
+                <CableIcon className="inline-block mr-1" size={16}/>
+                {item.cableType}
+              </TableCell>
+              <TableCell>{item.manufacturer}</TableCell>
+              <TableCell>{item.model}</TableCell>
+              <TableCell>{item.connectorTypes}, {item.lengthMeters}m</TableCell>
+              <TableCell className="text-right">{item.count}</TableCell>
+              <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
+              <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
+            </TableRow>
+          );
+          
+          if (cableTemplate) {
+            return (
+              <BomItemHoverCard key={`cableline-${item.cableTemplateId}-${item.lengthMeters}-${idx}`} component={cableTemplate}>
+                {rowContent}
+              </BomItemHoverCard>
+            );
+          }
+          
+          return <React.Fragment key={`cableline-${item.cableTemplateId}-${item.lengthMeters}-${idx}`}>{rowContent}</React.Fragment>;
+        })}
       </TableBody>
     </Table>
   </div>
-);
+  );
+};
 
 export default CablingTable;

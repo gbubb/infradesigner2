@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { FileSpreadsheet } from 'lucide-react';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { BomItemHoverCard } from './BomItemHoverCard';
 
 interface NetworkTableProps {
   summarizedComponentsByCategory: Record<string, (InfrastructureComponent & { summarizedQuantity: number })[]>;
@@ -49,22 +50,24 @@ export const NetworkTable: React.FC<NetworkTableProps> = ({
           const totalCost = component.cost * quantity;
           const roleId = useComponentRoleId(component);
           return (
-            <TableRow key={`network-${getBomGroupKey(component)}`}>
-              <TableCell>{component.type}</TableCell>
-              <TableCell>{component.role || component.switchRole || 'Unassigned'}</TableCell>
-              <TableCell>{component.manufacturer}</TableCell>
-              <TableCell>{component.model}</TableCell>
-              <TableCell>{(component as any).portCount || (component as any).portsProvidedQuantity || '-'}</TableCell>
-              <TableCell>{(component as any).portSpeed || (component as any).portSpeedType || '-'}</TableCell>
-              <TableCell className="text-right flex items-center gap-1 justify-end">
-                {quantity}
-                {roleId && (
-                  <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
-                )}
-              </TableCell>
-              <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-              <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-            </TableRow>
+            <BomItemHoverCard key={`network-${getBomGroupKey(component)}`} component={component}>
+              <TableRow className="cursor-pointer">
+                <TableCell>{component.type}</TableCell>
+                <TableCell>{component.role || component.switchRole || 'Unassigned'}</TableCell>
+                <TableCell>{component.manufacturer}</TableCell>
+                <TableCell>{component.model}</TableCell>
+                <TableCell>{(component as any).portCount || (component as any).portsProvidedQuantity || '-'}</TableCell>
+                <TableCell>{(component as any).portSpeed || (component as any).portSpeedType || '-'}</TableCell>
+                <TableCell className="text-right flex items-center gap-1 justify-end">
+                  {quantity}
+                  {roleId && (
+                    <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
+                  )}
+                </TableCell>
+                <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
+                <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+              </TableRow>
+            </BomItemHoverCard>
           );
         })}
         {/* Transceivers */}

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { FileSpreadsheet } from 'lucide-react';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { BomItemHoverCard } from './BomItemHoverCard';
 
 interface DiskLineItem {
   disk: any;
@@ -62,24 +63,26 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
           const totalCost = component.cost * quantity;
           const roleId = useComponentRoleId(component);
           return (
-            <TableRow key={`compute-${getBomGroupKey(component)}`}>
-              <TableCell>{component.type}</TableCell>
-              <TableCell>{component.role || 'Unassigned'}</TableCell>
-              <TableCell>-</TableCell>
-              <TableCell>{component.manufacturer}</TableCell>
-              <TableCell>{component.model}</TableCell>
-              <TableCell>{(component as any).cpuModel || '-'}</TableCell>
-              <TableCell className="text-right">{(component as any).memoryCapacity || (component as any).memoryGB || '-'}</TableCell>
-              <TableCell className="text-right">-</TableCell>
-              <TableCell className="text-right flex items-center gap-1 justify-end">
-                {quantity}
-                {roleId && (
-                  <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
-                )}
-              </TableCell>
-              <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-              <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-            </TableRow>
+            <BomItemHoverCard key={`compute-${getBomGroupKey(component)}`} component={component}>
+              <TableRow className="cursor-pointer">
+                <TableCell>{component.type}</TableCell>
+                <TableCell>{component.role || 'Unassigned'}</TableCell>
+                <TableCell>-</TableCell>
+                <TableCell>{component.manufacturer}</TableCell>
+                <TableCell>{component.model}</TableCell>
+                <TableCell>{(component as any).cpuModel || '-'}</TableCell>
+                <TableCell className="text-right">{(component as any).memoryCapacity || (component as any).memoryGB || '-'}</TableCell>
+                <TableCell className="text-right">-</TableCell>
+                <TableCell className="text-right flex items-center gap-1 justify-end">
+                  {quantity}
+                  {roleId && (
+                    <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
+                  )}
+                </TableCell>
+                <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
+                <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+              </TableRow>
+            </BomItemHoverCard>
           );
         })}
         {/* Storage Nodes */}
@@ -102,24 +105,26 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
                 .join(', ')
             : '-';
           return (
-            <TableRow key={`storage-node-${getStorageNodeGroupKey(server)}`}>
-              <TableCell className="font-medium">Storage Node</TableCell>
-              <TableCell>{server.role || 'Unassigned'}</TableCell>
-              <TableCell>{clusterName}</TableCell>
-              <TableCell>{server.manufacturer}</TableCell>
-              <TableCell>{server.model}</TableCell>
-              <TableCell>{(server as any).cpuModel || '-'}</TableCell>
-              <TableCell className="text-right">{(server as any).memoryCapacity || (server as any).memoryGB || '-'}</TableCell>
-              <TableCell className="text-right">{disksSummary}</TableCell>
-              <TableCell className="text-right flex items-center gap-1 justify-end">
-                {quantity}
-                {roleId && (
-                  <CalculationBreakdownDialog roleId={roleId} roleName={server.role || ''} />
-                )}
-              </TableCell>
-              <TableCell className="text-right">€{server.cost.toLocaleString()}</TableCell>
-              <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-            </TableRow>
+            <BomItemHoverCard key={`storage-node-${getStorageNodeGroupKey(server)}`} component={server}>
+              <TableRow className="cursor-pointer">
+                <TableCell className="font-medium">Storage Node</TableCell>
+                <TableCell>{server.role || 'Unassigned'}</TableCell>
+                <TableCell>{clusterName}</TableCell>
+                <TableCell>{server.manufacturer}</TableCell>
+                <TableCell>{server.model}</TableCell>
+                <TableCell>{(server as any).cpuModel || '-'}</TableCell>
+                <TableCell className="text-right">{(server as any).memoryCapacity || (server as any).memoryGB || '-'}</TableCell>
+                <TableCell className="text-right">{disksSummary}</TableCell>
+                <TableCell className="text-right flex items-center gap-1 justify-end">
+                  {quantity}
+                  {roleId && (
+                    <CalculationBreakdownDialog roleId={roleId} roleName={server.role || ''} />
+                  )}
+                </TableCell>
+                <TableCell className="text-right">€{server.cost.toLocaleString()}</TableCell>
+                <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+              </TableRow>
+            </BomItemHoverCard>
           );
         })}
         {/* Disks */}
@@ -149,24 +154,26 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
           const totalCost = component.cost * quantity;
           const roleId = useComponentRoleId(component);
           return (
-            <TableRow key={`gpu-${getBomGroupKey(component)}`}>
-              <TableCell>{component.type}</TableCell>
-              <TableCell>{component.role || 'Unassigned'}</TableCell>
-              <TableCell>-</TableCell>
-              <TableCell>{component.manufacturer}</TableCell>
-              <TableCell>{component.model}</TableCell>
-              <TableCell>-</TableCell>
-              <TableCell className="text-right">-</TableCell>
-              <TableCell className="text-right">-</TableCell>
-              <TableCell className="text-right flex items-center gap-1 justify-end">
-                {quantity}
-                {roleId && (
-                  <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
-                )}
-              </TableCell>
-              <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-              <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-            </TableRow>
+            <BomItemHoverCard key={`gpu-${getBomGroupKey(component)}`} component={component}>
+              <TableRow className="cursor-pointer">
+                <TableCell>{component.type}</TableCell>
+                <TableCell>{component.role || 'Unassigned'}</TableCell>
+                <TableCell>-</TableCell>
+                <TableCell>{component.manufacturer}</TableCell>
+                <TableCell>{component.model}</TableCell>
+                <TableCell>-</TableCell>
+                <TableCell className="text-right">-</TableCell>
+                <TableCell className="text-right">-</TableCell>
+                <TableCell className="text-right flex items-center gap-1 justify-end">
+                  {quantity}
+                  {roleId && (
+                    <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
+                  )}
+                </TableCell>
+                <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
+                <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+              </TableRow>
+            </BomItemHoverCard>
           );
         })}
       </TableBody>
