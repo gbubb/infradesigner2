@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 import { useDesignStore } from '@/store/designStore';
 import { useCostAnalysis } from '@/hooks/design/useCostAnalysis';
@@ -7,6 +8,7 @@ import { ComponentType } from '@/types/infrastructure';
 import { ClusterConsumptionControls } from './ClusterConsumptionControls';
 import { ClusterAnalysisCard } from './ClusterAnalysisCard';
 import { OperationalCostAlignmentCard, OverallSummaryCard } from './ModelSummaryCards';
+import { ScenarioTab } from './ScenarioTab';
 
 export const ModelPanel: React.FC = () => {
   const { requirements } = useDesignStore();
@@ -353,7 +355,7 @@ export const ModelPanel: React.FC = () => {
   if (!hasValidDesign) {
     return (
       <div className="w-full p-6">
-        <h2 className="text-2xl font-semibold mb-6">Revenue Model</h2>
+        <h2 className="text-2xl font-semibold mb-6">Model</h2>
         <Card>
           <CardContent className="p-6">
             <p className="text-muted-foreground">
@@ -367,60 +369,79 @@ export const ModelPanel: React.FC = () => {
 
   return (
     <div className="w-full p-6">
-      <h2 className="text-2xl font-semibold mb-4">Revenue Model</h2>
+      <h2 className="text-2xl font-semibold mb-4">Model</h2>
       
-      {/* Main layout with side-by-side panels on larger screens */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Left column - Inputs */}
-        <div className="space-y-4">
-          {/* Total Operational Cost Alignment Check */}
-          <OperationalCostAlignmentCard 
-            resultsTotal={operationalCosts.totalMonthly}
-            modelTotal={overallAnalysis.totalCosts}
-          />
+      <Tabs defaultValue="revenue" className="w-full">
+        <TabsList className="grid w-full max-w-[400px] grid-cols-2">
+          <TabsTrigger value="revenue">Revenue Model</TabsTrigger>
+          <TabsTrigger value="scenario">Scenario</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="revenue" className="mt-6">
+          {/* Main layout with side-by-side panels on larger screens */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Left column - Inputs */}
+            <div className="space-y-4">
+              {/* Total Operational Cost Alignment Check */}
+              <OperationalCostAlignmentCard 
+                resultsTotal={operationalCosts.totalMonthly}
+                modelTotal={overallAnalysis.totalCosts}
+              />
 
-          {/* Cluster Consumption Controls */}
-          <ClusterConsumptionControls
+              {/* Cluster Consumption Controls */}
+              <ClusterConsumptionControls
+                computePricing={computePricing}
+                storagePricing={storagePricing}
+                clusterConsumption={clusterConsumption}
+                clusterDeviceCounts={clusterDeviceCounts}
+                updateClusterConsumption={updateClusterConsumption}
+                storageClustersMetrics={storageClustersMetrics}
+                storageOverallocationRatios={storageOverallocationRatios}
+                updateStorageOverallocationRatio={updateStorageOverallocationRatio}
+              />
+            </div>
+
+            {/* Right column - Outcomes */}
+            <div className="space-y-4">
+              {/* Per-Cluster Analysis */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle>Outcome</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {Object.entries(clusterAnalysis).map(([clusterId, analysis]) => (
+                      <ClusterAnalysisCard
+                        key={clusterId}
+                        clusterId={clusterId}
+                        analysis={analysis}
+                      />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Overall Summary */}
+              <OverallSummaryCard
+                totalRevenue={overallAnalysis.totalRevenue}
+                totalCosts={overallAnalysis.totalCosts}
+                totalProfit={overallAnalysis.totalProfit}
+                profitMargin={overallAnalysis.profitMargin}
+              />
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="scenario" className="mt-6">
+          <ScenarioTab 
+            clusterAnalysis={clusterAnalysis}
             computePricing={computePricing}
             storagePricing={storagePricing}
-            clusterConsumption={clusterConsumption}
-            clusterDeviceCounts={clusterDeviceCounts}
-            updateClusterConsumption={updateClusterConsumption}
+            operationalCosts={operationalCosts}
             storageClustersMetrics={storageClustersMetrics}
-            storageOverallocationRatios={storageOverallocationRatios}
-            updateStorageOverallocationRatio={updateStorageOverallocationRatio}
           />
-        </div>
-
-        {/* Right column - Outcomes */}
-        <div className="space-y-4">
-          {/* Per-Cluster Analysis */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Outcome</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {Object.entries(clusterAnalysis).map(([clusterId, analysis]) => (
-                  <ClusterAnalysisCard
-                    key={clusterId}
-                    clusterId={clusterId}
-                    analysis={analysis}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Overall Summary */}
-          <OverallSummaryCard
-            totalRevenue={overallAnalysis.totalRevenue}
-            totalCosts={overallAnalysis.totalCosts}
-            totalProfit={overallAnalysis.totalProfit}
-            profitMargin={overallAnalysis.profitMargin}
-          />
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
