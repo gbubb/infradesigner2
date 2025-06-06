@@ -38,36 +38,36 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({
   const data: CostBreakdownData[] = [
     {
       category: 'Compute',
-      designA: designACosts.compute || 0,
-      designB: designBCosts.compute || 0,
+      designA: designACosts.compute,
+      designB: designBCosts.compute,
       designAName,
       designBName,
     },
     {
       category: 'Storage',
-      designA: designACosts.storage || 0,
-      designB: designBCosts.storage || 0,
+      designA: designACosts.storage,
+      designB: designBCosts.storage,
       designAName,
       designBName,
     },
     {
       category: 'Network',
-      designA: designACosts.network || 0,
-      designB: designBCosts.network || 0,
+      designA: designACosts.network,
+      designB: designBCosts.network,
       designAName,
       designBName,
     },
     {
       category: 'Cabling',
-      designA: designACosts.cabling || 0,
-      designB: designBCosts.cabling || 0,
+      designA: designACosts.cabling,
+      designB: designBCosts.cabling,
       designAName,
       designBName,
     },
     {
       category: 'Operational',
-      designA: designACosts.operational || 0,
-      designB: designBCosts.operational || 0,
+      designA: designACosts.operational,
+      designB: designBCosts.operational,
       designAName,
       designBName,
     },
@@ -89,7 +89,7 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({
           ))}
           <p className="text-sm text-muted-foreground mt-2">
             Difference: ${Math.abs(payload[0].value - payload[1].value).toLocaleString()} 
-            {payload[0].value > 0 ? `(${((Math.abs(payload[0].value - payload[1].value) / payload[0].value) * 100).toFixed(1)}%)` : ''}
+            ({((Math.abs(payload[0].value - payload[1].value) / payload[0].value) * 100).toFixed(1)}%)
           </p>
         </div>
       );

@@ -26,8 +26,8 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
   // Calculate totals and prepare data for charts
   const typeData = Object.entries(componentsByType).map(([type, components]) => {
     const totalTypeQuantity = components.reduce((sum, comp) => sum + (comp.quantity || 1), 0);
-    const totalTypeCost = components.reduce((sum, comp) => sum + ((comp.cost || 0) * (comp.quantity || 1)), 0);
-    const totalTypePower = components.reduce((sum, comp) => sum + ((comp.powerRequired || 0) * (comp.quantity || 1)), 0);
+    const totalTypeCost = components.reduce((sum, comp) => sum + (comp.cost * (comp.quantity || 1)), 0);
+    const totalTypePower = components.reduce((sum, comp) => sum + (comp.powerRequired * (comp.quantity || 1)), 0);
     
     const totalTypeRU = components.reduce((sum, comp) => {
       if ('rackUnitsConsumed' in comp) {
@@ -39,12 +39,12 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
     return {
       type: type.charAt(0).toUpperCase() + type.slice(1),
       quantity: totalTypeQuantity,
-      cost: isFinite(totalTypeCost) ? totalTypeCost : 0,
-      power: isFinite(totalTypePower) ? totalTypePower : 0,
-      rackUnits: isFinite(totalTypeRU) ? totalTypeRU : 0,
+      cost: totalTypeCost,
+      power: totalTypePower,
+      rackUnits: totalTypeRU,
       originalType: type // keep original type for color assignment
     };
-  }).filter(item => item.quantity > 0); // Filter out types with no components
+  });
   
   // Get a color for a component type
   const getTypeColor = (type: string) => {
@@ -76,7 +76,7 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
           {data.power && <p className="text-sm">{data.power.toLocaleString()} W</p>}
           {data.rackUnits > 0 && <p className="text-sm">{data.rackUnits} RU</p>}
           <p className="text-xs text-gray-500">
-            {payload[0].percent ? (payload[0].percent * 100).toFixed(1) : '0'}% of total
+            {(payload[0].percent * 100).toFixed(1)}% of total
           </p>
         </div>
       );

@@ -38,18 +38,18 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
   designBCosts,
 }) => {
   const designAData: CostData[] = [
-    { name: 'Compute', value: designACosts.compute || 0 },
-    { name: 'Storage', value: designACosts.storage || 0 },
-    { name: 'Network', value: designACosts.network || 0 },
-    { name: 'Cabling', value: designACosts.cabling || 0 },
-  ].filter(item => item.value > 0 && isFinite(item.value));
+    { name: 'Compute', value: designACosts.compute },
+    { name: 'Storage', value: designACosts.storage },
+    { name: 'Network', value: designACosts.network },
+    { name: 'Cabling', value: designACosts.cabling },
+  ].filter(item => item.value > 0);
 
   const designBData: CostData[] = [
-    { name: 'Compute', value: designBCosts.compute || 0 },
-    { name: 'Storage', value: designBCosts.storage || 0 },
-    { name: 'Network', value: designBCosts.network || 0 },
-    { name: 'Cabling', value: designBCosts.cabling || 0 },
-  ].filter(item => item.value > 0 && isFinite(item.value));
+    { name: 'Compute', value: designBCosts.compute },
+    { name: 'Storage', value: designBCosts.storage },
+    { name: 'Network', value: designBCosts.network },
+    { name: 'Cabling', value: designBCosts.cabling },
+  ].filter(item => item.value > 0);
 
   const designATotal = designAData.reduce((sum, item) => sum + item.value, 0);
   const designBTotal = designBData.reduce((sum, item) => sum + item.value, 0);
@@ -57,7 +57,7 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0];
-      const percentage = data.payload.total > 0 ? ((data.value / data.payload.total) * 100).toFixed(1) : '0';
+      const percentage = ((data.value / (data.payload.total || 1)) * 100).toFixed(1);
       return (
         <div className="bg-background border rounded-lg p-3 shadow-lg">
           <p className="font-semibold">{data.name}</p>
@@ -75,7 +75,7 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    const percentage = total > 0 ? ((data[index].value / total) * 100).toFixed(0) : '0';
+    const percentage = ((data[index].value / total) * 100).toFixed(0);
 
     return (
       <text 
@@ -104,32 +104,26 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
             <p className="text-center text-sm text-muted-foreground mb-4">
               Total: ${designATotal.toLocaleString()}
             </p>
-            {designAData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={designAData.map(item => ({ ...item, total: designATotal }))}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={renderCustomLabel(designAData, designATotal)}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {designAData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                No cost data available
-              </div>
-            )}
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={designAData.map(item => ({ ...item, total: designATotal }))}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={renderCustomLabel(designAData, designATotal)}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {designAData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
 
           {/* Design B Pie Chart */}
@@ -138,32 +132,26 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
             <p className="text-center text-sm text-muted-foreground mb-4">
               Total: ${designBTotal.toLocaleString()}
             </p>
-            {designBData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={designBData.map(item => ({ ...item, total: designBTotal }))}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={renderCustomLabel(designBData, designBTotal)}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {designBData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                No cost data available
-              </div>
-            )}
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={designBData.map(item => ({ ...item, total: designBTotal }))}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={renderCustomLabel(designBData, designBTotal)}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {designBData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
