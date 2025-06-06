@@ -92,47 +92,55 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
   // Per-cluster parameters
   const [clusterParameters, setClusterParameters] = useState<Record<string, ClusterParams>>(() => {
     const initial: Record<string, ClusterParams> = {};
-    computePricing.forEach(cluster => {
-      initial[cluster.clusterId] = {
-        startUtilization: 10,
-        targetUtilization: 85,
-        growthModel: 'logistic',
-        inflectionMonth: 12,
-        growthRate: 0.5,
-        phase1Duration: 6,
-        phase1Rate: 1.5,
-        phase2Duration: 12,
-        phase2Rate: 4,
-        phase3Rate: 0.5
-      };
-    });
-    storagePricing.forEach(cluster => {
-      initial[cluster.clusterId] = {
-        startUtilization: 10,
-        targetUtilization: 85,
-        growthModel: 'logistic',
-        inflectionMonth: 12,
-        growthRate: 0.5,
-        phase1Duration: 6,
-        phase1Rate: 1.5,
-        phase2Duration: 12,
-        phase2Rate: 4,
-        phase3Rate: 0.5,
-        overallocationRatio: 1.0
-      };
-    });
+    if (computePricing) {
+      computePricing.forEach(cluster => {
+        initial[cluster.clusterId] = {
+          startUtilization: 10,
+          targetUtilization: 85,
+          growthModel: 'logistic',
+          inflectionMonth: 12,
+          growthRate: 0.5,
+          phase1Duration: 6,
+          phase1Rate: 1.5,
+          phase2Duration: 12,
+          phase2Rate: 4,
+          phase3Rate: 0.5
+        };
+      });
+    }
+    if (storagePricing) {
+      storagePricing.forEach(cluster => {
+        initial[cluster.clusterId] = {
+          startUtilization: 10,
+          targetUtilization: 85,
+          growthModel: 'logistic',
+          inflectionMonth: 12,
+          growthRate: 0.5,
+          phase1Duration: 6,
+          phase1Rate: 1.5,
+          phase2Duration: 12,
+          phase2Rate: 4,
+          phase3Rate: 0.5,
+          overallocationRatio: 1.0
+        };
+      });
+    }
     return initial;
   });
   
   // Pricing overrides
   const [pricingOverrides, setPricingOverrides] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
-    computePricing.forEach(cluster => {
-      initial[cluster.clusterId] = cluster.pricePerMonth;
-    });
-    storagePricing.forEach(cluster => {
-      initial[cluster.clusterId] = cluster.pricePerMonth;
-    });
+    if (computePricing) {
+      computePricing.forEach(cluster => {
+        initial[cluster.clusterId] = cluster.pricePerMonth;
+      });
+    }
+    if (storagePricing) {
+      storagePricing.forEach(cluster => {
+        initial[cluster.clusterId] = cluster.pricePerMonth;
+      });
+    }
     return initial;
   });
 
@@ -236,65 +244,73 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
       }> = {};
       
       // Calculate for compute clusters
-      computePricing.forEach(cluster => {
-        const params = clusterParameters[cluster.clusterId];
-        const utilization = calculateUtilization(params, month);
-        
-        // Get device count and costs from initial analysis
-        const baseAnalysis = clusterAnalysis[cluster.clusterId];
-        if (!baseAnalysis) return;
-        
-        // Calculate revenue based on current utilization
-        const averageVMVCPUs = requirements.computeRequirements?.averageVMVCPUs || 4;
-        const averageVMMemoryGB = requirements.computeRequirements?.averageVMMemoryGB || 8;
-        const totalVCPUs = actualHardwareTotals.totalVCPUs / computePricing.length;
-        const totalMemoryGB = (actualHardwareTotals.totalComputeMemoryTB * 1024) / computePricing.length;
-        const vmsByCPU = Math.floor(totalVCPUs / averageVMVCPUs);
-        const vmsByMemory = Math.floor(totalMemoryGB / averageVMMemoryGB);
-        const maxVMs = Math.min(vmsByCPU, vmsByMemory);
-        const currentVMs = Math.floor(utilization * maxVMs / 100);
-        const revenue = (pricingOverrides[cluster.clusterId] || cluster.pricePerMonth) * currentVMs;
-        
-        totalRevenue += revenue;
-        totalCosts += baseAnalysis.costs.total;
-        
-        clusterMetrics[cluster.clusterId] = {
-          utilization,
-          revenue,
-          cost: baseAnalysis.costs.total,
-          units: currentVMs
-        };
-      });
+      if (computePricing && computePricing.length > 0) {
+        computePricing.forEach(cluster => {
+          const params = clusterParameters[cluster.clusterId];
+          if (!params) return;
+          
+          const utilization = calculateUtilization(params, month);
+          
+          // Get device count and costs from initial analysis
+          const baseAnalysis = clusterAnalysis[cluster.clusterId];
+          if (!baseAnalysis) return;
+          
+          // Calculate revenue based on current utilization
+          const averageVMVCPUs = requirements.computeRequirements?.averageVMVCPUs || 4;
+          const averageVMMemoryGB = requirements.computeRequirements?.averageVMMemoryGB || 8;
+          const totalVCPUs = actualHardwareTotals.totalVCPUs / computePricing.length;
+          const totalMemoryGB = (actualHardwareTotals.totalComputeMemoryTB * 1024) / computePricing.length;
+          const vmsByCPU = Math.floor(totalVCPUs / averageVMVCPUs);
+          const vmsByMemory = Math.floor(totalMemoryGB / averageVMMemoryGB);
+          const maxVMs = Math.min(vmsByCPU, vmsByMemory);
+          const currentVMs = Math.floor(utilization * maxVMs / 100);
+          const revenue = (pricingOverrides[cluster.clusterId] || cluster.pricePerMonth) * currentVMs;
+          
+          totalRevenue += revenue;
+          totalCosts += baseAnalysis.costs.total;
+          
+          clusterMetrics[cluster.clusterId] = {
+            utilization,
+            revenue,
+            cost: baseAnalysis.costs.total,
+            units: currentVMs
+          };
+        });
+      }
       
       // Calculate for storage clusters
-      storagePricing.forEach(cluster => {
-        const params = clusterParameters[cluster.clusterId];
-        const utilization = calculateUtilization(params, month);
-        
-        // Get base analysis
-        const baseAnalysis = clusterAnalysis[cluster.clusterId];
-        if (!baseAnalysis) return;
-        
-        // Calculate revenue based on current utilization
-        const clusterMetricsData = storageClustersMetrics.find(m => m.id === cluster.clusterId);
-        const usableStorageTiB = clusterMetricsData?.usableCapacityTiB || 0;
-        const currentStorageTiB = utilization * usableStorageTiB / 100;
-        
-        // Apply overallocation ratio if set
-        const overallocationRatio = params.overallocationRatio || 1.0;
-        const overallocatedStorageTiB = currentStorageTiB * overallocationRatio;
-        const revenue = (pricingOverrides[cluster.clusterId] || cluster.pricePerMonth) * overallocatedStorageTiB * 1024; // Convert TiB to GiB
-        
-        totalRevenue += revenue;
-        totalCosts += baseAnalysis.costs.total;
-        
-        clusterMetrics[cluster.clusterId] = {
-          utilization,
-          revenue,
-          cost: baseAnalysis.costs.total,
-          units: currentStorageTiB
-        };
-      });
+      if (storagePricing && storagePricing.length > 0) {
+        storagePricing.forEach(cluster => {
+          const params = clusterParameters[cluster.clusterId];
+          if (!params) return;
+          
+          const utilization = calculateUtilization(params, month);
+          
+          // Get base analysis
+          const baseAnalysis = clusterAnalysis[cluster.clusterId];
+          if (!baseAnalysis) return;
+          
+          // Calculate revenue based on current utilization
+          const clusterMetricsData = storageClustersMetrics.find(m => m.id === cluster.clusterId);
+          const usableStorageTiB = clusterMetricsData?.usableCapacityTiB || 0;
+          const currentStorageTiB = utilization * usableStorageTiB / 100;
+          
+          // Apply overallocation ratio if set
+          const overallocationRatio = params.overallocationRatio || 1.0;
+          const overallocatedStorageTiB = currentStorageTiB * overallocationRatio;
+          const revenue = (pricingOverrides[cluster.clusterId] || cluster.pricePerMonth) * overallocatedStorageTiB * 1024; // Convert TiB to GiB
+          
+          totalRevenue += revenue;
+          totalCosts += baseAnalysis.costs.total;
+          
+          clusterMetrics[cluster.clusterId] = {
+            utilization,
+            revenue,
+            cost: baseAnalysis.costs.total,
+            units: currentStorageTiB
+          };
+        });
+      }
       
       const profit = totalRevenue - totalCosts;
       const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
@@ -362,6 +378,21 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
     }).format(value);
   };
 
+  // Check if we have any pricing data
+  if ((!computePricing || computePricing.length === 0) && (!storagePricing || storagePricing.length === 0)) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-muted-foreground">
+              No pricing clusters defined. Please configure pricing in the Requirements panel first.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Scenario Parameters */}
@@ -400,7 +431,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
               </TableHeader>
               <TableBody>
                 {/* Compute Clusters */}
-                {computePricing.map(cluster => {
+                {computePricing && computePricing.map(cluster => {
                   const params = clusterParameters[cluster.clusterId];
                   return (
                     <TableRow key={cluster.clusterId}>
@@ -548,7 +579,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                 })}
                 
                 {/* Storage Clusters */}
-                {storagePricing.map(cluster => {
+                {storagePricing && storagePricing.map(cluster => {
                   const params = clusterParameters[cluster.clusterId];
                   return (
                     <TableRow key={cluster.clusterId}>
@@ -778,17 +809,20 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                   labelFormatter={(label) => `Month ${label}`}
                 />
                 <Legend />
-                {[...computePricing, ...storagePricing].map((cluster, index) => (
+                {[...(computePricing || []), ...(storagePricing || [])].map((cluster, index) => {
+                  const totalClusters = (computePricing?.length || 0) + (storagePricing?.length || 0);
+                  return (
                   <Line
                     key={cluster.clusterId}
                     type="monotone"
                     dataKey={`${cluster.clusterId}_utilization`}
                     name={cluster.clusterName}
-                    stroke={`hsl(${index * 360 / (computePricing.length + storagePricing.length)}, 70%, 50%)`}
+                    stroke={`hsl(${index * 360 / totalClusters}, 70%, 50%)`}
                     strokeWidth={2}
                     dot={false}
                   />
-                ))}
+                  );
+                })}
               </LineChart>
             </ResponsiveContainer>
           </div>
