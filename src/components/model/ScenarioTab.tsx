@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 import { useDesignStore } from '@/store/designStore';
@@ -536,19 +537,19 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                           </div>
                         )}
                         {params?.growthModel === 'phased' && (
-                          <div className="text-xs">
-                            <div className="flex items-center gap-1 mb-1">
-                              <Label className="text-xs">P1:</Label>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs w-6">P1:</span>
                               <Input
                                 type="number"
                                 min={1}
                                 max={24}
                                 value={params?.phase1Duration || 6}
                                 onChange={(e) => updateClusterParameter(cluster.clusterId, 'phase1Duration', Number(e.target.value))}
-                                className="w-10 h-6"
+                                className="w-10 h-6 text-xs"
                                 title="Phase 1 Duration (months)"
                               />
-                              <span>mo @</span>
+                              <span className="text-xs">mo</span>
                               <Input
                                 type="number"
                                 min={0}
@@ -556,23 +557,23 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                                 step={0.1}
                                 value={params?.phase1Rate || 1.5}
                                 onChange={(e) => updateClusterParameter(cluster.clusterId, 'phase1Rate', Number(e.target.value))}
-                                className="w-12 h-6"
+                                className="w-12 h-6 text-xs"
                                 title="Phase 1 Rate (%/mo)"
                               />
-                              <span>%/mo</span>
+                              <span className="text-xs">%/mo</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <Label className="text-xs">P2:</Label>
+                              <span className="text-xs w-6">P2:</span>
                               <Input
                                 type="number"
                                 min={1}
                                 max={24}
                                 value={params?.phase2Duration || 12}
                                 onChange={(e) => updateClusterParameter(cluster.clusterId, 'phase2Duration', Number(e.target.value))}
-                                className="w-10 h-6"
+                                className="w-10 h-6 text-xs"
                                 title="Phase 2 Duration (months)"
                               />
-                              <span>mo @</span>
+                              <span className="text-xs">mo</span>
                               <Input
                                 type="number"
                                 min={0}
@@ -580,10 +581,24 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                                 step={0.1}
                                 value={params?.phase2Rate || 4}
                                 onChange={(e) => updateClusterParameter(cluster.clusterId, 'phase2Rate', Number(e.target.value))}
-                                className="w-12 h-6"
+                                className="w-12 h-6 text-xs"
                                 title="Phase 2 Rate (%/mo compound)"
                               />
-                              <span>%</span>
+                              <span className="text-xs">%</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs w-6">P3:</span>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={5}
+                                step={0.1}
+                                value={params?.phase3Rate || 0.5}
+                                onChange={(e) => updateClusterParameter(cluster.clusterId, 'phase3Rate', Number(e.target.value))}
+                                className="w-12 h-6 text-xs"
+                                title="Phase 3 Decay Rate"
+                              />
+                              <span className="text-xs">decay</span>
                             </div>
                           </div>
                         )}
@@ -684,19 +699,19 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                           </div>
                         )}
                         {params?.growthModel === 'phased' && (
-                          <div className="text-xs">
-                            <div className="flex items-center gap-1 mb-1">
-                              <Label className="text-xs">P1:</Label>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs w-6">P1:</span>
                               <Input
                                 type="number"
                                 min={1}
                                 max={24}
                                 value={params?.phase1Duration || 6}
                                 onChange={(e) => updateClusterParameter(cluster.clusterId, 'phase1Duration', Number(e.target.value))}
-                                className="w-10 h-6"
+                                className="w-10 h-6 text-xs"
                                 title="Phase 1 Duration (months)"
                               />
-                              <span>mo @</span>
+                              <span className="text-xs">mo</span>
                               <Input
                                 type="number"
                                 min={0}
@@ -704,23 +719,23 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                                 step={0.1}
                                 value={params?.phase1Rate || 1.5}
                                 onChange={(e) => updateClusterParameter(cluster.clusterId, 'phase1Rate', Number(e.target.value))}
-                                className="w-12 h-6"
+                                className="w-12 h-6 text-xs"
                                 title="Phase 1 Rate (%/mo)"
                               />
-                              <span>%/mo</span>
+                              <span className="text-xs">%/mo</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <Label className="text-xs">P2:</Label>
+                              <span className="text-xs w-6">P2:</span>
                               <Input
                                 type="number"
                                 min={1}
                                 max={24}
                                 value={params?.phase2Duration || 12}
                                 onChange={(e) => updateClusterParameter(cluster.clusterId, 'phase2Duration', Number(e.target.value))}
-                                className="w-10 h-6"
+                                className="w-10 h-6 text-xs"
                                 title="Phase 2 Duration (months)"
                               />
-                              <span>mo @</span>
+                              <span className="text-xs">mo</span>
                               <Input
                                 type="number"
                                 min={0}
@@ -728,10 +743,24 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                                 step={0.1}
                                 value={params?.phase2Rate || 4}
                                 onChange={(e) => updateClusterParameter(cluster.clusterId, 'phase2Rate', Number(e.target.value))}
-                                className="w-12 h-6"
+                                className="w-12 h-6 text-xs"
                                 title="Phase 2 Rate (%/mo compound)"
                               />
-                              <span>%</span>
+                              <span className="text-xs">%</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs w-6">P3:</span>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={5}
+                                step={0.1}
+                                value={params?.phase3Rate || 0.5}
+                                onChange={(e) => updateClusterParameter(cluster.clusterId, 'phase3Rate', Number(e.target.value))}
+                                className="w-12 h-6 text-xs"
+                                title="Phase 3 Decay Rate"
+                              />
+                              <span className="text-xs">decay</span>
                             </div>
                           </div>
                         )}
@@ -810,215 +839,497 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
         </Card>
       )}
 
-      {/* Utilization Growth Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Cluster Utilization Growth</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={cumulativeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="month"
-                  type="number"
-                  domain={[0, 'dataMax']}
-                  tickFormatter={(value) => Math.round(value).toString()}
-                  label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
-                />
-                <YAxis 
-                  domain={[0, 100]}
-                  label={{ value: 'Utilization %', angle: -90, position: 'insideLeft' }}
-                />
-                <Tooltip 
-                  formatter={(value: number) => `${Number(value).toFixed(1)}%`}
-                  labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
-                />
-                <Legend />
-                {[...(computePricing || []), ...(storagePricing || [])].map((cluster, index) => {
-                  const totalClusters = Math.max(1, (computePricing?.length || 0) + (storagePricing?.length || 0));
-                  const hue = Math.round((index * 360) / totalClusters);
-                  return (
-                    <Line
-                      key={cluster.clusterId}
-                      type="monotone"
-                      dataKey={`${cluster.clusterId}_utilization`}
-                      name={cluster.clusterName}
-                      stroke={`hsl(${hue}, 70%, 50%)`}
-                      strokeWidth={2}
-                      dot={false}
-                      connectNulls={true}
-                    />
-                  );
-                })}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Financial Metrics Chart - Revenue and Profit */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Financial Projections - Revenue & Profit</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={cumulativeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="month"
-                  type="number"
-                  domain={[0, 'dataMax']}
-                  tickFormatter={(value) => Math.round(value).toString()}
-                  label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
-                />
-                <YAxis 
-                  label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft' }}
-                  tickFormatter={(value) => {
-                    if (value >= 1000000) {
-                      return `$${(value / 1000000).toFixed(1)}M`;
-                    } else if (value >= 1000) {
-                      return `$${(value / 1000).toFixed(0)}K`;
-                    }
-                    return `$${Math.round(value)}`;
-                  }}
-                />
-                <Tooltip 
-                  formatter={(value: number) => formatCurrency(value)}
-                  labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="cumulativeRevenue"
-                  name="Cumulative Revenue"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={false}
-                  connectNulls={true}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="cumulativeProfit"
-                  name="Cumulative Profit"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={false}
-                  connectNulls={true}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Financial Metrics Chart - Margin & Monthly Revenue */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Financial Projections - Margin % & Monthly Revenue</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={cumulativeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="month"
-                  type="number"
-                  domain={[0, 'dataMax']}
-                  tickFormatter={(value) => Math.round(value).toString()}
-                  label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
-                />
-                <YAxis 
-                  yAxisId="left"
-                  label={{ value: 'Monthly Revenue ($)', angle: -90, position: 'insideLeft' }}
-                  tickFormatter={(value) => {
-                    if (value >= 1000000) {
-                      return `$${(value / 1000000).toFixed(1)}M`;
-                    } else if (value >= 1000) {
-                      return `$${(value / 1000).toFixed(0)}K`;
-                    }
-                    return `$${Math.round(value)}`;
-                  }}
-                />
-                <YAxis 
-                  yAxisId="right"
-                  orientation="right"
-                  domain={[-50, 50]}
-                  label={{ value: 'Margin %', angle: 90, position: 'insideRight' }}
-                  ticks={[-50, -25, 0, 25, 50]}
-                  tickFormatter={(value) => `${value}%`}
-                />
-                <Tooltip 
-                  formatter={(value: number, name: string) => {
-                    if (name.includes('Margin')) {
-                      return `${Number(value).toFixed(1)}%`;
-                    }
-                    return formatCurrency(value);
-                  }}
-                  labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
-                />
-                <Legend />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="margin"
-                  name="Margin %"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                  connectNulls={true}
-                />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="totalRevenue"
-                  name="Total Monthly Revenue"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={false}
-                  connectNulls={true}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary Metrics */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Scenario Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Final Month Revenue</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(cumulativeData[cumulativeData.length - 1]?.totalRevenue || 0)}
-              </p>
+      {/* Charts Grid - 2x2 Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Utilization Growth Chart */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Cluster Utilization Growth</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={cumulativeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="month"
+                    type="number"
+                    domain={[0, 'dataMax']}
+                    tickFormatter={(value) => Math.round(value).toString()}
+                    label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+                  />
+                  <YAxis 
+                    domain={[0, 100]}
+                    label={{ value: 'Utilization %', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => `${Number(value).toFixed(1)}%`}
+                    labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
+                  />
+                  <Legend wrapperStyle={{fontSize: '12px'}} />
+                  {[...(computePricing || []), ...(storagePricing || [])].map((cluster, index) => {
+                    const totalClusters = Math.max(1, (computePricing?.length || 0) + (storagePricing?.length || 0));
+                    const hue = Math.round((index * 360) / totalClusters);
+                    return (
+                      <Line
+                        key={cluster.clusterId}
+                        type="monotone"
+                        dataKey={`${cluster.clusterId}_utilization`}
+                        name={cluster.clusterName}
+                        stroke={`hsl(${hue}, 70%, 50%)`}
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls={true}
+                      />
+                    );
+                  })}
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Revenue</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(cumulativeData[cumulativeData.length - 1]?.cumulativeRevenue || 0)}
-              </p>
+          </CardContent>
+        </Card>
+
+        {/* Financial Metrics Chart - Revenue and Profit */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Cumulative Revenue & Profit</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={cumulativeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="month"
+                    type="number"
+                    domain={[0, 'dataMax']}
+                    tickFormatter={(value) => Math.round(value).toString()}
+                    label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+                  />
+                  <YAxis 
+                    label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft' }}
+                    tickFormatter={(value) => {
+                      if (value >= 1000000) {
+                        return `$${(value / 1000000).toFixed(1)}M`;
+                      } else if (value >= 1000) {
+                        return `$${(value / 1000).toFixed(0)}K`;
+                      }
+                      return `$${Math.round(value)}`;
+                    }}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => formatCurrency(value)}
+                    labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
+                  />
+                  <Legend wrapperStyle={{fontSize: '12px'}} />
+                  <Line
+                    type="monotone"
+                    dataKey="cumulativeRevenue"
+                    name="Cumulative Revenue"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls={true}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="cumulativeProfit"
+                    name="Cumulative Profit"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls={true}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Profit</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(cumulativeData[cumulativeData.length - 1]?.cumulativeProfit || 0)}
-              </p>
+          </CardContent>
+        </Card>
+
+        {/* Financial Metrics Chart - Margin & Monthly Revenue */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Margin % & Monthly Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={cumulativeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="month"
+                    type="number"
+                    domain={[0, 'dataMax']}
+                    tickFormatter={(value) => Math.round(value).toString()}
+                    label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    label={{ value: 'Monthly Revenue ($)', angle: -90, position: 'insideLeft' }}
+                    tickFormatter={(value) => {
+                      if (value >= 1000000) {
+                        return `$${(value / 1000000).toFixed(1)}M`;
+                      } else if (value >= 1000) {
+                        return `$${(value / 1000).toFixed(0)}K`;
+                      }
+                      return `$${Math.round(value)}`;
+                    }}
+                  />
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    domain={[-100, 100]}
+                    label={{ value: 'Margin %', angle: 90, position: 'insideRight' }}
+                    ticks={[-100, -50, 0, 50, 100]}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <Tooltip 
+                    formatter={(value: number, name: string) => {
+                      if (name.includes('Margin')) {
+                        return `${Number(value).toFixed(1)}%`;
+                      }
+                      return formatCurrency(value);
+                    }}
+                    labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
+                  />
+                  <Legend wrapperStyle={{fontSize: '12px'}} />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="margin"
+                    name="Margin %"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={false}
+                    connectNulls={true}
+                  />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="totalRevenue"
+                    name="Total Monthly Revenue"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls={true}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Final Margin</p>
-              <p className="text-2xl font-bold">
-                {(cumulativeData[cumulativeData.length - 1]?.margin || 0).toFixed(1)}%
-              </p>
+          </CardContent>
+        </Card>
+
+        {/* Monthly Cash Flow Chart */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Monthly Cash Flow</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={cumulativeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="month"
+                    type="number"
+                    domain={[0, 'dataMax']}
+                    tickFormatter={(value) => Math.round(value).toString()}
+                    label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+                  />
+                  <YAxis 
+                    label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft' }}
+                    tickFormatter={(value) => {
+                      if (value >= 1000000) {
+                        return `$${(value / 1000000).toFixed(1)}M`;
+                      } else if (value >= 1000) {
+                        return `$${(value / 1000).toFixed(0)}K`;
+                      }
+                      return `$${Math.round(value)}`;
+                    }}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => formatCurrency(value)}
+                    labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
+                  />
+                  <Legend wrapperStyle={{fontSize: '12px'}} />
+                  <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
+                  <Line
+                    type="monotone"
+                    dataKey="totalRevenue"
+                    name="Revenue"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls={true}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="totalCosts"
+                    name="Costs"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls={true}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="profit"
+                    name="Net Cash Flow"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls={true}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Enhanced Summary Metrics */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Scenario Summary & Key Insights</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Primary Metrics */}
+          <div>
+            <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Financial Performance</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Final Month Revenue</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(cumulativeData[cumulativeData.length - 1]?.totalRevenue || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(cumulativeData[cumulativeData.length - 1]?.cumulativeRevenue || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Profit</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(cumulativeData[cumulativeData.length - 1]?.cumulativeProfit || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Final Margin</p>
+                <p className="text-2xl font-bold">
+                  {(cumulativeData[cumulativeData.length - 1]?.margin || 0).toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Business Metrics */}
+          <div>
+            <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Business Metrics</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Annual Run Rate</p>
+                <p className="text-lg font-semibold">
+                  {formatCurrency((cumulativeData[cumulativeData.length - 1]?.totalRevenue || 0) * 12)}
+                </p>
+                <p className="text-xs text-muted-foreground">Based on final month</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">ROI</p>
+                <p className="text-lg font-semibold">
+                  {(() => {
+                    const totalProfit = cumulativeData[cumulativeData.length - 1]?.cumulativeProfit || 0;
+                    const totalCapital = actualHardwareTotals?.totalCost || 1;
+                    const roi = (totalProfit / totalCapital) * 100;
+                    return `${roi.toFixed(1)}%`;
+                  })()}
+                </p>
+                <p className="text-xs text-muted-foreground">Return on investment</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Payback Period</p>
+                <p className="text-lg font-semibold">
+                  {(() => {
+                    const totalCapital = actualHardwareTotals?.totalCost || 0;
+                    const monthlyProfit = cumulativeData[cumulativeData.length - 1]?.profit || 0;
+                    if (monthlyProfit <= 0) return 'N/A';
+                    const paybackMonths = totalCapital / monthlyProfit;
+                    if (paybackMonths > scenarioMonths) return `>${scenarioMonths}mo`;
+                    return `${paybackMonths.toFixed(1)} months`;
+                  })()}
+                </p>
+                <p className="text-xs text-muted-foreground">To recover capital</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Contract Value</p>
+                <p className="text-lg font-semibold">
+                  {formatCurrency(cumulativeData[cumulativeData.length - 1]?.cumulativeRevenue || 0)}
+                </p>
+                <p className="text-xs text-muted-foreground">{scenarioMonths} month period</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Utilization & Efficiency */}
+          <div>
+            <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Utilization & Efficiency</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Average Revenue per VM */}
+              {computePricing && computePricing.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Avg Revenue per VM</p>
+                  <p className="text-lg font-semibold">
+                    {(() => {
+                      let totalVMs = 0;
+                      computePricing.forEach(cluster => {
+                        const params = clusterParameters[cluster.clusterId];
+                        const utilization = params ? calculateUtilization(params, scenarioMonths) : 0;
+                        const baseAnalysis = clusterAnalysis[cluster.clusterId];
+                        if (baseAnalysis) {
+                          const maxVMs = baseAnalysis.maxUnits || 0;
+                          totalVMs += Math.floor((utilization * maxVMs) / 100);
+                        }
+                      });
+                      const finalRevenue = cumulativeData[cumulativeData.length - 1]?.totalRevenue || 0;
+                      const computeRevenue = finalRevenue * (computePricing.length / (computePricing.length + storagePricing.length));
+                      return totalVMs > 0 ? formatCurrency(computeRevenue / totalVMs) : 'N/A';
+                    })()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Per month</p>
+                </div>
+              )}
+
+              {/* Average Revenue per TiB */}
+              {storagePricing && storagePricing.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Avg Revenue per TiB</p>
+                  <p className="text-lg font-semibold">
+                    {(() => {
+                      let totalTiB = 0;
+                      storagePricing.forEach(cluster => {
+                        const params = clusterParameters[cluster.clusterId];
+                        const utilization = params ? calculateUtilization(params, scenarioMonths) : 0;
+                        const clusterMetricsData = storageClustersMetrics.find(m => m.id === cluster.clusterId);
+                        const usableStorageTiB = clusterMetricsData?.usableCapacityTiB || 0;
+                        totalTiB += (utilization * usableStorageTiB) / 100;
+                      });
+                      const finalRevenue = cumulativeData[cumulativeData.length - 1]?.totalRevenue || 0;
+                      const storageRevenue = finalRevenue * (storagePricing.length / (computePricing.length + storagePricing.length));
+                      return totalTiB > 0 ? formatCurrency(storageRevenue / totalTiB) : 'N/A';
+                    })()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Per month</p>
+                </div>
+              )}
+
+              {/* Final Cluster Utilization */}
+              <div>
+                <p className="text-sm text-muted-foreground">Avg Final Utilization</p>
+                <p className="text-lg font-semibold">
+                  {(() => {
+                    const allClusters = [...(computePricing || []), ...(storagePricing || [])];
+                    let totalUtil = 0;
+                    allClusters.forEach(cluster => {
+                      const params = clusterParameters[cluster.clusterId];
+                      if (params) {
+                        totalUtil += calculateUtilization(params, scenarioMonths);
+                      }
+                    });
+                    return allClusters.length > 0 ? `${(totalUtil / allClusters.length).toFixed(1)}%` : 'N/A';
+                  })()}
+                </p>
+                <p className="text-xs text-muted-foreground">Across all clusters</p>
+              </div>
+
+              {/* Capital Efficiency */}
+              <div>
+                <p className="text-sm text-muted-foreground">Capital Efficiency</p>
+                <p className="text-lg font-semibold">
+                  {(() => {
+                    const totalRevenue = cumulativeData[cumulativeData.length - 1]?.cumulativeRevenue || 0;
+                    const totalCapital = actualHardwareTotals?.totalCost || 1;
+                    const efficiency = totalRevenue / totalCapital;
+                    return `${efficiency.toFixed(2)}x`;
+                  })()}
+                </p>
+                <p className="text-xs text-muted-foreground">Revenue/Capital ratio</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Growth Analysis */}
+          <div>
+            <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Growth Analysis</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Revenue Growth</p>
+                <p className="text-lg font-semibold">
+                  {(() => {
+                    const firstMonthRev = cumulativeData.find(d => d.totalRevenue > 0)?.totalRevenue || 0;
+                    const lastMonthRev = cumulativeData[cumulativeData.length - 1]?.totalRevenue || 0;
+                    if (firstMonthRev === 0) return 'N/A';
+                    const growth = ((lastMonthRev - firstMonthRev) / firstMonthRev) * 100;
+                    return `${growth.toFixed(0)}%`;
+                  })()}
+                </p>
+                <p className="text-xs text-muted-foreground">First to last month</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Monthly Growth Rate</p>
+                <p className="text-lg font-semibold">
+                  {(() => {
+                    const firstMonthRev = cumulativeData.find(d => d.totalRevenue > 0)?.totalRevenue || 0;
+                    const lastMonthRev = cumulativeData[cumulativeData.length - 1]?.totalRevenue || 0;
+                    if (firstMonthRev === 0 || lastMonthRev === 0) return 'N/A';
+                    const months = scenarioMonths;
+                    const cagr = (Math.pow(lastMonthRev / firstMonthRev, 1 / months) - 1) * 100;
+                    return `${cagr.toFixed(1)}%`;
+                  })()}
+                </p>
+                <p className="text-xs text-muted-foreground">Compound monthly</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Time to 50% Util</p>
+                <p className="text-lg font-semibold">
+                  {(() => {
+                    const allClusters = [...(computePricing || []), ...(storagePricing || [])];
+                    let minTime50 = Infinity;
+                    allClusters.forEach(cluster => {
+                      const params = clusterParameters[cluster.clusterId];
+                      if (params) {
+                        for (let month = 0; month <= scenarioMonths; month += 0.1) {
+                          const util = calculateUtilization(params, month);
+                          if (util >= 50) {
+                            minTime50 = Math.min(minTime50, month);
+                            break;
+                          }
+                        }
+                      }
+                    });
+                    return minTime50 < Infinity ? `${minTime50.toFixed(1)} months` : 'N/A';
+                  })()}
+                </p>
+                <p className="text-xs text-muted-foreground">Fastest cluster</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Peak Efficiency</p>
+                <p className="text-lg font-semibold">
+                  {(() => {
+                    const maxMargin = Math.max(...cumulativeData.map(d => d.margin || -100));
+                    const monthAtMax = cumulativeData.find(d => d.margin === maxMargin)?.month || 0;
+                    return `${maxMargin.toFixed(1)}%`;
+                  })()}
+                </p>
+                <p className="text-xs text-muted-foreground">Best margin achieved</p>
+              </div>
             </div>
           </div>
         </CardContent>
