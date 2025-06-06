@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useComponents } from '@/context/ComponentContext';
 import { useComponentForm } from '@/hooks/components/useComponentForm';
 import { ComponentFormDialog } from './dialogs/ComponentFormDialog';
@@ -94,6 +95,7 @@ const formSchema = z.object({
 });
 
 export const ComponentLibrary: React.FC = () => {
+  const location = useLocation();
   const { 
     componentTemplates,
     addComponentTemplate,
@@ -130,6 +132,30 @@ export const ComponentLibrary: React.FC = () => {
     removePort,
     updatePort
   } = useComponentForm();
+
+  // Handle navigation state to show specific component
+  useEffect(() => {
+    const state = location.state as { selectedComponentId?: string; scrollToComponent?: boolean } | null;
+    
+    if (state?.selectedComponentId) {
+      // Find the component by ID or templateId
+      const component = componentTemplates.find(
+        c => c.id === state.selectedComponentId || 
+             c.templateId === state.selectedComponentId
+      );
+      
+      if (component) {
+        // Set search term to the exact component name to filter it
+        setSearchTerm(component.name);
+        // Also set the category to narrow down the results
+        const category = componentTypeToCategory[component.type];
+        setSelectedCategory(category);
+      }
+      
+      // Clear the navigation state to prevent re-triggering
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, componentTemplates]);
 
   const filteredComponents = componentTemplates.filter(component => {
     const matchesSearch = 

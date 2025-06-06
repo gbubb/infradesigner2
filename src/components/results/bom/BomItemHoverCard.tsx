@@ -71,7 +71,7 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
 
       case ComponentType.Switch:
       case ComponentType.Router:
-      case ComponentType.Firewall:
+      case ComponentType.Firewall: {
         const totalPorts = (component.port100GCount || 0) + 
                           (component.port400GCount || 0) + 
                           (component.port10GCount || 0) + 
@@ -86,6 +86,7 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
           details.push({ label: "400G Ports", value: component.port400GCount });
         }
         break;
+      }
 
       case ComponentType.Cable:
         if (component.mediaType) {
