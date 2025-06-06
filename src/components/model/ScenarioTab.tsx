@@ -177,16 +177,18 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
       }
       
       case 'logistic': {
-        // Logistic S-curve growth
+        // Logistic S-curve growth that starts at P0
         const K = targetUtilization || 85; // Carrying capacity
         const P0 = Math.max(0.1, startUtilization || 2); // Initial value (avoid zero)
         const r = params.growthRate || 0.5; // Growth rate
         const t0 = params.inflectionMonth || 12; // Inflection point
         
-        // Logistic function: K / (1 + ((K - P0) / P0) * e^(-r * (t - t0)))
+        // Modified logistic function that ensures f(0) = P0
+        // We need to find the right offset to make this work
         const A = (K - P0) / P0;
-        const result = K / (1 + A * Math.exp(-r * (monthsElapsed - t0)));
-        return isFinite(result) ? result : P0;
+        const offset = Math.log(A); // This ensures that at t=0, we get P0
+        const result = K / (1 + A * Math.exp(-r * (monthsElapsed - t0 + offset/r)));
+        return Math.min(K, Math.max(P0, isFinite(result) ? result : P0));
       }
       
       case 'phased': {
@@ -314,11 +316,13 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
       }
       
       const profit = totalRevenue - totalCosts;
-      // Clamp margin to reasonable bounds to avoid display issues
+      // Calculate margin with clamping for display
       let margin = 0;
-      if (totalRevenue > 100) { // Only calculate margin if revenue is meaningful
+      if (totalRevenue > 0.01) { // Calculate margin even for small revenues
         margin = (profit / totalRevenue) * 100;
         margin = Math.max(-100, Math.min(100, margin)); // Clamp between -100% and 100%
+      } else if (totalCosts > 0) {
+        margin = -100; // If we have costs but no revenue, show -100%
       }
       
       data.push({
@@ -517,7 +521,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                               max={60}
                               value={params?.inflectionMonth || 12}
                               onChange={(e) => updateClusterParameter(cluster.clusterId, 'inflectionMonth', Number(e.target.value))}
-                              className="w-12"
+                              className="w-16"
                             />
                             <Label className="text-xs">Rate:</Label>
                             <Input
@@ -527,7 +531,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                               step={0.1}
                               value={params?.growthRate || 0.5}
                               onChange={(e) => updateClusterParameter(cluster.clusterId, 'growthRate', Number(e.target.value))}
-                              className="w-12"
+                              className="w-16"
                             />
                           </div>
                         )}
@@ -665,7 +669,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                               max={60}
                               value={params?.inflectionMonth || 12}
                               onChange={(e) => updateClusterParameter(cluster.clusterId, 'inflectionMonth', Number(e.target.value))}
-                              className="w-12"
+                              className="w-16"
                             />
                             <Label className="text-xs">Rate:</Label>
                             <Input
@@ -675,7 +679,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                               step={0.1}
                               value={params?.growthRate || 0.5}
                               onChange={(e) => updateClusterParameter(cluster.clusterId, 'growthRate', Number(e.target.value))}
-                              className="w-12"
+                              className="w-16"
                             />
                           </div>
                         )}
@@ -911,10 +915,10 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
         </CardContent>
       </Card>
 
-      {/* Financial Metrics Chart - Margin */}
+      {/* Financial Metrics Chart - Margin & Monthly Revenue */}
       <Card>
         <CardHeader>
-          <CardTitle>Financial Projections - Margin %</CardTitle>
+          <CardTitle>Financial Projections - Margin % & Monthly Revenue</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[400px] w-full">
@@ -929,21 +933,52 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                   label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
                 />
                 <YAxis 
+                  yAxisId="left"
+                  label={{ value: 'Monthly Revenue ($)', angle: -90, position: 'insideLeft' }}
+                  tickFormatter={(value) => {
+                    if (value >= 1000000) {
+                      return `$${(value / 1000000).toFixed(1)}M`;
+                    } else if (value >= 1000) {
+                      return `$${(value / 1000).toFixed(0)}K`;
+                    }
+                    return `$${Math.round(value)}`;
+                  }}
+                />
+                <YAxis 
+                  yAxisId="right"
+                  orientation="right"
                   domain={[-50, 50]}
-                  label={{ value: 'Margin %', angle: -90, position: 'insideLeft' }}
+                  label={{ value: 'Margin %', angle: 90, position: 'insideRight' }}
                   ticks={[-50, -25, 0, 25, 50]}
                   tickFormatter={(value) => `${value}%`}
                 />
                 <Tooltip 
-                  formatter={(value: number) => `${Number(value).toFixed(1)}%`}
+                  formatter={(value: number, name: string) => {
+                    if (name.includes('Margin')) {
+                      return `${Number(value).toFixed(1)}%`;
+                    }
+                    return formatCurrency(value);
+                  }}
                   labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
                 />
                 <Legend />
                 <Line
+                  yAxisId="right"
                   type="monotone"
                   dataKey="margin"
-                  name="Margin"
+                  name="Margin %"
                   stroke="#f59e0b"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={false}
+                  connectNulls={true}
+                />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="totalRevenue"
+                  name="Total Monthly Revenue"
+                  stroke="#10b981"
                   strokeWidth={2}
                   dot={false}
                   connectNulls={true}
