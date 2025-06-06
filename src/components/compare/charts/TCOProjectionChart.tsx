@@ -24,11 +24,12 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
   // Generate data points for each year
   const data = Array.from({ length: years + 1 }, (_, year) => ({
     year: `Year ${year}`,
-    designA: designACapitalCost + (designAOperationalCost * 12 * year),
-    designB: designBCapitalCost + (designBOperationalCost * 12 * year),
+    designA: (designACapitalCost || 0) + ((designAOperationalCost || 0) * 12 * year),
+    designB: (designBCapitalCost || 0) + ((designBOperationalCost || 0) * 12 * year),
   }));
 
   const formatCurrency = (value: number) => {
+    if (!value || isNaN(value) || !isFinite(value)) return '$0';
     if (value >= 1000000) {
       return `$${(value / 1000000).toFixed(1)}M`;
     }

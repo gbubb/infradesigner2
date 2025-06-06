@@ -26,42 +26,49 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
   // Normalize data to 0-100 scale for better visualization
   const normalizeData = () => {
     const maxValues = {
-      vCPUs: Math.max(designAMetrics.vCPUs, designBMetrics.vCPUs),
-      memoryTB: Math.max(designAMetrics.memoryTB, designBMetrics.memoryTB),
-      storageTB: Math.max(designAMetrics.storageTB, designBMetrics.storageTB),
-      powerKW: Math.max(designAMetrics.powerKW, designBMetrics.powerKW),
-      rackUnits: Math.max(designAMetrics.rackUnits, designBMetrics.rackUnits),
+      vCPUs: Math.max(designAMetrics.vCPUs || 0, designBMetrics.vCPUs || 0),
+      memoryTB: Math.max(designAMetrics.memoryTB || 0, designBMetrics.memoryTB || 0),
+      storageTB: Math.max(designAMetrics.storageTB || 0, designBMetrics.storageTB || 0),
+      powerKW: Math.max(designAMetrics.powerKW || 0, designBMetrics.powerKW || 0),
+      rackUnits: Math.max(designAMetrics.rackUnits || 0, designBMetrics.rackUnits || 0),
+    };
+
+    // Helper function to safely normalize values
+    const safeNormalize = (value: number, max: number) => {
+      if (!max || max === 0) return 0;
+      const normalized = (value / max) * 100;
+      return isNaN(normalized) || !isFinite(normalized) ? 0 : normalized;
     };
 
     return [
       {
         metric: 'vCPUs',
-        [designAName]: (designAMetrics.vCPUs / maxValues.vCPUs) * 100,
-        [designBName]: (designBMetrics.vCPUs / maxValues.vCPUs) * 100,
+        [designAName]: safeNormalize(designAMetrics.vCPUs || 0, maxValues.vCPUs),
+        [designBName]: safeNormalize(designBMetrics.vCPUs || 0, maxValues.vCPUs),
         fullMark: 100,
       },
       {
         metric: 'Memory',
-        [designAName]: (designAMetrics.memoryTB / maxValues.memoryTB) * 100,
-        [designBName]: (designBMetrics.memoryTB / maxValues.memoryTB) * 100,
+        [designAName]: safeNormalize(designAMetrics.memoryTB || 0, maxValues.memoryTB),
+        [designBName]: safeNormalize(designBMetrics.memoryTB || 0, maxValues.memoryTB),
         fullMark: 100,
       },
       {
         metric: 'Storage',
-        [designAName]: (designAMetrics.storageTB / maxValues.storageTB) * 100,
-        [designBName]: (designBMetrics.storageTB / maxValues.storageTB) * 100,
+        [designAName]: safeNormalize(designAMetrics.storageTB || 0, maxValues.storageTB),
+        [designBName]: safeNormalize(designBMetrics.storageTB || 0, maxValues.storageTB),
         fullMark: 100,
       },
       {
         metric: 'Power',
-        [designAName]: (designAMetrics.powerKW / maxValues.powerKW) * 100,
-        [designBName]: (designBMetrics.powerKW / maxValues.powerKW) * 100,
+        [designAName]: safeNormalize(designAMetrics.powerKW || 0, maxValues.powerKW),
+        [designBName]: safeNormalize(designBMetrics.powerKW || 0, maxValues.powerKW),
         fullMark: 100,
       },
       {
         metric: 'Rack Space',
-        [designAName]: (designAMetrics.rackUnits / maxValues.rackUnits) * 100,
-        [designBName]: (designBMetrics.rackUnits / maxValues.rackUnits) * 100,
+        [designAName]: safeNormalize(designAMetrics.rackUnits || 0, maxValues.rackUnits),
+        [designBName]: safeNormalize(designBMetrics.rackUnits || 0, maxValues.rackUnits),
         fullMark: 100,
       },
     ];
@@ -92,7 +99,7 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
             {designBName}: {values.B.toLocaleString()}{values.unit}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Difference: {((values.B - values.A) / values.A * 100).toFixed(1)}%
+            Difference: {values.A > 0 ? ((values.B - values.A) / values.A * 100).toFixed(1) : 'N/A'}%
           </p>
         </div>
       );

@@ -178,14 +178,15 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
       
       case 'logistic': {
         // Logistic S-curve growth
-        const K = targetUtilization; // Carrying capacity
-        const P0 = startUtilization; // Initial value
+        const K = targetUtilization || 85; // Carrying capacity
+        const P0 = Math.max(0.1, startUtilization || 10); // Initial value (avoid zero)
         const r = params.growthRate || 0.5; // Growth rate
         const t0 = params.inflectionMonth || 12; // Inflection point
         
         // Logistic function: K / (1 + ((K - P0) / P0) * e^(-r * (t - t0)))
         const A = (K - P0) / P0;
-        return K / (1 + A * Math.exp(-r * (monthsElapsed - t0)));
+        const result = K / (1 + A * Math.exp(-r * (monthsElapsed - t0)));
+        return isFinite(result) ? result : P0;
       }
       
       case 'phased': {
@@ -258,16 +259,16 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
           // Calculate revenue based on current utilization
           const averageVMVCPUs = requirements.computeRequirements?.averageVMVCPUs || 4;
           const averageVMMemoryGB = requirements.computeRequirements?.averageVMMemoryGB || 8;
-          const totalVCPUs = actualHardwareTotals.totalVCPUs / computePricing.length;
-          const totalMemoryGB = (actualHardwareTotals.totalComputeMemoryTB * 1024) / computePricing.length;
+          const totalVCPUs = (actualHardwareTotals.totalVCPUs || 0) / Math.max(1, computePricing.length);
+          const totalMemoryGB = ((actualHardwareTotals.totalComputeMemoryTB || 0) * 1024) / Math.max(1, computePricing.length);
           const vmsByCPU = Math.floor(totalVCPUs / averageVMVCPUs);
           const vmsByMemory = Math.floor(totalMemoryGB / averageVMMemoryGB);
-          const maxVMs = Math.min(vmsByCPU, vmsByMemory);
-          const currentVMs = Math.floor(utilization * maxVMs / 100);
-          const revenue = (pricingOverrides[cluster.clusterId] || cluster.pricePerMonth) * currentVMs;
+          const maxVMs = Math.max(0, Math.min(vmsByCPU, vmsByMemory));
+          const currentVMs = Math.floor((utilization || 0) * maxVMs / 100);
+          const revenue = (pricingOverrides[cluster.clusterId] || cluster.pricePerMonth || 0) * currentVMs;
           
-          totalRevenue += revenue;
-          totalCosts += baseAnalysis.costs.total;
+          totalRevenue += isFinite(revenue) ? revenue : 0;
+          totalCosts += isFinite(baseAnalysis.costs.total) ? baseAnalysis.costs.total : 0;
           
           clusterMetrics[cluster.clusterId] = {
             utilization,
@@ -300,8 +301,8 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
           const overallocatedStorageTiB = currentStorageTiB * overallocationRatio;
           const revenue = (pricingOverrides[cluster.clusterId] || cluster.pricePerMonth) * overallocatedStorageTiB * 1024; // Convert TiB to GiB
           
-          totalRevenue += revenue;
-          totalCosts += baseAnalysis.costs.total;
+          totalRevenue += isFinite(revenue) ? revenue : 0;
+          totalCosts += isFinite(baseAnalysis.costs.total) ? baseAnalysis.costs.total : 0;
           
           clusterMetrics[cluster.clusterId] = {
             utilization,
@@ -319,13 +320,13 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
         week,
         month: month,
         monthDisplay: Math.round(month),
-        totalRevenue,
-        totalCosts,
-        profit,
-        margin,
+        totalRevenue: isFinite(totalRevenue) ? totalRevenue : 0,
+        totalCosts: isFinite(totalCosts) ? totalCosts : 0,
+        profit: isFinite(profit) ? profit : 0,
+        margin: isFinite(margin) ? margin : 0,
         ...Object.entries(clusterMetrics).reduce((acc, [clusterId, metrics]) => ({
           ...acc,
-          [`${clusterId}_utilization`]: metrics.utilization
+          [`${clusterId}_utilization`]: isFinite(metrics.utilization) ? metrics.utilization : 0
         }), {})
       });
     }
@@ -386,6 +387,21 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
           <CardContent className="p-6">
             <p className="text-muted-foreground">
               No pricing clusters defined. Please configure pricing in the Requirements panel first.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Check if we have valid cumulative data
+  if (!cumulativeData || cumulativeData.length === 0) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-muted-foreground">
+              Unable to generate scenario data. Please check your design configuration.
             </p>
           </CardContent>
         </Card>
@@ -797,8 +813,8 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                 <XAxis 
                   dataKey="monthDisplay" 
                   label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
-                  domain={[0, scenarioMonths]}
-                  ticks={Array.from({ length: Math.ceil(scenarioMonths / 3) + 1 }, (_, i) => i * 3).filter(t => t <= scenarioMonths)}
+                  domain={['dataMin', 'dataMax']}
+                  ticks={Array.from({ length: Math.min(10, Math.ceil(scenarioMonths / 3) + 1) }, (_, i) => i * 3).filter(t => t <= scenarioMonths)}
                 />
                 <YAxis 
                   label={{ value: 'Utilization %', angle: -90, position: 'insideLeft' }}
@@ -842,8 +858,8 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
                 <XAxis 
                   dataKey="monthDisplay" 
                   label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
-                  domain={[0, scenarioMonths]}
-                  ticks={Array.from({ length: Math.ceil(scenarioMonths / 3) + 1 }, (_, i) => i * 3).filter(t => t <= scenarioMonths)}
+                  domain={['dataMin', 'dataMax']}
+                  ticks={Array.from({ length: Math.min(10, Math.ceil(scenarioMonths / 3) + 1) }, (_, i) => i * 3).filter(t => t <= scenarioMonths)}
                 />
                 <YAxis 
                   yAxisId="left"
