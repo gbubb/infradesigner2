@@ -769,22 +769,6 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
         </CardContent>
       </Card>
 
-      {/* Debug Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Debug Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm">
-            <p>Compute Pricing Length: {computePricing?.length || 0}</p>
-            <p>Storage Pricing Length: {storagePricing?.length || 0}</p>
-            <p>Cumulative Data Length: {cumulativeData?.length || 0}</p>
-            <p>First Data Point: {JSON.stringify(cumulativeData?.[0], null, 2)}</p>
-            <p>Margin Break-even: {marginBreakEvenMonth}</p>
-            <p>Profit Break-even: {profitBreakEvenMonth}</p>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Break-even Indicators */}
       {(marginBreakEvenMonth !== null || profitBreakEvenMonth !== null) && (
@@ -823,8 +807,44 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
           <CardTitle>Cluster Utilization Growth</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[400px] w-full flex items-center justify-center">
-            <p className="text-muted-foreground">Chart temporarily disabled for debugging</p>
+          <div className="h-[400px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={cumulativeData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="month"
+                  type="number"
+                  domain={[0, 'dataMax']}
+                  tickFormatter={(value) => Math.round(value).toString()}
+                  label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+                />
+                <YAxis 
+                  domain={[0, 100]}
+                  label={{ value: 'Utilization %', angle: -90, position: 'insideLeft' }}
+                />
+                <Tooltip 
+                  formatter={(value: number) => `${Number(value).toFixed(1)}%`}
+                  labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
+                />
+                <Legend />
+                {[...(computePricing || []), ...(storagePricing || [])].map((cluster, index) => {
+                  const totalClusters = Math.max(1, (computePricing?.length || 0) + (storagePricing?.length || 0));
+                  const hue = Math.round((index * 360) / totalClusters);
+                  return (
+                    <Line
+                      key={cluster.clusterId}
+                      type="monotone"
+                      dataKey={`${cluster.clusterId}_utilization`}
+                      name={cluster.clusterName}
+                      stroke={`hsl(${hue}, 70%, 50%)`}
+                      strokeWidth={2}
+                      dot={false}
+                      connectNulls={true}
+                    />
+                  );
+                })}
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
