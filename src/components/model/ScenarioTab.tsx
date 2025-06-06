@@ -855,8 +855,98 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
           <CardTitle>Financial Projections</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[400px] w-full flex items-center justify-center">
-            <p className="text-muted-foreground">Chart temporarily disabled for debugging</p>
+          <div className="h-[400px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={cumulativeData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="month"
+                  type="number"
+                  domain={[0, 'dataMax']}
+                  tickFormatter={(value) => Math.round(value).toString()}
+                  label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+                />
+                <YAxis 
+                  yAxisId="left"
+                  label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft' }}
+                  tickFormatter={(value) => {
+                    if (value >= 1000000) {
+                      return `$${(value / 1000000).toFixed(1)}M`;
+                    } else if (value >= 1000) {
+                      return `$${(value / 1000).toFixed(0)}K`;
+                    }
+                    return `$${value.toFixed(0)}`;
+                  }}
+                />
+                <YAxis 
+                  yAxisId="right"
+                  orientation="right"
+                  label={{ value: 'Margin %', angle: 90, position: 'insideRight' }}
+                  domain={[-100, 100]}
+                  tickFormatter={(value) => `${value}%`}
+                />
+                {/* Break-even markers */}
+                {marginBreakEvenMonth !== null && isFinite(marginBreakEvenMonth) && marginBreakEvenMonth <= scenarioMonths && (
+                  <ReferenceLine 
+                    x={marginBreakEvenMonth} 
+                    stroke="#f59e0b" 
+                    strokeDasharray="3 3" 
+                    label={{ value: "Margin +ve", position: "top" }}
+                  />
+                )}
+                {profitBreakEvenMonth !== null && isFinite(profitBreakEvenMonth) && profitBreakEvenMonth <= scenarioMonths && (
+                  <ReferenceLine 
+                    x={profitBreakEvenMonth} 
+                    stroke="#10b981" 
+                    strokeDasharray="3 3" 
+                    label={{ value: "Profit +ve", position: "top" }}
+                  />
+                )}
+                <ReferenceLine yAxisId="left" y={0} stroke="#666" strokeDasharray="3 3" />
+                <ReferenceLine yAxisId="right" y={0} stroke="#666" strokeDasharray="3 3" />
+                <Tooltip 
+                  formatter={(value: number, name: string) => {
+                    if (name === 'Margin') {
+                      return `${Number(value).toFixed(1)}%`;
+                    }
+                    return formatCurrency(value);
+                  }}
+                  labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
+                />
+                <Legend />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="cumulativeRevenue"
+                  name="Cumulative Revenue"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls={true}
+                />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="cumulativeProfit"
+                  name="Cumulative Profit"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls={true}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="margin"
+                  name="Margin"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={false}
+                  connectNulls={true}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
