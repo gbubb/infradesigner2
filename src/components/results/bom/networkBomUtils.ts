@@ -42,12 +42,29 @@ export function summarizeCablesFromConnections(
 ): Record<string, CableLineItem> {
   const cableTemplates = components.filter(c => c.type === ComponentType.Cable);
   const cableLineItems: Record<string, CableLineItem> = {};
+  const processedBreakoutCables = new Set<string>(); // Track breakout cables by base connectionId
 
   networkConnections.forEach(conn => {
     if (conn.cableTemplateId) {
       const cableTemplate = cableTemplates.find(c => c.id === conn.cableTemplateId);
       const cableKey =
         (conn.cableTemplateId || 'unknown') + '-' + String(conn.lengthMeters || 0) + 'm';
+
+      // Check if this is a breakout cable connection
+      const isBreakout = cableTemplate?.isBreakout || false;
+      let shouldCountCable = true;
+
+      if (isBreakout && conn.connectionId) {
+        // Extract base connectionId (before the suffix) for breakout cables
+        const baseConnectionId = conn.connectionId.split('-').slice(0, -1).join('-');
+        
+        // Only count this cable if we haven't seen this breakout group before
+        if (processedBreakoutCables.has(baseConnectionId)) {
+          shouldCountCable = false;
+        } else {
+          processedBreakoutCables.add(baseConnectionId);
+        }
+      }
 
       if (!cableLineItems[cableKey]) {
         const connectorTypes = `${cableTemplate?.connectorA_Type || '-'} to ${cableTemplate?.connectorB_Type || '-'}`;
@@ -66,8 +83,12 @@ export function summarizeCablesFromConnections(
           manufacturer: cableTemplate?.manufacturer || "-"
         };
       }
-      cableLineItems[cableKey].count += 1;
-      cableLineItems[cableKey].total += cableLineItems[cableKey].costPer;
+      
+      // Only increment count if we should count this cable (not a duplicate breakout)
+      if (shouldCountCable) {
+        cableLineItems[cableKey].count += 1;
+        cableLineItems[cableKey].total += cableLineItems[cableKey].costPer;
+      }
     }
   });
 
