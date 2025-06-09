@@ -120,22 +120,33 @@ function calculateCpuPower(inputs: PowerCalculationInputs, calibration: PowerCal
 function calculateMemoryPower(inputs: PowerCalculationInputs, calibration: PowerCalibrationProfile): { idle: number; average: number; peak: number } {
   const memModel = calibration.memoryPowerModel;
   
+  // Handle missing memoryPowerModel gracefully
+  if (!memModel || !memModel.controllerBasePower || !memModel.chipsPerGB || !memModel.powerPerChip) {
+    // Fallback to conservative estimate
+    const conservativePower = inputs.dimmCount * calibration.memoryConservativeMultiplier;
+    return {
+      idle: conservativePower * 0.35,
+      average: conservativePower * 0.7,
+      peak: conservativePower
+    };
+  }
+  
   // Calculate power per DIMM using chip-based model
-  const controllerPower = memModel.controllerBasePower[inputs.memoryType];
-  const chipsPerDimm = inputs.dimmCapacityGB * memModel.chipsPerGB[inputs.memoryType];
-  const chipPower = chipsPerDimm * memModel.powerPerChip[inputs.memoryType];
+  const controllerPower = memModel.controllerBasePower[inputs.memoryType] || 1.0;
+  const chipsPerDimm = inputs.dimmCapacityGB * (memModel.chipsPerGB[inputs.memoryType] || 0.5);
+  const chipPower = chipsPerDimm * (memModel.powerPerChip[inputs.memoryType] || 0.18);
   
   // Speed scaling (logarithmic)
-  const baseSpeed = memModel.speedScaling.baseSpeedMHz[inputs.memoryType];
+  const baseSpeed = memModel.speedScaling?.baseSpeedMHz?.[inputs.memoryType] || 2400;
   const speedRatio = inputs.memorySpeedMHz / baseSpeed;
-  const speedMultiplier = Math.pow(speedRatio, memModel.speedScaling.scalingExponent);
+  const speedMultiplier = Math.pow(speedRatio, memModel.speedScaling?.scalingExponent || 0.3);
   
   // Total power per DIMM at peak
   const peakPowerPerDimm = (controllerPower + chipPower) * speedMultiplier;
   
   // Apply activity multipliers
-  const idlePowerPerDimm = peakPowerPerDimm * memModel.activityMultipliers.idle;
-  const avgPowerPerDimm = peakPowerPerDimm * memModel.activityMultipliers.average;
+  const idlePowerPerDimm = peakPowerPerDimm * (memModel.activityMultipliers?.idle || 0.34);
+  const avgPowerPerDimm = peakPowerPerDimm * (memModel.activityMultipliers?.average || 1.0);
   
   // Total for all DIMMs
   const totalIdle = inputs.dimmCount * idlePowerPerDimm;

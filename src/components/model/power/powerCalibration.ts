@@ -324,12 +324,36 @@ export function getCalibrationProfiles(): PowerCalibrationProfile[] {
   
   try {
     const profiles = JSON.parse(stored);
-    // Convert date strings back to Date objects
-    return profiles.map((p: any) => ({
-      ...p,
-      createdAt: new Date(p.createdAt),
-      updatedAt: new Date(p.updatedAt)
-    }));
+    // Convert date strings back to Date objects and ensure all required fields exist
+    return profiles.map((p: any) => {
+      // Ensure memoryPowerModel exists with all required fields
+      if (!p.memoryPowerModel) {
+        p.memoryPowerModel = DEFAULT_CALIBRATION_PROFILE.memoryPowerModel;
+      } else {
+        // Ensure all sub-objects exist
+        if (!p.memoryPowerModel.controllerBasePower) {
+          p.memoryPowerModel.controllerBasePower = DEFAULT_CALIBRATION_PROFILE.memoryPowerModel.controllerBasePower;
+        }
+        if (!p.memoryPowerModel.powerPerChip) {
+          p.memoryPowerModel.powerPerChip = DEFAULT_CALIBRATION_PROFILE.memoryPowerModel.powerPerChip;
+        }
+        if (!p.memoryPowerModel.chipsPerGB) {
+          p.memoryPowerModel.chipsPerGB = DEFAULT_CALIBRATION_PROFILE.memoryPowerModel.chipsPerGB;
+        }
+        if (!p.memoryPowerModel.activityMultipliers) {
+          p.memoryPowerModel.activityMultipliers = DEFAULT_CALIBRATION_PROFILE.memoryPowerModel.activityMultipliers;
+        }
+        if (!p.memoryPowerModel.speedScaling) {
+          p.memoryPowerModel.speedScaling = DEFAULT_CALIBRATION_PROFILE.memoryPowerModel.speedScaling;
+        }
+      }
+      
+      return {
+        ...p,
+        createdAt: new Date(p.createdAt),
+        updatedAt: new Date(p.updatedAt)
+      };
+    });
   } catch {
     return [];
   }

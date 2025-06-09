@@ -15,7 +15,14 @@ export const PowerCalculationParameters: React.FC<PowerCalculationParametersProp
   calibrationProfile 
 }) => {
   // Use calibration profile if available, otherwise use defaults
-  const params = calibrationProfile || (DEFAULT_CALIBRATION_PROFILE as PowerCalibrationProfile);
+  const defaultProfile = {
+    ...DEFAULT_CALIBRATION_PROFILE,
+    id: 'default',
+    createdAt: new Date(),
+    updatedAt: new Date()
+  } as PowerCalibrationProfile;
+  
+  const params = calibrationProfile || defaultProfile;
   const isUsingCalibration = !!calibrationProfile;
   
   return (
@@ -136,41 +143,41 @@ export const PowerCalculationParameters: React.FC<PowerCalculationParametersProp
                 <div>
                   <h5 className="font-medium mb-1">Controller Base Power</h5>
                   <div className="grid grid-cols-3 gap-2">
-                    <div><span className="text-muted-foreground">DDR3:</span> {params.memoryPowerModel?.controllerBasePower?.DDR3 || 1.2}W</div>
-                    <div><span className="text-muted-foreground">DDR4:</span> {params.memoryPowerModel?.controllerBasePower?.DDR4 || 1.0}W</div>
-                    <div><span className="text-muted-foreground">DDR5:</span> {params.memoryPowerModel?.controllerBasePower?.DDR5 || 0.8}W</div>
+                    <div><span className="text-muted-foreground">DDR3:</span> {params.memoryPowerModel?.controllerBasePower?.DDR3 ?? 1.2}W</div>
+                    <div><span className="text-muted-foreground">DDR4:</span> {params.memoryPowerModel?.controllerBasePower?.DDR4 ?? 1.0}W</div>
+                    <div><span className="text-muted-foreground">DDR5:</span> {params.memoryPowerModel?.controllerBasePower?.DDR5 ?? 0.8}W</div>
                   </div>
                 </div>
                 
                 <div>
                   <h5 className="font-medium mb-1">Power per Memory Chip</h5>
                   <div className="grid grid-cols-3 gap-2">
-                    <div><span className="text-muted-foreground">DDR3:</span> {params.memoryPowerModel?.powerPerChip?.DDR3 || 0.25}W</div>
-                    <div><span className="text-muted-foreground">DDR4:</span> {params.memoryPowerModel?.powerPerChip?.DDR4 || 0.18}W</div>
-                    <div><span className="text-muted-foreground">DDR5:</span> {params.memoryPowerModel?.powerPerChip?.DDR5 || 0.135}W</div>
+                    <div><span className="text-muted-foreground">DDR3:</span> {params.memoryPowerModel?.powerPerChip?.DDR3 ?? 0.25}W</div>
+                    <div><span className="text-muted-foreground">DDR4:</span> {params.memoryPowerModel?.powerPerChip?.DDR4 ?? 0.18}W</div>
+                    <div><span className="text-muted-foreground">DDR5:</span> {params.memoryPowerModel?.powerPerChip?.DDR5 ?? 0.135}W</div>
                   </div>
                 </div>
                 
                 <div>
                   <h5 className="font-medium mb-1">Chips per GB</h5>
                   <div className="grid grid-cols-3 gap-2">
-                    <div><span className="text-muted-foreground">DDR3:</span> {params.memoryPowerModel?.chipsPerGB?.DDR3 || 1.0}</div>
-                    <div><span className="text-muted-foreground">DDR4:</span> {params.memoryPowerModel?.chipsPerGB?.DDR4 || 0.5}</div>
-                    <div><span className="text-muted-foreground">DDR5:</span> {params.memoryPowerModel?.chipsPerGB?.DDR5 || 0.25}</div>
+                    <div><span className="text-muted-foreground">DDR3:</span> {params.memoryPowerModel?.chipsPerGB?.DDR3 ?? 1.0}</div>
+                    <div><span className="text-muted-foreground">DDR4:</span> {params.memoryPowerModel?.chipsPerGB?.DDR4 ?? 0.5}</div>
+                    <div><span className="text-muted-foreground">DDR5:</span> {params.memoryPowerModel?.chipsPerGB?.DDR5 ?? 0.25}</div>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2">
-                  <div><span className="text-muted-foreground">Speed Scaling Exponent:</span> {params.memoryPowerModel?.speedScaling?.scalingExponent || 0.3}</div>
+                  <div><span className="text-muted-foreground">Speed Scaling Exponent:</span> {params.memoryPowerModel?.speedScaling?.scalingExponent ?? 0.3}</div>
                   <div><span className="text-muted-foreground">Conservative Override:</span> {params.memoryConservativeMultiplier}W per DIMM</div>
                 </div>
                 
                 <div>
                   <h5 className="font-medium mb-1">Activity Multipliers</h5>
                   <div className="grid grid-cols-3 gap-2">
-                    <div><span className="text-muted-foreground">Idle:</span> {((params.memoryPowerModel?.activityMultipliers?.idle || 0.34) * 100).toFixed(0)}%</div>
-                    <div><span className="text-muted-foreground">Load:</span> {((params.memoryPowerModel?.activityMultipliers?.average || 1.0) * 100).toFixed(0)}%</div>
-                    <div><span className="text-muted-foreground">Peak:</span> {((params.memoryPowerModel?.activityMultipliers?.peak || 1.0) * 100).toFixed(0)}%</div>
+                    <div><span className="text-muted-foreground">Idle:</span> {((params.memoryPowerModel?.activityMultipliers?.idle ?? 0.34) * 100).toFixed(0)}%</div>
+                    <div><span className="text-muted-foreground">Load:</span> {((params.memoryPowerModel?.activityMultipliers?.average ?? 1.0) * 100).toFixed(0)}%</div>
+                    <div><span className="text-muted-foreground">Peak:</span> {((params.memoryPowerModel?.activityMultipliers?.peak ?? 1.0) * 100).toFixed(0)}%</div>
                   </div>
                 </div>
               </div>
