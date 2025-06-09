@@ -21,6 +21,17 @@ const getBomGroupKey = (component: InfrastructureComponent): string => {
 const useComponentRoleId = (component: InfrastructureComponent & { summarizedQuantity: number }) => {
   const componentRoles = useDesignStore(state => state.componentRoles);
   if (!component.role) return null;
+  
+  // For storage nodes, match by both role and clusterId to find the specific storage cluster
+  if (component.role === 'storageNode') {
+    const clusterId = (component as any).clusterInfo?.clusterId;
+    const foundRole = componentRoles.find(r => 
+      r.role === component.role && r.clusterInfo?.clusterId === clusterId
+    );
+    return foundRole?.id || null;
+  }
+  
+  // For other roles, match by role only
   const foundRole = componentRoles.find(r => r.role === component.role);
   return foundRole?.id || null;
 };
