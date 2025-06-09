@@ -72,14 +72,14 @@ export interface PowerCalculationResult {
 
 // Remove hardcoded multipliers - now comes from calibration
 
-// PSU Efficiency curves
+// PSU Efficiency curves (based on 80 Plus certification requirements)
 const PSU_EFFICIENCY: Record<string, (load: number) => number> = {
   '80Plus': (load) => load < 0.2 ? 0.75 : load > 0.8 ? 0.78 : 0.80,
   '80PlusBronze': (load) => load < 0.2 ? 0.78 : load > 0.8 ? 0.81 : 0.85,
   '80PlusSilver': (load) => load < 0.2 ? 0.80 : load > 0.8 ? 0.85 : 0.88,
   '80PlusGold': (load) => load < 0.2 ? 0.82 : load > 0.8 ? 0.87 : 0.90,
   '80PlusPlatinum': (load) => load < 0.2 ? 0.85 : load > 0.8 ? 0.89 : 0.92,
-  '80PlusTitanium': (load) => load < 0.2 ? 0.88 : load > 0.8 ? 0.90 : 0.94
+  '80PlusTitanium': (load) => load < 0.2 ? 0.90 : load > 0.8 ? 0.91 : 0.96
 };
 
 function getCpuArchitecture(cpuModel: string): string {

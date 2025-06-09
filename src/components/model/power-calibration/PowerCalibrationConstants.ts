@@ -138,9 +138,9 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
       '80-100': 0.89
     },
     '80PlusTitanium': {
-      '0-20': 0.88,
-      '20-80': 0.94,
-      '80-100': 0.90
+      '0-20': 0.90,
+      '20-80': 0.96,
+      '80-100': 0.91
     }
   },
   
