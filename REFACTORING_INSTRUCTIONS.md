@@ -2,7 +2,32 @@
 
 This document contains specific refactoring instructions for each large file identified in the codebase. Each section provides detailed prompts that can be used in a Claude session to perform the refactoring work.
 
-## 1. connectionService.ts (1,031 lines) - HIGHEST PRIORITY
+## ✅ COMPLETED: 1. connectionService.ts (1,031 lines)
+
+**Status**: COMPLETED on 6/9/2025
+- Successfully refactored into 6 specialized modules in `/src/services/connection/`:
+  - ConnectionGenerator.ts - Core connection generation logic
+  - CableManager.ts - Cable-related functions and length calculations
+  - TransceiverManager.ts - Transceiver compatibility and selection
+  - BreakoutManager.ts - Breakout cable handling
+  - ConnectionValidator.ts - Connection validation logic
+  - PortMatcher.ts - Port filtering and matching algorithms
+- Main connectionService.ts now serves as a clean facade
+- All tests pass: build successful, no linting errors in refactored code
+
+## 2. ComponentFormDialog.tsx (730 lines) - NEXT HIGHEST PRIORITY
+
+**Status**: NOT STARTED
+**Recommended Start Date**: Ready to begin
+
+### Overview:
+This is the next file to refactor. It's a large form dialog component that handles forms for all component types in a single file. The refactoring will improve maintainability by separating concerns.
+
+### Key Challenges to Consider:
+- Form state management needs to remain consistent
+- Validation schemas must work with React Hook Form
+- The dialog wrapper should remain as the orchestrator
+- All component types must be handled without breaking changes
 
 ### Prompt:
 "Refactor the connectionService.ts file by breaking it down into the following modules:
@@ -174,9 +199,28 @@ For all refactoring tasks:
 ## Execution Order
 
 Recommended order for refactoring:
-1. Start with connectionService.ts (highest impact on maintainability)
-2. Then ComponentFormDialog.tsx (improves form maintainability)
-3. Follow with RackLayoutsTab.tsx (reduces complexity)
-4. Continue with remaining files in any order
+1. ✅ COMPLETED: connectionService.ts (highest impact on maintainability) - Done 6/9/2025
+2. ⏳ NEXT: ComponentFormDialog.tsx (improves form maintainability) - Ready to start
+3. 📋 TODO: RackLayoutsTab.tsx (reduces complexity)
+4. 📋 TODO: sidebar.tsx (UI component organization)
+5. 📋 TODO: ManualConnectionDialog.tsx (connection UI components)
+6. 📋 TODO: CablingFormFields.tsx (form field extraction)
 
-Each refactoring can be done independently, but connectionService.ts should be prioritized due to its critical role in the application.
+Each refactoring can be done independently. The connectionService.ts refactoring is complete and serves as a good example of the modular approach to use for the remaining files.
+
+## Progress Summary
+
+### Completed Work (6/9/2025):
+- ✅ **connectionService.ts**: Successfully refactored from 1,031 lines into 6 focused modules
+  - Reduced file to 59 lines (94% reduction)
+  - Created clean module structure in `/src/services/connection/`
+  - All functionality preserved, no breaking changes
+  - Build and lint tests pass
+
+### Next Steps:
+The next agent should:
+1. Start with ComponentFormDialog.tsx refactoring (instructions in section 2)
+2. Create the directory structure: `/src/components/sidebar/dialogs/forms/component-forms/`
+3. Extract type-specific form components as outlined
+4. Ensure all form validation continues to work with React Hook Form
+5. Update this document with progress after completion

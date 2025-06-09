@@ -230,15 +230,19 @@ function calculateEnvironmentalFactor(inletTempC: number, calibration: PowerCali
 
 function calculatePsuEfficiency(dcPower: number, psuRating: number, efficiencyRating: string, calibration: PowerCalibrationProfile): number {
   const loadPercentage = dcPower / psuRating;
+  const loadPercent = loadPercentage * 100;
   
   // Check for calibration overrides
   if (calibration.psuEfficiencyOverrides && calibration.psuEfficiencyOverrides[efficiencyRating]) {
     const overrides = calibration.psuEfficiencyOverrides[efficiencyRating];
-    for (const [range, efficiency] of Object.entries(overrides)) {
-      const [min, max] = range.split('-').map(Number);
-      if (loadPercentage * 100 >= min && loadPercentage * 100 <= max) {
-        return efficiency;
-      }
+    
+    // Check each range
+    if (loadPercent >= 0 && loadPercent <= 20 && overrides['0-20']) {
+      return overrides['0-20'];
+    } else if (loadPercent > 20 && loadPercent <= 80 && overrides['20-80']) {
+      return overrides['20-80'];
+    } else if (loadPercent > 80 && loadPercent <= 100 && overrides['80-100']) {
+      return overrides['80-100'];
     }
   }
   

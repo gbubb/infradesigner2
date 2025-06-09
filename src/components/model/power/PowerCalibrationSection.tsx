@@ -401,6 +401,16 @@ export const PowerCalibrationSection: React.FC<PowerCalibrationSectionProps> = (
                   <p className="text-xs text-muted-foreground mt-1">Default: 0.15</p>
                 </div>
                 <div>
+                  <Label>Capacity Scaling Factor</Label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    value={editingProfile.memoryCapacityScaling}
+                    onChange={(e) => updateProfile({ memoryCapacityScaling: parseFloat(e.target.value) })}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Default: 0.008 per GB above 8GB</p>
+                </div>
+                <div>
                   <Label>Conservative Power per DIMM</Label>
                   <Input
                     type="number"
@@ -632,6 +642,109 @@ export const PowerCalibrationSection: React.FC<PowerCalibrationSectionProps> = (
                     <p className="text-xs text-muted-foreground mt-1">Default: 0.15 (15%)</p>
                   </div>
                 </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label className="mb-2 block">PSU Efficiency Settings</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Redundant PSU Efficiency Bonus</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={editingProfile.redundantPsuEfficiencyBonus}
+                        onChange={(e) => updateProfile({ redundantPsuEfficiencyBonus: parseFloat(e.target.value) })}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Default: 0.98 (2% improvement)</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="psu-curves">
+                    <AccordionTrigger>PSU Efficiency Curve Overrides</AccordionTrigger>
+                    <AccordionContent>
+                      <Alert className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          Override default PSU efficiency curves by load range. Format: "min-max": efficiency
+                          <br />Example: "0-20": 0.75 means 75% efficiency at 0-20% load
+                        </AlertDescription>
+                      </Alert>
+                      
+                      <div className="space-y-4">
+                        {['80Plus', '80PlusBronze', '80PlusSilver', '80PlusGold', '80PlusPlatinum', '80PlusTitanium'].map(rating => (
+                          <div key={rating}>
+                            <Label className="text-sm font-medium mb-2 block">{rating}</Label>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <Label className="text-xs">0-20% Load</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={editingProfile.psuEfficiencyOverrides?.[rating]?.['0-20'] || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                                    const overrides = { ...editingProfile.psuEfficiencyOverrides };
+                                    if (!overrides[rating]) overrides[rating] = {};
+                                    if (value !== undefined) {
+                                      overrides[rating]['0-20'] = value;
+                                    } else {
+                                      delete overrides[rating]['0-20'];
+                                    }
+                                    updateProfile({ psuEfficiencyOverrides: overrides });
+                                  }}
+                                  placeholder="Default"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">20-80% Load</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={editingProfile.psuEfficiencyOverrides?.[rating]?.['20-80'] || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                                    const overrides = { ...editingProfile.psuEfficiencyOverrides };
+                                    if (!overrides[rating]) overrides[rating] = {};
+                                    if (value !== undefined) {
+                                      overrides[rating]['20-80'] = value;
+                                    } else {
+                                      delete overrides[rating]['20-80'];
+                                    }
+                                    updateProfile({ psuEfficiencyOverrides: overrides });
+                                  }}
+                                  placeholder="Default"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">80-100% Load</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={editingProfile.psuEfficiencyOverrides?.[rating]?.['80-100'] || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                                    const overrides = { ...editingProfile.psuEfficiencyOverrides };
+                                    if (!overrides[rating]) overrides[rating] = {};
+                                    if (value !== undefined) {
+                                      overrides[rating]['80-100'] = value;
+                                    } else {
+                                      delete overrides[rating]['80-100'];
+                                    }
+                                    updateProfile({ psuEfficiencyOverrides: overrides });
+                                  }}
+                                  placeholder="Default"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </div>
             </TabsContent>
             
