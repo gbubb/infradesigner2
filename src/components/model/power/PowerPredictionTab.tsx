@@ -7,13 +7,16 @@ import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Calculator, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Calculator, Plus, Trash2, Settings } from 'lucide-react';
 import { useDesignStore } from '@/store/designStore';
 import { ComponentType } from '@/types/infrastructure';
 import { PowerCalculationInputs, PowerCalculationResult, calculateServerPower } from './powerCalculations';
 import { Server } from '@/types/infrastructure/server-types';
 import { PowerBreakdownChart } from './PowerBreakdownChart';
 import { PowerConsumptionChart } from './PowerConsumptionChart';
+import { PowerCalibrationSection } from './PowerCalibrationSection';
+import { PowerCalibrationProfile, getActiveCalibrationProfile, saveCalibrationProfile } from './powerCalibration';
+import { PowerValidationDialog } from './PowerValidationDialog';
 
 interface StorageDevice {
   id: string;
@@ -54,6 +57,9 @@ export const PowerPredictionTab: React.FC = () => {
   const [storageDevices, setStorageDevices] = useState<StorageDevice[]>([]);
   const [networkPorts, setNetworkPorts] = useState<NetworkPort[]>([]);
   const [calculationResult, setCalculationResult] = useState<PowerCalculationResult | null>(null);
+  const [calibrationProfile, setCalibrationProfile] = useState<PowerCalibrationProfile | null>(null);
+  const [showCalibration, setShowCalibration] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
   
   const selectedServer = useMemo(() => 
     servers.find(s => s.id === selectedServerId),
@@ -134,8 +140,17 @@ export const PowerPredictionTab: React.FC = () => {
   
   const handleCalculate = () => {
     if (!powerInputs) return;
-    const result = calculateServerPower(powerInputs);
+    const result = calculateServerPower(powerInputs, calibrationProfile || undefined);
     setCalculationResult(result);
+  };
+  
+  const handleCalibrationChange = (profile: PowerCalibrationProfile | null) => {
+    setCalibrationProfile(profile);
+    // Recalculate if we already have results
+    if (powerInputs && calculationResult) {
+      const result = calculateServerPower(powerInputs, profile || undefined);
+      setCalculationResult(result);
+    }
   };
   
   const addStorageDevice = () => {
@@ -555,11 +570,33 @@ export const PowerPredictionTab: React.FC = () => {
       )}
       
       {selectedServer && (
-        <div className="flex justify-center">
-          <Button size="lg" onClick={handleCalculate}>
-            <Calculator className="h-4 w-4 mr-2" />
-            Calculate Power Consumption
-          </Button>
+        <div className="space-y-4">
+          <div className="flex justify-center gap-4">
+            <Button size="lg" onClick={handleCalculate}>
+              <Calculator className="h-4 w-4 mr-2" />
+              Calculate Power Consumption
+            </Button>
+            <Button 
+              size="lg" 
+              variant="outline"
+              onClick={() => setShowCalibration(!showCalibration)}
+            >
+              {showCalibration ? 'Hide' : 'Show'} Calibration
+            </Button>
+            {calculationResult && (
+              <Button 
+                size="lg" 
+                variant="outline"
+                onClick={() => setShowValidation(true)}
+              >
+                Validate Results
+              </Button>
+            )}
+          </div>
+          
+          {showCalibration && (
+            <PowerCalibrationSection onCalibrationChange={handleCalibrationChange} />
+          )}
         </div>
       )}
       
@@ -633,7 +670,75 @@ export const PowerPredictionTab: React.FC = () => {
               </AlertDescription>
             </Alert>
           )}
+          
+          {/* Real vs Predicted Comparison */}
+          {calibrationProfile && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Calibration Profile Applied</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Profile:</span>
+                    <span className="ml-2 font-medium">{calibrationProfile.name}</span>
+                  </p>
+                  {calibrationProfile.description && (
+                    <p className="text-sm">
+                      <span className="text-muted-foreground">Description:</span>
+                      <span className="ml-2">{calibrationProfile.description}</span>
+                    </p>
+                  )}
+                  <div className="mt-4 p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-medium mb-2">Key Adjustments:</p>
+                    <ul className="text-sm space-y-1">
+                      <li>• CPU Idle: {(calibrationProfile.cpuIdleMultiplier * 100).toFixed(0)}% of TDP</li>
+                      <li>• Safety Margin: {calibrationProfile.safetyMarginPercent}%</li>
+                      <li>• Temperature Coefficient: {calibrationProfile.tempCoefficientPerDegree} per °C</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
+      )}
+      
+      {/* Validation Dialog */}
+      {calculationResult && selectedServer && (
+        <PowerValidationDialog
+          open={showValidation}
+          onOpenChange={setShowValidation}
+          calculationResult={calculationResult}
+          serverModel={`${selectedServer.manufacturer} ${selectedServer.productLine} ${selectedServer.model}`}
+          onValidationSave={(observedValues) => {
+            if (calibrationProfile) {
+              // Add validation data to the calibration profile
+              const updatedProfile = {
+                ...calibrationProfile,
+                validationData: [
+                  ...(calibrationProfile.validationData || []),
+                  {
+                    serverModel: `${selectedServer.manufacturer} ${selectedServer.productLine} ${selectedServer.model}`,
+                    observedPower: observedValues,
+                    predictedPower: {
+                      idle: calculationResult.idlePowerW,
+                      average: calculationResult.averagePowerW,
+                      peak: calculationResult.peakPowerW
+                    },
+                    accuracy: {
+                      idle: 100 - Math.abs((calculationResult.idlePowerW - observedValues.idle) / observedValues.idle * 100),
+                      average: 100 - Math.abs((calculationResult.averagePowerW - observedValues.average) / observedValues.average * 100),
+                      peak: 100 - Math.abs((calculationResult.peakPowerW - observedValues.peak) / observedValues.peak * 100)
+                    }
+                  }
+                ]
+              };
+              saveCalibrationProfile(updatedProfile);
+              setCalibrationProfile(updatedProfile);
+            }
+          }}
+        />
       )}
     </div>
   );
