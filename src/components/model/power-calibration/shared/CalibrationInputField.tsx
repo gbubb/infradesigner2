@@ -25,6 +25,14 @@ export const CalibrationInputField: React.FC<CalibrationInputFieldProps> = ({
   description,
   unit
 }) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = parseFloat(e.target.value);
+    // Only call onChange if the value is valid (not NaN)
+    if (!isNaN(newValue)) {
+      onChange(newValue);
+    }
+  };
+
   return (
     <div>
       <Label>{label}{unit && ` (${unit})`}</Label>
@@ -34,7 +42,7 @@ export const CalibrationInputField: React.FC<CalibrationInputFieldProps> = ({
         min={min}
         max={max}
         value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
+        onChange={handleChange}
       />
       {(defaultValue || description) && (
         <p className="text-xs text-muted-foreground mt-1">

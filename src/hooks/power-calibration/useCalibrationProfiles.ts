@@ -165,7 +165,12 @@ export function useCalibrationProfiles(onCalibrationChange: (profile: PowerCalib
   
   const updateProfile = (updates: Partial<PowerCalibrationProfile>) => {
     if (!editingProfile) return;
-    setEditingProfile({ ...editingProfile, ...updates });
+    const updatedProfile = { ...editingProfile, ...updates };
+    setEditingProfile(updatedProfile);
+    // Also update the active calibration if this is the active profile
+    if (activeProfileId === editingProfile.id) {
+      onCalibrationChange(updatedProfile);
+    }
   };
   
   const updateNestedValue = (path: string[], value: any) => {
@@ -183,6 +188,10 @@ export function useCalibrationProfiles(onCalibrationChange: (profile: PowerCalib
     
     current[path[path.length - 1]] = value;
     setEditingProfile(newProfile);
+    // Also update the active calibration if this is the active profile
+    if (activeProfileId === editingProfile.id) {
+      onCalibrationChange(newProfile);
+    }
   };
   
   return {
