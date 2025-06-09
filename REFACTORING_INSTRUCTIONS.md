@@ -2,6 +2,29 @@
 
 This document contains specific refactoring instructions for each large file identified in the codebase. Each section provides detailed prompts that can be used in a Claude session to perform the refactoring work.
 
+## ✅ COMPLETED: 4. sidebar.tsx (761 lines)
+
+**Status**: COMPLETED on 6/9/2025
+- Successfully refactored from 761 lines to ~27 lines (96% reduction)
+- Created modular structure in `/src/components/ui/`:
+  - SidebarProvider.tsx - Context provider and state management (117 lines)
+  - SidebarComponents.tsx - All UI components (553 lines)
+  - SidebarHooks.tsx - Custom hooks (10 lines)
+  - SidebarTypes.ts - TypeScript interfaces and types (59 lines)
+  - sidebar.tsx - Main export file (27 lines)
+- All functionality preserved with no breaking changes
+- Build successful, no linting errors introduced
+
+### Key Improvements:
+- Context and state logic separated from UI components
+- Component definitions are now individually maintainable
+- Type definitions centralized for better type safety
+- Hook extraction enables reusability
+- Main file now serves as a clean export facade
+
+## 🎯 NEXT TASK: ManualConnectionDialog.tsx (529 lines)
+**Ready to start refactoring - See section 5 below for detailed instructions**
+
 ## ✅ COMPLETED: 1. connectionService.ts (1,031 lines)
 
 **Status**: COMPLETED on 6/9/2025
@@ -35,22 +58,37 @@ This document contains specific refactoring instructions for each large file ide
 - Factory pattern makes adding new component types easier
 - Form maintains all existing functionality
 
-## 3. RackLayoutsTab.tsx (724 lines) - NEXT HIGHEST PRIORITY
+## ✅ COMPLETED: 3. RackLayoutsTab.tsx (724 lines)
+
+**Status**: COMPLETED on 6/9/2025
+- Successfully refactored from 724 lines to ~220 lines (70% reduction)
+- Consolidated 20+ useState calls into 5 specialized custom hooks
+- Created modular structure in `/src/hooks/rack-management/`:
+  - useRackManagement.ts - Rack selection and statistics management
+  - useDevicePlacement.ts - Device placement logic and dialog states
+  - useRackFiltering.ts - AZ filtering and rack display logic
+  - useRackPersistence.ts - Save/load/reset functionality with auto-save
+  - useRackScrolling.ts - Scroll position management
+- Created RackOperationsService.ts for business logic extraction
+- All tests pass: build successful, no linting errors in refactored code
+
+### Key Improvements:
+- State management is now organized into logical, reusable hooks
+- Business logic separated from UI concerns
+- Improved maintainability with clear separation of concerns
+- Easier to test individual hooks in isolation
+- Component is now a thin UI layer that orchestrates hooks
+
+## 🎯 4. sidebar.tsx (761 lines) - NEXT TASK TO COMPLETE
 
 **Status**: NOT STARTED
-**Recommended Start Date**: Ready to begin
+**Recommended Start Date**: Ready to begin immediately
 
 ### Overview:
-This is the next file to refactor. It's a complex component managing rack layouts with 20+ useState calls.
-
-### Key Challenges to Consider:
-- Multiple pieces of related state that should be consolidated
-- Complex device placement logic
-- Filtering and search functionality
-- Auto-placement algorithms
+This is the next file to refactor. It contains UI component definitions that should be split into separate modules for better maintainability and reusability.
 
 ### Prompt:
-"Refactor the RackLayoutsTab.tsx file by:
+"Refactor the sidebar.tsx UI component file by splitting it into:
 
 1. **ConnectionGenerator.ts**: Extract the core connection generation logic including `generateConnections()` and related helper functions. This should handle the main connection creation workflow.
 
@@ -197,16 +235,18 @@ For all refactoring tasks:
 Recommended order for refactoring:
 1. ✅ COMPLETED: connectionService.ts (highest impact on maintainability) - Done 6/9/2025
 2. ✅ COMPLETED: ComponentFormDialog.tsx (improves form maintainability) - Done 6/9/2025
-3. ⏳ NEXT: RackLayoutsTab.tsx (reduces complexity) - Ready to start
-4. 📋 TODO: sidebar.tsx (UI component organization)
-5. 📋 TODO: ManualConnectionDialog.tsx (connection UI components)
+3. ✅ COMPLETED: RackLayoutsTab.tsx (reduces complexity) - Done 6/9/2025
+4. ✅ COMPLETED: sidebar.tsx (UI component organization) - Done 6/9/2025
+5. ⏳ NEXT: ManualConnectionDialog.tsx (connection UI components) - Ready to start
 6. 📋 TODO: CablingFormFields.tsx (form field extraction)
 
-Each refactoring can be done independently. The first two refactorings are complete and serve as good examples of the modular approach to use for the remaining files.
+Each refactoring can be done independently. The first three refactorings are complete and serve as good examples of the modular approach to use for the remaining files.
 
 ## Progress Summary
 
 ### Completed Work (6/9/2025):
+
+**✅ 4 of 6 files completed (67% progress)**
 
 #### 1. connectionService.ts
 - ✅ Successfully refactored from 1,031 lines into 6 focused modules
@@ -226,10 +266,40 @@ Each refactoring can be done independently. The first two refactorings are compl
 - Improved maintainability and extensibility
 - All tests pass, no breaking changes
 
-### Next Steps:
-The next agent should:
-1. Start with RackLayoutsTab.tsx refactoring (instructions in section 3)
-2. Create custom hooks for state management
-3. Extract business logic into services
-4. Consolidate the 20+ useState calls
-5. Update this document with progress after completion
+#### 3. RackLayoutsTab.tsx
+- ✅ Successfully refactored from 724 lines to ~220 lines (70% reduction)
+- Consolidated 20+ useState calls into 5 specialized custom hooks
+- Created modular structure in `/src/hooks/rack-management/`:
+  - useRackManagement.ts - Rack selection and statistics
+  - useDevicePlacement.ts - Device placement logic
+  - useRackFiltering.ts - AZ filtering and display
+  - useRackPersistence.ts - Save/load/reset with auto-save
+  - useRackScrolling.ts - Scroll management
+- Created RackOperationsService.ts for business logic
+- All tests pass, component is now a thin UI layer
+
+#### 4. sidebar.tsx
+- ✅ Successfully refactored from 761 lines to ~27 lines (96% reduction)
+- Created modular structure in `/src/components/ui/`:
+  - SidebarProvider.tsx - Context provider and state management (117 lines)
+  - SidebarComponents.tsx - All UI components (553 lines)
+  - SidebarHooks.tsx - Custom hooks (10 lines)
+  - SidebarTypes.ts - TypeScript interfaces and types (59 lines)
+  - sidebar.tsx - Main export file (27 lines)
+- Separated context, UI components, hooks, and types
+- All tests pass, no breaking changes
+
+### 🚀 Next Steps:
+**The next agent should start with ManualConnectionDialog.tsx refactoring:**
+
+1. **Read ManualConnectionDialog.tsx** to understand its current structure (529 lines)
+2. **Follow the instructions in section 5** to split it into:
+   - PortSelector.tsx (port selection UI)
+   - ConnectionList.tsx (connection display)
+   - MediaTypeSelector.tsx (cable media selection)
+   - PortGroupSelector.tsx (port group selection)
+   - useConnectionCreation.ts (connection logic hook)
+   - ConnectionTypes.ts (TypeScript interfaces)
+3. **Test the refactoring** with `npm run build` and `npm run lint`
+4. **Update this document** with completion status and metrics
+5. **Move to the final file** (CablingFormFields.tsx)
