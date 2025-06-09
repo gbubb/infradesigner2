@@ -31,12 +31,12 @@ interface NetworkPort {
 }
 
 export const PowerPredictionTab: React.FC = () => {
-  const { componentLibrary } = useDesignStore();
+  const { componentTemplates } = useDesignStore();
   
   // Filter servers from component library
   const servers = useMemo(() => 
-    componentLibrary.filter(c => c.type === ComponentType.Server) as Server[],
-    [componentLibrary]
+    componentTemplates?.filter(c => c.type === ComponentType.Server) as Server[] || [],
+    [componentTemplates]
   );
   
   const [selectedServerId, setSelectedServerId] = useState<string>('');
