@@ -90,12 +90,19 @@ export const PowerCalibrationSection: React.FC<PowerCalibrationSectionProps> = (
   };
   
   const handleSelectProfile = (id: string) => {
-    const profile = profiles.find(p => p.id === id);
-    if (profile) {
-      setActiveProfileId(id);
-      setEditingProfile(profile);
-      setActiveCalibrationProfile(id);
-      onCalibrationChange(profile);
+    if (id === 'none') {
+      setActiveProfileId(null);
+      setEditingProfile(null);
+      setActiveCalibrationProfile(null);
+      onCalibrationChange(null);
+    } else {
+      const profile = profiles.find(p => p.id === id);
+      if (profile) {
+        setActiveProfileId(id);
+        setEditingProfile(profile);
+        setActiveCalibrationProfile(id);
+        onCalibrationChange(profile);
+      }
     }
   };
   
@@ -143,12 +150,12 @@ export const PowerCalibrationSection: React.FC<PowerCalibrationSectionProps> = (
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <Label htmlFor="profile-select">Calibration Profile</Label>
-              <Select value={activeProfileId || ''} onValueChange={handleSelectProfile}>
+              <Select value={activeProfileId || 'none'} onValueChange={handleSelectProfile}>
                 <SelectTrigger id="profile-select">
                   <SelectValue placeholder="Select a calibration profile" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Default (No Calibration)</SelectItem>
+                  <SelectItem value="none">Default (No Calibration)</SelectItem>
                   {profiles.map(profile => (
                     <SelectItem key={profile.id} value={profile.id}>
                       {profile.name}
