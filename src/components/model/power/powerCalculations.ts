@@ -118,25 +118,37 @@ function calculateCpuPower(inputs: PowerCalculationInputs, calibration: PowerCal
 }
 
 function calculateMemoryPower(inputs: PowerCalculationInputs, calibration: PowerCalibrationProfile): { idle: number; average: number; peak: number } {
-  const basePower = calibration.memoryBasePower[inputs.memoryType] * (inputs.dimmCapacityGB / 8);
+  const memModel = calibration.memoryPowerModel;
   
-  // Speed factor
-  const baseSpeed = inputs.memoryType === 'DDR3' ? 1600 : inputs.memoryType === 'DDR4' ? 2133 : 3200;
-  const speedFactor = (inputs.memorySpeedMHz - baseSpeed) / baseSpeed * calibration.memorySpeedScaling;
+  // Calculate power per DIMM using chip-based model
+  const controllerPower = memModel.controllerBasePower[inputs.memoryType];
+  const chipsPerDimm = inputs.dimmCapacityGB * memModel.chipsPerGB[inputs.memoryType];
+  const chipPower = chipsPerDimm * memModel.powerPerChip[inputs.memoryType];
   
-  // Capacity factor
-  const capacityFactor = (inputs.dimmCapacityGB - 8) * calibration.memoryCapacityScaling;
+  // Speed scaling (logarithmic)
+  const baseSpeed = memModel.speedScaling.baseSpeedMHz[inputs.memoryType];
+  const speedRatio = inputs.memorySpeedMHz / baseSpeed;
+  const speedMultiplier = Math.pow(speedRatio, memModel.speedScaling.scalingExponent);
   
-  const powerPerDimm = basePower * (1 + speedFactor + capacityFactor);
-  const totalPower = inputs.dimmCount * powerPerDimm;
+  // Total power per DIMM at peak
+  const peakPowerPerDimm = (controllerPower + chipPower) * speedMultiplier;
   
-  // Conservative estimate
+  // Apply activity multipliers
+  const idlePowerPerDimm = peakPowerPerDimm * memModel.activityMultipliers.idle;
+  const avgPowerPerDimm = peakPowerPerDimm * memModel.activityMultipliers.average;
+  
+  // Total for all DIMMs
+  const totalIdle = inputs.dimmCount * idlePowerPerDimm;
+  const totalAvg = inputs.dimmCount * avgPowerPerDimm;
+  const totalPeak = inputs.dimmCount * peakPowerPerDimm;
+  
+  // Conservative estimate check
   const conservativePower = inputs.dimmCount * calibration.memoryConservativeMultiplier;
   
   return {
-    idle: totalPower * 0.8,
-    average: Math.max(totalPower, conservativePower),
-    peak: Math.max(totalPower * 1.2, conservativePower * 1.2)
+    idle: totalIdle,
+    average: Math.max(totalAvg, conservativePower * 0.7),
+    peak: Math.max(totalPeak, conservativePower)
   };
 }
 

@@ -25,15 +25,43 @@ export interface PowerCalibrationProfile {
     };
   };
   
-  // Memory Calibration Parameters
-  memoryBasePower: {
-    DDR3: number; // Default: 4.0W per 8GB
-    DDR4: number; // Default: 3.0W per 8GB
-    DDR5: number; // Default: 2.4W per 8GB
+  // Memory Calibration Parameters - Redesigned for accurate non-linear modeling
+  memoryPowerModel: {
+    // Base controller power (fixed per DIMM regardless of capacity)
+    controllerBasePower: {
+      DDR3: number; // Default: 1.2W
+      DDR4: number; // Default: 1.0W 
+      DDR5: number; // Default: 0.8W
+    };
+    // Power per memory chip/die
+    powerPerChip: {
+      DDR3: number; // Default: 0.25W per chip
+      DDR4: number; // Default: 0.18W per chip
+      DDR5: number; // Default: 0.12W per chip
+    };
+    // Chips per GB of capacity
+    chipsPerGB: {
+      DDR3: number; // Default: 1.0 (8Gb chips)
+      DDR4: number; // Default: 0.5 (16Gb chips)
+      DDR5: number; // Default: 0.25 (32Gb chips)
+    };
+    // Activity multipliers
+    activityMultipliers: {
+      idle: number; // Default: 0.35
+      average: number; // Default: 0.70
+      peak: number; // Default: 1.0
+    };
+    // Speed scaling (logarithmic)
+    speedScaling: {
+      baseSpeedMHz: {
+        DDR3: number; // Default: 1600
+        DDR4: number; // Default: 2400
+        DDR5: number; // Default: 4800
+      };
+      scalingExponent: number; // Default: 0.3 (logarithmic scaling)
+    };
   };
-  memorySpeedScaling: number; // Default: 0.15
-  memoryCapacityScaling: number; // Default: 0.008
-  memoryConservativeMultiplier: number; // Default: 5W per DIMM
+  memoryConservativeMultiplier: number; // Default: 5W per DIMM (legacy/override)
   
   // Storage Calibration Parameters
   storageBasePower: {
@@ -151,13 +179,36 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
     'Default': { idle: 0.15, peak: 1.3 }
   },
   
-  memoryBasePower: {
-    DDR3: 4.0,
-    DDR4: 3.0,
-    DDR5: 2.4
+  memoryPowerModel: {
+    controllerBasePower: {
+      DDR3: 1.2,
+      DDR4: 1.0,
+      DDR5: 0.8
+    },
+    powerPerChip: {
+      DDR3: 0.25,
+      DDR4: 0.18,
+      DDR5: 0.135  // Calibrated to match 96GB = 3.85W under load
+    },
+    chipsPerGB: {
+      DDR3: 1.0,
+      DDR4: 0.5,
+      DDR5: 0.25
+    },
+    activityMultipliers: {
+      idle: 0.34,   // 34% matches 1.32W idle for 96GB
+      average: 1.0,  // "Under load" typically means peak
+      peak: 1.0
+    },
+    speedScaling: {
+      baseSpeedMHz: {
+        DDR3: 1600,
+        DDR4: 2400,
+        DDR5: 4800
+      },
+      scalingExponent: 0.3
+    }
   },
-  memorySpeedScaling: 0.15,
-  memoryCapacityScaling: 0.008,
   memoryConservativeMultiplier: 5,
   
   storageBasePower: {

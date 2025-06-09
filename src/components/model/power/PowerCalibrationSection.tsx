@@ -353,74 +353,190 @@ export const PowerCalibrationSection: React.FC<PowerCalibrationSectionProps> = (
             </TabsContent>
             
             <TabsContent value="memory" className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Memory power is modeled using controller base power + (chips × power per chip).
+                  This accurately captures the non-linear scaling with capacity.
+                </AlertDescription>
+              </Alert>
+              
               <div>
-                <Label className="mb-2 block">Base Power per 8GB DIMM (Watts)</Label>
+                <Label className="mb-2 block">Controller Base Power (W)</Label>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label className="text-sm">DDR3</Label>
                     <Input
                       type="number"
                       step="0.1"
-                      value={editingProfile.memoryBasePower.DDR3}
-                      onChange={(e) => updateNestedValue(['memoryBasePower', 'DDR3'], parseFloat(e.target.value))}
+                      value={editingProfile.memoryPowerModel?.controllerBasePower?.DDR3 || 1.2}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'controllerBasePower', 'DDR3'], parseFloat(e.target.value))}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Default: 4.0W</p>
+                    <p className="text-xs text-muted-foreground mt-1">Default: 1.2W</p>
                   </div>
                   <div>
                     <Label className="text-sm">DDR4</Label>
                     <Input
                       type="number"
                       step="0.1"
-                      value={editingProfile.memoryBasePower.DDR4}
-                      onChange={(e) => updateNestedValue(['memoryBasePower', 'DDR4'], parseFloat(e.target.value))}
+                      value={editingProfile.memoryPowerModel?.controllerBasePower?.DDR4 || 1.0}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'controllerBasePower', 'DDR4'], parseFloat(e.target.value))}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Default: 3.0W</p>
+                    <p className="text-xs text-muted-foreground mt-1">Default: 1.0W</p>
                   </div>
                   <div>
                     <Label className="text-sm">DDR5</Label>
                     <Input
                       type="number"
                       step="0.1"
-                      value={editingProfile.memoryBasePower.DDR5}
-                      onChange={(e) => updateNestedValue(['memoryBasePower', 'DDR5'], parseFloat(e.target.value))}
+                      value={editingProfile.memoryPowerModel?.controllerBasePower?.DDR5 || 0.8}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'controllerBasePower', 'DDR5'], parseFloat(e.target.value))}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Default: 2.4W</p>
+                    <p className="text-xs text-muted-foreground mt-1">Default: 0.8W</p>
                   </div>
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Speed Scaling Factor</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editingProfile.memorySpeedScaling}
-                    onChange={(e) => updateProfile({ memorySpeedScaling: parseFloat(e.target.value) })}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Default: 0.15</p>
-                </div>
-                <div>
-                  <Label>Capacity Scaling Factor</Label>
-                  <Input
-                    type="number"
-                    step="0.001"
-                    value={editingProfile.memoryCapacityScaling}
-                    onChange={(e) => updateProfile({ memoryCapacityScaling: parseFloat(e.target.value) })}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Default: 0.008 per GB above 8GB</p>
-                </div>
-                <div>
-                  <Label>Conservative Power per DIMM</Label>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    value={editingProfile.memoryConservativeMultiplier}
-                    onChange={(e) => updateProfile({ memoryConservativeMultiplier: parseFloat(e.target.value) })}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Default: 5W (for planning)</p>
+              <div>
+                <Label className="mb-2 block">Power per Memory Chip (W)</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-sm">DDR3</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={editingProfile.memoryPowerModel?.powerPerChip?.DDR3 || 0.25}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'powerPerChip', 'DDR3'], parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Default: 0.25W</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm">DDR4</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={editingProfile.memoryPowerModel?.powerPerChip?.DDR4 || 0.18}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'powerPerChip', 'DDR4'], parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Default: 0.18W</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm">DDR5</Label>
+                    <Input
+                      type="number"
+                      step="0.001"
+                      value={editingProfile.memoryPowerModel?.powerPerChip?.DDR5 || 0.135}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'powerPerChip', 'DDR5'], parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Default: 0.135W</p>
+                  </div>
                 </div>
               </div>
+              
+              <div>
+                <Label className="mb-2 block">Chips per GB</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-sm">DDR3 (8Gb chips)</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={editingProfile.memoryPowerModel?.chipsPerGB?.DDR3 || 1.0}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'chipsPerGB', 'DDR3'], parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Default: 1.0</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm">DDR4 (16Gb chips)</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={editingProfile.memoryPowerModel?.chipsPerGB?.DDR4 || 0.5}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'chipsPerGB', 'DDR4'], parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Default: 0.5</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm">DDR5 (32Gb chips)</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={editingProfile.memoryPowerModel?.chipsPerGB?.DDR5 || 0.25}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'chipsPerGB', 'DDR5'], parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Default: 0.25</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="mb-2 block">Activity Multipliers</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-sm">Idle</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={editingProfile.memoryPowerModel?.activityMultipliers?.idle || 0.34}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'activityMultipliers', 'idle'], parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Default: 0.34 (34%)</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm">Average/Load</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={editingProfile.memoryPowerModel?.activityMultipliers?.average || 1.0}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'activityMultipliers', 'average'], parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Default: 1.0 (100%)</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm">Peak</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={editingProfile.memoryPowerModel?.activityMultipliers?.peak || 1.0}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'activityMultipliers', 'peak'], parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Default: 1.0 (100%)</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="mb-2 block">Speed Scaling</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm">Scaling Exponent</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={editingProfile.memoryPowerModel?.speedScaling?.scalingExponent || 0.3}
+                      onChange={(e) => updateNestedValue(['memoryPowerModel', 'speedScaling', 'scalingExponent'], parseFloat(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Default: 0.3 (logarithmic)</p>
+                  </div>
+                  <div>
+                    <Label>Conservative Override (W/DIMM)</Label>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      value={editingProfile.memoryConservativeMultiplier}
+                      onChange={(e) => updateProfile({ memoryConservativeMultiplier: parseFloat(e.target.value) })}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Default: 5W</p>
+                  </div>
+                </div>
+              </div>
+              
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Example:</strong> 96GB DDR5 @ 4800MHz = 0.8W (controller) + 24 chips × 0.135W = 4.04W peak, 1.37W idle
+                </AlertDescription>
+              </Alert>
             </TabsContent>
             
             <TabsContent value="storage" className="space-y-4">
