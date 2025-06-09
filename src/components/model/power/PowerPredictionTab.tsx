@@ -17,6 +17,7 @@ import { PowerConsumptionChart } from './PowerConsumptionChart';
 import { PowerCalibrationSection } from './PowerCalibrationSection';
 import { PowerCalibrationProfile, getActiveCalibrationProfile, saveCalibrationProfile } from './powerCalibration';
 import { PowerValidationDialog } from './PowerValidationDialog';
+import { PowerCalculationParameters } from './PowerCalculationParameters';
 
 interface StorageDevice {
   id: string;
@@ -641,6 +642,14 @@ export const PowerPredictionTab: React.FC = () => {
           
           {/* Power Consumption Chart */}
           <PowerConsumptionChart result={calculationResult} />
+          
+          {/* Calculation Parameters */}
+          {powerInputs && (
+            <PowerCalculationParameters 
+              inputs={powerInputs} 
+              calibrationProfile={calibrationProfile}
+            />
+          )}
           
           {/* Warnings and Missing Metrics */}
           {calculationResult.warnings.length > 0 && (
