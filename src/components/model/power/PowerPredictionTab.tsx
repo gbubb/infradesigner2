@@ -18,6 +18,7 @@ import { PowerCalibrationSection } from './PowerCalibrationSection';
 import { PowerCalibrationProfile, getActiveCalibrationProfile, saveCalibrationProfile } from './powerCalibration';
 import { PowerValidationDialog } from './PowerValidationDialog';
 import { PowerCalculationParameters } from './PowerCalculationParameters';
+import { PowerBreakdownTable } from './PowerBreakdownTable';
 
 interface StorageDevice {
   id: string;
@@ -61,6 +62,7 @@ export const PowerPredictionTab: React.FC = () => {
   const [calibrationProfile, setCalibrationProfile] = useState<PowerCalibrationProfile | null>(null);
   const [showCalibration, setShowCalibration] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
+  const [selectedPowerState, setSelectedPowerState] = useState<'idle' | 'average' | 'peak'>('average');
   
   const selectedServer = useMemo(() => 
     servers.find(s => s.id === selectedServerId),
@@ -606,7 +608,22 @@ export const PowerPredictionTab: React.FC = () => {
           {/* Results Summary */}
           <Card>
             <CardHeader>
-              <CardTitle>Power Consumption Prediction</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Power Consumption Prediction</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="power-state" className="text-sm">View breakdown for:</Label>
+                  <Select value={selectedPowerState} onValueChange={(value) => setSelectedPowerState(value as 'idle' | 'average' | 'peak')}>
+                    <SelectTrigger id="power-state" className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="idle">Idle</SelectItem>
+                      <SelectItem value="average">Average</SelectItem>
+                      <SelectItem value="peak">Peak</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-6">
@@ -654,6 +671,12 @@ export const PowerPredictionTab: React.FC = () => {
               calibrationProfile={calibrationProfile}
             />
           )}
+          
+          {/* Component Power Breakdown Table */}
+          <PowerBreakdownTable
+            result={calculationResult}
+            selectedState={selectedPowerState}
+          />
           
           {/* Warnings and Missing Metrics */}
           {calculationResult.warnings.length > 0 && (
