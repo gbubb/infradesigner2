@@ -608,22 +608,7 @@ export const PowerPredictionTab: React.FC = () => {
           {/* Results Summary */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Power Consumption Prediction</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="power-state" className="text-sm">View breakdown for:</Label>
-                  <Select value={selectedPowerState} onValueChange={(value) => setSelectedPowerState(value as 'idle' | 'average' | 'peak')}>
-                    <SelectTrigger id="power-state" className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="idle">Idle</SelectItem>
-                      <SelectItem value="average">Average</SelectItem>
-                      <SelectItem value="peak">Peak</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              <CardTitle>Power Consumption Prediction</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-6">
