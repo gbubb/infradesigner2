@@ -216,6 +216,39 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
   tempCoefficientPerDegree: 0.004,
   tempBaselineC: 20,
   
+  psuEfficiencyOverrides: {
+    '80Plus': {
+      '0-20': 0.75,
+      '20-80': 0.80,
+      '80-100': 0.78
+    },
+    '80PlusBronze': {
+      '0-20': 0.78,
+      '20-80': 0.85,
+      '80-100': 0.81
+    },
+    '80PlusSilver': {
+      '0-20': 0.80,
+      '20-80': 0.88,
+      '80-100': 0.85
+    },
+    '80PlusGold': {
+      '0-20': 0.82,
+      '20-80': 0.90,
+      '80-100': 0.87
+    },
+    '80PlusPlatinum': {
+      '0-20': 0.85,
+      '20-80': 0.92,
+      '80-100': 0.89
+    },
+    '80PlusTitanium': {
+      '0-20': 0.88,
+      '20-80': 0.94,
+      '80-100': 0.90
+    }
+  },
+  
   redundantPsuEfficiencyBonus: 0.98,
   safetyMarginPercent: 15
 };

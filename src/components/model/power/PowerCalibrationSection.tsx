@@ -683,7 +683,7 @@ export const PowerCalibrationSection: React.FC<PowerCalibrationSectionProps> = (
                                 <Input
                                   type="number"
                                   step="0.01"
-                                  value={editingProfile.psuEfficiencyOverrides?.[rating]?.['0-20'] || ''}
+                                  value={editingProfile.psuEfficiencyOverrides?.[rating]?.['0-20'] || DEFAULT_CALIBRATION_PROFILE.psuEfficiencyOverrides![rating]['0-20']}
                                   onChange={(e) => {
                                     const value = e.target.value ? parseFloat(e.target.value) : undefined;
                                     const overrides = { ...editingProfile.psuEfficiencyOverrides };
@@ -695,7 +695,7 @@ export const PowerCalibrationSection: React.FC<PowerCalibrationSectionProps> = (
                                     }
                                     updateProfile({ psuEfficiencyOverrides: overrides });
                                   }}
-                                  placeholder="Default"
+                                  placeholder={DEFAULT_CALIBRATION_PROFILE.psuEfficiencyOverrides![rating]['0-20'].toString()}
                                 />
                               </div>
                               <div>
@@ -703,7 +703,7 @@ export const PowerCalibrationSection: React.FC<PowerCalibrationSectionProps> = (
                                 <Input
                                   type="number"
                                   step="0.01"
-                                  value={editingProfile.psuEfficiencyOverrides?.[rating]?.['20-80'] || ''}
+                                  value={editingProfile.psuEfficiencyOverrides?.[rating]?.['20-80'] || DEFAULT_CALIBRATION_PROFILE.psuEfficiencyOverrides![rating]['20-80']}
                                   onChange={(e) => {
                                     const value = e.target.value ? parseFloat(e.target.value) : undefined;
                                     const overrides = { ...editingProfile.psuEfficiencyOverrides };
@@ -715,7 +715,7 @@ export const PowerCalibrationSection: React.FC<PowerCalibrationSectionProps> = (
                                     }
                                     updateProfile({ psuEfficiencyOverrides: overrides });
                                   }}
-                                  placeholder="Default"
+                                  placeholder={DEFAULT_CALIBRATION_PROFILE.psuEfficiencyOverrides![rating]['20-80'].toString()}
                                 />
                               </div>
                               <div>
@@ -723,7 +723,7 @@ export const PowerCalibrationSection: React.FC<PowerCalibrationSectionProps> = (
                                 <Input
                                   type="number"
                                   step="0.01"
-                                  value={editingProfile.psuEfficiencyOverrides?.[rating]?.['80-100'] || ''}
+                                  value={editingProfile.psuEfficiencyOverrides?.[rating]?.['80-100'] || DEFAULT_CALIBRATION_PROFILE.psuEfficiencyOverrides![rating]['80-100']}
                                   onChange={(e) => {
                                     const value = e.target.value ? parseFloat(e.target.value) : undefined;
                                     const overrides = { ...editingProfile.psuEfficiencyOverrides };
@@ -735,7 +735,7 @@ export const PowerCalibrationSection: React.FC<PowerCalibrationSectionProps> = (
                                     }
                                     updateProfile({ psuEfficiencyOverrides: overrides });
                                   }}
-                                  placeholder="Default"
+                                  placeholder={DEFAULT_CALIBRATION_PROFILE.psuEfficiencyOverrides![rating]['80-100'].toString()}
                                 />
                               </div>
                             </div>

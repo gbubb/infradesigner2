@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -12,8 +12,6 @@ import {
   DialogClose
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,119 +25,18 @@ import {
   ConnectorType,
   CableMediaType
 } from '@/types/infrastructure';
-import { PortSpeed, PortRole, MediaType } from '@/types/infrastructure/port-types';
-import { RouterFirewallFormFields } from '../forms/RouterFirewallFormFields';
-import { CablingFormFields } from '../forms/CablingFormFields';
+import { PortSpeed, MediaType } from '@/types/infrastructure/port-types';
 import { useDesignStore } from '@/store/designStore';
 
-// NEW FIELDS
-import { ServerFields } from "./fields/ServerFields";
-import { SwitchFields } from "./fields/SwitchFields";
-import { RouterFirewallFields } from "./fields/RouterFirewallFields";
-import { CablingFields } from "./fields/CablingFields";
-import { OpticsFields } from "./fields/OpticsFields";
+// Import validation schema
+import { legacyFormSchema } from './forms/component-forms/ComponentValidationSchemas';
 
-const formSchema = z.object({
-  type: z.nativeEnum(ComponentType),
-  name: z.string().min(2, {
-    message: 'Component name must be at least 2 characters.',
-  }),
-  manufacturer: z.string().min(2, {
-    message: 'Manufacturer must be at least 2 characters.',
-  }),
-  model: z.string().min(2, {
-    message: 'Model must be at least 2 characters.',
-  }),
-  cost: z.number(),
-  powerRequired: z.number(),
-  isDefault: z.boolean(),
-  // Naming fields
-  namingPrefix: z.string().optional(),
-  // Placement fields
-  validRUStart: z.number().optional(),
-  validRUEnd: z.number().optional(),
-  preferredRU: z.number().optional(),
-  // preferredRack: z.number().optional(), // Removed as per request
-  // Server specific fields
-  serverRole: z.preprocess(
-    (val) => (val === "" || val === undefined) ? undefined : val,
-    z.nativeEnum(ServerRole).optional()
-  ),
-  cpuModel: z.string().optional(),
-  cpuSockets: z.number().optional(),
-  cpuCoresPerSocket: z.number().optional(),
-  memoryCapacity: z.number().optional(),
-  diskSlotType: z.nativeEnum(DiskSlotType).optional(),
-  diskSlotQuantity: z.number().optional(),
-  ruSize: z.number().optional(),
-  networkPortType: z.nativeEnum(NetworkPortType).optional(),
-  portsConsumedQuantity: z.number().optional(),
-  // Switch specific fields
-  switchRole: z.preprocess(
-    (val) => (val === "" || val === undefined) ? undefined : val,
-    z.nativeEnum(SwitchRole).optional()
-  ),
-  // portCount: z.number().optional(), // Commented out as per request
-  // portSpeed: z.string().optional(), // Commented out as per request
-  portSpeedType: z.preprocess(
-    (val) => (val === "" ? undefined : val),
-    z.nativeEnum(PortSpeed).optional()
-  ),
-  portsProvidedQuantity: z.number().optional(),
-  // layer: z.number().optional(), // Commented out as per request
-  // Disk specific fields
-  capacityTB: z.number().optional(),
-  formFactor: z.string().optional(),
-  interface: z.string().optional(),
-  diskType: z.preprocess(
-    (val) => (val === "" || val === undefined) ? undefined : val,
-    z.nativeEnum(DiskType).optional()
-  ),
-  rpm: z.number().optional(),
-  iops: z.number().optional(),
-  readSpeed: z.number().optional(),
-  writeSpeed: z.number().optional(),
-  // Router/Firewall specific fields
-  throughput: z.number().optional(),
-  connectionPerSecond: z.number().optional(),
-  concurrentConnections: z.number().optional(),
-  features: z.array(z.string()).optional(),
-  supportedProtocols: z.array(z.string()).optional(),
-  // Cabling specific fields
-  cassetteCapacity: z.number().optional(),
-  portQuantity: z.number().optional(),
-  length: z.number().optional(),
-  portType: z.nativeEnum(ConnectorType).optional(),
-  // New cassette fields
-  frontPortType: z.nativeEnum(ConnectorType).optional(),
-  frontPortQuantity: z.number().optional(),
-  backPortType: z.nativeEnum(ConnectorType).optional(),
-  backPortQuantity: z.number().optional(),
-  // Cable specific fields
-  connectorA_Type: z.nativeEnum(ConnectorType).optional(),
-  connectorB_Type: z.nativeEnum(ConnectorType).optional(),
-  mediaType: z.nativeEnum(CableMediaType).optional(),
-  cableSpeed: z.nativeEnum(PortSpeed).optional(),
-  // Transceiver specific fields
-  mediaTypeSupported: z.array(z.nativeEnum(MediaType)).optional(),
-  connectorType: z.preprocess(
-    (val) => (val === "" || val === undefined) ? undefined : val,
-    z.nativeEnum(ConnectorType).optional()
-  ),
-  mediaConnectorType: z.preprocess(
-    (val) => (val === "" || val === undefined) ? undefined : val,
-    z.nativeEnum(ConnectorType).optional()
-  ),
-  speed: z.preprocess(
-    (val) => (val === "" || val === undefined) ? undefined : val,
-    z.nativeEnum(PortSpeed).optional()
-  ),
-  maxDistanceMeters: z.number().optional(),
-  breakoutCompatible: z.boolean().optional(),
-  // Breakout cable fields
-  isBreakout: z.boolean().optional(),
-  connectorB_Quantity: z.number().optional()
-});
+// Import factory and port management
+import { ComponentFormFactory } from './forms/component-forms/ComponentFormFactory';
+import { PortManagementSection } from './forms/component-forms/PortManagementSection';
+
+// Schema is now imported from ComponentValidationSchemas.ts
+const formSchema = legacyFormSchema;
 
 interface ComponentFormDialogProps {
   isOpen: boolean;
@@ -150,7 +47,7 @@ interface ComponentFormDialogProps {
   onTypeChange: (value: string) => void;
   onSwitchChange: (checked: boolean) => void;
   onCancel: () => void;
-  onSubmit: (data: z.infer<typeof formSchema>) => void;
+  onSubmit: (data: z.infer<typeof legacyFormSchema>) => void;
   isEditing: boolean;
   addPort: () => void;
   removePort: (index: number) => void;
@@ -192,12 +89,8 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
     state.activeDesign?.requirements?.physicalConstraints);
   const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
 
-  // Add interface types and form factors
-  const interfaceTypes = ["SATA", "SAS", "NVMe", "PCIe"];
-  const formFactors = ['2.5"', '3.5"', 'M.2', 'U.2', 'E1.S', 'E1.L'];
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof legacyFormSchema>>({
+    resolver: zodResolver(legacyFormSchema),
     defaultValues: {
       type: formValues.type || ComponentType.Server,
       name: formValues.name || '',
@@ -291,7 +184,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
     }
   };
 
-  const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
+  const handleFormSubmit = (data: z.infer<typeof legacyFormSchema>) => {
     // --- ADDED LOG --- 
     console.log('[ComponentFormDialog] handleFormSubmit (onValid) called with data:', data);
     onSubmit(data);
@@ -304,59 +197,6 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   };
 
   const { control } = form;
-
-  // --- BULK PORT ADDITION UI/LOGIC ---
-  const [bulkPort, setBulkPort] = useState({
-    prefix: "",
-    role: "",
-    speed: "",
-    connectorType: "",
-    quantity: 1,
-  });
-
-  const handleBulkPortChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setBulkPort((prev) => ({
-      ...prev,
-      [name]: name === "quantity" ? Number(value) : value,
-    }));
-  };
-
-  const handleBulkAddPorts = () => {
-    const { prefix, role, speed, connectorType, quantity } = bulkPort;
-    if (!prefix || !speed || !connectorType || !quantity || quantity < 1) {
-      alert("Please fill all fields for bulk port creation and use quantity >= 1.");
-      return;
-    }
-    const startNum = (formValues.ports?.length || 0) + 1;
-    const portsToAdd = Array.from({ length: quantity }).map((_, i) => ({
-      id: crypto.randomUUID(),
-      name: `${prefix}${startNum + i}`,
-      role: role || undefined,
-      speed,
-      connectorType,
-    }));
-    // Append new ports to current list
-    if (portsToAdd.length > 0) {
-      let updatedPorts = [...(formValues.ports || []), ...portsToAdd];
-      onInputChange({
-        target: {
-          name: "ports",
-          value: updatedPorts,
-        },
-      } as any);
-    }
-    setBulkPort((prev) => ({ ...prev, quantity: 1 }));
-  };
-
-  const handlePortChange = (index: number, field: keyof import('@/types/infrastructure/port-types').Port, value: any) => {
-    updatePort(index, field, value);
-  };
-
-  // Type check for cable; if it's a cable, hide all port UI
-  const isCable = formValues.type === "Cable";
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -434,287 +274,24 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
                 onInputChange={onInputChange}
               />
 
-              {/* Server fields */}
-              {formValues.type === ComponentType.Server && (
-                <ServerFields
-                  control={control}
-                  formValues={formValues}
-                  onInputChange={onInputChange}
-                  onSelectChange={onSelectChange}
-                />
-              )}
+              {/* Component-specific fields rendered by factory */}
+              <ComponentFormFactory
+                control={control}
+                componentType={formValues.type}
+                formValues={formValues}
+                onInputChange={onInputChange}
+                onSelectChange={onSelectChange}
+              />
 
-              {/* Switch fields */}
-              {formValues.type === ComponentType.Switch && (
-                <SwitchFields
-                  control={control}
-                  formValues={formValues}
-                  onInputChange={onInputChange}
-                  onSelectChange={onSelectChange}
-                />
-              )}
-
-              {/* Router/Firewall fields */}
-              {(formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) && (
-                <RouterFirewallFields control={control} />
-              )}
-
-              {/* Cabling/Panel/Cassette fields */}
-              {(formValues.type === "FiberPatchPanel" ||
-                formValues.type === "CopperPatchPanel" ||
-                formValues.type === "Cassette" ||
-                formValues.type === "Cable") && (
-                <CablingFields
-                  control={control}
-                  componentType={formValues.type}
-                  onInputChange={onInputChange}
-                  onSelectChange={onSelectChange}
-                />
-              )}
-
-              {/* Optics/Transceiver fields */}
-              {formValues.type === ComponentType.Transceiver && (
-                <OpticsFields control={control} />
-              )}
-
-              {/* Disk fields */}
-              {formValues.type === ComponentType.Disk && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <FormLabel htmlFor="capacityTB">Capacity (TB)</FormLabel>
-                      <Input
-                        id="capacityTB"
-                        name="capacityTB"
-                        type="number"
-                        value={formValues.capacityTB || 0}
-                        onChange={onInputChange}
-                        placeholder="e.g. 8"
-                        min={0}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <FormLabel htmlFor="diskType">Disk Type</FormLabel>
-                      <select
-                        id="diskType"
-                        name="diskType"
-                        className="border rounded px-3 py-2 w-full"
-                        value={formValues.diskType ?? ''}
-                        onChange={(e) => onSelectChange("diskType", e.target.value)}
-                      >
-                        <option value="">Select Type</option>
-                        {Object.values(DiskType).map(dt => (
-                          <option value={dt} key={dt}>{dt}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <FormLabel htmlFor="interface">Interface Type</FormLabel>
-                      <select
-                        id="interface"
-                        name="interface"
-                        className="border rounded px-3 py-2 w-full"
-                        value={formValues.interface ?? ''}
-                        onChange={(e) => onSelectChange("interface", e.target.value)}
-                      >
-                        <option value="">Select Interface</option>
-                        {interfaceTypes.map((iface) => (
-                          <option value={iface} key={iface}>{iface}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <FormLabel htmlFor="formFactor">Form Factor</FormLabel>
-                      <select
-                        id="formFactor"
-                        name="formFactor"
-                        className="border rounded px-3 py-2 w-full"
-                        value={formValues.formFactor ?? ''}
-                        onChange={(e) => onSelectChange("formFactor", e.target.value)}
-                      >
-                        <option value="">Select Form Factor</option>
-                        {formFactors.map(ff => (
-                          <option value={ff} key={ff}>{ff}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ---- BULK PORTS SECTION - Not for Transceivers or Cables ---- */}
-              {formValues.type !== ComponentType.Transceiver && !isCable && (
-                <div className="mb-4 border p-3 rounded-lg">
-                  <div className="font-semibold mb-1">Add Multiple Ports</div>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
-                    <div>
-                      <label className="block text-xs font-medium mb-1" htmlFor="prefix">Prefix</label>
-                      <input
-                        type="text"
-                        name="prefix"
-                        id="bulk-port-prefix"
-                        value={bulkPort.prefix}
-                        onChange={handleBulkPortChange}
-                        placeholder="eth"
-                        className="border px-2 py-1 rounded w-full"
-                      />
-                    </div>
-                    {formValues.type !== ComponentType.Cassette && 
-                     formValues.type !== ComponentType.FiberPatchPanel && 
-                     formValues.type !== ComponentType.CopperPatchPanel && (
-                      <>
-                        <div>
-                          <label className="block text-xs font-medium mb-1" htmlFor="role">Role</label>
-                          <select
-                            name="role"
-                            value={bulkPort.role}
-                            onChange={handleBulkPortChange}
-                            className="border px-2 py-1 rounded w-full"
-                          >
-                            <option value="">--</option>
-                            {Object.values(PortRole).map(r => (
-                              <option value={r} key={r}>{r}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium mb-1" htmlFor="speed">Speed</label>
-                          <select
-                            name="speed"
-                            value={bulkPort.speed}
-                            onChange={handleBulkPortChange}
-                            className="border px-2 py-1 rounded w-full"
-                          >
-                            <option value="">--</option>
-                            {Object.values(PortSpeed).map(s => (
-                              <option value={s} key={s}>{s}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </>
-                    )}
-                    <div>
-                      <label className="block text-xs font-medium mb-1" htmlFor="connectorType">Connector</label>
-                      <select
-                        name="connectorType"
-                        value={bulkPort.connectorType}
-                        onChange={handleBulkPortChange}
-                        className="border px-2 py-1 rounded w-full"
-                      >
-                        <option value="">--</option>
-                        {Object.values(ConnectorType).map(ct => (
-                          <option value={ct} key={ct}>{ct}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1" htmlFor="quantity">Qty</label>
-                      <input
-                        type="number"
-                        min={1}
-                        name="quantity"
-                        value={bulkPort.quantity}
-                        onChange={handleBulkPortChange}
-                        className="border px-2 py-1 rounded w-full"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      className="bg-blue-600 text-white py-1 px-3 rounded hover:bg-blue-700"
-                      onClick={handleBulkAddPorts}
-                    >
-                      Add Ports
-                    </button>
-                  </div>
-                </div>
-              )}
-              {/* ---- END BULK PORTS SECTION ---- */}
-
-              {/* ---- SINGLE PORTS SECTION - Not for Transceivers or Cables ---- */}
-              {formValues.type !== ComponentType.Transceiver && !isCable && (
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="font-semibold">Ports</div>
-                    <Button type="button" size="sm" onClick={addPort} data-testid="add-port">Add Port</Button>
-                  </div>
-                  {(formValues.ports && formValues.ports.length > 0) ? (
-                    <div className="space-y-2">
-                      {formValues.ports.map((port: any, idx: number) => {
-                        const isPassiveDevice = formValues.type === ComponentType.Cassette || 
-                                               formValues.type === ComponentType.FiberPatchPanel || 
-                                               formValues.type === ComponentType.CopperPatchPanel;
-                        return (
-                          <div key={port.id || idx} className="border rounded p-3 flex flex-col sm:flex-row gap-2 items-center flex-wrap">
-                            <Input
-                              type="text"
-                              placeholder="Name (e.g. eth0)"
-                              value={port.name || ''}
-                              onChange={e => handlePortChange(idx, 'name', e.target.value)}
-                              className="w-32"
-                            />
-                            {!isPassiveDevice && (
-                              <>
-                                <select
-                                  value={port.role || ''}
-                                  className="border rounded px-2 py-1"
-                                  onChange={e => handlePortChange(idx, 'role', e.target.value)}
-                                >
-                                  <option value="">Role</option>
-                                  {Object.values(PortRole).map(r => (
-                                    <option value={r} key={r}>{r}</option>
-                                  ))}
-                                </select>
-                                <select
-                                  value={port.speed || PortSpeed.Speed1G}
-                                  className="border rounded px-2 py-1"
-                                  onChange={e => handlePortChange(idx, 'speed', e.target.value)}
-                                >
-                                  {Object.values(PortSpeed).map(s => (
-                                    <option value={s} key={s}>{s}</option>
-                                  ))}
-                                </select>
-                              </>
-                            )}
-                            <select
-                              value={port.connectorType || ConnectorType.RJ45}
-                              className="border rounded px-2 py-1"
-                              onChange={e => handlePortChange(idx, 'connectorType', e.target.value)}
-                            >
-                              {Object.values(ConnectorType).map(ct => (
-                                <option value={ct} key={ct}>{ct}</option>
-                              ))}
-                            </select>
-                            <select
-                              value={port.mediaType || ''}
-                              className="border rounded px-2 py-1"
-                              onChange={e => handlePortChange(idx, 'mediaType', e.target.value || undefined)}
-                            >
-                              <option value="">Media Type (Optional)</option>
-                              {Object.values(MediaType).map(mt => (
-                                <option value={mt} key={mt}>{mt}</option>
-                              ))}
-                            </select>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => removePort(idx)}
-                              data-testid={`remove-port-${idx}`}
-                            >Remove</Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-gray-500 my-2">No ports defined. Add at least one port for network rules.</div>
-                  )}
-                </div>
-              )}
-              {/* ---- END PORTS SECTION ---- */}
+              {/* Port Management Section */}
+              <PortManagementSection
+                componentType={formValues.type}
+                formValues={formValues}
+                addPort={addPort}
+                removePort={removePort}
+                updatePort={updatePort}
+                onInputChange={onInputChange}
+              />
 
             </form>
           </Form>

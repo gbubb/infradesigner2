@@ -641,7 +641,11 @@ export const PowerPredictionTab: React.FC = () => {
           <PowerBreakdownChart breakdown={calculationResult.componentBreakdown} />
           
           {/* Power Consumption Chart */}
-          <PowerConsumptionChart result={calculationResult} />
+          <PowerConsumptionChart 
+            result={calculationResult} 
+            inputs={powerInputs}
+            calibrationProfile={calibrationProfile}
+          />
           
           {/* Calculation Parameters */}
           {powerInputs && (
