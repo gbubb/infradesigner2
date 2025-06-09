@@ -16,6 +16,7 @@ import { saveCalibrationProfile, PowerCalibrationProfile } from './powerCalibrat
 import { PowerValidationDialog } from './PowerValidationDialog';
 import { PowerCalculationParameters } from './PowerCalculationParameters';
 import { PowerBreakdownTable } from './PowerBreakdownTable';
+import { MemoryPowerAnalysis } from './MemoryPowerAnalysis';
 
 // Configuration Components
 import { CPUConfiguration } from '../power-prediction/configs/CPUConfiguration';
@@ -246,6 +247,17 @@ export const PowerPredictionTab: React.FC = () => {
             result={calculationResult}
             selectedState={selectedPowerState}
           />
+          
+          {/* Memory Power Analysis */}
+          {powerInputs && (
+            <MemoryPowerAnalysis
+              dimmCount={powerInputs.dimmCount}
+              dimmCapacityGB={powerInputs.dimmCapacityGB}
+              memoryType={powerInputs.memoryType}
+              memorySpeedMHz={powerInputs.memorySpeedMHz}
+              calibrationProfile={calibrationProfile}
+            />
+          )}
           
           {/* Warnings and Missing Metrics */}
           {calculationResult.warnings.length > 0 && (
