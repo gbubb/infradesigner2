@@ -86,9 +86,10 @@ export const PowerBreakdownTable: React.FC<PowerBreakdownTableProps> = ({ result
   // Sort by power consumption (highest first)
   breakdownData.sort((a, b) => b.power - a.power);
   
-  // Calculate PSU efficiency loss
-  const psuLoss = totalAcPower - totalDcPower;
-  const psuEfficiency = (totalDcPower / totalAcPower) * 100;
+  // Get actual PSU efficiency and calculate loss
+  const actualPsuEfficiency = getPowerValue(result.psuEfficiency) * 100;
+  const acBeforeSafety = getPowerValue(result.acTotalBeforeSafety);
+  const psuLoss = acBeforeSafety - totalDcPower;
   
   return (
     <Card className="mt-6">
@@ -165,19 +166,37 @@ export const PowerBreakdownTable: React.FC<PowerBreakdownTableProps> = ({ result
                   <TableCell className="text-right font-semibold">100%</TableCell>
                 </TableRow>
                 
-                {/* PSU Efficiency Loss */}
+                {/* PSU Efficiency */}
                 <TableRow>
                   <TableCell className="text-muted-foreground">
-                    PSU Efficiency
+                    PSU Efficiency (actual)
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
-                    {((result.dcTotalW.idle / result.acTotalW.idle) * 100).toFixed(1)}%
+                    {(result.psuEfficiency.idle * 100).toFixed(1)}%
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
-                    {((result.dcTotalW.average / result.acTotalW.average) * 100).toFixed(1)}%
+                    {(result.psuEfficiency.average * 100).toFixed(1)}%
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
-                    {((result.dcTotalW.peak / result.acTotalW.peak) * 100).toFixed(1)}%
+                    {(result.psuEfficiency.peak * 100).toFixed(1)}%
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">-</TableCell>
+                  <TableCell className="text-right text-muted-foreground">-</TableCell>
+                </TableRow>
+                
+                {/* AC Power before Safety Margin */}
+                <TableRow>
+                  <TableCell className="text-muted-foreground">
+                    AC Power (before safety margin)
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {result.acTotalBeforeSafety.idle.toFixed(1)}W
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {result.acTotalBeforeSafety.average.toFixed(1)}W
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {result.acTotalBeforeSafety.peak.toFixed(1)}W
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">-</TableCell>
                   <TableCell className="text-right text-muted-foreground">-</TableCell>
@@ -185,7 +204,7 @@ export const PowerBreakdownTable: React.FC<PowerBreakdownTableProps> = ({ result
                 
                 {/* AC Total */}
                 <TableRow className="border-t font-semibold bg-muted/50">
-                  <TableCell>AC Total (Wall Power)</TableCell>
+                  <TableCell>AC Total (with safety margin)</TableCell>
                   <TableCell className="text-right">{result.acTotalW.idle.toFixed(1)}</TableCell>
                   <TableCell className="text-right">{result.acTotalW.average.toFixed(1)}</TableCell>
                   <TableCell className="text-right">{result.acTotalW.peak.toFixed(1)}</TableCell>
@@ -200,18 +219,22 @@ export const PowerBreakdownTable: React.FC<PowerBreakdownTableProps> = ({ result
             </Table>
             
             {/* Additional metrics */}
-            <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+            <div className="mt-4 grid grid-cols-4 gap-4 text-sm">
               <div className="space-y-1">
                 <p className="text-muted-foreground">DC Power</p>
                 <p className="font-semibold">{totalDcPower.toFixed(1)}W</p>
               </div>
               <div className="space-y-1">
-                <p className="text-muted-foreground">AC Power</p>
+                <p className="text-muted-foreground">AC Power (actual)</p>
+                <p className="font-semibold">{acBeforeSafety.toFixed(1)}W</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">AC Power (budgeted)</p>
                 <p className="font-semibold">{totalAcPower.toFixed(1)}W</p>
               </div>
               <div className="space-y-1">
                 <p className="text-muted-foreground">PSU Efficiency</p>
-                <p className="font-semibold">{psuEfficiency.toFixed(1)}%</p>
+                <p className="font-semibold">{actualPsuEfficiency.toFixed(1)}%</p>
               </div>
             </div>
             

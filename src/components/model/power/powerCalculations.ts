@@ -65,6 +65,8 @@ export interface PowerCalculationResult {
   
   dcTotalW: { idle: number; average: number; peak: number };
   acTotalW: { idle: number; average: number; peak: number };
+  psuEfficiency: { idle: number; average: number; peak: number };
+  acTotalBeforeSafety: { idle: number; average: number; peak: number };
   
   warnings: string[];
   missingMetrics: string[];
@@ -428,6 +430,18 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
       idle: Math.round(acWithSafety.idle),
       average: Math.round(acWithSafety.average),
       peak: Math.round(acWithSafety.peak)
+    },
+    
+    psuEfficiency: {
+      idle: psuEfficiencyIdle,
+      average: psuEfficiencyAvg,
+      peak: psuEfficiencyPeak
+    },
+    
+    acTotalBeforeSafety: {
+      idle: Math.round(acTotal.idle),
+      average: Math.round(acTotal.average),
+      peak: Math.round(acTotal.peak)
     },
     
     warnings,
