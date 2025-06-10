@@ -456,17 +456,18 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
             <div>
               <Label htmlFor="parent-layer">Parent Layer (Optional)</Label>
               <Select
-                value={editingLayer?.parentLayerId || newLayer.parentLayerId || ''}
+                value={editingLayer?.parentLayerId || newLayer.parentLayerId || 'none'}
                 onValueChange={(value) => {
+                  const parentId = value === 'none' ? undefined : value;
                   if (editingLayer) {
                     setEditingLayer({ 
                       ...editingLayer, 
-                      parentLayerId: value || undefined 
+                      parentLayerId: parentId 
                     });
                   } else {
                     setNewLayer({ 
                       ...newLayer, 
-                      parentLayerId: value || undefined 
+                      parentLayerId: parentId 
                     });
                   }
                 }}
@@ -475,7 +476,7 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
                   <SelectValue placeholder="Select parent layer" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (Root Layer)</SelectItem>
+                  <SelectItem value="none">None (Root Layer)</SelectItem>
                   {facility.powerInfrastructure
                     .filter(layer => layer.id !== editingLayer?.id)
                     .map(layer => (

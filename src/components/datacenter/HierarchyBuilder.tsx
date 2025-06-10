@@ -299,10 +299,10 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
                 <select
                   id="parent-level"
                   className="w-full p-2 border rounded-md"
-                  value={newLevelParentId || ''}
-                  onChange={(e) => setNewLevelParentId(e.target.value || undefined)}
+                  value={newLevelParentId || 'none'}
+                  onChange={(e) => setNewLevelParentId(e.target.value === 'none' ? undefined : e.target.value)}
                 >
-                  <option value="">None (Root Level)</option>
+                  <option value="none">None (Root Level)</option>
                   {facility.hierarchyConfig.map(level => (
                     <option key={level.id} value={level.id}>
                       {level.name}
@@ -341,13 +341,13 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
                   <select
                     id="edit-parent-level"
                     className="w-full p-2 border rounded-md"
-                    value={editingLevel.parentId || ''}
+                    value={editingLevel.parentId || 'none'}
                     onChange={(e) => setEditingLevel({ 
                       ...editingLevel, 
-                      parentId: e.target.value || undefined 
+                      parentId: e.target.value === 'none' ? undefined : e.target.value 
                     })}
                   >
-                    <option value="">None (Root Level)</option>
+                    <option value="none">None (Root Level)</option>
                     {facility.hierarchyConfig
                       .filter(level => level.id !== editingLevel.id)
                       .map(level => (
