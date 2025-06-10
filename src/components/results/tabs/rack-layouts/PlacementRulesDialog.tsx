@@ -41,7 +41,7 @@ const getAllConfigurableRoles = (activeDesign: InfrastructureDesign | null, avai
     let userProvidedName: string | null = null;
 
     // Check for cluster types first and try to get name from clusterInfo
-    if (['storage', 'storagenode', 'compute', 'computenode', 'controller', 'gpunode'].some(type => roleKey.includes(type))) {
+    if (['storage', 'storagenode', 'compute', 'computenode', 'controller', 'infrastructure', 'infrastructurenode', 'gpunode'].some(type => roleKey.includes(type))) {
       if (role.clusterInfo && typeof role.clusterInfo.clusterName === 'string' && role.clusterInfo.clusterName.trim() !== '') {
         userProvidedName = role.clusterInfo.clusterName.trim();
       }
@@ -89,7 +89,7 @@ const getAllConfigurableRoles = (activeDesign: InfrastructureDesign | null, avai
     }
 
     // For cluster-based roles, use the actual cluster ID, otherwise use role ID
-    const clusterId = (['storage', 'storagenode', 'compute', 'computenode', 'controller', 'gpunode'].some(type => roleKey.includes(type)) && role.clusterInfo?.clusterId)
+    const clusterId = (['storage', 'storagenode', 'compute', 'computenode', 'controller', 'infrastructure', 'infrastructurenode', 'gpunode'].some(type => roleKey.includes(type)) && role.clusterInfo?.clusterId)
       ? role.clusterInfo.clusterId
       : role.id;
 

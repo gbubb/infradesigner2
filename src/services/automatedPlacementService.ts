@@ -95,10 +95,14 @@ export class AutomatedPlacementService {
     toPlaceComponents.forEach(component => {
       const typeLabel = getTypeKey(component);
       const isStorage = typeLabel.includes('storage') || (component.role && component.role.toLowerCase().includes('storage'));
-      const isComputeCluster = (typeLabel.includes('compute') || typeLabel.includes('controller') || 
-                               typeLabel.includes('infrastructure') || typeLabel.includes('gpu')) && 
-                              (component.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role));
+      // Check if this is a compute cluster component - rely primarily on role
+      const isComputeCluster = component.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role);
       const clusterId = component.clusterId || component.clusterInfo?.clusterId;
+      
+      // Debug logging to understand clustering
+      if (component.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role)) {
+        console.log(`Component ${component.name}: role=${component.role}, typeLabel=${typeLabel}, isComputeCluster=${isComputeCluster}, clusterId=${clusterId}, clusterInfo=`, component.clusterInfo);
+      }
       
       if (isStorage && clusterId) {
         if (!storageClusterMap.has(clusterId)) {
@@ -143,8 +147,11 @@ export class AutomatedPlacementService {
     }
     
     // Place compute clusters with even distribution
+    console.log(`Placing compute clusters: ${computeClusterMap.size} clusters found`);
     for (const [clusterId, clusterComponents] of computeClusterMap) {
+      console.log(`Placing compute cluster ${clusterId} with ${clusterComponents.length} components`);
       const clusterAZs = allowedAZsMap[clusterId] || allAZs.filter(id => id !== coreAZId);
+      console.log(`Allowed AZs for cluster ${clusterId}:`, clusterAZs);
       const { placementReports } = placeComputeCluster({
         clusterComponents,
         allowedAZs: clusterAZs,
