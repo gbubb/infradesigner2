@@ -97,7 +97,10 @@ CREATE POLICY "Users can manage power layers" ON facility_power_layers
         )
     );
 
--- 10. Update the calculate_facility_pue function
+-- 10. Drop the view first since it depends on the function
+DROP VIEW IF EXISTS facility_utilization_summary;
+
+-- 11. Update the calculate_facility_pue function
 DROP FUNCTION IF EXISTS calculate_facility_pue(UUID);
 CREATE OR REPLACE FUNCTION calculate_facility_pue(p_facility_id UUID)
 RETURNS DECIMAL AS $$
@@ -131,8 +134,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 11. Update the facility_utilization_summary view
-DROP VIEW IF EXISTS facility_utilization_summary;
+-- 12. Recreate the facility_utilization_summary view
 CREATE OR REPLACE VIEW facility_utilization_summary AS
 SELECT 
     f.id AS "facilityId",
