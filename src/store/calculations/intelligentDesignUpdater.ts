@@ -225,6 +225,17 @@ export class IntelligentDesignUpdater {
           ruSize: componentTemplate.ruSize,
         };
         
+        // Debug logging for controller/infrastructure nodes
+        if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
+          console.log(`Creating ${role.role} component:`, {
+            roleName: role.role,
+            roleClusterInfo: role.clusterInfo,
+            componentName: instanceName,
+            componentClusterInfo: newComponent.clusterInfo,
+            componentClusterId: newComponent.clusterId
+          });
+        }
+        
         updatedComponents.push(newComponent);
       }
       
@@ -323,6 +334,23 @@ export class IntelligentDesignUpdater {
           role: role.role,
           ruSize: componentTemplate.ruSize,
         };
+        
+        // Add clusterInfo if present in the role
+        if (role.clusterInfo) {
+          (newComponent as any).clusterInfo = role.clusterInfo;
+          (newComponent as any).clusterId = role.clusterInfo.clusterId;
+        }
+        
+        // Debug logging for controller/infrastructure nodes
+        if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
+          console.log(`[generateComponentInstances] Creating ${role.role} component:`, {
+            roleName: role.role,
+            roleClusterInfo: role.clusterInfo,
+            componentName: instanceName,
+            componentClusterInfo: (newComponent as any).clusterInfo,
+            componentClusterId: (newComponent as any).clusterId
+          });
+        }
         
         components.push(newComponent);
       }

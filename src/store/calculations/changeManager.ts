@@ -24,7 +24,7 @@ export interface ChangeImpact {
 // Map change types to their impacts
 const CHANGE_IMPACT_MAP: Record<ChangeType, ChangeImpact> = {
   [ChangeType.COMPUTE_CAPACITY]: {
-    affectedRoles: ['controller', 'computeNode', 'infrastructure'],
+    affectedRoles: ['controllerNode', 'computeNode', 'infrastructureNode', 'gpuNode'],
     requiresNewRacks: false, // Usually just quantity changes
     requiresRackRebalancing: true,
     affectedComponents: ['servers'],
@@ -40,7 +40,7 @@ const CHANGE_IMPACT_MAP: Record<ChangeType, ChangeImpact> = {
     preserveRackIds: true
   },
   [ChangeType.NETWORK_CONFIG]: {
-    affectedRoles: ['coreSwitch', 'accessSwitch', 'firewall'],
+    affectedRoles: ['leafSwitch', 'spineSwitch', 'borderLeafSwitch', 'storageSwitch', 'torSwitch', 'firewall', 'managementSwitch', 'ipmiSwitch'],
     requiresNewRacks: true, // Network topology changes may need new racks
     requiresRackRebalancing: false,
     affectedComponents: ['switches', 'firewalls'],

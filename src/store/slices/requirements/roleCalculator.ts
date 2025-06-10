@@ -60,19 +60,21 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   
   const leafSwitchCount = totalAvailabilityZones * leafSwitchesPerAZ;
   
-  const newRoles: ComponentRole[] = [
-    {
-      id: uuidv4(),
-      role: 'controllerNode',
-      description: 'Handles cluster management and monitoring',
-      requiredCount: controllerNodeCount,
-      clusterInfo: {
-        clusterId: 'controller-cluster',
-        clusterName: 'Controller Cluster',
-        clusterIndex: 0
-      }
+  const controllerRole = {
+    id: uuidv4(),
+    role: 'controllerNode',
+    description: 'Handles cluster management and monitoring',
+    requiredCount: controllerNodeCount,
+    clusterInfo: {
+      clusterId: 'controller-cluster',
+      clusterName: 'Controller Cluster',
+      clusterIndex: 0
     }
-  ];
+  };
+  
+  console.log('Creating controller role with clusterInfo:', controllerRole.clusterInfo);
+  
+  const newRoles: ComponentRole[] = [controllerRole];
   
   // Add compute cluster nodes
   computeClusters.forEach((cluster, index) => {
@@ -132,7 +134,7 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
   
   // Add infrastructure nodes if required
   if (infrastructureClusterRequired) {
-    newRoles.push({
+    const infrastructureRole = {
       id: uuidv4(),
       role: 'infrastructureNode',
       description: 'Provides infrastructure services for the cluster',
@@ -142,7 +144,10 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
         clusterName: 'Infrastructure Cluster',
         clusterIndex: 0
       }
-    });
+    };
+    
+    console.log('Creating infrastructure role with clusterInfo:', infrastructureRole.clusterInfo);
+    newRoles.push(infrastructureRole);
   }
   
   // Add management switches only if we need them (not using converged management)
