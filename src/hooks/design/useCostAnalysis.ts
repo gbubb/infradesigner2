@@ -2,27 +2,50 @@ import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useHardwareTotals } from './useHardwareTotals';
 import { usePowerCalculations } from './usePowerCalculations';
+import { useRackLayout } from './useRackLayout';
 import { ComponentType } from '@/types/infrastructure';
+import { DatacenterCostCalculator } from '@/services/datacenter/DatacenterCostCalculator';
 
 export const useCostAnalysis = () => {
   // Use primitive selector for better stability
   const activeDesign = useDesignStore(state => state.activeDesign);
   const { actualHardwareTotals } = useHardwareTotals();
   const { energyCosts } = usePowerCalculations();
+  const { racks } = useRackLayout();
+  
+  // Get facility data
+  const getFacilityById = useDesignStore(state => state.getFacilityById);
+  const facilityType = activeDesign?.requirements?.physicalConstraints?.facilityType || 'none';
+  const selectedFacilityId = activeDesign?.requirements?.physicalConstraints?.selectedFacilityId;
+  const selectedFacility = selectedFacilityId ? getFacilityById(selectedFacilityId) : null;
   
   // Get rack quantity
   const rackQuantity = useMemo(() => {
     return activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity || 1;
   }, [activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity]);
   
-  // Get rack cost per month
+  // Calculate facility costs if owned datacenter is selected
+  const facilityCosts = useMemo(() => {
+    if (facilityType !== 'owned' || !selectedFacility || !racks) {
+      return null;
+    }
+    
+    const calculator = new DatacenterCostCalculator(selectedFacility, racks);
+    return calculator.calculateFacilityCosts();
+  }, [facilityType, selectedFacility, racks]);
+  
+  // Get rack cost per month (colocation or facility-based)
   const rackCostPerMonth = useMemo(() => {
-    return activeDesign?.requirements?.physicalConstraints?.useColoRacks 
-      ? (activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros || 2000)
-      : 0;
+    if (facilityType === 'colocation') {
+      return activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros || 2000;
+    } else if (facilityType === 'owned' && facilityCosts) {
+      return facilityCosts.costPerRack;
+    }
+    return 0;
   }, [
-    activeDesign?.requirements?.physicalConstraints?.useColoRacks, 
-    activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros
+    facilityType,
+    activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros,
+    facilityCosts
   ]);
 
   // Calculate licensing costs
@@ -139,26 +162,41 @@ export const useCostAnalysis = () => {
   const operationalCosts = useMemo(() => {
     const totalRackQuantityValue = (activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity || 1) + 
       (activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks ? 2 : 0);
-    const rackCostPerMonthValue = activeDesign?.requirements?.physicalConstraints?.useColoRacks 
-      ? (activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros || 2000)
-      : 0;
-      
-    const rackMonthly = rackCostPerMonthValue * totalRackQuantityValue;
-    const energyMonthly = energyCosts.monthlyEnergyCost;
+    
+    let rackMonthly = 0;
+    let facilityMonthly = 0;
+    
+    if (facilityType === 'colocation') {
+      const rackCostPerMonthValue = activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros || 2000;
+      rackMonthly = rackCostPerMonthValue * totalRackQuantityValue;
+    } else if (facilityType === 'owned' && facilityCosts) {
+      // For owned facilities, use the total monthly facility cost
+      facilityMonthly = facilityCosts.totalMonthlyCost;
+    }
+    
+    const energyMonthly = facilityType === 'owned' ? 0 : energyCosts.monthlyEnergyCost; // Energy included in facility costs
     const amortizedMonthly = amortizedCostsByType.total;
     const licensingMonthly = licensingCosts.monthly;
     const networkMonthly = amortizedCostsByType.network;
-    const totalMonthly = rackMonthly + energyMonthly + amortizedMonthly + licensingMonthly + networkMonthly;
+    const totalMonthly = rackMonthly + facilityMonthly + energyMonthly + amortizedMonthly + licensingMonthly + networkMonthly;
     
     return { 
-      racksMonthly: rackMonthly, 
+      racksMonthly: rackMonthly,
+      facilityMonthly: facilityMonthly,
       energyMonthly, 
       amortizedMonthly, 
       licensingMonthly,
       networkMonthly,
       totalMonthly 
     };
-  }, [energyCosts.monthlyEnergyCost, amortizedCostsByType.total, licensingCosts.monthly, activeDesign?.requirements]);
+  }, [
+    energyCosts.monthlyEnergyCost, 
+    amortizedCostsByType, 
+    licensingCosts.monthly, 
+    activeDesign?.requirements,
+    facilityType,
+    facilityCosts
+  ]);
   
   // Calculate TCO for 12 months (operational costs only)
   const totalCostOfOwnership = useMemo(() => {
@@ -184,6 +222,8 @@ export const useCostAnalysis = () => {
     costPerVCPU,
     costPerTB,
     amortizedCostsByType,
-    licensingCosts
+    licensingCosts,
+    facilityCosts,
+    facilityType
   };
 };

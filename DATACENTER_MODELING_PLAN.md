@@ -107,15 +107,15 @@ Components to create:
 - [ ] Non-productive loads interface
 
 ### Phase 3: Cost Allocation & Calculations
-**Status**: [ ] Not Started
+**Status**: [✓] Completed
 
 #### 3.1 Create Cost Allocation Engine
 **Location**: `/src/services/datacenter/`
 
 Services to implement:
-- [ ] `DatacenterCostCalculator.ts` - Core allocation logic
-- [ ] `PowerEfficiencyCalculator.ts` - PUE and efficiency cascade
-- [ ] `CapacityManagementService.ts` - Track utilization
+- [✓] `DatacenterCostCalculator.ts` - Core allocation logic
+- [✓] `PowerEfficiencyCalculator.ts` - PUE and efficiency cascade
+- [✓] `CapacityManagementService.ts` - Track utilization
 
 Key algorithms:
 ```typescript
@@ -125,9 +125,9 @@ const perKWCost = totalMonthlyCost / totalPowerKW;
 ```
 
 #### 3.2 Integration with Existing Calculations
-- [ ] Extend `useCostAnalysis.ts` to support facility costs
-- [ ] Add facility cost option to `PhysicalConstraintsForm`
-- [ ] Update cost breakdowns to show facility vs equipment costs
+- [✓] Extend `useCostAnalysis.ts` to support facility costs
+- [✓] Add facility cost option to `PhysicalConstraintsForm`
+- [✓] Update cost breakdowns to show facility vs equipment costs
 
 ### Phase 4: Visualization & Analysis
 **Status**: [ ] Not Started
@@ -262,5 +262,5 @@ GET    /api/facilities/:id/utilization
 ---
 
 **Last Updated**: 2025-01-10
-**Status**: Phase 1 & 2 Completed, Phase 3 Ready to Start
-**Next Steps**: Begin Phase 3 - Create Cost Allocation & Calculations
+**Status**: Phase 1, 2 & 3 Completed, Phase 4 Ready to Start
+**Next Steps**: Begin Phase 4 - Visualization & Analysis

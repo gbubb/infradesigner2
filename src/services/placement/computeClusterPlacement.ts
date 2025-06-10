@@ -58,9 +58,6 @@ export function placeComputeCluster({
     azDistribution.set(az, nodesPerAZ + (index < extraNodes ? 1 : 0));
   });
   
-  console.log(`Compute cluster distribution - Total nodes: ${clusterComponents.length}, AZs: ${azsArray.length}, Nodes per AZ: ${nodesPerAZ}, Extra nodes: ${extraNodes}`);
-  console.log('AZ Distribution plan:', Array.from(azDistribution.entries()));
-  
   // Place nodes by AZ, then evenly within each AZ
   let componentIndex = 0;
   
@@ -90,23 +87,12 @@ export function placeComputeCluster({
       return aCount - bCount;
     });
     
-    console.log(`AZ ${azId} - Racks: ${sortedAZRacks.length}, Target nodes: ${targetCount}`);
-    sortedAZRacks.forEach((rack, i) => {
-      const currentCount = rack.devices.filter(d => {
-        const placedComponent = state.activeDesign?.components?.find((c: any) => c.id === d.deviceId);
-        const templateComponent = state.componentTemplates.find((c: any) => c.id === d.deviceId);
-        const component = placedComponent || templateComponent;
-        return component?.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role);
-      }).length;
-      console.log(`  Rack ${rack.id}: Current compute nodes: ${currentCount}`);
-    });
-    
     // Place nodes in this AZ
     for (let rackIndex = 0; rackIndex < sortedAZRacks.length && componentIndex < clusterComponents.length; rackIndex++) {
       const rack = sortedAZRacks[rackIndex];
       const nodesForThisRack = nodesPerRackInAZ + (rackIndex < extraNodesInAZ ? 1 : 0);
       
-      console.log(`  Placing ${nodesForThisRack} nodes in rack ${rack.id}`);
+      // console.log(`  Placing ${nodesForThisRack} nodes in rack ${rack.id}`);
       
       for (let i = 0; i < nodesForThisRack && componentIndex < clusterComponents.length; i++) {
         const component = clusterComponents[componentIndex];

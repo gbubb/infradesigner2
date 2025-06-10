@@ -7,6 +7,7 @@ interface DetailedCostAnalysisCardProps {
   capitalCost: number;
   operationalCosts: {
     racksMonthly: number;
+    facilityMonthly?: number;
     energyMonthly: number;
     amortizedMonthly: number;
     licensingMonthly?: number;
@@ -23,6 +24,16 @@ interface DetailedCostAnalysisCardProps {
     oneTime: number;
     monthly: number;
   };
+  facilityType?: 'none' | 'colocation' | 'owned';
+  facilityCosts?: {
+    totalMonthlyCost: number;
+    costPerRack: number;
+    costPerKW: number;
+    costLayerBreakdowns?: Array<{
+      layerName: string;
+      monthlyAmount: number;
+    }>;
+  };
 }
 
 export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> = ({
@@ -30,7 +41,9 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
   operationalCosts,
   amortizedCostsByType,
   totalCostOfOwnership,
-  licensingCosts
+  licensingCosts,
+  facilityType = 'none',
+  facilityCosts
 }) => {
   // Calculate first year operational costs (monthly × 12)
   const firstYearOperationalCost = operationalCosts.totalMonthly * 12;
@@ -70,17 +83,42 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
           <div>
             <h3 className="text-lg font-medium mb-2">2. Operational Costs (Monthly)</h3>
             <div className="space-y-2">
-              {operationalCosts.racksMonthly > 0 && (
+              {/* Facility Costs Section */}
+              {facilityType === 'colocation' && operationalCosts.racksMonthly > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Rack Colocation</span>
                   <span className="font-medium">${operationalCosts.racksMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 </div>
               )}
               
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Energy Consumption</span>
-                <span className="font-medium">${operationalCosts.energyMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-              </div>
+              {facilityType === 'owned' && operationalCosts.facilityMonthly !== undefined && operationalCosts.facilityMonthly > 0 && (
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Datacenter Facility</span>
+                    <span className="font-medium">${operationalCosts.facilityMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  </div>
+                  {facilityCosts?.costLayerBreakdowns && facilityCosts.costLayerBreakdowns.length > 0 && (
+                    <div className="ml-4 space-y-1 text-sm">
+                      {facilityCosts.costLayerBreakdowns.slice(0, 3).map((layer, idx) => (
+                        <div key={idx} className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{layer.layerName}</span>
+                          <span>${layer.monthlyAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        </div>
+                      ))}
+                      {facilityCosts.costLayerBreakdowns.length > 3 && (
+                        <div className="text-xs text-muted-foreground">+{facilityCosts.costLayerBreakdowns.length - 3} more...</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {facilityType !== 'owned' && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Energy Consumption</span>
+                  <span className="font-medium">${operationalCosts.energyMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                </div>
+              )}
               
               <div className="space-y-1 ml-4">
                 <h4 className="text-sm font-medium">Hardware Amortization</h4>
@@ -131,7 +169,7 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
               <span>${firstYearOperationalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Includes 12 months of operational costs (amortization, energy, rack colocation, and licensing)
+              Includes 12 months of operational costs (amortization, {facilityType === 'owned' ? 'facility' : facilityType === 'colocation' ? 'rack colocation' : 'energy'}, and licensing)
             </p>
           </div>
         </div>

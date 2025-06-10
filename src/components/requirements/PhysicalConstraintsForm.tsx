@@ -1,14 +1,17 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { FormItem } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
-import { Plus, X } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, X, Building, Server, DollarSign } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { AvailabilityZone } from '@/types/infrastructure/requirements-types';
+import { useDesignStore } from '@/store/designStore';
 
 interface PhysicalConstraintsProps {
   requirements: {
@@ -21,6 +24,8 @@ interface PhysicalConstraintsProps {
     rackCostPerMonthEuros?: number;
     electricityPricePerKwh?: number;
     operationalLoadPercentage?: number;
+    facilityType?: 'none' | 'colocation' | 'owned';
+    selectedFacilityId?: string;
   };
   onUpdate: (physicalConstraints: any) => void;
 }
@@ -30,6 +35,30 @@ export const PhysicalConstraintsForm: React.FC<PhysicalConstraintsProps> = ({
   onUpdate,
 }) => {
   const [newAzName, setNewAzName] = useState<string>('');
+  
+  // Get facilities from store
+  const facilities = useDesignStore(state => state.facilities);
+  const loadFacilities = useDesignStore(state => state.loadFacilities);
+  
+  // Load facilities on mount
+  useEffect(() => {
+    loadFacilities();
+  }, [loadFacilities]);
+  
+  // Handle facility type change
+  const handleFacilityTypeChange = (value: string) => {
+    onUpdate({ 
+      facilityType: value as 'none' | 'colocation' | 'owned',
+      // Clear legacy fields when switching types
+      useColoRacks: value === 'colocation',
+      selectedFacilityId: value === 'owned' ? requirements.selectedFacilityId : undefined
+    });
+  };
+  
+  // Handle facility selection
+  const handleFacilitySelect = (facilityId: string) => {
+    onUpdate({ selectedFacilityId: facilityId });
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -194,21 +223,75 @@ export const PhysicalConstraintsForm: React.FC<PhysicalConstraintsProps> = ({
           <CardTitle>Operational Costs</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label className="text-base">Colo Racks</Label>
-              <p className="text-sm text-muted-foreground">
-                Enable to configure colocation rack costs
-              </p>
+          {/* Facility Type Selection */}
+          <div className="space-y-4">
+            <Label>Facility Type</Label>
+            <RadioGroup 
+              value={requirements.facilityType || (requirements.useColoRacks ? 'colocation' : 'none')} 
+              onValueChange={handleFacilityTypeChange}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="none" id="none" />
+                <Label htmlFor="none" className="font-normal cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Server className="h-4 w-4" />
+                    <span>None (Equipment costs only)</span>
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="colocation" id="colocation" />
+                <Label htmlFor="colocation" className="font-normal cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    <span>Colocation (Fixed cost per rack)</span>
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="owned" id="owned" />
+                <Label htmlFor="owned" className="font-normal cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    <span>Owned Datacenter (Detailed cost modeling)</span>
+                  </div>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+          
+          {/* Facility Selection for Owned Datacenters */}
+          {requirements.facilityType === 'owned' && (
+            <div className="space-y-2">
+              <Label htmlFor="facility">Select Facility</Label>
+              <Select value={requirements.selectedFacilityId} onValueChange={handleFacilitySelect}>
+                <SelectTrigger id="facility">
+                  <SelectValue placeholder="Choose a datacenter facility" />
+                </SelectTrigger>
+                <SelectContent>
+                  {facilities.length === 0 ? (
+                    <SelectItem value="_" disabled>
+                      No facilities available. Create one in the Datacenter panel.
+                    </SelectItem>
+                  ) : (
+                    facilities.map(facility => (
+                      <SelectItem key={facility.id} value={facility.id}>
+                        {facility.name} - {facility.location}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {requirements.selectedFacilityId && (
+                <p className="text-xs text-muted-foreground">
+                  Facility costs will be calculated based on the selected datacenter's configuration.
+                </p>
+              )}
             </div>
-            <Switch
-              checked={requirements.useColoRacks || false}
-              onCheckedChange={handleSwitchChange}
-            />
-          </FormItem>
+          )}
           
           <div className="grid grid-cols-3 gap-4 mt-4">
-            {requirements.useColoRacks && (
+            {requirements.facilityType === 'colocation' && (
               <div className="space-y-2">
                 <Label htmlFor="rackCostPerMonthEuros">Rack Cost per Month (€)</Label>
                 <Input
@@ -224,19 +307,21 @@ export const PhysicalConstraintsForm: React.FC<PhysicalConstraintsProps> = ({
               </div>
             )}
             
-            <div className="space-y-2">
-              <Label htmlFor="electricityPricePerKwh">Energy Price (€/kWh)</Label>
-              <Input
-                id="electricityPricePerKwh"
-                name="electricityPricePerKwh"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.25"
-                value={requirements.electricityPricePerKwh === undefined ? 0.25 : requirements.electricityPricePerKwh}
-                onChange={handleFloatInputChange}
-              />
-            </div>
+            {requirements.facilityType !== 'owned' && (
+              <div className="space-y-2">
+                <Label htmlFor="electricityPricePerKwh">Energy Price (€/kWh)</Label>
+                <Input
+                  id="electricityPricePerKwh"
+                  name="electricityPricePerKwh"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.25"
+                  value={requirements.electricityPricePerKwh === undefined ? 0.25 : requirements.electricityPricePerKwh}
+                  onChange={handleFloatInputChange}
+                />
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="operationalLoadPercentage">Operational Load (%)</Label>
