@@ -103,7 +103,7 @@ export class AutomatedPlacementService {
       const isStorage = typeLabel.includes('storage') || (component.role && component.role.toLowerCase().includes('storage'));
       // Check if this is a compute cluster component - rely primarily on role
       const isComputeCluster = component.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role);
-      const clusterId = component.clusterId || component.clusterInfo?.clusterId;
+      const clusterId = component.clusterId || component.clusterInfo?.clusterId || (component.clusterInfo && 'clusterId' in component.clusterInfo ? component.clusterInfo.clusterId : undefined);
       
       // Debug logging to understand clustering
       if (component.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role)) {

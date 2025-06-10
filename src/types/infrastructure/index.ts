@@ -16,3 +16,4 @@ export * from './transceiver-types';
 export * from './connection-types';
 export * from './licensing-types';
 export * from './pricing-types';
+export * from './datacenter-types';

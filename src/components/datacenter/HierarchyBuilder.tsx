@@ -1,0 +1,375 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Plus, Edit2, Trash2, Building, Home, Server, Grid3x3, Box, AlertCircle } from 'lucide-react';
+import { DatacenterFacility, HierarchyLevel } from '@/types/infrastructure/datacenter-types';
+import { cn } from '@/lib/utils';
+import { useDrag, useDrop, DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+
+interface HierarchyBuilderProps {
+  facility: DatacenterFacility;
+  onUpdate: (facility: DatacenterFacility) => void;
+}
+
+interface HierarchyNodeProps {
+  level: HierarchyLevel;
+  allLevels: HierarchyLevel[];
+  onEdit: (level: HierarchyLevel) => void;
+  onDelete: (levelId: string) => void;
+  onMove: (draggedId: string, targetId: string | null) => void;
+  depth?: number;
+}
+
+const hierarchyIcons = {
+  'Building': Building,
+  'Floor': Home,
+  'Hall': Grid3x3,
+  'Pod': Server,
+  'Row': Box,
+  'Rack': Server
+};
+
+const HierarchyNode: React.FC<HierarchyNodeProps> = ({ 
+  level, 
+  allLevels, 
+  onEdit, 
+  onDelete, 
+  onMove,
+  depth = 0 
+}) => {
+  const children = allLevels.filter(l => l.parentId === level.id);
+  const Icon = hierarchyIcons[level.name as keyof typeof hierarchyIcons] || Box;
+
+  const [{ isDragging }, drag] = useDrag({
+    type: 'HIERARCHY_LEVEL',
+    item: { id: level.id },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [{ isOver, canDrop }, drop] = useDrop({
+    accept: 'HIERARCHY_LEVEL',
+    drop: (item: { id: string }) => {
+      if (item.id !== level.id) {
+        onMove(item.id, level.id);
+      }
+    },
+    canDrop: (item: { id: string }) => {
+      // Prevent dropping a parent onto its own child
+      const isDescendant = (parentId: string, childId: string): boolean => {
+        const child = allLevels.find(l => l.id === childId);
+        if (!child) return false;
+        if (child.parentId === parentId) return true;
+        if (child.parentId) return isDescendant(parentId, child.parentId);
+        return false;
+      };
+      return item.id !== level.id && !isDescendant(item.id, level.id);
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  });
+
+  const dragDropRef = (el: HTMLDivElement | null) => {
+    drag(el);
+    drop(el);
+  };
+
+  return (
+    <div className="relative">
+      <div
+        ref={dragDropRef}
+        className={cn(
+          "flex items-center gap-2 p-3 rounded-md border bg-card transition-all cursor-move",
+          isDragging && "opacity-50",
+          isOver && canDrop && "border-primary bg-primary/5",
+          isOver && !canDrop && "border-destructive bg-destructive/5"
+        )}
+        style={{ marginLeft: `${depth * 24}px` }}
+      >
+        <Icon className="w-4 h-4 text-muted-foreground" />
+        <span className="font-medium flex-1">{level.name}</span>
+        {level.customAttributes && Object.keys(level.customAttributes).length > 0 && (
+          <Badge variant="outline" className="text-xs">
+            {Object.keys(level.customAttributes).length} attrs
+          </Badge>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(level);
+          }}
+        >
+          <Edit2 className="w-3 h-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(level.id);
+          }}
+        >
+          <Trash2 className="w-3 h-3" />
+        </Button>
+      </div>
+      {children.length > 0 && (
+        <div className="mt-2">
+          {children.map(child => (
+            <HierarchyNode
+              key={child.id}
+              level={child}
+              allLevels={allLevels}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onMove={onMove}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, onUpdate }) => {
+  const [editingLevel, setEditingLevel] = useState<HierarchyLevel | null>(null);
+  const [isAddingLevel, setIsAddingLevel] = useState(false);
+  const [newLevelName, setNewLevelName] = useState('');
+  const [newLevelParentId, setNewLevelParentId] = useState<string | undefined>(undefined);
+  const [customAttributes, setCustomAttributes] = useState<Record<string, string>>({});
+
+  const rootLevels = facility.hierarchyConfig.filter(l => !l.parentId);
+
+  const handleAddLevel = () => {
+    if (!newLevelName.trim()) return;
+
+    const newLevel: HierarchyLevel = {
+      id: `level-${Date.now()}`,
+      name: newLevelName.trim(),
+      parentId: newLevelParentId,
+      customAttributes: Object.keys(customAttributes).length > 0 ? customAttributes : undefined
+    };
+
+    onUpdate({
+      ...facility,
+      hierarchyConfig: [...facility.hierarchyConfig, newLevel]
+    });
+
+    setNewLevelName('');
+    setNewLevelParentId(undefined);
+    setCustomAttributes({});
+    setIsAddingLevel(false);
+  };
+
+  const handleEditLevel = (level: HierarchyLevel) => {
+    const updatedLevels = facility.hierarchyConfig.map(l => 
+      l.id === level.id ? level : l
+    );
+    onUpdate({
+      ...facility,
+      hierarchyConfig: updatedLevels
+    });
+    setEditingLevel(null);
+  };
+
+  const handleDeleteLevel = (levelId: string) => {
+    // Delete the level and all its children
+    const deleteRecursive = (id: string): string[] => {
+      const children = facility.hierarchyConfig.filter(l => l.parentId === id);
+      const childIds = children.flatMap(child => deleteRecursive(child.id));
+      return [id, ...childIds];
+    };
+
+    const idsToDelete = deleteRecursive(levelId);
+    const updatedLevels = facility.hierarchyConfig.filter(l => !idsToDelete.includes(l.id));
+    
+    onUpdate({
+      ...facility,
+      hierarchyConfig: updatedLevels
+    });
+  };
+
+  const handleMoveLevel = (draggedId: string, targetId: string | null) => {
+    const updatedLevels = facility.hierarchyConfig.map(level => {
+      if (level.id === draggedId) {
+        return { ...level, parentId: targetId };
+      }
+      return level;
+    });
+    
+    onUpdate({
+      ...facility,
+      hierarchyConfig: updatedLevels
+    });
+  };
+
+  // Add default hierarchy template
+  const addDefaultHierarchy = () => {
+    const defaultHierarchy: HierarchyLevel[] = [
+      { id: 'building-1', name: 'Building', parentId: undefined },
+      { id: 'floor-1', name: 'Floor', parentId: 'building-1' },
+      { id: 'hall-1', name: 'Hall', parentId: 'floor-1' },
+      { id: 'pod-1', name: 'Pod', parentId: 'hall-1' },
+      { id: 'row-1', name: 'Row', parentId: 'pod-1' },
+    ];
+    
+    onUpdate({
+      ...facility,
+      hierarchyConfig: defaultHierarchy
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle>Space Hierarchy</CardTitle>
+          <div className="flex gap-2">
+            {facility.hierarchyConfig.length === 0 && (
+              <Button variant="outline" size="sm" onClick={addDefaultHierarchy}>
+                Use Default Template
+              </Button>
+            )}
+            <Button size="sm" onClick={() => setIsAddingLevel(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Level
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {facility.hierarchyConfig.length === 0 ? (
+          <div className="text-center py-8">
+            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground mb-4">
+              No hierarchy levels defined. Add levels to organize your datacenter space.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Typical hierarchy: Building → Floor → Hall → Pod → Row → Rack
+            </p>
+          </div>
+        ) : (
+          <DndProvider backend={HTML5Backend}>
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-2">
+                {rootLevels.map(level => (
+                  <HierarchyNode
+                    key={level.id}
+                    level={level}
+                    allLevels={facility.hierarchyConfig}
+                    onEdit={setEditingLevel}
+                    onDelete={handleDeleteLevel}
+                    onMove={handleMoveLevel}
+                  />
+                ))}
+              </div>
+            </ScrollArea>
+          </DndProvider>
+        )}
+
+        {/* Add Level Dialog */}
+        <Dialog open={isAddingLevel} onOpenChange={setIsAddingLevel}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Hierarchy Level</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="level-name">Level Name</Label>
+                <Input
+                  id="level-name"
+                  value={newLevelName}
+                  onChange={(e) => setNewLevelName(e.target.value)}
+                  placeholder="e.g., Building, Floor, Hall"
+                />
+              </div>
+              <div>
+                <Label htmlFor="parent-level">Parent Level (Optional)</Label>
+                <select
+                  id="parent-level"
+                  className="w-full p-2 border rounded-md"
+                  value={newLevelParentId || ''}
+                  onChange={(e) => setNewLevelParentId(e.target.value || undefined)}
+                >
+                  <option value="">None (Root Level)</option>
+                  {facility.hierarchyConfig.map(level => (
+                    <option key={level.id} value={level.id}>
+                      {level.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddingLevel(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddLevel}>Add Level</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Level Dialog */}
+        <Dialog open={!!editingLevel} onOpenChange={() => setEditingLevel(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Hierarchy Level</DialogTitle>
+            </DialogHeader>
+            {editingLevel && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-level-name">Level Name</Label>
+                  <Input
+                    id="edit-level-name"
+                    value={editingLevel.name}
+                    onChange={(e) => setEditingLevel({ ...editingLevel, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-parent-level">Parent Level</Label>
+                  <select
+                    id="edit-parent-level"
+                    className="w-full p-2 border rounded-md"
+                    value={editingLevel.parentId || ''}
+                    onChange={(e) => setEditingLevel({ 
+                      ...editingLevel, 
+                      parentId: e.target.value || undefined 
+                    })}
+                  >
+                    <option value="">None (Root Level)</option>
+                    {facility.hierarchyConfig
+                      .filter(level => level.id !== editingLevel.id)
+                      .map(level => (
+                        <option key={level.id} value={level.id}>
+                          {level.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingLevel(null)}>
+                Cancel
+              </Button>
+              <Button onClick={() => editingLevel && handleEditLevel(editingLevel)}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
+  );
+};
