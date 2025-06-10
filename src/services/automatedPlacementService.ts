@@ -108,26 +108,47 @@ export class AutomatedPlacementService {
       
       // Fix missing cluster information for controller and infrastructure nodes
       if (isComputeCluster && !clusterId) {
-        if (component.role === 'controllerNode') {
-          clusterId = 'controller-cluster';
-          console.warn(`Component ${component.name} missing cluster info, setting to controller-cluster`);
+        // For controller and infrastructure nodes, we need to find the role ID to use as cluster ID
+        // This matches the logic in PlacementRulesDialog.tsx
+        const designState = useDesignStore.getState();
+        const matchingRole = designState.activeDesign?.componentRoles?.find(role => 
+          role.role === component.role && 
+          role.assignedComponentId // Only consider roles that have assigned components
+        );
+        
+        if (matchingRole) {
+          // Use the role ID as cluster ID to match placement rules
+          clusterId = matchingRole.id;
+          console.warn(`Component ${component.name} missing cluster info, setting clusterId to role ID: ${clusterId}`);
+          
           // Add the cluster info to the component for downstream processing
           (component as any).clusterId = clusterId;
-          (component as any).clusterInfo = {
-            clusterId: 'controller-cluster',
-            clusterName: 'Controller Cluster',
+          (component as any).clusterInfo = matchingRole.clusterInfo || {
+            clusterId: clusterId,
+            clusterName: component.role === 'controllerNode' ? 'Controller Cluster' : 'Infrastructure Cluster',
             clusterIndex: 0
           };
-        } else if (component.role === 'infrastructureNode') {
-          clusterId = 'infrastructure-cluster';
-          console.warn(`Component ${component.name} missing cluster info, setting to infrastructure-cluster`);
-          // Add the cluster info to the component for downstream processing
-          (component as any).clusterId = clusterId;
-          (component as any).clusterInfo = {
-            clusterId: 'infrastructure-cluster',
-            clusterName: 'Infrastructure Cluster',
-            clusterIndex: 0
-          };
+        } else {
+          // Fallback to hardcoded cluster IDs if no matching role found
+          if (component.role === 'controllerNode') {
+            clusterId = 'controller-cluster';
+            console.warn(`Component ${component.name} missing cluster info and no matching role found, setting to controller-cluster`);
+            (component as any).clusterId = clusterId;
+            (component as any).clusterInfo = {
+              clusterId: 'controller-cluster',
+              clusterName: 'Controller Cluster',
+              clusterIndex: 0
+            };
+          } else if (component.role === 'infrastructureNode') {
+            clusterId = 'infrastructure-cluster';
+            console.warn(`Component ${component.name} missing cluster info and no matching role found, setting to infrastructure-cluster`);
+            (component as any).clusterId = clusterId;
+            (component as any).clusterInfo = {
+              clusterId: 'infrastructure-cluster',
+              clusterName: 'Infrastructure Cluster',
+              clusterIndex: 0
+            };
+          }
         }
       }
       
