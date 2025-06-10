@@ -162,7 +162,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           location: updates.location,
           description: updates.description,
           constraints: updates.constraints,
-          updated_at: new Date().toISOString()
+          updatedAt: new Date().toISOString()
         })
         .eq('id', id)
         .eq('createdBy', (await supabase.auth.getUser()).data.user?.id);
