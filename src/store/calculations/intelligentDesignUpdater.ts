@@ -218,6 +218,8 @@ export class IntelligentDesignUpdater {
           id: uuidv4(),
           name: instanceName,
           templateId: componentTemplate.id,
+          clusterInfo: role.clusterInfo,
+          clusterId: role.clusterInfo?.clusterId,
           quantity: 1,
           role: role.role,
           ruSize: componentTemplate.ruSize,

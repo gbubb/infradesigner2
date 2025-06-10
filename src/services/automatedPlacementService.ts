@@ -9,6 +9,7 @@ import { placePatchPanel } from './placement/patchPanelPlacement';
 import { placeCoreDevice } from './placement/coreDevicePlacement';
 import { placeComputeLike } from './placement/computePlacement';
 import { placeDefaultDevice } from './placement/defaultDevicePlacement';
+import { placeStorageCluster } from './placement/storageClusterPlacement';
 
 export interface PlacementReportItem {
   deviceName: string;
@@ -81,9 +82,59 @@ export class AutomatedPlacementService {
     // For generated instance names
     const typeCounters: Record<string, number> = {};
 
+    // Group storage components by cluster for even distribution
+    const storageClusterMap = new Map<string, typeof components>();
+    const standaloneComponents: typeof components = [];
+    
     // Main placement loop: filter out devices already placed (user/manual placement protection)
     const toPlaceComponents = components.filter(c => !placedDeviceIds.has(c.id));
-    for (const component of toPlaceComponents) {
+    
+    // Separate storage cluster components from standalone components
+    toPlaceComponents.forEach(component => {
+      const typeLabel = getTypeKey(component);
+      const isStorage = typeLabel.includes('storage') || (component.role && component.role.toLowerCase().includes('storage'));
+      const clusterId = component.clusterId || component.clusterInfo?.clusterId;
+      
+      if (isStorage && clusterId) {
+        if (!storageClusterMap.has(clusterId)) {
+          storageClusterMap.set(clusterId, []);
+        }
+        storageClusterMap.get(clusterId)!.push(component);
+      } else {
+        standaloneComponents.push(component);
+      }
+    });
+    
+    // Place storage clusters first with even distribution
+    const placedStorageNodeIds = new Set<string>();
+    for (const [clusterId, clusterComponents] of storageClusterMap) {
+      const clusterAZs = allowedAZsMap[clusterId] || allAZs.filter(id => id !== coreAZId);
+      const { placementReports } = placeStorageCluster({
+        clusterComponents,
+        allowedAZs: clusterAZs,
+        computeRacks,
+        state,
+        typeCounters
+      });
+      
+      placementReports.forEach(report => {
+        totalDevices++;
+        if (report.status === 'placed') {
+          placedDevices++;
+          const component = clusterComponents.find(c => c.name === report.deviceName);
+          if (component) {
+            placedStorageNodeIds.add(component.id);
+          }
+        } else {
+          failedDevices++;
+        }
+        placementResult.items.push(report);
+      });
+    }
+    
+    // Continue with standalone components
+    const remainingComponents = standaloneComponents.filter(c => !placedStorageNodeIds.has(c.id));
+    for (const component of remainingComponents) {
       totalDevices++;
       const typeLabel = getTypeKey(component);
       if (!typeCounters[typeLabel]) typeCounters[typeLabel] = 1;
