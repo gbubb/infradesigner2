@@ -41,7 +41,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           facility_hierarchy (*),
           facility_non_productive_loads (*)
         `)
-        .eq('user_id', userData.user.id)
+        .eq('created_by', userData.user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -95,7 +95,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           location: facilityData.location,
           description: facilityData.description,
           constraints: facilityData.constraints,
-          user_id: userData.user.id
+          created_by: userData.user.id
         })
         .select()
         .single();
@@ -164,7 +164,8 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           constraints: updates.constraints,
           updated_at: new Date().toISOString()
         })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('created_by', (await supabase.auth.getUser()).data.user?.id);
 
       if (facilityError) throw facilityError;
 
@@ -220,7 +221,8 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
       const { error } = await supabase
         .from('facilities')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('created_by', (await supabase.auth.getUser()).data.user?.id);
 
       if (error) throw error;
 

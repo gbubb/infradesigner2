@@ -1,28 +1,81 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Plus, DollarSign, Zap, AlertCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Building2, Plus, DollarSign, Zap, AlertCircle, Edit, Trash2 } from 'lucide-react';
 import { DatacenterFacility } from '@/types/infrastructure/datacenter-types';
 import { HierarchyBuilder } from './HierarchyBuilder';
 import { PowerInfrastructureDesigner } from './PowerInfrastructureDesigner';
 import { CostLayerManager } from './CostLayerManager';
 import { useDesignStore } from '@/store/designStore';
 import { cn } from '@/lib/utils';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { toast } from '@/components/ui/use-toast';
+
+const facilityFormSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  location: z.string().min(1, 'Location is required'),
+  description: z.string().optional()
+});
+
+type FacilityFormData = z.infer<typeof facilityFormSchema>;
 
 export const DatacenterPanel: React.FC = () => {
-  const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
-  const [facilities, setFacilities] = useState<DatacenterFacility[]>([]);
   const [isCreatingFacility, setIsCreatingFacility] = useState(false);
+  const [editingFacility, setEditingFacility] = useState<DatacenterFacility | null>(null);
 
-  // Get active design from store for context
-  const activeDesign = useDesignStore(state => state.activeDesign);
+  // Get state and actions from the facilities slice
+  const {
+    facilities,
+    selectedFacilityId,
+    isLoadingFacilities,
+    facilitiesError,
+    loadFacilities,
+    selectFacility,
+    createFacility,
+    updateFacility,
+    deleteFacility
+  } = useDesignStore();
+
+  // Load facilities on mount
+  useEffect(() => {
+    loadFacilities();
+  }, [loadFacilities]);
 
   // Get selected facility
   const selectedFacility = useMemo(() => {
     return facilities.find(f => f.id === selectedFacilityId);
   }, [facilities, selectedFacilityId]);
+
+  // Form for creating/editing facilities
+  const form = useForm<FacilityFormData>({
+    resolver: zodResolver(facilityFormSchema),
+    defaultValues: {
+      name: '',
+      location: '',
+      description: ''
+    }
+  });
+
+  // Update form when editing a facility
+  useEffect(() => {
+    if (editingFacility) {
+      form.reset({
+        name: editingFacility.name,
+        location: editingFacility.location,
+        description: editingFacility.description || ''
+      });
+    } else {
+      form.reset({ name: '', location: '', description: '' });
+    }
+  }, [editingFacility, form]);
 
   // Calculate facility-level metrics
   const facilityMetrics = useMemo(() => {
@@ -63,30 +116,90 @@ export const DatacenterPanel: React.FC = () => {
   }, [selectedFacility]);
 
   const handleCreateFacility = () => {
-    const newFacility: DatacenterFacility = {
-      id: `facility-${Date.now()}`,
-      name: 'New Datacenter',
-      location: 'Location TBD',
-      hierarchyConfig: [],
-      powerInfrastructure: [],
-      costLayers: [],
-      constraints: {
-        maxPowerKW: 0,
-        maxCoolingKW: 0,
-        maxRacks: 0,
-        maxFloorLoadingKgPerM2: 0
+    setIsCreatingFacility(true);
+    setEditingFacility(null);
+  };
+
+  const handleEditFacility = (facility: DatacenterFacility) => {
+    setEditingFacility(facility);
+    setIsCreatingFacility(true);
+  };
+
+  const handleDeleteFacility = async (facilityId: string) => {
+    try {
+      await deleteFacility(facilityId);
+      toast({
+        title: 'Success',
+        description: 'Facility deleted successfully'
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete facility',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const onSubmitFacility = async (data: FacilityFormData) => {
+    try {
+      if (editingFacility) {
+        // Update existing facility
+        await updateFacility(editingFacility.id, data);
+        toast({
+          title: 'Success',
+          description: 'Facility updated successfully'
+        });
+      } else {
+        // Create new facility
+        const newFacility = await createFacility({
+          name: data.name,
+          location: data.location,
+          description: data.description,
+          hierarchyConfig: [],
+          powerInfrastructure: [],
+          costLayers: [],
+          constraints: {
+            maxPowerKW: 0,
+            maxCoolingKW: 0,
+            maxRacks: 0,
+            maxFloorLoadingKgPerM2: 0
+          }
+        });
+        selectFacility(newFacility.id);
+        toast({
+          title: 'Success',
+          description: 'Facility created successfully'
+        });
       }
-    };
-    setFacilities([...facilities, newFacility]);
-    setSelectedFacilityId(newFacility.id);
-    setIsCreatingFacility(false);
+      setIsCreatingFacility(false);
+      setEditingFacility(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: editingFacility ? 'Failed to update facility' : 'Failed to create facility',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleUpdateFacility = (updatedFacility: DatacenterFacility) => {
-    setFacilities(facilities.map(f => 
-      f.id === updatedFacility.id ? updatedFacility : f
-    ));
+    updateFacility(updatedFacility.id, updatedFacility);
   };
+
+  if (isLoadingFacilities) {
+    return (
+      <div className="w-full p-6">
+        <h2 className="text-2xl font-semibold mb-6">Datacenter Facilities</h2>
+        <Card>
+          <CardContent className="p-12 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading facilities...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (facilities.length === 0 && !isCreatingFacility) {
     return (
@@ -99,12 +212,72 @@ export const DatacenterPanel: React.FC = () => {
             <p className="text-muted-foreground mb-4">
               Create your first datacenter facility to model costs and capacity.
             </p>
-            <Button onClick={() => setIsCreatingFacility(true)}>
+            <Button onClick={handleCreateFacility}>
               <Plus className="w-4 h-4 mr-2" />
               Create Facility
             </Button>
           </CardContent>
         </Card>
+        
+        {/* Facility Form Dialog */}
+        <Dialog open={isCreatingFacility} onOpenChange={setIsCreatingFacility}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingFacility ? 'Edit Facility' : 'Create New Facility'}</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmitFacility)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter facility name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter facility location" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter facility description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsCreatingFacility(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    {editingFacility ? 'Update' : 'Create'} Facility
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -129,17 +302,41 @@ export const DatacenterPanel: React.FC = () => {
                 "cursor-pointer transition-colors",
                 selectedFacilityId === facility.id && "border-primary"
               )}
-              onClick={() => setSelectedFacilityId(facility.id)}
+              onClick={() => selectFacility(facility.id)}
             >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="flex-1">
                     <h4 className="font-medium">{facility.name}</h4>
                     <p className="text-sm text-muted-foreground">{facility.location}</p>
                   </div>
-                  {selectedFacilityId === facility.id && (
-                    <Badge variant="default" className="ml-2">Active</Badge>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {selectedFacilityId === facility.id && (
+                      <Badge variant="default" className="ml-2">Active</Badge>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditFacility(facility);
+                      }}
+                    >
+                      <Edit className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('Are you sure you want to delete this facility?')) {
+                          handleDeleteFacility(facility.id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="mt-2 flex gap-2">
                   <Badge variant="outline" className="text-xs">
@@ -250,6 +447,66 @@ export const DatacenterPanel: React.FC = () => {
           )}
         </div>
       </div>
+      
+      {/* Facility Form Dialog */}
+      <Dialog open={isCreatingFacility} onOpenChange={setIsCreatingFacility}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingFacility ? 'Edit Facility' : 'Create New Facility'}</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmitFacility)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter facility name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter facility location" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter facility description" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsCreatingFacility(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {editingFacility ? 'Update' : 'Create'} Facility
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
