@@ -65,7 +65,12 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
       id: uuidv4(),
       role: 'controllerNode',
       description: 'Handles cluster management and monitoring',
-      requiredCount: controllerNodeCount
+      requiredCount: controllerNodeCount,
+      clusterInfo: {
+        clusterId: 'controller-cluster',
+        clusterName: 'Controller Cluster',
+        clusterIndex: 0
+      }
     }
   ];
   
@@ -131,7 +136,12 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
       id: uuidv4(),
       role: 'infrastructureNode',
       description: 'Provides infrastructure services for the cluster',
-      requiredCount: infrastructureNodeCount
+      requiredCount: infrastructureNodeCount,
+      clusterInfo: {
+        clusterId: 'infrastructure-cluster',
+        clusterName: 'Infrastructure Cluster',
+        clusterIndex: 0
+      }
     });
   }
   

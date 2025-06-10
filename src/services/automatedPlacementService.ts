@@ -10,6 +10,7 @@ import { placeCoreDevice } from './placement/coreDevicePlacement';
 import { placeComputeLike } from './placement/computePlacement';
 import { placeDefaultDevice } from './placement/defaultDevicePlacement';
 import { placeStorageCluster } from './placement/storageClusterPlacement';
+import { placeComputeCluster } from './placement/computeClusterPlacement';
 
 export interface PlacementReportItem {
   deviceName: string;
@@ -82,17 +83,21 @@ export class AutomatedPlacementService {
     // For generated instance names
     const typeCounters: Record<string, number> = {};
 
-    // Group storage components by cluster for even distribution
+    // Group storage and compute components by cluster for even distribution
     const storageClusterMap = new Map<string, typeof components>();
+    const computeClusterMap = new Map<string, typeof components>();
     const standaloneComponents: typeof components = [];
     
     // Main placement loop: filter out devices already placed (user/manual placement protection)
     const toPlaceComponents = components.filter(c => !placedDeviceIds.has(c.id));
     
-    // Separate storage cluster components from standalone components
+    // Separate cluster components from standalone components
     toPlaceComponents.forEach(component => {
       const typeLabel = getTypeKey(component);
       const isStorage = typeLabel.includes('storage') || (component.role && component.role.toLowerCase().includes('storage'));
+      const isComputeCluster = (typeLabel.includes('compute') || typeLabel.includes('controller') || 
+                               typeLabel.includes('infrastructure') || typeLabel.includes('gpu')) && 
+                              (component.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role));
       const clusterId = component.clusterId || component.clusterInfo?.clusterId;
       
       if (isStorage && clusterId) {
@@ -100,13 +105,18 @@ export class AutomatedPlacementService {
           storageClusterMap.set(clusterId, []);
         }
         storageClusterMap.get(clusterId)!.push(component);
+      } else if (isComputeCluster && clusterId) {
+        if (!computeClusterMap.has(clusterId)) {
+          computeClusterMap.set(clusterId, []);
+        }
+        computeClusterMap.get(clusterId)!.push(component);
       } else {
         standaloneComponents.push(component);
       }
     });
     
     // Place storage clusters first with even distribution
-    const placedStorageNodeIds = new Set<string>();
+    const placedClusterNodeIds = new Set<string>();
     for (const [clusterId, clusterComponents] of storageClusterMap) {
       const clusterAZs = allowedAZsMap[clusterId] || allAZs.filter(id => id !== coreAZId);
       const { placementReports } = placeStorageCluster({
@@ -123,7 +133,33 @@ export class AutomatedPlacementService {
           placedDevices++;
           const component = clusterComponents.find(c => c.name === report.deviceName);
           if (component) {
-            placedStorageNodeIds.add(component.id);
+            placedClusterNodeIds.add(component.id);
+          }
+        } else {
+          failedDevices++;
+        }
+        placementResult.items.push(report);
+      });
+    }
+    
+    // Place compute clusters with even distribution
+    for (const [clusterId, clusterComponents] of computeClusterMap) {
+      const clusterAZs = allowedAZsMap[clusterId] || allAZs.filter(id => id !== coreAZId);
+      const { placementReports } = placeComputeCluster({
+        clusterComponents,
+        allowedAZs: clusterAZs,
+        computeRacks,
+        state,
+        typeCounters
+      });
+      
+      placementReports.forEach(report => {
+        totalDevices++;
+        if (report.status === 'placed') {
+          placedDevices++;
+          const component = clusterComponents.find(c => c.name === report.deviceName);
+          if (component) {
+            placedClusterNodeIds.add(component.id);
           }
         } else {
           failedDevices++;
@@ -133,7 +169,7 @@ export class AutomatedPlacementService {
     }
     
     // Continue with standalone components
-    const remainingComponents = standaloneComponents.filter(c => !placedStorageNodeIds.has(c.id));
+    const remainingComponents = standaloneComponents.filter(c => !placedClusterNodeIds.has(c.id));
     for (const component of remainingComponents) {
       totalDevices++;
       const typeLabel = getTypeKey(component);
