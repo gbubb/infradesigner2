@@ -41,8 +41,8 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           facility_hierarchy (*),
           facility_non_productive_loads (*)
         `)
-        .eq('created_by', userData.user.id)
-        .order('created_at', { ascending: false });
+        .eq('createdBy', userData.user.id)
+        .order('createdAt', { ascending: false });
 
       if (error) throw error;
 
@@ -61,8 +61,8 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
         },
         nonProductiveLoads: facility.facility_non_productive_loads || [],
         metadata: {
-          createdAt: facility.created_at,
-          updatedAt: facility.updated_at
+          createdAt: facility.createdAt,
+          updatedAt: facility.updatedAt
         }
       }));
 
@@ -95,7 +95,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           location: facilityData.location,
           description: facilityData.description,
           constraints: facilityData.constraints,
-          created_by: userData.user.id
+          createdBy: userData.user.id
         })
         .select()
         .single();
@@ -109,7 +109,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           .insert(
             facilityData.powerInfrastructure.map(layer => ({
               ...layer,
-              facility_id: facility.id
+              facilityId: facility.id
             }))
           );
         if (powerError) throw powerError;
@@ -121,7 +121,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           .insert(
             facilityData.costLayers.map(layer => ({
               ...layer,
-              facility_id: facility.id
+              facilityId: facility.id
             }))
           );
         if (costError) throw costError;
@@ -133,7 +133,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           .insert(
             facilityData.hierarchyConfig.map(level => ({
               ...level,
-              facility_id: facility.id
+              facilityId: facility.id
             }))
           );
         if (hierarchyError) throw hierarchyError;
@@ -165,7 +165,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
-        .eq('created_by', (await supabase.auth.getUser()).data.user?.id);
+        .eq('createdBy', (await supabase.auth.getUser()).data.user?.id);
 
       if (facilityError) throw facilityError;
 
@@ -176,7 +176,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
         await supabase
           .from('facility_power_layers')
           .delete()
-          .eq('facility_id', id);
+          .eq('facilityId', id);
         
         if (updates.powerInfrastructure.length > 0) {
           await supabase
@@ -184,7 +184,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
             .insert(
               updates.powerInfrastructure.map(layer => ({
                 ...layer,
-                facility_id: id
+                facilityId: id
               }))
             );
         }
@@ -194,7 +194,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
         await supabase
           .from('facility_cost_layers')
           .delete()
-          .eq('facility_id', id);
+          .eq('facilityId', id);
         
         if (updates.costLayers.length > 0) {
           await supabase
@@ -202,7 +202,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
             .insert(
               updates.costLayers.map(layer => ({
                 ...layer,
-                facility_id: id
+                facilityId: id
               }))
             );
         }
@@ -222,7 +222,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
         .from('facilities')
         .delete()
         .eq('id', id)
-        .eq('created_by', (await supabase.auth.getUser()).data.user?.id);
+        .eq('createdBy', (await supabase.auth.getUser()).data.user?.id);
 
       if (error) throw error;
 
