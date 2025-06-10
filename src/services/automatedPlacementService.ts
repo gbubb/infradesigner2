@@ -65,6 +65,7 @@ export class AutomatedPlacementService {
         allowedAZsMap[a.clusterId] = a.selectedAZs;
         console.log(`Cluster ${a.clusterId} (${a.clusterName}) allowed AZs:`, a.selectedAZs);
       });
+      console.log('Final allowedAZsMap:', allowedAZsMap);
     } else {
       console.log('No placement rules provided');
     }
@@ -103,11 +104,45 @@ export class AutomatedPlacementService {
       const isStorage = typeLabel.includes('storage') || (component.role && component.role.toLowerCase().includes('storage'));
       // Check if this is a compute cluster component - rely primarily on role
       const isComputeCluster = component.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role);
-      const clusterId = component.clusterId || component.clusterInfo?.clusterId || (component.clusterInfo && 'clusterId' in component.clusterInfo ? component.clusterInfo.clusterId : undefined);
+      let clusterId = component.clusterId || component.clusterInfo?.clusterId || (component.clusterInfo && 'clusterId' in component.clusterInfo ? component.clusterInfo.clusterId : undefined);
       
-      // Debug logging to understand clustering
+      // Fix missing cluster information for controller and infrastructure nodes
+      if (isComputeCluster && !clusterId) {
+        if (component.role === 'controllerNode') {
+          clusterId = 'controller-cluster';
+          console.warn(`Component ${component.name} missing cluster info, setting to controller-cluster`);
+          // Add the cluster info to the component for downstream processing
+          (component as any).clusterId = clusterId;
+          (component as any).clusterInfo = {
+            clusterId: 'controller-cluster',
+            clusterName: 'Controller Cluster',
+            clusterIndex: 0
+          };
+        } else if (component.role === 'infrastructureNode') {
+          clusterId = 'infrastructure-cluster';
+          console.warn(`Component ${component.name} missing cluster info, setting to infrastructure-cluster`);
+          // Add the cluster info to the component for downstream processing
+          (component as any).clusterId = clusterId;
+          (component as any).clusterInfo = {
+            clusterId: 'infrastructure-cluster',
+            clusterName: 'Infrastructure Cluster',
+            clusterIndex: 0
+          };
+        }
+      }
+      
+      // Enhanced debug logging to understand clustering - show all properties
       if (component.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role)) {
-        console.log(`Component ${component.name}: role=${component.role}, typeLabel=${typeLabel}, isComputeCluster=${isComputeCluster}, clusterId=${clusterId}, clusterInfo=`, component.clusterInfo);
+        console.log(`Component ${component.name}:`);
+        console.log(`  role=${component.role}`);
+        console.log(`  typeLabel=${typeLabel}`);
+        console.log(`  isComputeCluster=${isComputeCluster}`);
+        console.log(`  clusterId=${clusterId}`);
+        console.log(`  component.clusterId=${component.clusterId}`);
+        console.log(`  component.clusterInfo=`, component.clusterInfo);
+        console.log(`  component.templateId=${component.templateId}`);
+        console.log(`  component.id=${component.id}`);
+        console.log('  Full component:', JSON.stringify(component, null, 2));
       }
       
       if (isStorage && clusterId) {
