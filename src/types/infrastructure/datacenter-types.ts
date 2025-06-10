@@ -135,6 +135,16 @@ export interface CostLayerBreakdown {
   allocatedToRacks: Record<string, number>; // rackId -> cost
 }
 
+export interface CostAllocation {
+  layerId: string;
+  layerName: string;
+  type: 'capital' | 'operational';
+  monthlyAmount: number;
+  allocationMethod: AllocationMethod;
+  allocatedByRack: number;
+  allocatedByPower: number;
+}
+
 export interface PowerEfficiencyMetrics {
   pue: number; // Power Usage Effectiveness
   dcie: number; // Data Center Infrastructure Efficiency (1/PUE)

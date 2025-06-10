@@ -10,6 +10,7 @@ import { ClusterAnalysisCard } from './ClusterAnalysisCard';
 import { OperationalCostAlignmentCard, OverallSummaryCard } from './ModelSummaryCards';
 import { ScenarioTab } from './ScenarioTab';
 import { PowerPredictionTab } from './power/PowerPredictionTab';
+import { DatacenterAnalyticsTab } from './datacenter/DatacenterAnalyticsTab';
 
 export const ModelPanel: React.FC = () => {
   const { requirements } = useDesignStore();
@@ -373,10 +374,11 @@ export const ModelPanel: React.FC = () => {
       <h2 className="text-2xl font-semibold mb-4">Model</h2>
       
       <Tabs defaultValue="revenue" className="w-full">
-        <TabsList className="grid w-full max-w-[600px] grid-cols-3">
+        <TabsList className="grid w-full max-w-[800px] grid-cols-4">
           <TabsTrigger value="revenue">Revenue Model</TabsTrigger>
           <TabsTrigger value="scenario">Scenario</TabsTrigger>
           <TabsTrigger value="power">Power Prediction</TabsTrigger>
+          <TabsTrigger value="datacenter">Datacenter</TabsTrigger>
         </TabsList>
         
         <TabsContent value="revenue" className="mt-6">
@@ -446,6 +448,10 @@ export const ModelPanel: React.FC = () => {
         
         <TabsContent value="power" className="mt-6">
           <PowerPredictionTab />
+        </TabsContent>
+        
+        <TabsContent value="datacenter" className="mt-6">
+          <DatacenterAnalyticsTab />
         </TabsContent>
       </Tabs>
     </div>
