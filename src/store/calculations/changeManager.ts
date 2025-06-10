@@ -89,50 +89,49 @@ export class ChangeManager {
   static detectChanges(oldRequirements: DesignRequirements, newRequirements: DesignRequirements): ChangeType[] {
     const changes: ChangeType[] = [];
     
-
     // Check compute capacity changes
     if (this.hasComputeChanges(oldRequirements.computeRequirements, newRequirements.computeRequirements)) {
-      console.log('ChangeManager: Compute capacity changes detected');
+      // console.log('ChangeManager: Compute capacity changes detected');
       changes.push(ChangeType.COMPUTE_CAPACITY);
     }
 
     // Check storage capacity changes
     if (this.hasStorageChanges(oldRequirements.storageRequirements, newRequirements.storageRequirements)) {
-      console.log('ChangeManager: Storage capacity changes detected');
+      // console.log('ChangeManager: Storage capacity changes detected');
       changes.push(ChangeType.STORAGE_CAPACITY);
     }
 
     // Check network configuration changes
     if (this.hasNetworkChanges(oldRequirements.networkRequirements, newRequirements.networkRequirements)) {
-      console.log('ChangeManager: Network configuration changes detected');
+      // console.log('ChangeManager: Network configuration changes detected');
       changes.push(ChangeType.NETWORK_CONFIG);
     }
 
     // Check physical constraint changes
     if (this.hasPhysicalChanges(oldRequirements.physicalConstraints, newRequirements.physicalConstraints)) {
-      console.log('ChangeManager: Physical constraint changes detected');
+      // console.log('ChangeManager: Physical constraint changes detected');
       changes.push(ChangeType.PHYSICAL_CONSTRAINTS);
     }
 
     // Check GPU requirement changes
     if (this.hasGPUChanges(oldRequirements.computeRequirements, newRequirements.computeRequirements)) {
-      console.log('ChangeManager: GPU requirement changes detected');
+      // console.log('ChangeManager: GPU requirement changes detected');
       changes.push(ChangeType.GPU_REQUIREMENTS);
     }
 
     // Check licensing changes
     if (this.hasLicensingChanges(oldRequirements.licensingRequirements, newRequirements.licensingRequirements)) {
-      console.log('ChangeManager: Licensing changes detected');
+      // console.log('ChangeManager: Licensing changes detected');
       changes.push(ChangeType.LICENSING);
     }
 
     // Check pricing changes
     if (this.hasPricingChanges(oldRequirements.pricingRequirements, newRequirements.pricingRequirements)) {
-      console.log('ChangeManager: Pricing changes detected');
+      // console.log('ChangeManager: Pricing changes detected');
       changes.push(ChangeType.PRICING);
     }
 
-    console.log('ChangeManager: Detected changes:', changes);
+    // console.log('ChangeManager: Detected changes:', changes);
     return changes;
   }
 

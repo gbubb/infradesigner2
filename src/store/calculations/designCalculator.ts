@@ -10,7 +10,7 @@ export const recalculateDesign = () => {
   
   try {
     isRecalculating = true;
-    console.log("Starting design recalculation");
+    // console.log("Starting design recalculation");
     
     const state = useDesignStore.getState();
     
@@ -67,9 +67,9 @@ export const recalculateDesign = () => {
       });
       
       useDesignStore.setState({ componentRoles: updatedRoles });
-      console.log(
-        `Restored assignments to ${updatedRoles.filter(r => r.assignedComponentId).length} roles`
-      );
+      // console.log(
+      //   `Restored assignments to ${updatedRoles.filter(r => r.assignedComponentId).length} roles`
+      // );
       
       if (state.activeDesign.selectedDisksByRole) {
         state.selectedDisksByRole = state.activeDesign.selectedDisksByRole;
@@ -81,8 +81,11 @@ export const recalculateDesign = () => {
       
       updatedRoles.forEach(role => {
         if (role.assignedComponentId) {
+          // console.log(
+          //   `Recalculating quantity for role ${role.role} (${role.description}) with component ${componentTemplate.name}`
+          // );
           const newQuantity = state.calculateRequiredQuantity(role.id, role.assignedComponentId);
-          console.log(`Recalculated ${role.role}: ${newQuantity} units required`);
+          // console.log(`Recalculated ${role.role}: ${newQuantity} units required`);
         }
       });
       
@@ -140,13 +143,13 @@ export const recalculateDesign = () => {
               
               // Debug logging for controller/infrastructure nodes
               if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
-                console.log(`[designCalculator] Creating ${role.role} component:`, {
-                  roleName: role.role,
-                  roleClusterInfo: role.clusterInfo,
-                  componentName: instanceName,
-                  componentClusterInfo: role.clusterInfo,
-                  componentClusterId: role.clusterInfo.clusterId
-                });
+                // console.log(`[designCalculator] Creating ${role.role} component:`, {
+//                   roleName: role.role,
+//                   roleClusterInfo: role.clusterInfo,
+//                   componentName: instanceName,
+//                   componentClusterInfo: role.clusterInfo,
+//                   componentClusterId: role.clusterInfo.clusterId
+//                 });
               }
             }
               instances.push(instanceComponent);
@@ -192,13 +195,13 @@ export const recalculateDesign = () => {
               
               // Debug logging for controller/infrastructure nodes
               if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
-                console.log(`[designCalculator] Creating ${role.role} component:`, {
-                  roleName: role.role,
-                  roleClusterInfo: role.clusterInfo,
-                  componentName: instanceName,
-                  componentClusterInfo: role.clusterInfo,
-                  componentClusterId: role.clusterInfo.clusterId
-                });
+                // console.log(`[designCalculator] Creating ${role.role} component:`, {
+//                   roleName: role.role,
+//                   roleClusterInfo: role.clusterInfo,
+//                   componentName: instanceName,
+//                   componentClusterInfo: role.clusterInfo,
+//                   componentClusterId: role.clusterInfo.clusterId
+//                 });
               }
             }
               instances.push(instanceComponent);
@@ -230,13 +233,13 @@ export const recalculateDesign = () => {
               
               // Debug logging for controller/infrastructure nodes
               if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
-                console.log(`[designCalculator] Creating ${role.role} component:`, {
-                  roleName: role.role,
-                  roleClusterInfo: role.clusterInfo,
-                  componentName: instanceName,
-                  componentClusterInfo: role.clusterInfo,
-                  componentClusterId: role.clusterInfo.clusterId
-                });
+                // console.log(`[designCalculator] Creating ${role.role} component:`, {
+//                   roleName: role.role,
+//                   roleClusterInfo: role.clusterInfo,
+//                   componentName: instanceName,
+//                   componentClusterInfo: role.clusterInfo,
+//                   componentClusterId: role.clusterInfo.clusterId
+//                 });
               }
             }
             instances.push(instanceComponent);
@@ -248,7 +251,7 @@ export const recalculateDesign = () => {
       const finalComponentList = updatedComponentsArray;
 
       if (finalComponentList && finalComponentList.length > 0) {
-        console.log(`Updating active design with ${finalComponentList.length} individual component instances`);
+        // console.log(`Updating active design with ${finalComponentList.length} individual component instances`);
         state.updateActiveDesign(finalComponentList);
       } else {
         console.warn("No components found to update design with");
@@ -263,29 +266,29 @@ export const recalculateDesign = () => {
     toast.error("Error during design recalculation. Please try again.");
   } finally {
     isRecalculating = false;
-    console.log("Design recalculation completed");
+    // console.log("Design recalculation completed");
   }
 };
 
 export const manualRecalculateDesign = () => {
   isRecalculating = false;
-  console.log("Manual recalculation requested");
+  // console.log("Manual recalculation requested");
   
   const state = useDesignStore.getState();
-  console.log("Current calculation state:", {
-    roleCount: state.componentRoles.length,
-    assignedRoles: state.componentRoles.filter(r => r.assignedComponentId).length,
-    hasBreakdowns: Object.keys(state.calculationBreakdowns).length > 0
-  });
+  // console.log("Current calculation state:", {
+  //   roleCount: state.componentRoles.length,
+  //   assignedRoles: state.componentRoles.filter(r => r.assignedComponentId).length,
+  //   hasBreakdowns: Object.keys(state.calculationBreakdowns).length > 0
+  // });
   
   recalculateDesign();
   
-  setTimeout(() => {
-    const newState = useDesignStore.getState();
-    console.log("After recalculation:", {
-      roleCount: newState.componentRoles.length,
-      assignedRoles: newState.componentRoles.filter(r => r.assignedComponentId).length,
-      hasBreakdowns: Object.keys(newState.calculationBreakdowns).length > 0
-    });
-  }, 100);
+  // setTimeout(() => {
+  //   const newState = useDesignStore.getState();
+  //   console.log("After recalculation:", {
+  //     roleCount: newState.componentRoles.length,
+  //     assignedRoles: newState.componentRoles.filter(r => r.assignedComponentId).length,
+  //     hasBreakdowns: Object.keys(newState.calculationBreakdowns).length > 0
+  //   });
+  // }, 100);
 };

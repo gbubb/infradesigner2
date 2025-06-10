@@ -60,14 +60,14 @@ export class AutomatedPlacementService {
     // Map of clusterId -> selected AZs from UI
     const allowedAZsMap: Record<string, string[]> = {};
     if (clusterAZAssignments) {
-      console.log('Placement rules provided:', clusterAZAssignments);
+      // console.log('Placement rules provided:', clusterAZAssignments);
       clusterAZAssignments.forEach(a => { 
         allowedAZsMap[a.clusterId] = a.selectedAZs;
-        console.log(`Cluster ${a.clusterId} (${a.clusterName}) allowed AZs:`, a.selectedAZs);
+        // console.log(`Cluster ${a.clusterId} (${a.clusterName}) allowed AZs:`, a.selectedAZs);
       });
       // console.log('Final allowedAZsMap:', allowedAZsMap);
     } else {
-      console.log('No placement rules provided');
+      // console.log('No placement rules provided');
     }
 
     // For patch panel per-rack report only
@@ -209,11 +209,11 @@ export class AutomatedPlacementService {
     }
     
     // Place compute clusters with even distribution
-    console.log(`Placing compute clusters: ${computeClusterMap.size} clusters found`);
+    // console.log(`Placing compute clusters: ${computeClusterMap.size} clusters found`);
     for (const [clusterId, clusterComponents] of computeClusterMap) {
-      console.log(`Placing compute cluster ${clusterId} with ${clusterComponents.length} components`);
+      // console.log(`Placing compute cluster ${clusterId} with ${clusterComponents.length} components`);
       const clusterAZs = allowedAZsMap[clusterId] || allAZs.filter(id => id !== coreAZId);
-      console.log(`Allowed AZs for cluster ${clusterId}:`, clusterAZs);
+      // console.log(`Allowed AZs for cluster ${clusterId}:`, clusterAZs);
       const { placementReports } = placeComputeCluster({
         clusterComponents,
         allowedAZs: clusterAZs,

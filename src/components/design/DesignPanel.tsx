@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -63,7 +62,7 @@ export const DesignPanel: React.FC = () => {
         
         if (!role.assignedComponentId && existingAssignments[roleKey]) {
           // Restore assignment from activeDesign
-          console.log(`Restoring assignment for ${roleKey} from activeDesign: ${existingAssignments[roleKey]}`);
+          // console.log(`Restoring assignment for ${roleKey} from activeDesign: ${existingAssignments[roleKey]}`);
           assignComponentToRole(role.id, existingAssignments[roleKey]);
         } else if (!role.assignedComponentId) {
           // Only assign defaults if no existing assignment found
@@ -84,15 +83,15 @@ export const DesignPanel: React.FC = () => {
           if (componentType) {
             const defaultComponent = findDefaultComponent(componentType, role.role);
             if (defaultComponent) {
-              console.log(`Assigning default ${componentType} for role ${role.role}: ${defaultComponent.name}`);
+              // console.log(`Assigning default ${componentType} for role ${role.role}: ${defaultComponent.name}`);
               assignComponentToRole(role.id, defaultComponent.id);
             } else {
               const matchingComponents = getComponentsForRole(role.role);
               if (matchingComponents.length > 0) {
-                console.log(`No default ${componentType} found for role ${role.role}, using first available: ${matchingComponents[0].name}`);
+                // console.log(`No default ${componentType} found for role ${role.role}, using first available: ${matchingComponents[0].name}`);
                 assignComponentToRole(role.id, matchingComponents[0].id);
               } else {
-                console.log(`No components found for role ${role.role}`);
+                // console.log(`No components found for role ${role.role}`);
               }
             }
           }
