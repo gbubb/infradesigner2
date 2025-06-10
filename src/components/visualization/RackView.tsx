@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo } from 'react';
 import { useRackLayout } from '@/hooks/design/useRackLayout';
 import { useDesignStore } from '@/store/designStore';
@@ -138,6 +137,7 @@ export const RackView: React.FC<RackViewProps> = ({
                   manufacturer={component.manufacturer}
                   powerRequired={component.powerRequired}
                   portsCount={component.ports?.length}
+                  serverRole={(component as any).serverRole}
                 />
               );
             })}

@@ -1,4 +1,3 @@
-
 import React, { useCallback } from 'react';
 import { useDrag } from 'react-dnd';
 import { ComponentType } from '@/types/infrastructure/component-types';
@@ -19,6 +18,7 @@ interface PlacedDeviceItemProps {
   manufacturer?: string;
   powerRequired?: number;
   portsCount?: number;
+  serverRole?: string;
 }
 
 export const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
@@ -33,7 +33,8 @@ export const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
   onDeviceClick,
   manufacturer,
   powerRequired,
-  portsCount
+  portsCount,
+  serverRole
 }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'RACK_PLACED_DEVICE',
@@ -56,6 +57,7 @@ export const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
       {manufacturer && <p>Manufacturer: {manufacturer}</p>}
       {powerRequired !== undefined && <p>Power: {powerRequired}W</p>}
       {portsCount !== undefined && <p>Ports: {portsCount}</p>}
+      {serverRole && <p>Role: {serverRole}</p>}
     </div>
   );
 
@@ -69,7 +71,7 @@ export const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
             ref={drag}
             className={cn(
               "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-1 py-0 overflow-hidden", // Minimal padding
-              getDeviceColor(type),
+              getDeviceColor(type, { serverRole }),
               "cursor-move"
             )}
             style={{

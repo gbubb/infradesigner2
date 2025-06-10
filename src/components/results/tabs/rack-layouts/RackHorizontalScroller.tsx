@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -56,7 +55,7 @@ const MiniRackVisualization: React.FC<{ rack: { id: string; name: string; azName
         return (
           <div
             key={`${placedDevice.deviceId}-${index}`}
-            className={`absolute left-1 right-1 border-l-2 ${getDeviceColor(component.type as ComponentType)} opacity-80`}
+            className={`absolute left-1 right-1 border-l-2 ${getDeviceColor(component.type as ComponentType, component)} opacity-80`}
             style={{
               bottom: `${bottom}px`,
               height: `${height}px`,
