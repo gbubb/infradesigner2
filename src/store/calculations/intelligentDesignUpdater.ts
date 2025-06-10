@@ -226,15 +226,15 @@ export class IntelligentDesignUpdater {
         };
         
         // Debug logging for controller/infrastructure nodes
-        if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
-          console.log(`Creating ${role.role} component:`, {
-            roleName: role.role,
-            roleClusterInfo: role.clusterInfo,
-            componentName: instanceName,
-            componentClusterInfo: newComponent.clusterInfo,
-            componentClusterId: newComponent.clusterId
-          });
-        }
+        // if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
+        //   console.log(`Creating ${role.role} component:`, {
+        //     roleName: role.role,
+        //     roleClusterInfo: role.clusterInfo,
+        //     componentName: instanceName,
+        //     componentClusterInfo: newComponent.clusterInfo,
+        //     componentClusterId: newComponent.clusterId
+        //   });
+        // }
         
         updatedComponents.push(newComponent);
       }
@@ -342,15 +342,15 @@ export class IntelligentDesignUpdater {
         }
         
         // Debug logging for controller/infrastructure nodes
-        if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
-          console.log(`[generateComponentInstances] Creating ${role.role} component:`, {
-            roleName: role.role,
-            roleClusterInfo: role.clusterInfo,
-            componentName: instanceName,
-            componentClusterInfo: (newComponent as any).clusterInfo,
-            componentClusterId: (newComponent as any).clusterId
-          });
-        }
+        // if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
+        //   console.log(`[generateComponentInstances] Creating ${role.role} component:`, {
+        //     roleName: role.role,
+        //     roleClusterInfo: role.clusterInfo,
+        //     componentName: instanceName,
+        //     componentClusterInfo: (newComponent as any).clusterInfo,
+        //     componentClusterId: (newComponent as any).clusterId
+        //   });
+        // }
         
         components.push(newComponent);
       }

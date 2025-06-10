@@ -26,7 +26,7 @@ export const recalculateDesign = () => {
               ? `${role.role}-${role.clusterInfo.clusterId}`
               : role.role;
             existingAssignments[clusterKey] = role.assignedComponentId;
-            console.log(`Preserving assignment for ${clusterKey}: ${role.assignedComponentId}`);
+            // console.log(`Preserving assignment for ${clusterKey}: ${role.assignedComponentId}`);
           }
         });
       }
@@ -37,18 +37,18 @@ export const recalculateDesign = () => {
               ? `${role.role}-${role.clusterInfo.clusterId}`
               : role.role;
             existingAssignments[clusterKey] = role.assignedComponentId;
-            console.log(`Found assignment in design for ${clusterKey}: ${role.assignedComponentId}`);
+            // console.log(`Found assignment in design for ${clusterKey}: ${role.assignedComponentId}`);
           }
         });
       }
-      console.log("Preserved component assignments:", existingAssignments);
+      // console.log("Preserved component assignments:", existingAssignments);
 
       // --- When restoring, match using combined key so clusters stay independent
       const updatedRoles = state.componentRoles.map(role => {
         if (role.role === 'storageNode' && role.clusterInfo?.clusterId) {
           const clusterKey = `storageNode-${role.clusterInfo.clusterId}`;
           if (existingAssignments[clusterKey]) {
-            console.log(`Restoring assignment for ${clusterKey}: ${existingAssignments[clusterKey]}`);
+            // console.log(`Restoring assignment for ${clusterKey}: ${existingAssignments[clusterKey]}`);
             return {
               ...role,
               assignedComponentId: existingAssignments[clusterKey]
@@ -56,7 +56,7 @@ export const recalculateDesign = () => {
           }
         } else {
           if (existingAssignments[role.role]) {
-            console.log(`Restoring assignment for ${role.role}: ${existingAssignments[role.role]}`);
+            // console.log(`Restoring assignment for ${role.role}: ${existingAssignments[role.role]}`);
             return {
               ...role,
               assignedComponentId: existingAssignments[role.role]

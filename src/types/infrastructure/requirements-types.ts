@@ -60,6 +60,9 @@ export interface DesignRequirements {
     electricityPricePerKwh?: number;
     operationalLoadPercentage?: number;
     networkCoreRackQuantity?: number;
+    // Datacenter facility configuration
+    facilityType?: 'none' | 'colocation' | 'owned';
+    selectedFacilityId?: string;
   };
   licensingRequirements?: LicensingRequirements;
   pricingRequirements?: PricingRequirements;

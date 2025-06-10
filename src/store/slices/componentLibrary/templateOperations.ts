@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { StoreState } from '../../types';
@@ -8,7 +7,7 @@ import { saveComponent, deleteComponent } from '@/services/componentService';
 export const handleTemplateOperations = (set: Function, get: () => StoreState) => ({
   addComponentTemplate: (component: InfrastructureComponent) => {
     // Log the component being added for debugging
-    console.log('Adding component template:', component);
+    // console.log('Adding component template:', component);
     
     // Generate default naming prefix if not provided
     if (!component.namingPrefix) {
@@ -32,15 +31,15 @@ export const handleTemplateOperations = (set: Function, get: () => StoreState) =
     }
     
     // Debug log for Switch components
-    if (component.type === ComponentType.Switch) {
-      console.log('Processing Switch component:', {
-        name: component.name,
-        hasPlacement: !!component.placement,
-        placement: component.placement,
-        validRUStart: component.validRUStart,
-        validRUEnd: component.validRUEnd
-      });
-    }
+    // if (component.type === ComponentType.Switch) {
+    //   console.log('Processing Switch component:', {
+    //     name: component.name,
+    //     hasPlacement: !!component.placement,
+    //     placement: component.placement,
+    //     validRUStart: component.validRUStart,
+    //     validRUEnd: component.validRUEnd
+    //   });
+    // }
     
     // Ensure placement is properly set for rack-mountable components
     // Note: processFormForSubmission may have already created the placement object

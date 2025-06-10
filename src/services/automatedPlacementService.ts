@@ -65,7 +65,7 @@ export class AutomatedPlacementService {
         allowedAZsMap[a.clusterId] = a.selectedAZs;
         console.log(`Cluster ${a.clusterId} (${a.clusterName}) allowed AZs:`, a.selectedAZs);
       });
-      console.log('Final allowedAZsMap:', allowedAZsMap);
+      // console.log('Final allowedAZsMap:', allowedAZsMap);
     } else {
       console.log('No placement rules provided');
     }
@@ -154,16 +154,16 @@ export class AutomatedPlacementService {
       
       // Enhanced debug logging to understand clustering - show all properties
       if (component.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role)) {
-        console.log(`Component ${component.name}:`);
-        console.log(`  role=${component.role}`);
-        console.log(`  typeLabel=${typeLabel}`);
-        console.log(`  isComputeCluster=${isComputeCluster}`);
-        console.log(`  clusterId=${clusterId}`);
-        console.log(`  component.clusterId=${component.clusterId}`);
-        console.log(`  component.clusterInfo=`, component.clusterInfo);
-        console.log(`  component.templateId=${component.templateId}`);
-        console.log(`  component.id=${component.id}`);
-        console.log('  Full component:', JSON.stringify(component, null, 2));
+        // console.log(`Component ${component.name}:`);
+        // console.log(`  role=${component.role}`);
+        // console.log(`  typeLabel=${typeLabel}`);
+        // console.log(`  isComputeCluster=${isComputeCluster}`);
+        // console.log(`  clusterId=${clusterId}`);
+        // console.log(`  component.clusterId=${component.clusterId}`);
+        // console.log(`  component.clusterInfo=`, component.clusterInfo);
+        // console.log(`  component.templateId=${component.templateId}`);
+        // console.log(`  component.id=${component.id}`);
+        // console.log('  Full component:', JSON.stringify(component, null, 2));
       }
       
       if (isStorage && clusterId) {

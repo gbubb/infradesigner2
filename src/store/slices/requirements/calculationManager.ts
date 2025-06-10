@@ -119,13 +119,13 @@ export const calculateRequiredQuantity = (
           componentTemplates
         );
         
-        console.log('Calculate storage node quantity:', {
-          role: roleName,
-          roleId,
-          storageCluster: storageCluster.name,
-          storageNodeCapacityTiB,
-          disksConfig: selectedDisksByRole[roleId] || []
-        });
+        // console.log('Calculate storage node quantity:', {
+        //   role: roleName,
+        //   roleId,
+        //   storageCluster: storageCluster.name,
+        //   storageNodeCapacityTiB,
+        //   disksConfig: selectedDisksByRole[roleId] || []
+        // });
         
         if (storageNodeCapacityTiB > 0) {
           const result = calculateStorageNodeQuantity(role, storageCluster, roleId, storageNodeCapacityTiB);

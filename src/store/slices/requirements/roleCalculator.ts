@@ -72,7 +72,7 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
     }
   };
   
-  console.log('Creating controller role with clusterInfo:', controllerRole.clusterInfo);
+  // console.log('Creating controller role with clusterInfo:', controllerRole.clusterInfo);
   
   const newRoles: ComponentRole[] = [controllerRole];
   
@@ -146,7 +146,7 @@ export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
       }
     };
     
-    console.log('Creating infrastructure role with clusterInfo:', infrastructureRole.clusterInfo);
+    // console.log('Creating infrastructure role with clusterInfo:', infrastructureRole.clusterInfo);
     newRoles.push(infrastructureRole);
   }
   
