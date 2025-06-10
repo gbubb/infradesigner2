@@ -48,7 +48,11 @@ const getAllConfigurableRoles = (activeDesign: InfrastructureDesign | null, avai
       
       if (['storage', 'storagenode'].some(type => roleKey.includes(type))) {
         finalDisplayName = userProvidedName ? `Storage Cluster - ${userProvidedName}` : role.role; 
-      } else { // For compute, controller, gpunode
+      } else if (['infrastructure', 'infrastructurenode'].some(type => roleKey.includes(type))) {
+        finalDisplayName = userProvidedName ? `Infrastructure Cluster - ${userProvidedName}` : role.role;
+      } else if (['controller', 'controllernode'].some(type => roleKey.includes(type))) {
+        finalDisplayName = userProvidedName ? `Controller Cluster - ${userProvidedName}` : role.role;
+      } else { // For compute, gpunode
         finalDisplayName = userProvidedName ? `Compute Cluster - ${userProvidedName}` : role.role; 
       }
     } else {

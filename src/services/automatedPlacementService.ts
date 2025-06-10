@@ -60,7 +60,13 @@ export class AutomatedPlacementService {
     // Map of clusterId -> selected AZs from UI
     const allowedAZsMap: Record<string, string[]> = {};
     if (clusterAZAssignments) {
-      clusterAZAssignments.forEach(a => { allowedAZsMap[a.clusterId] = a.selectedAZs; });
+      console.log('Placement rules provided:', clusterAZAssignments);
+      clusterAZAssignments.forEach(a => { 
+        allowedAZsMap[a.clusterId] = a.selectedAZs;
+        console.log(`Cluster ${a.clusterId} (${a.clusterName}) allowed AZs:`, a.selectedAZs);
+      });
+    } else {
+      console.log('No placement rules provided');
     }
 
     // For patch panel per-rack report only
