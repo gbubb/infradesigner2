@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,6 +18,7 @@ import { RequirementsPanel } from "@/components/requirements/RequirementsPanel";
 import { ComponentLibrary } from "@/components/sidebar/ComponentLibrary";
 import { DesignPanel } from "@/components/design/DesignPanel";
 import { ConfigurePanel } from "@/components/configure/ConfigurePanel";
+import { DatacenterPanel } from "@/components/datacenter/DatacenterPanel";
 import { ResultsPanel } from "@/components/results/ResultsPanel";
 import { ProcurePanel } from "@/components/procure/ProcurePanel";
 import { ComparePanel } from "@/components/compare/ComparePanel";
@@ -56,6 +56,7 @@ const AppRoutes = () => {
         <Route path="components" element={<ComponentLibrary />} />
         <Route path="design" element={<DesignPanel />} />
         <Route path="configure/*" element={<ConfigurePanel />} />
+        <Route path="datacenter" element={<DatacenterPanel />} />
         <Route path="results" element={<ResultsPanel />} />
         <Route path="procure" element={<ProcurePanel />} />
         <Route path="compare" element={<ComparePanel />} />

@@ -1,7 +1,6 @@
-
 import React from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Wrench, Folder, FolderOpen, ArrowRight, Settings, TrendingUp, ShoppingCart } from "lucide-react";
+import { LayoutDashboard, Wrench, Folder, FolderOpen, ArrowRight, Settings, TrendingUp, ShoppingCart, Building } from "lucide-react";
 
 const SIDEBAR_WIDTH = 140;
 
@@ -10,6 +9,7 @@ const sidebarSections = [
   { label: "Components", path: "/components", icon: Folder, color: "bg-[#FFB703]" },
   { label: "Design", path: "/design", icon: Wrench, color: "bg-[#219EBC]" },
   { label: "Configure", path: "/configure", icon: Settings, color: "bg-[#8E54E9]" },
+  { label: "Datacenter", path: "/datacenter", icon: Building, color: "bg-[#2D4A87]" },
   { label: "Results", path: "/results", icon: FolderOpen, color: "bg-[#43AA8B]" },
   { label: "Procure", path: "/procure", icon: ShoppingCart, color: "bg-[#FF8C42]" },
   { label: "Compare", path: "/compare", icon: ArrowRight, color: "bg-[#FF6392]" },
