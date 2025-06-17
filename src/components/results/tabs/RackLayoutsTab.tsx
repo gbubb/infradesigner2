@@ -14,6 +14,7 @@ import { PlacementRulesDialog } from './rack-layouts/PlacementRulesDialog';
 import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
 import { useDesignStore } from '@/store/designStore';
 import { RackOperationsService } from '@/services/RackOperationsService';
+import { RackPDFExport } from './rack-layouts/RackPDFExport';
 import {
   useRackManagement,
   useDevicePlacement,
@@ -174,6 +175,13 @@ export const RackLayoutsTab: React.FC = () => {
             >
               {isLoadingLayout ? "Loading..." : "Load Layout"}
             </Button>
+          </div>
+          <div>
+            <RackPDFExport
+              rackProfiles={rackProfiles}
+              azNameMap={azNameMap}
+              selectedRackId={selectedRackId}
+            />
           </div>
         </div>
         
