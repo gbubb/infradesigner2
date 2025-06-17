@@ -81,7 +81,7 @@ const PowerLayerNode: React.FC<PowerLayerNodeProps> = ({
         {layer.redundancyConfig && (
           <div className="mt-2">
             <Badge variant="outline" className="text-xs">
-              {layer.redundancyConfig.type} ({layer.redundancyConfig.config})
+              {layer.redundancyConfig.type}
             </Badge>
           </div>
         )}
@@ -121,6 +121,7 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
   const [isAddingLayer, setIsAddingLayer] = useState(false);
   const [newLayer, setNewLayer] = useState<Partial<PowerLayer>>({
     name: '',
+    type: 'pdu',
     capacityKW: 1000,
     efficiency: 0.95,
     parentLayerId: undefined
@@ -187,8 +188,9 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
     if (!newLayer.name?.trim()) return;
 
     const layer: PowerLayer = {
-      id: `power-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: newLayer.name.trim(),
+      type: newLayer.type || 'pdu',
       capacityKW: newLayer.capacityKW || 1000,
       efficiency: newLayer.efficiency || 0.95,
       parentLayerId: newLayer.parentLayerId,
@@ -202,6 +204,7 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
 
     setNewLayer({
       name: '',
+      type: 'pdu',
       capacityKW: 1000,
       efficiency: 0.95,
       parentLayerId: undefined
@@ -239,12 +242,17 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
 
   // Add default power infrastructure template
   const addDefaultInfrastructure = () => {
+    const gridId = crypto.randomUUID();
+    const upsId = crypto.randomUUID();
+    const pduAId = crypto.randomUUID();
+    const pduBId = crypto.randomUUID();
+    
     const defaultLayers: PowerLayer[] = [
-      { id: 'grid-1', name: 'Grid Input', capacityKW: 10000, efficiency: 1.0, parentLayerId: undefined },
-      { id: 'ups-1', name: 'UPS System', capacityKW: 10000, efficiency: 0.95, parentLayerId: 'grid-1', 
-        redundancyConfig: { type: 'N+1', config: '2N' } },
-      { id: 'pdu-1', name: 'PDU A', capacityKW: 5000, efficiency: 0.98, parentLayerId: 'ups-1' },
-      { id: 'pdu-2', name: 'PDU B', capacityKW: 5000, efficiency: 0.98, parentLayerId: 'ups-1' },
+      { id: gridId, name: 'Grid Input', type: 'grid', capacityKW: 10000, efficiency: 1.0, parentLayerId: undefined },
+      { id: upsId, name: 'UPS System', type: 'ups', capacityKW: 10000, efficiency: 0.95, parentLayerId: gridId, 
+        redundancyConfig: { type: '2N' } },
+      { id: pduAId, name: 'PDU A', type: 'pdu', capacityKW: 5000, efficiency: 0.98, parentLayerId: upsId },
+      { id: pduBId, name: 'PDU B', type: 'pdu', capacityKW: 5000, efficiency: 0.98, parentLayerId: upsId },
     ];
     
     onUpdate({
@@ -413,6 +421,33 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
                 }}
                 placeholder="e.g., Grid Input, UPS, PDU"
               />
+            </div>
+            
+            <div>
+              <Label htmlFor="layer-type">Layer Type</Label>
+              <Select
+                value={editingLayer?.type || newLayer.type || 'pdu'}
+                onValueChange={(value) => {
+                  if (editingLayer) {
+                    setEditingLayer({ ...editingLayer, type: value as PowerLayer['type'] });
+                  } else {
+                    setNewLayer({ ...newLayer, type: value as PowerLayer['type'] });
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select layer type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="grid">Grid Input</SelectItem>
+                  <SelectItem value="ups">UPS</SelectItem>
+                  <SelectItem value="generator">Generator</SelectItem>
+                  <SelectItem value="switchgear">Switchgear</SelectItem>
+                  <SelectItem value="pdu">PDU</SelectItem>
+                  <SelectItem value="panel">Panel</SelectItem>
+                  <SelectItem value="rack">Rack</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             <div>

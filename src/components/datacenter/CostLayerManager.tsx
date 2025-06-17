@@ -116,7 +116,7 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
 
     const category = costCategories[selectedCategory];
     const layer: CostLayer = {
-      id: `cost-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: newLayer.name.trim(),
       type: newLayer.type || 'capital',
       amount: newLayer.amount || 0,
