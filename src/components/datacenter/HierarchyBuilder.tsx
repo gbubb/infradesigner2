@@ -154,10 +154,20 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
   const handleAddLevel = () => {
     if (!newLevelName.trim()) return;
 
+    // Calculate the level based on parent
+    let level = 0;
+    if (newLevelParentId) {
+      const parent = facility.hierarchyConfig.find(l => l.id === newLevelParentId);
+      if (parent) {
+        level = (parent.level || 0) + 1;
+      }
+    }
+
     const newLevel: HierarchyLevel = {
       id: `level-${Date.now()}`,
       name: newLevelName.trim(),
       parentId: newLevelParentId,
+      level: level,
       customAttributes: Object.keys(customAttributes).length > 0 ? customAttributes : undefined
     };
 
@@ -201,12 +211,33 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
   };
 
   const handleMoveLevel = (draggedId: string, targetId: string | null) => {
-    const updatedLevels = facility.hierarchyConfig.map(level => {
+    // First update the parent relationship
+    let updatedLevels = facility.hierarchyConfig.map(level => {
       if (level.id === draggedId) {
         return { ...level, parentId: targetId };
       }
       return level;
     });
+    
+    // Then recalculate all levels based on the new hierarchy
+    const calculateLevels = (levels: HierarchyLevel[]): HierarchyLevel[] => {
+      const levelMap = new Map<string, HierarchyLevel>();
+      levels.forEach(l => levelMap.set(l.id, { ...l }));
+      
+      const calculateLevel = (id: string): number => {
+        const level = levelMap.get(id);
+        if (!level) return 0;
+        if (!level.parentId) return 0;
+        return calculateLevel(level.parentId) + 1;
+      };
+      
+      return levels.map(l => ({
+        ...l,
+        level: calculateLevel(l.id)
+      }));
+    };
+    
+    updatedLevels = calculateLevels(updatedLevels);
     
     onUpdate({
       ...facility,
@@ -217,11 +248,11 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
   // Add default hierarchy template
   const addDefaultHierarchy = () => {
     const defaultHierarchy: HierarchyLevel[] = [
-      { id: 'building-1', name: 'Building', parentId: undefined },
-      { id: 'floor-1', name: 'Floor', parentId: 'building-1' },
-      { id: 'hall-1', name: 'Hall', parentId: 'floor-1' },
-      { id: 'pod-1', name: 'Pod', parentId: 'hall-1' },
-      { id: 'row-1', name: 'Row', parentId: 'pod-1' },
+      { id: 'building-1', name: 'Building', parentId: undefined, level: 0 },
+      { id: 'floor-1', name: 'Floor', parentId: 'building-1', level: 1 },
+      { id: 'hall-1', name: 'Hall', parentId: 'floor-1', level: 2 },
+      { id: 'pod-1', name: 'Pod', parentId: 'hall-1', level: 3 },
+      { id: 'row-1', name: 'Row', parentId: 'pod-1', level: 4 },
     ];
     
     onUpdate({
