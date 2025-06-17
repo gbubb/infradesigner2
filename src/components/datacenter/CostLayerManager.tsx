@@ -11,13 +11,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Edit2, Trash2, DollarSign, Building, Wrench, Server, Zap, Home, Info } from 'lucide-react';
-import { DatacenterFacility, CostLayer } from '@/types/infrastructure/datacenter-types';
+import { DatacenterFacility, CostLayer, CostCategory } from '@/types/infrastructure/datacenter-types';
 import { cn } from '@/lib/utils';
 
 interface CostLayerManagerProps {
   facility: DatacenterFacility;
   onUpdate: (facility: DatacenterFacility) => void;
 }
+
+// Map the selected category to the CostCategory type
+const categoryMapping: Record<string, CostCategory> = {
+  realEstate: 'real-estate',
+  facilityInfrastructure: 'building-facility',
+  mechanicalElectrical: 'power-infrastructure',
+  itInfrastructure: 'it-infrastructure',
+  power: 'utilities',
+  maintenance: 'maintenance',
+  staffing: 'operations'
+};
 
 // Predefined cost categories with typical amortization periods
 const costCategories = {
@@ -114,10 +125,10 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
   const handleAddLayer = () => {
     if (!newLayer.name?.trim()) return;
 
-    const category = costCategories[selectedCategory];
     const layer: CostLayer = {
       id: crypto.randomUUID(),
       name: newLayer.name.trim(),
+      category: categoryMapping[selectedCategory],
       type: newLayer.type || 'capital',
       amount: newLayer.amount || 0,
       currency: newLayer.currency || 'USD',
@@ -430,6 +441,41 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
                 }}
                 placeholder="e.g., Building Construction, Power Costs"
               />
+            </div>
+
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Select
+                value={editingLayer?.category || categoryMapping[selectedCategory] || 'other'}
+                onValueChange={(value: CostCategory) => {
+                  if (editingLayer) {
+                    setEditingLayer({ ...editingLayer, category: value });
+                  } else {
+                    // Find the key for the selected category value
+                    const categoryKey = Object.entries(categoryMapping).find(([key, val]) => val === value)?.[0] as keyof typeof costCategories;
+                    if (categoryKey) {
+                      setSelectedCategory(categoryKey);
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="real-estate">Real Estate</SelectItem>
+                  <SelectItem value="building-facility">Facility Infrastructure</SelectItem>
+                  <SelectItem value="power-infrastructure">Mechanical & Electrical</SelectItem>
+                  <SelectItem value="cooling-infrastructure">Cooling Infrastructure</SelectItem>
+                  <SelectItem value="it-infrastructure">IT Infrastructure</SelectItem>
+                  <SelectItem value="network-connectivity">Network Connectivity</SelectItem>
+                  <SelectItem value="security">Security</SelectItem>
+                  <SelectItem value="operations">Operations</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="utilities">Utilities</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
