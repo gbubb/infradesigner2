@@ -55,7 +55,7 @@ export const analyzeRackLayout = (rackId: string): {
   const activeDesign = state.activeDesign;
   if (!activeDesign) throw new Error("No active design found");
 
-  let usedRUs = new Set<number>();
+  const usedRUs = new Set<number>();
   let deviceCount = 0;
 
   // Use the RU *size* of each device

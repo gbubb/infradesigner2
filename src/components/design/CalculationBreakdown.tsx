@@ -186,7 +186,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
               steps.push(`Number of availability zones: ${totalAvailabilityZones}`);
               steps.push(`Minimum nodes per AZ: ceil(${totalNodesNeeded} / ${totalAvailabilityZones}) = ${nodesPerAZ} nodes per AZ`);
               
-              let baseNodeCount = nodesPerAZ * totalAvailabilityZones;
+              const baseNodeCount = nodesPerAZ * totalAvailabilityZones;
               
               if (baseNodeCount < totalNodesNeeded) {
                  steps.push(`Adjusted base node count for even distribution: ${nodesPerAZ} nodes/AZ * ${totalAvailabilityZones} AZs = ${baseNodeCount} total nodes`);

@@ -42,7 +42,7 @@ const ConnectionReportModal: React.FC<Props> = ({ open, onClose, report }) => {
   }, [report]);
 
   const displayedReport = useMemo(() => {
-    let filtered = filterConnectionAttempts(report || [], searchQuery);
+    const filtered = filterConnectionAttempts(report || [], searchQuery);
     if (sortCol) {
       filtered.sort((a, b) => {
         const aval = a[sortCol] ?? "";

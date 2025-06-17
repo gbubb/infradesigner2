@@ -9,7 +9,7 @@ import { CalibrationInputField } from '../shared/CalibrationInputField';
 interface CPUCalibrationTabProps {
   profile: PowerCalibrationProfile;
   updateProfile: (updates: Partial<PowerCalibrationProfile>) => void;
-  updateNestedValue: (path: string[], value: any) => void;
+  updateNestedValue: (path: string[], value: number) => void;
 }
 
 export const CPUCalibrationTab: React.FC<CPUCalibrationTabProps> = ({

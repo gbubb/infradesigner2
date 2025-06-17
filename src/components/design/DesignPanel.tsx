@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useDesignStore, recalculateDesign, manualRecalculateDesign } from '@/store/designStore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ComponentType, DeviceRoleType } from '@/types/infrastructure';
+import { ComponentType, DeviceRoleType, InfrastructureComponent } from '@/types/infrastructure';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { Info, LayoutGrid, RotateCw, Save } from 'lucide-react';
@@ -14,6 +14,7 @@ import { DiskConfiguration } from './DiskConfiguration';
 import { GPUConfiguration } from './GPUConfiguration';
 import { useComponentsByType } from '@/hooks/design/useComponentsByType';
 import { CassetteConfiguration } from './CassetteConfiguration';
+import { ServerComponent, SwitchComponent, ActiveDesign, SavedComponentRole } from '@/types/design';
 
 export const DesignPanel: React.FC = () => {
   const {
@@ -33,17 +34,19 @@ export const DesignPanel: React.FC = () => {
 
   useEffect(() => {
     if (activeDesign) {
-      setDesignName(activeDesign.name);
-      setDesignDescription(activeDesign.description || '');
+      const design = activeDesign as ActiveDesign;
+      setDesignName(design.name);
+      setDesignDescription(design.description || '');
     }
   }, [activeDesign]);
 
   useEffect(() => {
     if (componentRoles.length > 0 && activeDesign) {
+      const design = activeDesign as ActiveDesign;
       // Create a map of existing assignments from activeDesign
       const existingAssignments: Record<string, string> = {};
-      if (activeDesign.componentRoles && activeDesign.componentRoles.length > 0) {
-        activeDesign.componentRoles.forEach(savedRole => {
+      if (design.componentRoles && design.componentRoles.length > 0) {
+        design.componentRoles.forEach((savedRole: SavedComponentRole) => {
           if (savedRole.assignedComponentId) {
             // For storage nodes, use cluster-specific key
             const roleKey = savedRole.role === 'storageNode' && savedRole.clusterInfo?.clusterId
@@ -100,29 +103,49 @@ export const DesignPanel: React.FC = () => {
     }
   }, [componentRoles, componentTemplates, findDefaultComponent, assignComponentToRole, activeDesign]);
 
-  const getComponentsForRole = (role: string) => {
+  const getComponentsForRole = (role: string): InfrastructureComponent[] => {
     switch (role) {
       case 'computeNode':
-        return componentTemplates.filter(c => c.type === ComponentType.Server && (c as any).serverRole === 'compute');
+        return componentTemplates.filter(
+          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'compute'
+        );
       case 'gpuNode':
-        return componentTemplates.filter(c => c.type === ComponentType.Server && (c as any).serverRole === 'gpu');
+        return componentTemplates.filter(
+          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'gpu'
+        );
       case 'storageNode':
-        return componentTemplates.filter(c => c.type === ComponentType.Server && (c as any).serverRole === 'storage');
+        return componentTemplates.filter(
+          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'storage'
+        );
       case 'controllerNode':
       case 'infrastructureNode':
-        return componentTemplates.filter(c => c.type === ComponentType.Server && (c as any).serverRole === 'controller');
+        return componentTemplates.filter(
+          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'controller'
+        );
       case 'managementSwitch':
-        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'management');
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'management'
+        );
       case 'ipmiSwitch': // Updated from 'ipmiSwitch' to filter to show only management switches
-        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'management');
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'management'
+        );
       case 'leafSwitch':
-        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'leaf');
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'leaf'
+        );
       case 'borderLeafSwitch':
-        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'leaf');
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'leaf'
+        );
       case 'spineSwitch':
-        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'spine');
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'spine'
+        );
       case 'storageSwitch':
-        return componentTemplates.filter(c => c.type === ComponentType.Switch && (c as any).switchRole === 'leaf');
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'leaf'
+        );
       case 'firewall':
         return componentTemplates.filter(c => c.type === ComponentType.Firewall);
       case 'copperPatchPanel':

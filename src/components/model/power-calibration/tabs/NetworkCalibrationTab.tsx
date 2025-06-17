@@ -5,7 +5,7 @@ import { CalibrationInputField } from '../shared/CalibrationInputField';
 
 interface NetworkCalibrationTabProps {
   profile: PowerCalibrationProfile;
-  updateNestedValue: (path: string[], value: any) => void;
+  updateNestedValue: (path: string[], value: number) => void;
 }
 
 export const NetworkCalibrationTab: React.FC<NetworkCalibrationTabProps> = ({

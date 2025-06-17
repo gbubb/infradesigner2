@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { CostAllocation } from '@/types/infrastructure/datacenter-types';
+import { ChartTooltipProps } from '@/types/component-types';
 
 interface CostBreakdownChartProps {
   costLayers: CostAllocation[];
@@ -16,7 +17,7 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ costLaye
   }));
 
   // Custom tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
     if (!active || !payload?.length) return null;
 
     const data = payload[0].payload;

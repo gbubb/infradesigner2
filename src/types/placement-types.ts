@@ -1,0 +1,68 @@
+// Placement Service Types
+
+import { InfrastructureComponent } from './infrastructure';
+import { RackProfile } from './infrastructure/rack-types';
+import { PlacementResult } from './service-types';
+
+export interface PlacementConfig {
+  component: InfrastructureComponent;
+  allAZs: string[];
+  coreAZId: string;
+  allowedAZsMap: Record<string, string[]>;
+  computeRacks: RackProfile[];
+  components: InfrastructureComponent[];
+  state: any; // Active design state
+  typeLabel: string;
+  typeCounters: Record<string, number>;
+}
+
+export interface PlacementReportItem {
+  deviceName: string;
+  instanceName: string;
+  status: 'placed' | 'failed';
+  reason?: string;
+  azId?: string;
+  rackId?: string;
+  startU?: number;
+  endU?: number;
+}
+
+export interface PlacementPanelConfig {
+  panelId: string;
+  targetRacks: RackProfile[];
+  racks: RackProfile[];
+  activeDesignState: any;
+  placementReport: PlacementReportItem[];
+  sortByIndex?: (p1: InfrastructureComponent, p2: InfrastructureComponent) => number;
+  sortByCapacity?: (p1: InfrastructureComponent, p2: InfrastructureComponent) => number;
+}
+
+export interface DevicePlacementConfig {
+  device: InfrastructureComponent;
+  minU?: number;
+  maxU?: number;
+  ruHeight: number;
+  startRackIndex?: number;
+  racks: RackProfile[];
+  activeDesignState: any;
+}
+
+export interface ClusterPlacementConfig {
+  components: InfrastructureComponent[];
+  clusters: any[]; // Could be ComputeClusterRequirement or StorageClusterRequirement
+  allAZs: string[];
+  coreAZId: string;
+  allowedAZsMap: Record<string, string[]>;
+  racks: RackProfile[];
+  state: any;
+  placementReport: PlacementReportItem[];
+}
+
+export interface PlacementConstraints {
+  minRU?: number;
+  maxRU?: number;
+  preferredRack?: string;
+  adjacentTo?: string[];
+  separateFrom?: string[];
+  availabilityZone?: string;
+}

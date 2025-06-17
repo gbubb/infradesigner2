@@ -1,15 +1,20 @@
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
-import { InfrastructureComponent, InfrastructureDesign } from '@/types/infrastructure';
+import { InfrastructureComponent, InfrastructureDesign, DesignRequirements } from '@/types/infrastructure';
 import { saveDesignToDB } from './databaseOperations';
 import { cableTemplates } from '@/data/componentData';
+import { 
+  CreateNewDesignOperationFn,
+  UpdateDesignOperationFn,
+  UpdateActiveDesignOperationFn 
+} from '@/types/store-operations';
 
-export const createNewDesignOperation = (
-  name: string,
-  description: string | undefined,
-  existingDesign: InfrastructureDesign | null,
-  currentRequirements: any
-): InfrastructureDesign => {
+export const createNewDesignOperation: CreateNewDesignOperationFn = (
+  name,
+  description,
+  existingDesign,
+  currentRequirements
+) => {
   const newDesignId = uuidv4();
 
   // Merge existing components (if any) with all cable templates, avoiding duplicates by id
@@ -34,10 +39,10 @@ export const createNewDesignOperation = (
   };
 };
 
-export const updateDesignOperation = (
-  design: InfrastructureDesign,
-  updates: Partial<InfrastructureDesign>
-): InfrastructureDesign => {
+export const updateDesignOperation: UpdateDesignOperationFn = (
+  design,
+  updates
+) => {
   return {
     ...design,
     ...updates,
@@ -45,10 +50,10 @@ export const updateDesignOperation = (
   };
 };
 
-export const updateActiveDesignOperation = (
-  activeDesign: InfrastructureDesign,
-  components: InfrastructureComponent[]
-): InfrastructureDesign => {
+export const updateActiveDesignOperation: UpdateActiveDesignOperationFn = (
+  activeDesign,
+  components
+) => {
   return {
     ...activeDesign,
     components,

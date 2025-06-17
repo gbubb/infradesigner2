@@ -1,6 +1,7 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartTooltipPayload, TooltipPayloadEntry } from '@/types/compare';
 
 interface TCOProjectionChartProps {
   designAName: string;
@@ -36,7 +37,7 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
     return `$${(value / 1000).toFixed(0)}K`;
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: ChartTooltipPayload) => {
     if (active && payload && payload.length) {
       const diff = payload[1].value - payload[0].value;
       const savings = diff < 0 ? Math.abs(diff) : 0;
@@ -44,7 +45,7 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
       return (
         <div className="bg-background border rounded-lg p-3 shadow-lg">
           <p className="font-semibold mb-2">{label}</p>
-          {payload.map((entry: any) => (
+          {payload.map((entry: TooltipPayloadEntry) => (
             <p key={entry.dataKey} className="text-sm" style={{ color: entry.color }}>
               {entry.name}: {formatCurrency(entry.value)}
             </p>

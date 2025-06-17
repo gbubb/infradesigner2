@@ -84,7 +84,7 @@ export function generateConnections(
   const usedSrcPorts = new Set<string>();
   const usedDstPorts = new Set<string>();
   const breakoutGroups = new Map<string, any>();
-  let breakoutCableCounter = 1000;
+  const breakoutCableCounter = 1000;
   
   // Map deviceId to rack and ru
   const rackPlacement: Record<string, { rackId?: string; ruPosition?: number }> = {};
@@ -204,7 +204,7 @@ export function generateConnections(
         rule.maxConnections || Infinity
       );
       
-      let mutableAvailableSrcPorts = [...availableSrcPorts];
+      const mutableAvailableSrcPorts = [...availableSrcPorts];
 
       for (const targetDevice of targets) {
         if (srcDevice.id === targetDevice.id) continue;

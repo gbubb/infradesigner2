@@ -16,5 +16,6 @@ export const purgeAllDesignsFromDB = async () => {
 
 // To make this function available in the console
 if (typeof window !== 'undefined') {
-  (window as any).purgeAllDesignsFromDB = purgeAllDesignsFromDB;
+  const extendedWindow = window as Window & { purgeAllDesignsFromDB?: typeof purgeAllDesignsFromDB };
+  extendedWindow.purgeAllDesignsFromDB = purgeAllDesignsFromDB;
 }

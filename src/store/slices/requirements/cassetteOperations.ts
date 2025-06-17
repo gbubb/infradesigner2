@@ -1,12 +1,14 @@
 
+import { AddCassetteToPanelFn, RemoveCassetteFromPanelFn } from '@/types/store-operations';
+
 /**
  * Handles cassette operations for patch panels
  */
-export const addCassetteToPanel = (
-  roleId: string, 
-  cassetteId: string, 
-  quantity: number,
-  selectedCassettesByRole: Record<string, { cassetteId: string, quantity: number }[]>
+export const addCassetteToPanel: AddCassetteToPanelFn = (
+  roleId,
+  cassetteId,
+  quantity,
+  selectedCassettesByRole
 ) => {
   const currentCassettes = selectedCassettesByRole[roleId] || [];
   const existingIndex = currentCassettes.findIndex(c => c.cassetteId === cassetteId);
@@ -28,10 +30,10 @@ export const addCassetteToPanel = (
   };
 };
 
-export const removeCassetteFromPanel = (
-  roleId: string, 
-  cassetteId: string,
-  selectedCassettesByRole: Record<string, { cassetteId: string, quantity: number }[]>
+export const removeCassetteFromPanel: RemoveCassetteFromPanelFn = (
+  roleId,
+  cassetteId,
+  selectedCassettesByRole
 ) => {
   const currentCassettes = selectedCassettesByRole[roleId] || [];
   const updatedCassettes = currentCassettes.filter(c => c.cassetteId !== cassetteId);

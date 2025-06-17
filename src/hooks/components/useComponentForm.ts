@@ -34,7 +34,45 @@ export interface ComponentFormValues {
   preferredRack?: number;
   // Detailed port array
   ports: Port[];
-  [key: string]: any;
+  // Component-specific fields
+  serverRole?: string;
+  capacityTB?: number;
+  formFactor?: string;
+  interface?: string;
+  diskType?: string;
+  cpuSockets?: number;
+  cpuCoresPerSocket?: number;
+  cpuModel?: string;
+  memoryCapacity?: number;
+  memoryType?: string;
+  diskSlotQuantity?: number;
+  coreCount?: number;
+  ruSize?: number;
+  portsConsumedQuantity?: number;
+  portCount?: number;
+  layer3Capable?: boolean;
+  throughput?: number;
+  rpm?: number;
+  iops?: number;
+  readSpeed?: number;
+  writeSpeed?: number;
+  breakoutCompatible?: boolean;
+  isBreakout?: boolean;
+  connectorB_Quantity?: number;
+  maxDistanceMeters?: number;
+  frontPortQuantity?: number;
+  backPortQuantity?: number;
+  connectionPerSecond?: number;
+  concurrentConnections?: number;
+  cassetteCapacity?: number;
+  portQuantity?: number;
+  length?: number;
+  portType?: ConnectorType;
+  connectorA_Type?: ConnectorType;
+  connectorB_Type?: ConnectorType;
+  mediaType?: MediaType;
+  frontPortType?: ConnectorType;
+  backPortType?: ConnectorType;
 }
 
 export const useComponentForm = () => {
@@ -112,7 +150,7 @@ export const useComponentForm = () => {
     }));
   };
 
-  const updatePort = (index: number, field: keyof Port, value: any) => {
+  const updatePort = (index: number, field: keyof Port, value: string | number | PortRole | PortSpeed | MediaType | ConnectorType | undefined) => {
     // Prevent updating ports if it's a cable
     if (componentForm.type === 'Cable') return;
     setComponentForm(prev => ({

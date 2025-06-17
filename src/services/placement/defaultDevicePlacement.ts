@@ -1,6 +1,8 @@
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
+import { PlacementReportItem } from '@/types/placement-types';
+import { InfrastructureComponent } from '@/types/infrastructure';
 
 export function placeDefaultDevice({
   component,
@@ -11,16 +13,16 @@ export function placeDefaultDevice({
   typeLabel,
   typeCounters,
 }: {
-  component: any,
+  component: InfrastructureComponent,
   allowedAZs: string[],
   rackProfiles: RackProfile[],
-  components: any[],
+  components: InfrastructureComponent[],
   state: any,
   typeLabel: string,
   typeCounters: Record<string, number>
-}): { placed: boolean, reportItem: any } {
+}): { placed: boolean, reportItem: PlacementReportItem | null } {
   let placed = false;
-  let reportItem = null;
+  let reportItem: PlacementReportItem | null = null;
 
   let componentClusterAZs: string[] | undefined;
   if (component.clusterId && allowedAZs) {
@@ -28,7 +30,7 @@ export function placeDefaultDevice({
   } else if (component.clusterInfo?.clusterId && allowedAZs) {
     componentClusterAZs = allowedAZs;
   }
-  let eligibleRacks = rackProfiles.filter(rk =>
+  const eligibleRacks = rackProfiles.filter(rk =>
     allowedAZs.includes(rk.availabilityZoneId || '')
   );
   // Find rack with least of this type
@@ -50,7 +52,7 @@ export function placeDefaultDevice({
     ruHeight,
     activeDesignState: state
   });
-  let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+  const instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
   if (placement.success) {
     placed = true;
     reportItem = {

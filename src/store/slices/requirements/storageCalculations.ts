@@ -1,14 +1,20 @@
 
 import { TB_TO_TIB_FACTOR, StoragePoolEfficiencyFactors } from './constants';
 import { ComponentType } from '@/types/infrastructure';
+import { 
+  CalculateStorageNodeCapacityFn, 
+  CalculateStorageNodeQuantityFn,
+  CalculationResult,
+  DiskConfig 
+} from '@/types/store-operations';
 
 /**
  * Calculates the capacity of a storage node based on attached disks
  */
-export const calculateStorageNodeCapacity = (
-  roleId: string, 
-  selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>,
-  componentTemplates: any[]
+export const calculateStorageNodeCapacity: CalculateStorageNodeCapacityFn = (
+  roleId,
+  selectedDisksByRole,
+  componentTemplates
 ): number => {
   const roleDiskConfigs = selectedDisksByRole[roleId] || [];
   let totalCapacityTiB = 0;
@@ -27,13 +33,13 @@ export const calculateStorageNodeCapacity = (
 /**
  * Calculates required quantity of storage nodes
  */
-export const calculateStorageNodeQuantity = (
-  role: any,
-  storageCluster: any,
-  roleId: string,
-  storageNodeCapacityTiB: number
-): { requiredQuantity: number, calculationSteps: string[] } => {
-  let calculationSteps: string[] = [];
+export const calculateStorageNodeQuantity: CalculateStorageNodeQuantityFn = (
+  role,
+  storageCluster,
+  roleId,
+  storageNodeCapacityTiB
+): CalculationResult => {
+  const calculationSteps: string[] = [];
   let requiredQuantity = role.requiredCount || 1;
   
   if (!storageCluster) {

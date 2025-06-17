@@ -13,11 +13,15 @@ import { addGPUToComputeNode, removeGPUFromComputeNode } from './diskAndGPUOpera
 import { assignComponentToRole, getRoleById, updateRoleRequiredCount } from './roleOperations';
 import { addCassetteToPanel, removeCassetteFromPanel } from './cassetteOperations';
 import { IntelligentDesignUpdater } from '../../calculations/intelligentDesignUpdater';
+import { StoreSet, StoreGet } from '@/types/store-operations';
 
 /**
  * Creates the requirements slice with operations dispatched to specialized modules
  */
-export const createRequirementsSliceOperations = (set: any, get: any): RequirementsSlice => {
+export const createRequirementsSliceOperations = (
+  set: StoreSet<StoreState>, 
+  get: StoreGet<StoreState>
+): RequirementsSlice => {
   return {
     requirements: defaultRequirements,
     componentRoles: [],
@@ -101,7 +105,7 @@ export const createRequirementsSliceOperations = (set: any, get: any): Requireme
       const { requirements, componentRoles: existingRoles, activeDesign } = state;
       
       // Create a map of existing assignments before recalculation
-      const existingAssignments: Record<string, { componentId: string, diskConfig?: any, gpuConfig?: any }> = {};
+      const existingAssignments: Record<string, { componentId: string, diskConfig?: Array<{ diskId: string, quantity: number }>, gpuConfig?: Array<{ gpuId: string, quantity: number }> }> = {};
       
       // Get assignments from current componentRoles
       existingRoles.forEach(role => {
@@ -155,8 +159,8 @@ export const createRequirementsSliceOperations = (set: any, get: any): Requireme
       });
       
       // Rebuild disk and GPU configurations
-      const newDisksByRole: Record<string, any> = {};
-      const newGPUsByRole: Record<string, any> = {};
+      const newDisksByRole: Record<string, Array<{ diskId: string, quantity: number }>> = {};
+      const newGPUsByRole: Record<string, Array<{ gpuId: string, quantity: number }>> = {};
       
       updatedRoles.forEach(role => {
         const roleKey = role.role === 'storageNode' && role.clusterInfo?.clusterId

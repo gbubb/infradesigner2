@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useDesignStore } from '@/store/designStore';
 import { ComponentType } from '@/types/infrastructure';
+import { DiskComponent, DiskConfig } from '@/types/design';
 
 interface DiskConfigurationProps {
   roleId: string;
@@ -23,10 +24,12 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
   } = useDesignStore();
   
   // Get available disks
-  const availableDisks = componentTemplates.filter(c => c.type === ComponentType.Disk);
+  const availableDisks = componentTemplates.filter(
+    (c): c is DiskComponent => c.type === ComponentType.Disk
+  );
   
   // Get currently selected disks for this role
-  const selectedDisks = selectedDisksByRole[roleId] || [];
+  const selectedDisks: DiskConfig[] = selectedDisksByRole[roleId] || [];
 
   // Local state for new disk form
   const [selectedDiskId, setSelectedDiskId] = useState<string>('');
@@ -68,7 +71,7 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
                 <SelectContent>
                   {availableDisks.map(disk => (
                     <SelectItem key={disk.id} value={disk.id}>
-                      {disk.manufacturer} {disk.name} ({(disk as any).capacityTB}TB)
+                      {disk.manufacturer} {disk.name} ({disk.capacityTB}TB)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -110,7 +113,7 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
                           {disk.manufacturer} {disk.name}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {(disk as any).capacityTB}TB {(disk as any).diskType} | Interface: {disk.interface}
+                          {disk.capacityTB}TB {disk.diskType} | Interface: {disk.interface}
                         </p>
                       </div>
                       <div className="flex items-center space-x-4">
@@ -138,7 +141,7 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
                 <span>
                   {selectedDisks.reduce((sum, diskConfig) => {
                     const disk = findDiskById(diskConfig.diskId);
-                    return sum + (disk ? (disk as any).capacityTB * diskConfig.quantity : 0);
+                    return sum + (disk ? disk.capacityTB * diskConfig.quantity : 0);
                   }, 0).toLocaleString()} TB
                 </span>
               </div>

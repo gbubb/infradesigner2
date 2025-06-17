@@ -1,12 +1,19 @@
 
+import { 
+  AddDiskToStorageNodeFn,
+  RemoveDiskFromStorageNodeFn,
+  AddGPUToComputeNodeFn,
+  RemoveGPUFromComputeNodeFn 
+} from '@/types/store-operations';
+
 /**
  * Handles disk and GPU operations for components
  */
-export const addDiskToStorageNode = (
-  roleId: string, 
-  diskId: string, 
-  quantity: number,
-  selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>
+export const addDiskToStorageNode: AddDiskToStorageNodeFn = (
+  roleId,
+  diskId,
+  quantity,
+  selectedDisksByRole
 ) => {
   const currentDisks = selectedDisksByRole[roleId] || [];
   const existingDiskIndex = currentDisks.findIndex(d => d.diskId === diskId);
@@ -28,10 +35,10 @@ export const addDiskToStorageNode = (
   };
 };
 
-export const removeDiskFromStorageNode = (
-  roleId: string, 
-  diskId: string,
-  selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>
+export const removeDiskFromStorageNode: RemoveDiskFromStorageNodeFn = (
+  roleId,
+  diskId,
+  selectedDisksByRole
 ) => {
   const currentDisks = selectedDisksByRole[roleId] || [];
   const updatedDisks = currentDisks.filter(d => d.diskId !== diskId);
@@ -42,11 +49,11 @@ export const removeDiskFromStorageNode = (
   };
 };
 
-export const addGPUToComputeNode = (
-  roleId: string, 
-  gpuId: string, 
-  quantity: number,
-  selectedGPUsByRole: Record<string, { gpuId: string, quantity: number }[]>
+export const addGPUToComputeNode: AddGPUToComputeNodeFn = (
+  roleId,
+  gpuId,
+  quantity,
+  selectedGPUsByRole
 ) => {
   const currentGPUs = selectedGPUsByRole[roleId] || [];
   const existingGPUIndex = currentGPUs.findIndex(g => g.gpuId === gpuId);
@@ -68,10 +75,10 @@ export const addGPUToComputeNode = (
   };
 };
 
-export const removeGPUFromComputeNode = (
-  roleId: string, 
-  gpuId: string,
-  selectedGPUsByRole: Record<string, { gpuId: string, quantity: number }[]>
+export const removeGPUFromComputeNode: RemoveGPUFromComputeNodeFn = (
+  roleId,
+  gpuId,
+  selectedGPUsByRole
 ) => {
   const currentGPUs = selectedGPUsByRole[roleId] || [];
   const updatedGPUs = currentGPUs.filter(g => g.gpuId !== gpuId);

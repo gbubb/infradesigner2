@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ComponentType, ConnectorType } from '@/types/infrastructure';
+import { CassetteComponent, PortSummary, PatchPanelComponent } from '@/types/design';
 
 interface CassetteConfigurationProps {
   roleId: string;
@@ -26,12 +27,12 @@ export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ ro
   const [quantity, setQuantity] = useState<number>(1);
 
   const cassettes = componentTemplates.filter(
-    c => c.type === ComponentType.Cassette
+    (c): c is CassetteComponent => c.type === ComponentType.Cassette
   );
 
   const role = componentRoles.find(r => r.id === roleId);
   const assignedPanel = role?.assignedComponentId 
-    ? componentTemplates.find(c => c.id === role.assignedComponentId)
+    ? componentTemplates.find(c => c.id === role.assignedComponentId) as PatchPanelComponent | undefined
     : null;
 
   const cassetteSlots = assignedPanel?.cassetteCapacity || 0;
@@ -41,11 +42,13 @@ export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ ro
   const availableSlots = Math.max(0, cassetteSlots - usedSlots);
 
   // For port summary calculation
-  const portSummary = currentCassettes.reduce((summary, cassetteItem) => {
-    const cassette = componentTemplates.find(c => c.id === cassetteItem.cassetteId);
+  const portSummary = currentCassettes.reduce<PortSummary>((summary, cassetteItem) => {
+    const cassette = componentTemplates.find(
+      (c): c is CassetteComponent => c.id === cassetteItem.cassetteId && c.type === ComponentType.Cassette
+    );
     if (cassette) {
-      const portType = (cassette as any).portType || 'Unknown';
-      const portQuantity = (cassette as any).portQuantity || 0;
+      const portType = cassette.portType || 'Unknown';
+      const portQuantity = cassette.portQuantity || 0;
       const totalPorts = portQuantity * cassetteItem.quantity;
       
       if (summary[portType]) {
@@ -55,7 +58,7 @@ export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ ro
       }
     }
     return summary;
-  }, {} as Record<string, number>);
+  }, {} as PortSummary);
 
   const handleAddCassette = () => {
     if (selectedCassetteId && quantity > 0) {
@@ -99,7 +102,7 @@ export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ ro
               <SelectContent>
                 {cassettes.map(cassette => (
                   <SelectItem key={cassette.id} value={cassette.id}>
-                    {cassette.name} ({(cassette as any).portQuantity}x {getPortTypeLabel((cassette as any).portType)})
+                    {cassette.name} ({cassette.portQuantity}x {getPortTypeLabel(cassette.portType || '')})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -147,17 +150,19 @@ export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ ro
             </TableHeader>
             <TableBody>
               {currentCassettes.map((item) => {
-                const cassette = componentTemplates.find(c => c.id === item.cassetteId);
+                const cassette = componentTemplates.find(
+                  (c): c is CassetteComponent => c.id === item.cassetteId && c.type === ComponentType.Cassette
+                );
                 if (!cassette) return null;
-                const portType = (cassette as any).portType || 'Unknown';
+                const portType = cassette.portType || 'Unknown';
                 
                 return (
                   <TableRow key={item.cassetteId}>
                     <TableCell>{cassette.name}</TableCell>
                     <TableCell>{getPortTypeLabel(portType)}</TableCell>
-                    <TableCell>{(cassette as any).portQuantity || 0}</TableCell>
+                    <TableCell>{cassette.portQuantity || 0}</TableCell>
                     <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.quantity * ((cassette as any).portQuantity || 0)}</TableCell>
+                    <TableCell>{item.quantity * (cassette.portQuantity || 0)}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"

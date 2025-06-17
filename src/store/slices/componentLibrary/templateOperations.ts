@@ -3,8 +3,12 @@ import { toast } from 'sonner';
 import { StoreState } from '../../types';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { saveComponent, deleteComponent } from '@/services/componentService';
+import { StoreSet, StoreGet } from '@/types/store-operations';
 
-export const handleTemplateOperations = (set: Function, get: () => StoreState) => ({
+export const handleTemplateOperations = (
+  set: StoreSet<StoreState>, 
+  get: StoreGet<StoreState>
+) => ({
   addComponentTemplate: (component: InfrastructureComponent) => {
     // Log the component being added for debugging
     // console.log('Adding component template:', component);

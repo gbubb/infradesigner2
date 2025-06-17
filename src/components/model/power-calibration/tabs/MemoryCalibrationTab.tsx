@@ -8,7 +8,7 @@ import { CalibrationInputField } from '../shared/CalibrationInputField';
 interface MemoryCalibrationTabProps {
   profile: PowerCalibrationProfile;
   updateProfile: (updates: Partial<PowerCalibrationProfile>) => void;
-  updateNestedValue: (path: string[], value: any) => void;
+  updateNestedValue: (path: string[], value: number) => void;
 }
 
 export const MemoryCalibrationTab: React.FC<MemoryCalibrationTabProps> = ({

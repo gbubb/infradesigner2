@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ComponentCostsByType, ChartTooltipPayload, TooltipPayloadEntry } from '@/types/compare';
 
 interface CostBreakdownData {
   category: string;
@@ -13,20 +14,8 @@ interface CostBreakdownData {
 interface CostBreakdownChartProps {
   designAName: string;
   designBName: string;
-  designACosts: {
-    compute: number;
-    storage: number;
-    network: number;
-    cabling: number;
-    operational: number;
-  };
-  designBCosts: {
-    compute: number;
-    storage: number;
-    network: number;
-    cabling: number;
-    operational: number;
-  };
+  designACosts: ComponentCostsByType;
+  designBCosts: ComponentCostsByType;
 }
 
 export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({
@@ -77,12 +66,12 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({
     return `$${(value / 1000).toFixed(0)}K`;
   };
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: ChartTooltipPayload) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border rounded-lg p-3 shadow-lg">
           <p className="font-semibold mb-2">{payload[0].payload.category}</p>
-          {payload.map((entry: any) => (
+          {payload.map((entry: TooltipPayloadEntry) => (
             <p key={entry.dataKey} className="text-sm" style={{ color: entry.color }}>
               {entry.dataKey === 'designA' ? designAName : designBName}: ${entry.value.toLocaleString()}
             </p>

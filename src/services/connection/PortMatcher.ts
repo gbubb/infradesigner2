@@ -42,7 +42,7 @@ export function filterPorts(
 ): Port[] {
   if (!device.ports || !criteria) return device.ports || [];
 
-  let filteredPorts = device.ports.filter((p) => {
+  const filteredPorts = device.ports.filter((p) => {
     const matchesRole = !criteria.portRole?.length || (p.role && criteria.portRole.includes(p.role));
     
     // For breakout connections, adjust speed matching

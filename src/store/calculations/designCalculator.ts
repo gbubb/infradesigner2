@@ -2,6 +2,7 @@ import { useDesignStore } from '../designStore';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
+import { ComponentWithPlacement } from '@/types/service-types';
 
 let isRecalculating = false;
 
@@ -115,8 +116,8 @@ export const recalculateDesign = () => {
               templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
               const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
               
-              const attachedDisks: any[] = [];
-              let instanceComponent: InfrastructureComponent = {
+              const attachedDisks: InfrastructureComponent[] = [];
+              const instanceComponent: InfrastructureComponent = {
                 ...componentTemplate,
                 id: uuidv4(),
                 name: instanceName,
@@ -136,10 +137,10 @@ export const recalculateDesign = () => {
                   }
                 });
               }
-              if (attachedDisks.length > 0) (instanceComponent as any).attachedDisks = attachedDisks;
+              if (attachedDisks.length > 0) (instanceComponent as ComponentWithPlacement).attachedDisks = attachedDisks;
               if (role.clusterInfo) {
-              (instanceComponent as any).clusterInfo = role.clusterInfo;
-              (instanceComponent as any).clusterId = role.clusterInfo.clusterId;
+              (instanceComponent as ComponentWithPlacement).clusterInfo = role.clusterInfo;
+              (instanceComponent as ComponentWithPlacement).clusterId = role.clusterInfo.clusterId;
               
               // Debug logging for controller/infrastructure nodes
               if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
@@ -160,7 +161,7 @@ export const recalculateDesign = () => {
           // -- GPU NODE ROLES --
           if (role.role === 'gpuNode') {
             const roleGPUConfigs = state.selectedGPUsByRole[role.id] || [];
-            const attachedGPUs: any[] = [];
+            const attachedGPUs: InfrastructureComponent[] = [];
             const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
             const instances: InfrastructureComponent[] = [];
             for (let i = 0; i < requiredQuantity; i++) {
@@ -168,7 +169,7 @@ export const recalculateDesign = () => {
               templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
               const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
               
-              let instanceComponent: InfrastructureComponent = {
+              const instanceComponent: InfrastructureComponent = {
                 ...componentTemplate,
                 id: uuidv4(),
                 name: instanceName,
@@ -188,10 +189,10 @@ export const recalculateDesign = () => {
                   }
                 });
               }
-              if (attachedGPUs.length > 0) (instanceComponent as any).attachedGPUs = attachedGPUs;
+              if (attachedGPUs.length > 0) (instanceComponent as ComponentWithPlacement).attachedGPUs = attachedGPUs;
               if (role.clusterInfo) {
-              (instanceComponent as any).clusterInfo = role.clusterInfo;
-              (instanceComponent as any).clusterId = role.clusterInfo.clusterId;
+              (instanceComponent as ComponentWithPlacement).clusterInfo = role.clusterInfo;
+              (instanceComponent as ComponentWithPlacement).clusterId = role.clusterInfo.clusterId;
               
               // Debug logging for controller/infrastructure nodes
               if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
@@ -228,8 +229,8 @@ export const recalculateDesign = () => {
               ruSize: componentTemplate.ruSize,
             };
             if (role.clusterInfo) {
-              (instanceComponent as any).clusterInfo = role.clusterInfo;
-              (instanceComponent as any).clusterId = role.clusterInfo.clusterId;
+              (instanceComponent as ComponentWithPlacement).clusterInfo = role.clusterInfo;
+              (instanceComponent as ComponentWithPlacement).clusterId = role.clusterInfo.clusterId;
               
               // Debug logging for controller/infrastructure nodes
               if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {

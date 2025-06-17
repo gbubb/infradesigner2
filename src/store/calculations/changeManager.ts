@@ -195,7 +195,10 @@ export class ChangeManager {
   }
 
   // Helper methods to detect specific types of changes
-  private static hasComputeChanges(oldCompute: any, newCompute: any): boolean {
+  private static hasComputeChanges(
+    oldCompute: DesignRequirements['computeRequirements'] | undefined,
+    newCompute: DesignRequirements['computeRequirements'] | undefined
+  ): boolean {
     
     if (!oldCompute && !newCompute) {
       return false;
@@ -217,7 +220,7 @@ export class ChangeManager {
       cpuPerVM: oldCompute.cpuPerVM !== newCompute.cpuPerVM,
       memoryPerVMGB: oldCompute.memoryPerVMGB !== newCompute.memoryPerVMGB,
       vmDensityPercent: oldCompute.vmDensityPercent !== newCompute.vmDensityPercent,
-      clusters: JSON.stringify(oldCompute.clusters || []) !== JSON.stringify(newCompute.clusters || [])
+      clusters: false // Legacy field removed
     };
     
     
@@ -226,7 +229,10 @@ export class ChangeManager {
     return hasChanges;
   }
 
-  private static hasStorageChanges(oldStorage: any, newStorage: any): boolean {
+  private static hasStorageChanges(
+    oldStorage: DesignRequirements['storageRequirements'] | undefined,
+    newStorage: DesignRequirements['storageRequirements'] | undefined
+  ): boolean {
     
     if (!oldStorage && !newStorage) {
       return false;
@@ -242,7 +248,7 @@ export class ChangeManager {
       // Legacy field support for backward compatibility
       totalCapacityTB: oldStorage.totalCapacityTB !== newStorage.totalCapacityTB,
       storageEfficiencyPercent: oldStorage.storageEfficiencyPercent !== newStorage.storageEfficiencyPercent,
-      clusters: JSON.stringify(oldStorage.clusters || []) !== JSON.stringify(newStorage.clusters || [])
+      clusters: false // Legacy field removed
     };
     
     
@@ -251,7 +257,10 @@ export class ChangeManager {
     return hasChanges;
   }
 
-  private static hasNetworkChanges(oldNetwork: any, newNetwork: any): boolean {
+  private static hasNetworkChanges(
+    oldNetwork: DesignRequirements['networkRequirements'] | undefined,
+    newNetwork: DesignRequirements['networkRequirements'] | undefined
+  ): boolean {
     
     if (!oldNetwork && !newNetwork) {
       return false;
@@ -286,7 +295,10 @@ export class ChangeManager {
     return hasChanges;
   }
 
-  private static hasPhysicalChanges(oldPhysical: any, newPhysical: any): boolean {
+  private static hasPhysicalChanges(
+    oldPhysical: DesignRequirements['physicalConstraints'] | undefined,
+    newPhysical: DesignRequirements['physicalConstraints'] | undefined
+  ): boolean {
     
     if (!oldPhysical && !newPhysical) {
       return false;
@@ -318,24 +330,33 @@ export class ChangeManager {
     return hasChanges;
   }
 
-  private static hasGPUChanges(oldCompute: any, newCompute: any): boolean {
+  private static hasGPUChanges(
+    oldCompute: DesignRequirements['computeRequirements'] | undefined,
+    newCompute: DesignRequirements['computeRequirements'] | undefined
+  ): boolean {
     if (!oldCompute && !newCompute) return false;
     if (!oldCompute || !newCompute) return true;
 
-    const oldGPUClusters = (oldCompute.clusters || []).filter((c: any) => c.requiresGPU);
-    const newGPUClusters = (newCompute.clusters || []).filter((c: any) => c.requiresGPU);
+    const oldGPUClusters = (oldCompute.computeClusters || []).filter(c => c.gpuEnabled);
+    const newGPUClusters = (newCompute.computeClusters || []).filter(c => c.gpuEnabled);
 
     return JSON.stringify(oldGPUClusters) !== JSON.stringify(newGPUClusters);
   }
 
-  private static hasLicensingChanges(oldLicensing: any, newLicensing: any): boolean {
+  private static hasLicensingChanges(
+    oldLicensing: DesignRequirements['licensingRequirements'] | undefined,
+    newLicensing: DesignRequirements['licensingRequirements'] | undefined
+  ): boolean {
     if (!oldLicensing && !newLicensing) return false;
     if (!oldLicensing || !newLicensing) return true;
 
     return JSON.stringify(oldLicensing) !== JSON.stringify(newLicensing);
   }
 
-  private static hasPricingChanges(oldPricing: any, newPricing: any): boolean {
+  private static hasPricingChanges(
+    oldPricing: DesignRequirements['pricingRequirements'] | undefined,
+    newPricing: DesignRequirements['pricingRequirements'] | undefined
+  ): boolean {
     if (!oldPricing && !newPricing) return false;
     if (!oldPricing || !newPricing) return true;
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartTooltipPayload, ComponentCostsByType } from '@/types/compare';
 
 interface CostData {
   name: string;
@@ -10,18 +11,8 @@ interface CostData {
 interface CostDistributionPieChartsProps {
   designAName: string;
   designBName: string;
-  designACosts: {
-    compute: number;
-    storage: number;
-    network: number;
-    cabling: number;
-  };
-  designBCosts: {
-    compute: number;
-    storage: number;
-    network: number;
-    cabling: number;
-  };
+  designACosts: Omit<ComponentCostsByType, 'operational'>;
+  designBCosts: Omit<ComponentCostsByType, 'operational'>;
 }
 
 const COLORS = {
@@ -54,7 +45,7 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
   const designATotal = designAData.reduce((sum, item) => sum + item.value, 0);
   const designBTotal = designBData.reduce((sum, item) => sum + item.value, 0);
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: ChartTooltipPayload) => {
     if (active && payload && payload.length) {
       const data = payload[0];
       const percentage = data.payload.total > 0 ? ((data.value / data.payload.total) * 100).toFixed(1) : '0';
@@ -69,7 +60,16 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
     return null;
   };
 
-  const renderCustomLabel = (data: CostData[], total: number) => (props: any) => {
+  interface LabelProps {
+    cx: number;
+    cy: number;
+    midAngle: number;
+    innerRadius: number;
+    outerRadius: number;
+    index: number;
+  }
+
+  const renderCustomLabel = (data: CostData[], total: number) => (props: LabelProps) => {
     const { cx, cy, midAngle, innerRadius, outerRadius, index } = props;
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;

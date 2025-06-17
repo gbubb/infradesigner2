@@ -38,7 +38,7 @@ export interface StoreState {
   
   // Workspace components
   placedComponents: Record<string, InfrastructureComponent>;
-  workspaceComponents: any[]; // this should be more specific
+  workspaceComponents: InfrastructureComponent[];
   selectedComponentId: string | null;
   
   // Editing state
@@ -72,7 +72,7 @@ export interface StoreState {
 }
 
 // Define individual slice states if needed
-export interface RequirementsState extends StoreState {}
-export interface DesignState extends StoreState {}
-export interface WorkspaceState extends StoreState {}
-export interface ComponentLibraryState extends StoreState {}
+export type RequirementsState = StoreState;
+export type DesignState = StoreState;
+export type WorkspaceState = StoreState;
+export type ComponentLibraryState = StoreState;

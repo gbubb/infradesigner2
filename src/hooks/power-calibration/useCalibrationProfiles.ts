@@ -24,7 +24,7 @@ export function getCalibrationProfiles(): PowerCalibrationProfile[] {
   try {
     const profiles = JSON.parse(stored);
     // Convert date strings back to Date objects and ensure all required fields exist
-    return profiles.map((p: any) => {
+    return profiles.map((p: Partial<PowerCalibrationProfile> & { createdAt: string; updatedAt: string }) => {
       // Ensure memoryPowerModel exists with all required fields
       if (!p.memoryPowerModel) {
         p.memoryPowerModel = DEFAULT_CALIBRATION_PROFILE.memoryPowerModel;
@@ -173,11 +173,11 @@ export function useCalibrationProfiles(onCalibrationChange: (profile: PowerCalib
     }
   };
   
-  const updateNestedValue = (path: string[], value: any) => {
+  const updateNestedValue = (path: string[], value: number) => {
     if (!editingProfile) return;
     
     const newProfile = { ...editingProfile };
-    let current: any = newProfile;
+    let current: Record<string, any> = newProfile;
     
     for (let i = 0; i < path.length - 1; i++) {
       if (!(path[i] in current)) {

@@ -6,6 +6,16 @@ import {
   ServerRole,
   Switch
 } from '@/types/infrastructure';
+import { 
+  DesignMetrics, 
+  SignificantDifferences, 
+  ComponentCostsByType, 
+  AdditionalDesignMetrics, 
+  ResourceMetrics,
+  ServerComponentExtended,
+  DiskComponentExtended,
+  StoragePoolEfficiencyFactors
+} from '@/types/compare';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,9 +29,9 @@ import { ResourceUtilizationRadar } from './charts/ResourceUtilizationRadar';
 import { ComponentLevelComparison } from './tables/ComponentLevelComparison';
 
 // Helper function to calculate all relevant metrics from a design
-function calculateDesignMetrics(design: InfrastructureDesign) {
+function calculateDesignMetrics(design: InfrastructureDesign): DesignMetrics {
   // Initialize metrics object
-  const metrics = {
+  const metrics: DesignMetrics = {
     totalCost: 0,
     costPerVCPU: 0,
     costPerTB: 0,
@@ -60,11 +70,12 @@ function calculateDesignMetrics(design: InfrastructureDesign) {
   
   computeServers.forEach(server => {
     const quantity = server.quantity || 1;
-    const cores = (server as any).cpuCoresPerSocket * (server as any).cpuSockets || 0;
+    const serverExt = server as ServerComponentExtended;
+    const cores = (serverExt.cpuCoresPerSocket || 0) * (serverExt.cpuSockets || 0);
     const vcpus = cores * 2; // Assuming hyperthreading
     
     metrics.totalVCPUs += vcpus * quantity;
-    metrics.totalMemoryTB += ((server as any).memoryCapacity / 1024) * quantity; // Convert GB to TB
+    metrics.totalMemoryTB += ((serverExt.memoryCapacity || 0) / 1024) * quantity; // Convert GB to TB
   });
   
   // Calculate storage metrics
@@ -76,7 +87,8 @@ function calculateDesignMetrics(design: InfrastructureDesign) {
   
   disks.forEach(disk => {
     const quantity = disk.quantity || 1;
-    metrics.totalStorageTB += ((disk as any).capacityTB || 0) * quantity;
+    const diskExt = disk as DiskComponentExtended;
+    metrics.totalStorageTB += (diskExt.capacityTB || 0) * quantity;
   });
   
   // Calculate power metrics
@@ -175,7 +187,7 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
   };
   
   // Determine which metrics have significant differences (>10%)
-  const significantDifferences = {
+  const significantDifferences: SignificantDifferences = {
     totalCost: Math.abs(getPercentDifference(metricsA.totalCost, metricsB.totalCost)) > 10,
     costPerVCPU: Math.abs(getPercentDifference(metricsA.costPerVCPU, metricsB.costPerVCPU)) > 10,
     costPerTB: Math.abs(getPercentDifference(metricsA.costPerTB, metricsB.costPerTB)) > 10,
@@ -188,8 +200,8 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
   };
   
   // Calculate component costs by type
-  const calculateComponentCostsByType = (design: InfrastructureDesign, monthlyCost: number) => {
-    const costs = {
+  const calculateComponentCostsByType = (design: InfrastructureDesign, monthlyCost: number): ComponentCostsByType => {
+    const costs: ComponentCostsByType = {
       compute: 0,
       storage: 0,
       network: 0,
@@ -249,7 +261,7 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
   const designBCosts = calculateComponentCostsByType(designB, metricsB.monthlyCost);
 
   // Calculate rack units and usable storage capacity
-  const calculateAdditionalMetrics = (design: InfrastructureDesign) => {
+  const calculateAdditionalMetrics = (design: InfrastructureDesign): AdditionalDesignMetrics => {
     let rackUnits = 0;
     let usableStorageTB = 0;
 
@@ -266,7 +278,7 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
         // Find storage nodes for this cluster
         const clusterNodes = design.components.filter(
           component => component.role === 'storageNode' && 
-          (component as any).clusterInfo?.clusterId === cluster.id
+          (component as ServerComponentExtended).clusterInfo?.clusterId === cluster.id
         );
         
         // Calculate total raw capacity for this cluster
@@ -275,10 +287,10 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
           const quantity = node.quantity || 1;
           
           // Add attached disks capacity if available
-          if ('attachedDisks' in node) {
-            const disks = (node as any).attachedDisks || [];
-            disks.forEach((disk: any) => {
-              if (disk && 'capacityTB' in disk) {
+          const nodeExt = node as ServerComponentExtended;
+          if (nodeExt.attachedDisks) {
+            nodeExt.attachedDisks.forEach((disk) => {
+              if (disk && disk.capacityTB) {
                 clusterRawCapacityTB += disk.capacityTB * (disk.quantity || 1) * quantity;
               }
             });
@@ -286,14 +298,6 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
         });
         
         // Calculate usable capacity based on pool type and efficiency
-        const StoragePoolEfficiencyFactors: Record<string, number> = {
-          '3 Replica': 0.33333,
-          '2 Replica': 0.5,
-          'Erasure Coding 4+2': 0.66666,
-          'Erasure Coding 8+3': 0.72727,
-          'Erasure Coding 6+3': 0.66666,
-          'Erasure Coding 10+4': 0.71429,
-        };
         
         const poolEfficiencyFactor = StoragePoolEfficiencyFactors[cluster.poolType || '3 Replica'] || (1/3);
         const clusterUsableCapacityTB = clusterRawCapacityTB * poolEfficiencyFactor;

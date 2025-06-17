@@ -1,15 +1,17 @@
+import { CalculationResult, CalculateComputeNodeQuantityFn } from '@/types/store-operations';
+
 /**
  * Calculates required quantity of compute nodes
  * Optional fifth parameter for GPU nodes to include GPU configurations
  */
-export const calculateComputeNodeQuantity = (
-  role: any,
-  component: any,
-  cluster: any,
-  totalAvailabilityZones: number,
-  nodeGPUs?: { gpuId: string, quantity: number }[]
-): { requiredQuantity: number, calculationSteps: string[] } => {
-  let calculationSteps: string[] = [];
+export const calculateComputeNodeQuantity: CalculateComputeNodeQuantityFn = (
+  role,
+  component,
+  cluster,
+  totalAvailabilityZones,
+  nodeGPUs?
+): CalculationResult => {
+  const calculationSteps: string[] = [];
   
   if (!role || !component || !cluster) {
     calculationSteps.push(`Missing required data - using default count`);
@@ -123,7 +125,7 @@ export const calculateComputeNodeQuantity = (
   calculationSteps.push(`Number of availability zones: ${totalAvailabilityZones}`);
   calculationSteps.push(`Minimum nodes per AZ: ${totalNodesNeeded} ÷ ${totalAvailabilityZones} = ${nodesPerAZ} nodes per AZ (rounded up)`);
   
-  let baseNodeCount = nodesPerAZ * totalAvailabilityZones;
+  const baseNodeCount = nodesPerAZ * totalAvailabilityZones;
   
   // If we rounded up for the AZ calculation, we might have more nodes than originally needed
   if (baseNodeCount > totalNodesNeeded) {

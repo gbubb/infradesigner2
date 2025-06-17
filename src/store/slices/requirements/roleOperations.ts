@@ -1,14 +1,19 @@
 
 import { ComponentRole } from '@/types/infrastructure';
+import { 
+  UpdateRoleRequiredCountFn,
+  AssignComponentToRoleFn,
+  GetRoleByIdFn 
+} from '@/types/store-operations';
 
 /**
  * Updates the required count for a role
  */
-export const updateRoleRequiredCount = (
-  componentRoles: ComponentRole[],
-  roleId: string,
-  newQuantity: number
-): ComponentRole[] => {
+export const updateRoleRequiredCount: UpdateRoleRequiredCountFn = (
+  componentRoles,
+  roleId,
+  newQuantity
+) => {
   return componentRoles.map(r => {
     if (r.id === roleId) {
       return {
@@ -23,11 +28,11 @@ export const updateRoleRequiredCount = (
 /**
  * Assigns a component to a role
  */
-export const assignComponentToRole = (
-  componentRoles: ComponentRole[],
-  roleId: string,
-  componentId: string
-): ComponentRole[] => {
+export const assignComponentToRole: AssignComponentToRoleFn = (
+  componentRoles,
+  roleId,
+  componentId
+) => {
   return componentRoles.map(role => {
     if (role.id === roleId) {
       return {
@@ -44,10 +49,10 @@ export const assignComponentToRole = (
 /**
  * Gets a role by ID
  */
-export const getRoleById = (
-  componentRoles: ComponentRole[],
-  roleId: string
-): ComponentRole | undefined => {
+export const getRoleById: GetRoleByIdFn = (
+  componentRoles,
+  roleId
+) => {
   return componentRoles.find(r => r.id === roleId);
 };
 

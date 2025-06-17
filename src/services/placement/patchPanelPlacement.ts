@@ -1,6 +1,8 @@
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
+import { PlacementReportItem } from '@/types/placement-types';
+import { InfrastructureComponent } from '@/types/infrastructure';
 
 /**
  * When placing patch panels, AZ-wide quantities must be split across all racks in that AZ and placed round-robin.
@@ -20,10 +22,10 @@ export function placePatchPanel({
   copperPatchPanelsPerAZ,
   fiberPatchPanelsPerAZ,
 }: {
-  component: any,
+  component: InfrastructureComponent,
   rackProfiles: RackProfile[],
   state: any,
-  components: any[],
+  components: InfrastructureComponent[],
   typeLabel: string,
   coreRacks: RackProfile[],
   computeRacks: RackProfile[],
@@ -32,9 +34,9 @@ export function placePatchPanel({
   fiberPatchPanelsPerCoreRack: number,
   copperPatchPanelsPerAZ: number,
   fiberPatchPanelsPerAZ: number,
-}): { placed: boolean, reportItem: any } {
+}): { placed: boolean, reportItem: PlacementReportItem | null } {
   let placed = false;
-  let reportItem = null;
+  let reportItem: PlacementReportItem | null = null;
 
   const isCopperPatchPanel = typeLabel.includes('copperpatchpanel');
   const isFiberPatchPanel = typeLabel.includes('fiberpatchpanel');
@@ -68,7 +70,7 @@ export function placePatchPanel({
           ruHeight,
           activeDesignState: state,
         });
-        let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+        const instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
         if (placement.success) {
           placed = true;
           reportItem = {
@@ -146,7 +148,7 @@ export function placePatchPanel({
             ruHeight,
             activeDesignState: state,
           });
-          let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+          const instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
           if (placement.success) {
             placed = true;
             reportItem = {

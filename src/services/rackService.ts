@@ -263,7 +263,7 @@ export class RackService {
   static findAvailablePositions(
     rack: RackProfile, 
     deviceSize: number, 
-    components: any[]
+    components: InfrastructureComponent[]
   ): number[] {
     const positions: number[] = [];
 

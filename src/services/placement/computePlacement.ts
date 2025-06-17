@@ -1,6 +1,8 @@
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
+import { PlacementConfig, PlacementReportItem } from '@/types/placement-types';
+import { InfrastructureComponent } from '@/types/infrastructure';
 
 export function placeComputeLike({
   component,
@@ -12,19 +14,9 @@ export function placeComputeLike({
   state,
   typeLabel,
   typeCounters,
-}: {
-  component: any,
-  allAZs: string[],
-  coreAZId: string,
-  allowedAZsMap: Record<string, string[]>,
-  computeRacks: RackProfile[],
-  components: any[],
-  state: any,
-  typeLabel: string,
-  typeCounters: Record<string, number>
-}): { placed: boolean, reportItem: any } {
+}: PlacementConfig): { placed: boolean, reportItem: PlacementReportItem | null } {
   let placed = false;
-  let reportItem = null;
+  let reportItem: PlacementReportItem | null = null;
 
   let allowedAZs: string[] = allAZs.filter(id => id !== coreAZId);
   let clusterAZs: string[] | undefined;
@@ -90,7 +82,7 @@ export function placeComputeLike({
     ruHeight,
     activeDesignState: state
   });
-  let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+  const instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
   if (placement.success) {
     placed = true;
     reportItem = {

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { PowerLayer } from '@/types/infrastructure/datacenter-types';
 import { AlertCircle } from 'lucide-react';
+import { PowerCapacityData } from '@/types/model-types';
 
 interface PowerCapacityWaterfallProps {
   powerLayers: PowerLayer[];
@@ -14,7 +15,7 @@ export const PowerCapacityWaterfall: React.FC<PowerCapacityWaterfallProps> = ({
 }) => {
   const waterfallData = useMemo(() => {
     let previousCapacity = 0;
-    const data: any[] = [];
+    const data: PowerCapacityData[] = [];
 
     // Sort layers by hierarchy (parent first)
     const sortedLayers = [...powerLayers].sort((a, b) => {
@@ -52,7 +53,7 @@ export const PowerCapacityWaterfall: React.FC<PowerCapacityWaterfallProps> = ({
     return data;
   }, [powerLayers, currentUsageKW]);
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: PowerCapacityData }> }) => {
     if (!active || !payload?.length) return null;
 
     const data = payload[0].payload;

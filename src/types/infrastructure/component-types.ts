@@ -81,7 +81,28 @@ export interface InfrastructureComponent {
   switchRole?: string;
   // For Server components
   serverRole?: string;
-  [key: string]: any; // To allow for any additional properties
+  // Cluster information
+  clusterInfo?: {
+    clusterId: string;
+    clusterName?: string;
+  };
+  // Additional component-specific properties
+  // Server properties
+  cpuCores?: number;
+  memoryGB?: number;
+  storageCapacityGB?: number;
+  // Network properties
+  portCount?: number;
+  portSpeed?: string;
+  // Storage properties
+  capacityTB?: number;
+  diskType?: string;
+  // GPU properties
+  gpuModel?: string;
+  gpuMemoryGB?: number;
+  // PDU properties
+  outlets?: number;
+  maxAmps?: number;
 }
 
 // New interface for component placement constraints

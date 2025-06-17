@@ -1,6 +1,7 @@
 import { useDesignStore } from '../designStore';
 import { ChangeManager, ChangeType, ChangeImpact } from './changeManager';
 import { DesignRequirements, InfrastructureComponent, ComponentRole } from '@/types/infrastructure';
+import { ComponentWithPlacement } from '@/types/service-types';
 import { calculateComponentRoles } from '../slices/requirements/roleCalculator';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -337,8 +338,8 @@ export class IntelligentDesignUpdater {
         
         // Add clusterInfo if present in the role
         if (role.clusterInfo) {
-          (newComponent as any).clusterInfo = role.clusterInfo;
-          (newComponent as any).clusterId = role.clusterInfo.clusterId;
+          (newComponent as ComponentWithPlacement).clusterInfo = role.clusterInfo;
+          (newComponent as ComponentWithPlacement).clusterId = role.clusterInfo.clusterId;
         }
         
         // Debug logging for controller/infrastructure nodes

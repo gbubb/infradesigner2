@@ -11,6 +11,8 @@ import { OperationalCostAlignmentCard, OverallSummaryCard } from './ModelSummary
 import { ScenarioTab } from './ScenarioTab';
 import { PowerPredictionTab } from './power/PowerPredictionTab';
 import { DatacenterAnalyticsTab } from './datacenter/DatacenterAnalyticsTab';
+import { ClusterAnalysis } from '@/types/model-types';
+import { ComponentWithPlacement } from '@/types/service-types';
 
 export const ModelPanel: React.FC = () => {
   const { requirements } = useDesignStore();
@@ -130,7 +132,7 @@ export const ModelPanel: React.FC = () => {
 
   // Calculate cluster-level analysis
   const clusterAnalysis = useMemo(() => {
-    const analysis: Record<string, any> = {};
+    const analysis: Record<string, ClusterAnalysis> = {};
     
     // Calculate total device count, RU, and power for proportional cost allocation
     const totalDeviceCount = Object.values(clusterDeviceCounts).reduce((sum, count) => sum + count, 0);
@@ -169,7 +171,7 @@ export const ModelPanel: React.FC = () => {
       const computeDevices = activeDesign?.components.filter(
         component => component.type === ComponentType.Server && 
         component.role === 'computeNode' &&
-        (component as any).clusterInfo?.clusterId === cluster.clusterId
+        (component as ComponentWithPlacement).clusterInfo?.clusterId === cluster.clusterId
       ) || [];
       
       const computeHardwareCost = computeDevices.reduce((total, device) => {
@@ -253,7 +255,7 @@ export const ModelPanel: React.FC = () => {
       const storageDevices = activeDesign?.components.filter(
         component => (component.type === ComponentType.Disk || 
           (component.type === ComponentType.Server && component.role === 'storageNode')) &&
-          (component as any).clusterInfo?.clusterId === cluster.clusterId
+          (component as ComponentWithPlacement).clusterInfo?.clusterId === cluster.clusterId
       ) || [];
       
       const storageHardwareCost = storageDevices.reduce((total, device) => {
@@ -342,8 +344,8 @@ export const ModelPanel: React.FC = () => {
 
   // Calculate overall totals
   const overallAnalysis = useMemo(() => {
-    const totalRevenue = Object.values(clusterAnalysis).reduce((sum: number, cluster: any) => sum + cluster.revenue, 0);
-    const totalCosts = Object.values(clusterAnalysis).reduce((sum: number, cluster: any) => sum + cluster.costs.total, 0);
+    const totalRevenue = Object.values(clusterAnalysis).reduce((sum: number, cluster: ClusterAnalysis) => sum + cluster.revenue, 0);
+    const totalCosts = Object.values(clusterAnalysis).reduce((sum: number, cluster: ClusterAnalysis) => sum + cluster.costs.total, 0);
     const totalProfit = totalRevenue - totalCosts;
     
     return {

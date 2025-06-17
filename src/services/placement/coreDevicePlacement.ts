@@ -1,6 +1,8 @@
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
+import { PlacementReportItem } from '@/types/placement-types';
+import { InfrastructureComponent } from '@/types/infrastructure';
 
 export function placeCoreDevice({
   component,
@@ -10,15 +12,15 @@ export function placeCoreDevice({
   typeLabel,
   typeCounters,
 }: {
-  component: any,
+  component: InfrastructureComponent,
   coreRacks: RackProfile[],
-  components: any[],
+  components: InfrastructureComponent[],
   state: any,
   typeLabel: string,
   typeCounters: Record<string, number>
-}): { placed: boolean, reportItem: any } {
+}): { placed: boolean, reportItem: PlacementReportItem | null } {
   let placed = false;
-  let reportItem = null;
+  let reportItem: PlacementReportItem | null = null;
 
   if (coreRacks.length === 0) {
     reportItem = {
@@ -50,7 +52,7 @@ export function placeCoreDevice({
     ruHeight,
     activeDesignState: state
   });
-  let instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
+  const instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
   if (placement.success) {
     placed = true;
     reportItem = {

@@ -1,7 +1,7 @@
-import { ComponentType } from '@/types/infrastructure/component-types';
+import { ComponentType, InfrastructureComponent } from '@/types/infrastructure/component-types';
 
 // Component type color mapping with support for server roles
-export const getDeviceColor = (type: string, component?: any): string => {
+export const getDeviceColor = (type: string, component?: InfrastructureComponent): string => {
   // For servers, differentiate by role if component information is available
   if (type === ComponentType.Server && component?.serverRole) {
     switch (component.serverRole) {

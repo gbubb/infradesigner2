@@ -1,6 +1,7 @@
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
+import { PlacementReportItem } from '@/types/placement-types';
 
 interface StorageClusterPlacementParams {
   clusterComponents: InfrastructureComponent[];
@@ -16,8 +17,8 @@ export function placeStorageCluster({
   computeRacks,
   state,
   typeCounters,
-}: StorageClusterPlacementParams): { placementReports: any[] } {
-  const placementReports: any[] = [];
+}: StorageClusterPlacementParams): { placementReports: PlacementReportItem[] } {
+  const placementReports: PlacementReportItem[] = [];
   
   // Filter racks by allowed AZs
   const availableRacks = computeRacks.filter(rack => 

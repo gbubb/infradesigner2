@@ -3,10 +3,11 @@ import { useCallback } from 'react';
 import { useDrop } from 'react-dnd';
 import { calculateDropRUPosition } from './rackUtils';
 import { toast } from 'sonner';
+import { RackProfile } from '@/types/infrastructure/rack-types';
 
 interface UseRackDropzoneProps {
   rackProfileId: string;
-  rackProfile: any;
+  rackProfile: RackProfile | null;
   placeDevice: (deviceId: string, targetRuPosition?: number) => { success: boolean; error?: string };
   moveDevice: (deviceId: string, newRuPosition: number) => { success: boolean; error?: string };
 }

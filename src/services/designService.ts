@@ -1,6 +1,7 @@
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureDesign } from '@/types/infrastructure';
 import { toast } from 'sonner';
+import { DesignDatabaseRow } from '@/types/database-types';
 
 // Load all designs from Supabase
 export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign[]> => {
@@ -142,7 +143,7 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
 // Save a design to Supabase
 export const saveDesign = async (design: InfrastructureDesign, userId?: string): Promise<boolean> => {
   try {
-    const designToSave: any = {
+    const designToSave: Partial<DesignDatabaseRow> = {
       id: design.id,
       name: design.name,
       description: design.description,

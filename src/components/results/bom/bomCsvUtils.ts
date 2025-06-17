@@ -1,13 +1,13 @@
 /**
  * Utility: Checks if value is a plain object (not null, array, or function)
  */
-function isPlainObject(obj: unknown): obj is Record<string, any> {
+function isPlainObject(obj: unknown): obj is Record<string, unknown> {
   return typeof obj === "object" && obj !== null && !Array.isArray(obj);
 }
 
 // Example usage with safe spreading in your export(s) - adjust as needed:
 
-export function toCsvLineItems(lineItems: any[]) {
+export function toCsvLineItems(lineItems: unknown[]) {
   return lineItems
     .filter(isPlainObject)
     .map(item => ({
@@ -16,7 +16,7 @@ export function toCsvLineItems(lineItems: any[]) {
     }));
 }
 
-export function fromCsvLineItems(csvItems: any[]) {
+export function fromCsvLineItems(csvItems: unknown[]) {
   return csvItems
     .filter(isPlainObject)
     .map(item => ({

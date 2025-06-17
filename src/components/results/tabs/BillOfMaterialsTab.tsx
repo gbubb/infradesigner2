@@ -84,7 +84,7 @@ export const BillOfMaterialsTab: React.FC = () => {
     const groupedByTemplate: Record<string, InfrastructureComponent & { summarizedQuantity: number }> = {};
 
     components.forEach(instance => {
-      let key =
+      const key =
         instance.role === 'storageNode'
           ? getStorageNodeGroupKey(instance)
           : getBomGroupKey(instance);
@@ -144,10 +144,10 @@ export const BillOfMaterialsTab: React.FC = () => {
   }, [components]);
 
   const grandTotalCost = React.useMemo(() => {
-    let componentSum = components.reduce((sum, comp) => sum + comp.cost, 0);
-    let diskSum = Object.values(diskLineItems).reduce((sum, o) => sum + o.totalDiskCost, 0);
-    let cableSum = Object.values(cableLineItems).reduce((sum, o) => sum + o.total, 0);
-    let trxSum = Object.values(transceiverLineItems).reduce((sum, o) => sum + o.total, 0);
+    const componentSum = components.reduce((sum, comp) => sum + comp.cost, 0);
+    const diskSum = Object.values(diskLineItems).reduce((sum, o) => sum + o.totalDiskCost, 0);
+    const cableSum = Object.values(cableLineItems).reduce((sum, o) => sum + o.total, 0);
+    const trxSum = Object.values(transceiverLineItems).reduce((sum, o) => sum + o.total, 0);
     // Avoid double-counting disk costs if disks are included in main components as line items
     return componentSum + diskSum + cableSum + trxSum;
   }, [components, diskLineItems, cableLineItems, transceiverLineItems]);
@@ -159,7 +159,7 @@ export const BillOfMaterialsTab: React.FC = () => {
   // --- ENHANCED CSV Export logic including cables and transceivers --- //
   const generateCSVData = (category?: string) => {
     let csvContent = "data:text/csv;charset=utf-8,Category,Type,Role/Model,Manufacturer,Model,Details,Quantity,Unit Cost,Total Cost,Cable Type,Length,Connector Types,Speed,Media Support,Max Distance\r\n";
-    let dataToExport: any[] = [];
+    const dataToExport: any[] = [];
     // --- Standard hardware/export
     if (!category || ["Compute", "Storage", "Acceleration", "Network", "Cabling", "Cables"].includes(category)) {
       Object.values(summarizedComponentsByCategory).forEach(componentsArr => dataToExport.push(...componentsArr));

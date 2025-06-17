@@ -1,6 +1,8 @@
 
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { NetworkConnection } from '@/types/infrastructure/connection-types';
+import { Transceiver } from '@/types/infrastructure/transceiver-types';
+import { Cable } from '@/types/infrastructure/component-types';
 
 // Type for cable line items in BOM
 export interface CableLineItem {
@@ -108,7 +110,7 @@ export function summarizeTransceiversFromConnections(
   networkConnections.forEach(conn => {
     // Source transceiver
     if (conn.transceiverSourceId) {
-      const trans = transceiverTemplates.find(t => t.id === conn.transceiverSourceId) as any;
+      const trans = transceiverTemplates.find(t => t.id === conn.transceiverSourceId) as Transceiver | undefined;
       const key = conn.transceiverSourceId;
       if (!transceiverLineItems[key]) {
         transceiverLineItems[key] = {
@@ -130,7 +132,7 @@ export function summarizeTransceiversFromConnections(
     }
     // Destination transceiver
     if (conn.transceiverDestinationId) {
-      const trans = transceiverTemplates.find(t => t.id === conn.transceiverDestinationId) as any;
+      const trans = transceiverTemplates.find(t => t.id === conn.transceiverDestinationId) as Transceiver | undefined;
       const key = conn.transceiverDestinationId;
       if (!transceiverLineItems[key]) {
         transceiverLineItems[key] = {
@@ -181,7 +183,7 @@ export function createPortUtilizationRows(
     };
   });
 
-  let rows: any[] = [];
+  const rows: any[] = [];
   devices.forEach(device => {
     const ports: any[] = (device.ports ?? []);
     ports.forEach(port => {

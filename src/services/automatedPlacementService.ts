@@ -71,7 +71,7 @@ export class AutomatedPlacementService {
     }
 
     // For patch panel per-rack report only
-    let patchPanelAssignedPerRack: Record<string, number> = {};
+    const patchPanelAssignedPerRack: Record<string, number> = {};
 
     const requirements = state.requirements || defaultRequirements;
     const copperPatchPanelsPerAZ = requirements.networkRequirements?.copperPatchPanelsPerAZ ?? 0;

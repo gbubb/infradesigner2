@@ -1,13 +1,17 @@
 
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
 import { StoreState } from '../../types';
+import { StoreSet, StoreGet } from '@/types/store-operations';
 
-export const handleDefaultComponents = (set: Function, get: () => StoreState) => ({
+export const handleDefaultComponents = (
+  set: StoreSet<StoreState>, 
+  get: StoreGet<StoreState>
+) => ({
   getDefaultComponent: (type: ComponentType, role: string) => {
     const state = get();
     return state.componentTemplates.find(c => 
       c.type === type && 
-      ((c as any).serverRole === role || (c as any).switchRole === role) && 
+      (c.serverRole === role || c.switchRole === role) && 
       c.isDefault
     );
   },
@@ -15,7 +19,7 @@ export const handleDefaultComponents = (set: Function, get: () => StoreState) =>
   setDefaultComponent: (type: ComponentType, role: string, id: string) => {
     set((state: StoreState) => {
       const updatedTemplates = state.componentTemplates.map(c => {
-        if (c.type === type && ((c as any).serverRole === role || (c as any).switchRole === role)) {
+        if (c.type === type && (c.serverRole === role || c.switchRole === role)) {
           return { ...c, isDefault: c.id === id };
         }
         return c;

@@ -3,8 +3,12 @@ import { toast } from 'sonner';
 import { StoreState } from '../../types';
 import { loadComponents, saveComponents } from '@/services/componentService';
 import { defaultComponents } from '@/data/componentData';
+import { StoreSet, StoreGet } from '@/types/store-operations';
 
-export const handleDatabaseOperations = (set: Function, get: () => StoreState) => ({
+export const handleDatabaseOperations = (
+  set: StoreSet<StoreState>, 
+  get: StoreGet<StoreState>
+) => ({
   initializeComponentTemplates: () => {
     set({ componentTemplates: defaultComponents });
     get().saveAllComponentsToDB();

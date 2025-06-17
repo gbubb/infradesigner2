@@ -6,6 +6,7 @@ import { InfrastructureComponent } from '@/types/infrastructure';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { ChartPie } from 'lucide-react';
+import { ChartTooltipProps } from '@/types/component-types';
 
 interface ComponentTypeSummaryTableProps {
   componentsByType: Record<string, InfrastructureComponent[]>;
@@ -66,7 +67,7 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
   };
   
   // Custom tooltip for pie charts
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (

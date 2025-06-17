@@ -3,15 +3,17 @@ import {
   calculateStorageNodeQuantity,
   calculateStorageNodeCapacity
 } from './calculationUtils';
+import { CalculationResult, CalculateRequiredQuantityFn } from '@/types/store-operations';
+import { StoreState } from '../../types';
 
 /**
  * Manages the calculation of required quantities for different component types
  */
-export const calculateRequiredQuantity = (
+export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
   roleId: string,
   componentId: string,
-  state: any
-): { requiredQuantity: number, calculationSteps: string[] } => {
+  state: StoreState
+): CalculationResult => {
   const { 
     requirements, 
     componentRoles, 

@@ -70,7 +70,7 @@ export const PortManagementSection: React.FC<PortManagementSectionProps> = ({
     }));
     // Append new ports to current list
     if (portsToAdd.length > 0) {
-      let updatedPorts = [...(formValues.ports || []), ...portsToAdd];
+      const updatedPorts = [...(formValues.ports || []), ...portsToAdd];
       onInputChange({
         target: {
           name: "ports",

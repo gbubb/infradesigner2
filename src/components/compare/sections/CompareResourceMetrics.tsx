@@ -1,13 +1,14 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
+import { DesignMetrics, SignificantDifferences, FormatType, BetterDirection } from '@/types/compare';
 
 interface CompareResourceMetricsProps {
   designAName: string;
   designBName: string;
-  metricsA: any;
-  metricsB: any;
-  significantDifferences: any;
+  metricsA: DesignMetrics;
+  metricsB: DesignMetrics;
+  significantDifferences: SignificantDifferences;
 }
 
 export const CompareResourceMetrics: React.FC<CompareResourceMetricsProps> = ({
@@ -24,7 +25,7 @@ export const CompareResourceMetrics: React.FC<CompareResourceMetricsProps> = ({
   };
   
   // Helper to format a value with a change indicator
-  const formatWithChange = (valueA: number, valueB: number, format: string = 'standard', better: 'lower' | 'higher' = 'higher') => {
+  const formatWithChange = (valueA: number, valueB: number, format: FormatType = 'standard', better: BetterDirection = 'higher') => {
     const percentDiff = getPercentDifference(valueA, valueB);
     const isImprovement = (better === 'lower' && percentDiff < 0) || (better === 'higher' && percentDiff > 0);
     

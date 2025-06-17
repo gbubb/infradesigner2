@@ -36,7 +36,7 @@ interface ComponentRow {
   serverrole: string | null;
   switchrole: string | null;
   isdefault: boolean | null;
-  details: any | null;
+  details: Record<string, any> | null;
   created_at?: string | null;
 }
 
@@ -71,7 +71,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
             JSON.parse(component.details) : component.details) : {};
         
         // Extract common fields from details
-        const commonFields: any = {
+        const commonFields: Partial<InfrastructureComponent> = {
           namingPrefix: details.namingPrefix,
           placement: details.placement,
         };

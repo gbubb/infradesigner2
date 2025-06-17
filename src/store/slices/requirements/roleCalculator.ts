@@ -1,13 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
-import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType } from '@/types/infrastructure';
+import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType, DesignRequirements } from '@/types/infrastructure';
 
 /**
  * Calculates component roles based on requirements
  */
-export const calculateComponentRoles = (requirements: any): ComponentRole[] => {
-  const getValue = <T>(obj: any, path: string, defaultValue: T): T => {
+export const calculateComponentRoles = (requirements: DesignRequirements): ComponentRole[] => {
+  const getValue = <T>(obj: DesignRequirements, path: string, defaultValue: T): T => {
     try {
-      return path.split('.').reduce((o, key) => o[key], obj) || defaultValue;
+      return path.split('.').reduce((o: Record<string, any>, key) => o?.[key], obj as Record<string, any>) || defaultValue;
     } catch (error) {
       return defaultValue;
     }

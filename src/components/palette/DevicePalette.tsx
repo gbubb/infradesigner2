@@ -6,6 +6,7 @@ import { DragSource } from '@/components/visualization/DragSource';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { RackProfile, PlacedDevice } from '@/types/infrastructure';
 
 interface DevicePaletteProps {
   rackId?: string;
@@ -22,7 +23,7 @@ export const DevicePalette: React.FC<DevicePaletteProps> = ({ rackId, onDevicePl
     if (!activeDesign) return new Set<string>();
     return new Set(
       (activeDesign.rackprofiles || [])
-        .flatMap((rp: any) => rp.devices?.map((d: any) => d.deviceId) || [])
+        .flatMap((rp: RackProfile) => rp.devices?.map((d: PlacedDevice) => d.deviceId) || [])
     );
   }, [activeDesign]);
 
