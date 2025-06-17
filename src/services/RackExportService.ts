@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { RackProfile } from '@/types/infrastructure/rack-types';
-import { Component } from '@/types/infrastructure/component-types';
+import { Component, ComponentType } from '@/types/infrastructure/component-types';
 import { PlacedDevice } from '@/types/infrastructure/rack-types';
 
 interface ExportOptions {
@@ -112,48 +112,78 @@ export class RackExportService {
     groupedRacks: Record<string, RackWithDevices[]>,
     azNameMap: Record<string, string>
   ): Promise<void> {
-    const racksPerRow = 6;
-    const racksPerPage = 18; // 3 rows of 6 racks
-    const thumbnailWidth = 30;
-    const thumbnailHeight = 70;
-    const spacing = 5;
+    // Switch to landscape for row view
+    const landscapePdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Copy existing pages to landscape PDF
+    const pageCount = pdf.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      if (i > 1) landscapePdf.addPage();
+      // Note: jsPDF doesn't have a direct way to copy pages, so we'll continue with the original PDF
+    }
+
+    // Landscape dimensions
+    const pageWidth = 297; // A4 landscape width
+    const pageHeight = 210; // A4 landscape height
+    const margin = 10;
+    const contentWidth = pageWidth - (2 * margin);
+    const contentHeight = pageHeight - (2 * margin);
+
+    // Calculate optimal thumbnail size
+    const racksPerRow = 12; // More racks per row in landscape
+    const maxRows = 4; // Maximum rows per page
+    const spacing = 3;
+    const thumbnailWidth = (contentWidth - (spacing * (racksPerRow - 1))) / racksPerRow;
+    const thumbnailHeight = (contentHeight - 40 - (spacing * (maxRows - 1))) / maxRows; // 40 for headers
 
     for (const [azName, racks] of Object.entries(groupedRacks)) {
+      pdf.addPage('a4', 'landscape');
+      
       // Add AZ header
-      pdf.setFontSize(16);
-      pdf.text(`Availability Zone: ${azName}`, this.MARGIN, 20);
+      pdf.setFontSize(14);
+      pdf.text(`Availability Zone: ${azName}`, margin, 20);
+      
+      // Sort racks by name to maintain rack order
+      const sortedRacks = [...racks].sort((a, b) => {
+        const aNum = this.extractRackNumber(a.rack.name);
+        const bNum = this.extractRackNumber(b.rack.name);
+        return aNum - bNum;
+      });
 
-      let rackIndex = 0;
-      while (rackIndex < racks.length) {
-        if (rackIndex > 0) pdf.addPage();
+      let row = 0;
+      let col = 0;
+      const startY = 30;
 
-        const pageRacks = racks.slice(rackIndex, rackIndex + racksPerPage);
-        let row = 0;
-        let col = 0;
-
-        for (const rackData of pageRacks) {
-          const x = this.MARGIN + (col * (thumbnailWidth + spacing));
-          const y = 30 + (row * (thumbnailHeight + spacing + 10));
-
-          // Draw rack thumbnail
-          this.drawRackThumbnail(pdf, rackData, x, y, thumbnailWidth, thumbnailHeight);
-
-          // Add rack name
-          pdf.setFontSize(8);
-          const displayName = this.getDisplayRackName(rackData.rack.name);
-          pdf.text(displayName, x + thumbnailWidth / 2, y + thumbnailHeight + 3, { 
-            align: 'center',
-            maxWidth: thumbnailWidth
-          });
-
-          col++;
-          if (col >= racksPerRow) {
-            col = 0;
-            row++;
-          }
+      for (const rackData of sortedRacks) {
+        if (row >= maxRows) {
+          pdf.addPage('a4', 'landscape');
+          row = 0;
+          col = 0;
         }
 
-        rackIndex += racksPerPage;
+        const x = margin + (col * (thumbnailWidth + spacing));
+        const y = startY + (row * (thumbnailHeight + spacing + 8));
+
+        // Draw rack thumbnail
+        this.drawRackThumbnail(pdf, rackData, x, y, thumbnailWidth, thumbnailHeight);
+
+        // Add rack name
+        pdf.setFontSize(7);
+        const displayName = this.getDisplayRackName(rackData.rack.name);
+        pdf.text(displayName, x + thumbnailWidth / 2, y + thumbnailHeight + 2, { 
+          align: 'center',
+          maxWidth: thumbnailWidth
+        });
+
+        col++;
+        if (col >= racksPerRow) {
+          col = 0;
+          row++;
+        }
       }
     }
   }
@@ -187,7 +217,7 @@ export class RackExportService {
       const deviceY = y + height - (placedDevice.ruPosition * ruHeight);
 
       // Set color based on device type
-      const color = this.getDeviceColorForPDF(component.type);
+      const color = this.getDeviceColorForPDF(component.type, component);
       pdf.setFillColor(color.r, color.g, color.b);
       pdf.setDrawColor(color.r * 0.8, color.g * 0.8, color.b * 0.8);
       
@@ -275,7 +305,7 @@ export class RackExportService {
       const deviceY = y + height - (placedDevice.ruPosition * ruHeight);
 
       // Device rectangle
-      const color = this.getDeviceColorForPDF(component.type);
+      const color = this.getDeviceColorForPDF(component.type, component);
       pdf.setFillColor(color.r, color.g, color.b);
       pdf.setDrawColor(color.r * 0.8, color.g * 0.8, color.b * 0.8);
       pdf.rect(x + 2, deviceY + 1, width - 4, deviceHeight - 2, 'FD');
@@ -300,53 +330,128 @@ export class RackExportService {
     y: number
   ): void {
     pdf.setFontSize(12);
-    pdf.text('Device Details:', x, y);
+    pdf.text('Device Summary:', x, y);
     
     let currentY = y + 10;
     pdf.setFontSize(9);
 
-    // Sort devices by RU position (top to bottom)
-    const sortedDevices = [...rackData.devices].sort((a, b) => 
-      b.placedDevice.ruPosition - a.placedDevice.ruPosition
-    );
+    // Group devices by component type and specification
+    const deviceGroups = new Map<string, {
+      component: Component;
+      positions: number[];
+    }>();
 
-    sortedDevices.forEach(({ placedDevice, component }) => {
+    rackData.devices.forEach(({ placedDevice, component }) => {
+      // Create a unique key for each component specification
+      const key = `${component.type}-${component.manufacturer}-${component.model}`;
+      
+      if (!deviceGroups.has(key)) {
+        deviceGroups.set(key, {
+          component,
+          positions: []
+        });
+      }
+      
+      deviceGroups.get(key)!.positions.push(placedDevice.ruPosition);
+    });
+
+    // Sort groups by highest RU position
+    const sortedGroups = Array.from(deviceGroups.entries()).sort((a, b) => {
+      const maxA = Math.max(...a[1].positions);
+      const maxB = Math.max(...b[1].positions);
+      return maxB - maxA;
+    });
+
+    sortedGroups.forEach(([key, group]) => {
       // Check if we need a new page
-      if (currentY > this.PAGE_HEIGHT - 30) {
+      if (currentY > this.PAGE_HEIGHT - 40) {
         pdf.addPage();
         currentY = 20;
       }
 
-      // Device info
-      pdf.setFont(undefined, 'bold');
-      pdf.text(`U${placedDevice.ruPosition}: ${component.name}`, x, currentY);
+      const { component, positions } = group;
       
+      // Sort positions in descending order
+      positions.sort((a, b) => b - a);
+      
+      // Component header
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`${component.name} (${positions.length}x)`, x, currentY);
+      
+      // Component details
       pdf.setFont(undefined, 'normal');
-      pdf.text(`Model: ${component.model || 'N/A'}`, x + 5, currentY + 5);
-      pdf.text(`Manufacturer: ${component.manufacturer || 'N/A'}`, x + 5, currentY + 10);
+      pdf.text(`Type: ${component.type}`, x + 5, currentY + 5);
+      pdf.text(`Model: ${component.model || 'N/A'}`, x + 5, currentY + 10);
+      pdf.text(`Manufacturer: ${component.manufacturer || 'N/A'}`, x + 5, currentY + 15);
       
       if (component.type === 'Server' && 'serverRole' in component && component.serverRole) {
-        pdf.text(`Role: ${component.serverRole}`, x + 5, currentY + 15);
+        pdf.text(`Role: ${component.serverRole}`, x + 5, currentY + 20);
+        currentY += 5;
       }
       
       if (component.powerRequired) {
-        pdf.text(`Power: ${component.powerRequired}W`, x + 5, currentY + 20);
+        pdf.text(`Power: ${component.powerRequired}W each`, x + 5, currentY + 20);
+        currentY += 5;
       }
-
-      currentY += 30;
+      
+      // RU positions
+      const ruSize = component.ruSize || 1;
+      const positionStrings = positions.map(pos => {
+        if (ruSize === 1) {
+          return `U${pos}`;
+        } else {
+          return `U${pos}-U${pos + ruSize - 1}`;
+        }
+      });
+      
+      pdf.text(`Positions: ${positionStrings.join(', ')}`, x + 5, currentY + 20);
+      
+      currentY += 35;
     });
   }
 
-  private static getDeviceColorForPDF(type: string): { r: number; g: number; b: number } {
-    const colors: Record<string, { r: number; g: number; b: number }> = {
-      'Server': { r: 59, g: 130, b: 246 }, // blue-500
-      'Network': { r: 16, g: 185, b: 129 }, // emerald-500
-      'Storage': { r: 236, g: 72, b: 153 }, // pink-500
-      'Cabling': { r: 251, g: 191, b: 36 }, // amber-400
-      'Accessories': { r: 168, g: 85, b: 247 }, // purple-500
-    };
-
-    return colors[type] || { r: 156, g: 163, b: 175 }; // gray-400
+  private static getDeviceColorForPDF(type: string, component?: Component): { r: number; g: number; b: number } {
+    // Match the color scheme from rackUtils.ts
+    // For servers, differentiate by role
+    if (type === ComponentType.Server && component && 'serverRole' in component && component.serverRole) {
+      switch (component.serverRole) {
+        case 'compute':
+          return { r: 191, g: 219, b: 254 }; // blue-200
+        case 'controller':
+          return { r: 153, g: 246, b: 228 }; // teal-200
+        case 'infrastructure':
+          return { r: 199, g: 210, b: 254 }; // indigo-200
+        case 'storage':
+          return { r: 254, g: 215, b: 170 }; // orange-200
+        case 'gpu':
+          return { r: 233, g: 213, b: 255 }; // purple-200
+        default:
+          return { r: 191, g: 219, b: 254 }; // blue-200
+      }
+    }
+    
+    // Type-based colors matching rackUtils.ts
+    switch (type) {
+      case ComponentType.Server:
+        return { r: 191, g: 219, b: 254 }; // blue-200
+      case ComponentType.Switch:
+        return { r: 187, g: 247, b: 208 }; // green-200
+      case ComponentType.Router:
+        return { r: 254, g: 240, b: 138 }; // yellow-200
+      case ComponentType.Firewall:
+        return { r: 254, g: 202, b: 202 }; // red-200
+      case ComponentType.FiberPatchPanel:
+      case ComponentType.CopperPatchPanel:
+        return { r: 165, g: 243, b: 252 }; // cyan-200
+      case ComponentType.Cassette:
+        return { r: 165, g: 243, b: 252 }; // cyan-200
+      case ComponentType.PDU:
+        return { r: 187, g: 247, b: 208 }; // green-200
+      case ComponentType.Transceiver:
+        return { r: 233, g: 213, b: 255 }; // purple-200
+      default:
+        return { r: 229, g: 231, b: 235 }; // gray-200
+    }
   }
 
   private static getDisplayRackName(fullName: string): string {
@@ -357,6 +462,12 @@ export class RackExportService {
       if (parts.length > 1 && parts[1]) return `Rack ${parts[1]}`;
     }
     return fullName;
+  }
+
+  private static extractRackNumber(rackName: string): number {
+    // Extract numeric part from rack name for sorting
+    const match = rackName.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 0;
   }
 
   // Helper method to capture element as image
