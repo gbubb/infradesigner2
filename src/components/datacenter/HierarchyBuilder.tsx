@@ -164,7 +164,7 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
     }
 
     const newLevel: HierarchyLevel = {
-      id: `level-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: newLevelName.trim(),
       parentId: newLevelParentId,
       level: level,
@@ -247,12 +247,18 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
 
   // Add default hierarchy template
   const addDefaultHierarchy = () => {
+    const buildingId = crypto.randomUUID();
+    const floorId = crypto.randomUUID();
+    const hallId = crypto.randomUUID();
+    const podId = crypto.randomUUID();
+    const rowId = crypto.randomUUID();
+    
     const defaultHierarchy: HierarchyLevel[] = [
-      { id: 'building-1', name: 'Building', parentId: undefined, level: 0 },
-      { id: 'floor-1', name: 'Floor', parentId: 'building-1', level: 1 },
-      { id: 'hall-1', name: 'Hall', parentId: 'floor-1', level: 2 },
-      { id: 'pod-1', name: 'Pod', parentId: 'hall-1', level: 3 },
-      { id: 'row-1', name: 'Row', parentId: 'pod-1', level: 4 },
+      { id: buildingId, name: 'Building', parentId: undefined, level: 0 },
+      { id: floorId, name: 'Floor', parentId: buildingId, level: 1 },
+      { id: hallId, name: 'Hall', parentId: floorId, level: 2 },
+      { id: podId, name: 'Pod', parentId: hallId, level: 3 },
+      { id: rowId, name: 'Row', parentId: podId, level: 4 },
     ];
     
     onUpdate({
