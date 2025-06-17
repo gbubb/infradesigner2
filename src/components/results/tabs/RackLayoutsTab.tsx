@@ -178,7 +178,7 @@ export const RackLayoutsTab: React.FC = () => {
           </div>
           <div>
             <RackPDFExport
-              rackProfiles={rackProfiles}
+              rackProfiles={getDisplayRacks}
               azNameMap={azNameMap}
               selectedRackId={selectedRackId}
             />

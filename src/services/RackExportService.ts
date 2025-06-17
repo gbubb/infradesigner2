@@ -143,12 +143,8 @@ export class RackExportService {
       pdf.setFontSize(14);
       pdf.text(`Availability Zone: ${azName}`, margin, 20);
       
-      // Sort racks by name to maintain rack order
-      const sortedRacks = [...racks].sort((a, b) => {
-        const aNum = this.extractRackNumber(a.rack.name);
-        const bNum = this.extractRackNumber(b.rack.name);
-        return aNum - bNum;
-      });
+      // Don't sort - maintain the order from the UI
+      const sortedRacks = racks;
 
       let row = 0;
       let col = 0;
@@ -308,7 +304,11 @@ export class RackExportService {
       // Device label
       pdf.setFontSize(9);
       pdf.setTextColor(0, 0, 0); // Black text for better contrast
-      const label = `${component.name} (U${placedDevice.ruPosition}-U${placedDevice.ruPosition + (component.ruSize || 1) - 1})`;
+      const ruSize = component.ruSize || 1;
+      const positionLabel = ruSize === 1 
+        ? `U${placedDevice.ruPosition}`
+        : `U${placedDevice.ruPosition}-U${placedDevice.ruPosition + ruSize - 1}`;
+      const label = `${component.name} (${positionLabel})`;
       pdf.text(label, x + width / 2, deviceY + deviceHeight / 2, {
         align: 'center',
         baseline: 'middle',
