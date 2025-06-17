@@ -187,12 +187,15 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
   const handleAddLayer = () => {
     if (!newLayer.name?.trim()) return;
 
+    // Ensure efficiency doesn't exceed database constraint
+    const efficiency = Math.min(newLayer.efficiency || 0.95, 0.999);
+
     const layer: PowerLayer = {
       id: crypto.randomUUID(),
       name: newLayer.name.trim(),
       type: newLayer.type || 'pdu',
       capacityKW: newLayer.capacityKW || 1000,
-      efficiency: newLayer.efficiency || 0.95,
+      efficiency: efficiency,
       parentLayerId: newLayer.parentLayerId,
       redundancyConfig: newLayer.redundancyConfig
     };
@@ -213,8 +216,14 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
   };
 
   const handleEditLayer = (layer: PowerLayer) => {
+    // Ensure efficiency doesn't exceed database constraint
+    const sanitizedLayer = {
+      ...layer,
+      efficiency: Math.min(layer.efficiency, 0.999)
+    };
+    
     const updatedLayers = facility.powerInfrastructure.map(l => 
-      l.id === layer.id ? layer : l
+      l.id === layer.id ? sanitizedLayer : l
     );
     onUpdate({
       ...facility,
@@ -248,7 +257,7 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
     const pduBId = crypto.randomUUID();
     
     const defaultLayers: PowerLayer[] = [
-      { id: gridId, name: 'Grid Input', type: 'grid', capacityKW: 10000, efficiency: 1.0, parentLayerId: undefined },
+      { id: gridId, name: 'Grid Input', type: 'grid', capacityKW: 10000, efficiency: 0.999, parentLayerId: undefined },
       { id: upsId, name: 'UPS System', type: 'ups', capacityKW: 10000, efficiency: 0.95, parentLayerId: gridId, 
         redundancyConfig: { type: '2N' } },
       { id: pduAId, name: 'PDU A', type: 'pdu', capacityKW: 5000, efficiency: 0.98, parentLayerId: upsId },
@@ -474,8 +483,8 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
               <Slider
                 id="efficiency"
                 min={0.5}
-                max={1}
-                step={0.01}
+                max={0.999}
+                step={0.001}
                 value={[editingLayer?.efficiency || newLayer.efficiency || 0.95]}
                 onValueChange={(value) => {
                   if (editingLayer) {
