@@ -112,33 +112,20 @@ export class RackExportService {
     groupedRacks: Record<string, RackWithDevices[]>,
     azNameMap: Record<string, string>
   ): Promise<void> {
-    // Switch to landscape for row view
-    const landscapePdf = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4'
-    });
-
-    // Copy existing pages to landscape PDF
-    const pageCount = pdf.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      if (i > 1) landscapePdf.addPage();
-      // Note: jsPDF doesn't have a direct way to copy pages, so we'll continue with the original PDF
-    }
-
     // Landscape dimensions
     const pageWidth = 297; // A4 landscape width
     const pageHeight = 210; // A4 landscape height
-    const margin = 10;
+    const margin = 15;
     const contentWidth = pageWidth - (2 * margin);
     const contentHeight = pageHeight - (2 * margin);
 
-    // Calculate optimal thumbnail size
-    const racksPerRow = 12; // More racks per row in landscape
-    const maxRows = 4; // Maximum rows per page
-    const spacing = 3;
+    // Calculate optimal thumbnail size to maximize use of space
+    const racksPerRow = 8; // Optimal for visibility
+    const maxRows = 2; // 2 rows per page for larger thumbnails
+    const spacing = 4;
+    const headerHeight = 25;
     const thumbnailWidth = (contentWidth - (spacing * (racksPerRow - 1))) / racksPerRow;
-    const thumbnailHeight = (contentHeight - 40 - (spacing * (maxRows - 1))) / maxRows; // 40 for headers
+    const thumbnailHeight = (contentHeight - headerHeight - (spacing * (maxRows - 1))) / maxRows;
 
     for (const [azName, racks] of Object.entries(groupedRacks)) {
       pdf.addPage('a4', 'landscape');
@@ -227,13 +214,12 @@ export class RackExportService {
       // Add device label if space permits
       if (deviceHeight > 3) {
         pdf.setFontSize(6);
-        pdf.setTextColor(255, 255, 255);
+        pdf.setTextColor(0, 0, 0); // Black text for better contrast
         const label = component.name.substring(0, 10);
         pdf.text(label, x + width / 2, deviceY + deviceHeight / 2, {
           align: 'center',
           baseline: 'middle'
         });
-        pdf.setTextColor(0, 0, 0);
       }
     });
 
@@ -250,7 +236,7 @@ export class RackExportService {
   ): Promise<void> {
     for (const [azName, racks] of Object.entries(groupedRacks)) {
       for (const rackData of racks) {
-        pdf.addPage();
+        pdf.addPage('a4', 'portrait'); // Ensure portrait orientation
         
         // Header
         pdf.setFontSize(16);
@@ -312,14 +298,13 @@ export class RackExportService {
 
       // Device label
       pdf.setFontSize(9);
-      pdf.setTextColor(255, 255, 255);
+      pdf.setTextColor(0, 0, 0); // Black text for better contrast
       const label = `${component.name} (U${placedDevice.ruPosition}-U${placedDevice.ruPosition + (component.ruSize || 1) - 1})`;
       pdf.text(label, x + width / 2, deviceY + deviceHeight / 2, {
         align: 'center',
         baseline: 'middle',
         maxWidth: width - 8
       });
-      pdf.setTextColor(0, 0, 0);
     });
   }
 
@@ -411,46 +396,46 @@ export class RackExportService {
   }
 
   private static getDeviceColorForPDF(type: string, component?: Component): { r: number; g: number; b: number } {
-    // Match the color scheme from rackUtils.ts
+    // Enhanced saturated colors for better PDF visibility
     // For servers, differentiate by role
     if (type === ComponentType.Server && component && 'serverRole' in component && component.serverRole) {
       switch (component.serverRole) {
         case 'compute':
-          return { r: 191, g: 219, b: 254 }; // blue-200
+          return { r: 96, g: 165, b: 250 }; // blue-400
         case 'controller':
-          return { r: 153, g: 246, b: 228 }; // teal-200
+          return { r: 45, g: 212, b: 191 }; // teal-400
         case 'infrastructure':
-          return { r: 199, g: 210, b: 254 }; // indigo-200
+          return { r: 129, g: 140, b: 248 }; // indigo-400
         case 'storage':
-          return { r: 254, g: 215, b: 170 }; // orange-200
+          return { r: 251, g: 146, b: 60 }; // orange-400
         case 'gpu':
-          return { r: 233, g: 213, b: 255 }; // purple-200
+          return { r: 192, g: 132, b: 252 }; // purple-400
         default:
-          return { r: 191, g: 219, b: 254 }; // blue-200
+          return { r: 96, g: 165, b: 250 }; // blue-400
       }
     }
     
-    // Type-based colors matching rackUtils.ts
+    // Type-based colors with higher saturation
     switch (type) {
       case ComponentType.Server:
-        return { r: 191, g: 219, b: 254 }; // blue-200
+        return { r: 96, g: 165, b: 250 }; // blue-400
       case ComponentType.Switch:
-        return { r: 187, g: 247, b: 208 }; // green-200
+        return { r: 74, g: 222, b: 128 }; // green-400
       case ComponentType.Router:
-        return { r: 254, g: 240, b: 138 }; // yellow-200
+        return { r: 250, g: 204, b: 21 }; // yellow-400
       case ComponentType.Firewall:
-        return { r: 254, g: 202, b: 202 }; // red-200
+        return { r: 248, g: 113, b: 113 }; // red-400
       case ComponentType.FiberPatchPanel:
       case ComponentType.CopperPatchPanel:
-        return { r: 165, g: 243, b: 252 }; // cyan-200
+        return { r: 34, g: 211, b: 238 }; // cyan-400
       case ComponentType.Cassette:
-        return { r: 165, g: 243, b: 252 }; // cyan-200
+        return { r: 34, g: 211, b: 238 }; // cyan-400
       case ComponentType.PDU:
-        return { r: 187, g: 247, b: 208 }; // green-200
+        return { r: 74, g: 222, b: 128 }; // green-400
       case ComponentType.Transceiver:
-        return { r: 233, g: 213, b: 255 }; // purple-200
+        return { r: 192, g: 132, b: 252 }; // purple-400
       default:
-        return { r: 229, g: 231, b: 235 }; // gray-200
+        return { r: 156, g: 163, b: 175 }; // gray-400
     }
   }
 
