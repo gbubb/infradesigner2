@@ -208,6 +208,24 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
         }
       }
 
+      if (updates.hierarchyConfig) {
+        await supabase
+          .from('facility_hierarchy')
+          .delete()
+          .eq('facilityId', id);
+        
+        if (updates.hierarchyConfig.length > 0) {
+          await supabase
+            .from('facility_hierarchy')
+            .insert(
+              updates.hierarchyConfig.map(level => ({
+                ...level,
+                facilityId: id
+              }))
+            );
+        }
+      }
+
       // Reload facilities
       await get().loadFacilities();
     } catch (error) {
