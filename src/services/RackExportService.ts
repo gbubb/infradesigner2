@@ -93,18 +93,27 @@ export class RackExportService {
     azNameMap: Record<string, string>
   ): Record<string, RackWithDevices[]> {
     const grouped: Record<string, RackWithDevices[]> = {};
+    const azOrder: string[] = [];
 
+    // Maintain the original order while grouping
     racks.forEach(rackData => {
       const azId = rackData.rack.availabilityZoneId || 'unknown';
       const azName = azNameMap[azId] || azId;
       
       if (!grouped[azName]) {
         grouped[azName] = [];
+        azOrder.push(azName);
       }
       grouped[azName].push(rackData);
     });
 
-    return grouped;
+    // Return grouped racks in the order they were first encountered
+    const orderedGrouped: Record<string, RackWithDevices[]> = {};
+    azOrder.forEach(az => {
+      orderedGrouped[az] = grouped[az];
+    });
+
+    return orderedGrouped;
   }
 
   private static async addRowViewPages(
