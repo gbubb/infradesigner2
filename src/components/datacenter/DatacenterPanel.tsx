@@ -30,6 +30,7 @@ type FacilityFormData = z.infer<typeof facilityFormSchema>;
 export const DatacenterPanel: React.FC = () => {
   const [isCreatingFacility, setIsCreatingFacility] = useState(false);
   const [editingFacility, setEditingFacility] = useState<DatacenterFacility | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('hierarchy');
 
   // Get state and actions from the facilities slice
   const {
@@ -406,7 +407,7 @@ export const DatacenterPanel: React.FC = () => {
               )}
 
               {/* Configuration Tabs */}
-              <Tabs defaultValue="hierarchy" className="w-full">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="hierarchy">Space Hierarchy</TabsTrigger>
                   <TabsTrigger value="power">Power Infrastructure</TabsTrigger>

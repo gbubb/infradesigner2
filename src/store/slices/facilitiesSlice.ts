@@ -66,7 +66,9 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
         }
       }));
 
-      set({ facilities, isLoadingFacilities: false });
+      // Preserve the selected facility ID when loading
+      const currentSelectedId = get().selectedFacilityId;
+      set({ facilities, isLoadingFacilities: false, selectedFacilityId: currentSelectedId });
     } catch (error) {
       console.error('Error loading facilities:', error);
       set({ 
