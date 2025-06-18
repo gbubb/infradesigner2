@@ -12,8 +12,9 @@ import { DatacenterFacility } from '@/types/infrastructure/datacenter-types';
 import { HierarchyBuilder } from './HierarchyBuilder';
 import { PowerInfrastructureDesigner } from './PowerInfrastructureDesigner';
 import { CostLayerManager } from './CostLayerManager';
-import { RackAssignmentPanel } from './RackAssignment/RackAssignmentPanel';
+import { RackMappingPanel } from './RackMapping/RackMappingPanel';
 import { RackCostVisualization } from './RackAssignment/RackCostVisualization';
+import { RackDefinitionPanel } from './RackDefinition/RackDefinitionPanel';
 import { useDesignStore } from '@/store/designStore';
 import { cn } from '@/lib/utils';
 import { useForm } from 'react-hook-form';
@@ -410,10 +411,14 @@ export const DatacenterPanel: React.FC = () => {
 
               {/* Configuration Tabs */}
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="hierarchy">Space Hierarchy</TabsTrigger>
                   <TabsTrigger value="power">Power Infrastructure</TabsTrigger>
                   <TabsTrigger value="costs">Cost Layers</TabsTrigger>
+                  <TabsTrigger value="rack-definition" className="flex items-center gap-1">
+                    <Server className="h-3 w-3" />
+                    Rack Definition
+                  </TabsTrigger>
                   <TabsTrigger value="racks" className="flex items-center gap-1">
                     <Server className="h-3 w-3" />
                     Rack Assignment
@@ -445,8 +450,12 @@ export const DatacenterPanel: React.FC = () => {
                   />
                 </TabsContent>
 
+                <TabsContent value="rack-definition" className="mt-6">
+                  <RackDefinitionPanel />
+                </TabsContent>
+
                 <TabsContent value="racks" className="mt-6">
-                  <RackAssignmentPanel />
+                  <RackMappingPanel />
                 </TabsContent>
 
                 <TabsContent value="analysis" className="mt-6">

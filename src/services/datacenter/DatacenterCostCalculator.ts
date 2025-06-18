@@ -7,15 +7,17 @@ import type {
   CostCategory
 } from '@/types/infrastructure/datacenter-types';
 import type { RackProfile } from '@/types/infrastructure/rack-types';
+import type { DatacenterRack, DatacenterRackWithUsage } from '@/types/infrastructure/datacenter-rack-types';
 import { RackFacilityIntegrationService } from './RackFacilityIntegrationService';
+import { DatacenterRackService } from './DatacenterRackService';
 
 export class DatacenterCostCalculator {
   private facility: DatacenterFacility;
-  private assignedRacks: RackProfile[];
+  private datacenterRacks: DatacenterRackWithUsage[];
 
-  constructor(facility: DatacenterFacility, assignedRacks: RackProfile[]) {
+  constructor(facility: DatacenterFacility, datacenterRacks: DatacenterRackWithUsage[]) {
     this.facility = facility;
-    this.assignedRacks = assignedRacks;
+    this.datacenterRacks = datacenterRacks;
   }
 
   /**
@@ -97,13 +99,14 @@ export class DatacenterCostCalculator {
 
   /**
    * Calculate detailed per-rack cost allocations
+   * Costs are distributed across ALL datacenter racks, not just occupied ones
    */
   async calculatePerRackCosts(): Promise<RackCostAllocation[]> {
     const facilityBreakdown = this.calculateFacilityCosts();
     const rackAllocations: RackCostAllocation[] = [];
 
-    for (const rack of this.assignedRacks) {
-      const rackPowerKw = rack.actualPowerUsageKw || rack.powerAllocationKw || 0;
+    for (const rack of this.datacenterRacks) {
+      const rackPowerKw = rack.powerUsageKw || rack.maxPowerKw || 0;
       const hierarchyPath = await this.getHierarchyPath(rack);
       
       // Calculate costs for this rack
@@ -114,15 +117,6 @@ export class DatacenterCostCalculator {
       const perU = rack.uHeight > 0 ? totalMonthly / rack.uHeight : 0;
       const perKw = rackPowerKw > 0 ? totalMonthly / rackPowerKw : 0;
       
-      // Calculate used U space
-      const usedU = rack.devices?.reduce((sum, device) => {
-        // Each device has a startU and endU position
-        if (device.endU && device.startU) {
-          return Math.max(sum, device.endU);
-        }
-        return sum;
-      }, 0) || 0;
-
       rackAllocations.push({
         rackId: rack.id,
         rackName: rack.name,
@@ -138,9 +132,9 @@ export class DatacenterCostCalculator {
           }
         },
         utilization: {
-          powerAllocatedKw: rack.powerAllocationKw || 0,
-          powerUsedKw: rackPowerKw,
-          usedU,
+          powerAllocatedKw: rack.maxPowerKw || 0,
+          powerUsedKw: rack.powerUsageKw,
+          usedU: rack.spaceUsageU,
           totalU: rack.uHeight
         }
       });
@@ -153,7 +147,7 @@ export class DatacenterCostCalculator {
    * Calculate capital cost allocation for a rack
    */
   private calculateRackCapitalCosts(
-    rack: RackProfile,
+    rack: DatacenterRackWithUsage,
     facilityBreakdown: FacilityCostBreakdown
   ): { monthly: number; breakdown: Record<CostCategory, number> } {
     const capitalLayers = this.facility.costLayers.filter(l => l.type === 'capital');
@@ -173,7 +167,7 @@ export class DatacenterCostCalculator {
    * Calculate operational cost allocation for a rack
    */
   private calculateRackOperationalCosts(
-    rack: RackProfile,
+    rack: DatacenterRackWithUsage,
     facilityBreakdown: FacilityCostBreakdown
   ): { monthly: number; breakdown: Record<CostCategory, number> } {
     const operationalLayers = this.facility.costLayers.filter(l => l.type === 'operational');
@@ -194,7 +188,7 @@ export class DatacenterCostCalculator {
    */
   private allocateCostToRack(
     layer: CostLayer,
-    rack: RackProfile,
+    rack: DatacenterRackWithUsage,
     facilityBreakdown: FacilityCostBreakdown
   ): number {
     let monthlyAmount = 0;
@@ -214,12 +208,12 @@ export class DatacenterCostCalculator {
       }
     }
 
-    // Apply allocation method
-    const totalRacks = this.assignedRacks.length;
-    const totalPower = this.assignedRacks.reduce((sum, r) => 
-      sum + (r.actualPowerUsageKw || r.powerAllocationKw || 0), 0
+    // Apply allocation method - costs are distributed across ALL datacenter racks
+    const totalRacks = this.datacenterRacks.length;
+    const totalPower = this.datacenterRacks.reduce((sum, r) => 
+      sum + (r.maxPowerKw || 0), 0  // Use max power capacity for cost allocation
     );
-    const rackPower = rack.actualPowerUsageKw || rack.powerAllocationKw || 0;
+    const rackPower = rack.maxPowerKw || 0;  // Use max power capacity for cost allocation
 
     switch (layer.allocationMethod) {
       case 'per-rack':
@@ -247,12 +241,26 @@ export class DatacenterCostCalculator {
   /**
    * Get hierarchy path for a rack
    */
-  private async getHierarchyPath(rack: RackProfile): Promise<string[]> {
+  private async getHierarchyPath(rack: DatacenterRackWithUsage): Promise<string[]> {
     if (!rack.facilityId || !rack.hierarchyLevelId) return [];
     
     try {
-      // This would call the integration service method
-      return [];
+      // Get hierarchy path from facility configuration
+      const facility = this.facility;
+      const hierarchyMap = new Map<string, any>();
+      facility.hierarchyConfig.forEach(level => {
+        hierarchyMap.set(level.id, level);
+      });
+      
+      const path: string[] = [];
+      let currentLevel = hierarchyMap.get(rack.hierarchyLevelId);
+      
+      while (currentLevel) {
+        path.unshift(currentLevel.name);
+        currentLevel = currentLevel.parentId ? hierarchyMap.get(currentLevel.parentId) : null;
+      }
+      
+      return path;
     } catch {
       return [];
     }

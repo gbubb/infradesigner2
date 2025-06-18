@@ -414,17 +414,30 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
     if (!facility) throw new Error('Facility not found');
 
     try {
-      // Get assigned racks for this facility
-      const { data: assignedRacks, error } = await supabase
-        .from('rack_profiles')
-        .select('*')
-        .eq('facility_id', facilityId);
-
-      if (error) throw error;
-
-      // Import and use the calculator
+      // Import services
+      const { DatacenterRackService } = await import('@/services/datacenter/DatacenterRackService');
       const { DatacenterCostCalculator } = await import('@/services/datacenter/DatacenterCostCalculator');
-      const calculator = new DatacenterCostCalculator(facility, assignedRacks || []);
+      
+      // Get ALL datacenter racks for this facility (with usage information)
+      const datacenterRacks = await DatacenterRackService.getFacilityRacks(facilityId);
+      
+      // Get usage information for each rack
+      const racksWithUsage = await Promise.all(
+        datacenterRacks.map(async (rack) => {
+          const rackWithUsage = await DatacenterRackService.getRacksWithUsage(rack.hierarchyLevelId);
+          return rackWithUsage.find(r => r.id === rack.id) || {
+            ...rack,
+            mappedRack: undefined,
+            powerUsageKw: 0,
+            powerUtilization: 0,
+            spaceUsageU: 0,
+            spaceUtilization: 0
+          };
+        })
+      );
+
+      // Calculate costs distributed across ALL datacenter racks
+      const calculator = new DatacenterCostCalculator(facility, racksWithUsage);
       
       return await calculator.calculatePerRackCosts();
     } catch (error) {
