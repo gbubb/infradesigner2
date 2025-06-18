@@ -111,7 +111,7 @@ DECLARE
   v_rack datacenter_racks;
 BEGIN
   -- Get facility ID and level name
-  SELECT facilityId, name INTO v_facility_id, v_level_name
+  SELECT "facilityId", name INTO v_facility_id, v_level_name
   FROM facility_hierarchy
   WHERE id = p_hierarchy_level_id;
   
