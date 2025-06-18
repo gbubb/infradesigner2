@@ -330,8 +330,7 @@ export function RackMappingPanel() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-full max-h-[600px]">
-                  <div className="space-y-3">
+                <div className="space-y-3">
                     {datacenterRacks
                       .filter(r => r.mappedRack)
                       .map(rack => (
@@ -421,7 +420,6 @@ export function RackMappingPanel() {
                       </div>
                     )}
                   </div>
-                </ScrollArea>
               </CardContent>
             </Card>
           </>
