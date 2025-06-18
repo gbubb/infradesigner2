@@ -24,3 +24,6 @@ export { initializeStore };
 // Export calculation functions
 export { recalculateDesign, manualRecalculateDesign };
 
+// Export convenience alias
+export const useStore = useDesignStore;
+

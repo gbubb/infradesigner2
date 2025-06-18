@@ -7,11 +7,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Building2, Plus, DollarSign, Zap, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { Building2, Plus, DollarSign, Zap, AlertCircle, Edit, Trash2, Server, BarChart3 } from 'lucide-react';
 import { DatacenterFacility } from '@/types/infrastructure/datacenter-types';
 import { HierarchyBuilder } from './HierarchyBuilder';
 import { PowerInfrastructureDesigner } from './PowerInfrastructureDesigner';
 import { CostLayerManager } from './CostLayerManager';
+import { RackAssignmentPanel } from './RackAssignment/RackAssignmentPanel';
+import { RackCostVisualization } from './RackAssignment/RackCostVisualization';
 import { useDesignStore } from '@/store/designStore';
 import { cn } from '@/lib/utils';
 import { useForm } from 'react-hook-form';
@@ -408,10 +410,18 @@ export const DatacenterPanel: React.FC = () => {
 
               {/* Configuration Tabs */}
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="hierarchy">Space Hierarchy</TabsTrigger>
                   <TabsTrigger value="power">Power Infrastructure</TabsTrigger>
                   <TabsTrigger value="costs">Cost Layers</TabsTrigger>
+                  <TabsTrigger value="racks" className="flex items-center gap-1">
+                    <Server className="h-3 w-3" />
+                    Rack Assignment
+                  </TabsTrigger>
+                  <TabsTrigger value="analysis" className="flex items-center gap-1">
+                    <BarChart3 className="h-3 w-3" />
+                    Cost Analysis
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="hierarchy" className="mt-6">
@@ -433,6 +443,14 @@ export const DatacenterPanel: React.FC = () => {
                     facility={selectedFacility}
                     onUpdate={handleUpdateFacility}
                   />
+                </TabsContent>
+
+                <TabsContent value="racks" className="mt-6">
+                  <RackAssignmentPanel />
+                </TabsContent>
+
+                <TabsContent value="analysis" className="mt-6">
+                  <RackCostVisualization />
                 </TabsContent>
               </Tabs>
             </>

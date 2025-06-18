@@ -3,17 +3,19 @@ import type {
   CostLayer, 
   FacilityCostBreakdown,
   RackCostAllocation,
-  CostLayerBreakdown
+  CostLayerBreakdown,
+  CostCategory
 } from '@/types/infrastructure/datacenter-types';
-import type { Rack } from '@/types/infrastructure';
+import type { RackProfile } from '@/types/infrastructure/rack-types';
+import { RackFacilityIntegrationService } from './RackFacilityIntegrationService';
 
 export class DatacenterCostCalculator {
   private facility: DatacenterFacility;
-  private racks: Rack[];
+  private assignedRacks: RackProfile[];
 
-  constructor(facility: DatacenterFacility, racks: Rack[]) {
+  constructor(facility: DatacenterFacility, assignedRacks: RackProfile[]) {
     this.facility = facility;
-    this.racks = racks;
+    this.assignedRacks = assignedRacks;
   }
 
   /**
@@ -21,9 +23,9 @@ export class DatacenterCostCalculator {
    */
   calculateFacilityCosts(): FacilityCostBreakdown {
     const totalPowerCapacityKW = this.calculateTotalPowerCapacity();
-    const totalRackCount = this.racks.length;
+    const totalRackCount = this.assignedRacks.length;
     const allocatedPowerKW = this.calculateAllocatedPower();
-    const allocatedRackCount = this.racks.filter(r => r.placedComponents.length > 0).length;
+    const allocatedRackCount = this.assignedRacks.filter(r => r.devices && r.devices.length > 0).length;
 
     const costLayerBreakdowns = this.facility.costLayers.map(layer => 
       this.calculateCostLayerBreakdown(layer, totalRackCount, totalPowerCapacityKW)
@@ -56,7 +58,7 @@ export class DatacenterCostCalculator {
         allocatedPowerKW
       },
       costLayerBreakdowns,
-      rackAllocations: this.calculateRackAllocations(totalMonthlyCost, totalPowerCapacityKW)
+      rackAllocations: [] // Use calculatePerRackCosts() for detailed allocations
     };
   }
 
@@ -94,43 +96,163 @@ export class DatacenterCostCalculator {
   }
 
   /**
-   * Calculate cost allocation for each rack based on power and space
+   * Calculate detailed per-rack cost allocations
    */
-  private calculateRackAllocations(
-    totalMonthlyCost: number, 
-    totalPowerKW: number
-  ): RackCostAllocation[] {
-    return this.racks.map(rack => {
-      const rackPowerKW = this.calculateRackPower(rack);
-      const costByPower = totalPowerKW > 0 ? (rackPowerKW / totalPowerKW) * totalMonthlyCost : 0;
-      const costBySpace = this.racks.length > 0 ? totalMonthlyCost / this.racks.length : 0;
-      
-      // Calculate weighted allocation based on facility cost layers
-      const powerWeightedLayers = this.facility.costLayers.filter(l => 
-        l.allocationMethod === 'per-kw' || l.allocationMethod === 'hybrid'
-      );
-      const spaceWeightedLayers = this.facility.costLayers.filter(l => 
-        l.allocationMethod === 'per-rack' || l.allocationMethod === 'hybrid'
-      );
-      
-      const powerWeight = powerWeightedLayers.length / this.facility.costLayers.length;
-      const spaceWeight = spaceWeightedLayers.length / this.facility.costLayers.length;
-      
-      const allocatedCost = (costByPower * powerWeight) + (costBySpace * spaceWeight);
+  async calculatePerRackCosts(): Promise<RackCostAllocation[]> {
+    const facilityBreakdown = this.calculateFacilityCosts();
+    const rackAllocations: RackCostAllocation[] = [];
 
-      return {
+    for (const rack of this.assignedRacks) {
+      const rackPowerKw = rack.actualPowerUsageKw || rack.powerAllocationKw || 0;
+      const hierarchyPath = await this.getHierarchyPath(rack);
+      
+      // Calculate costs for this rack
+      const capitalCosts = this.calculateRackCapitalCosts(rack, facilityBreakdown);
+      const operationalCosts = this.calculateRackOperationalCosts(rack, facilityBreakdown);
+      
+      const totalMonthly = capitalCosts.monthly + operationalCosts.monthly;
+      const perU = rack.uHeight > 0 ? totalMonthly / rack.uHeight : 0;
+      const perKw = rackPowerKw > 0 ? totalMonthly / rackPowerKw : 0;
+      
+      // Calculate used U space
+      const usedU = rack.devices?.reduce((sum, device) => {
+        // This would need to look up the device height from component library
+        return sum + 1; // Placeholder - actual implementation would get real U height
+      }, 0) || 0;
+
+      rackAllocations.push({
         rackId: rack.id,
         rackName: rack.name,
-        powerKW: rackPowerKW,
-        powerPercentage: totalPowerKW > 0 ? (rackPowerKW / totalPowerKW) * 100 : 0,
-        spacePercentage: this.racks.length > 0 ? (1 / this.racks.length) * 100 : 0,
-        allocatedMonthlyCost: allocatedCost,
-        costBreakdown: {
-          byPower: costByPower * powerWeight,
-          bySpace: costBySpace * spaceWeight
+        hierarchyPath,
+        hierarchyLevelId: rack.hierarchyLevelId || '',
+        costs: {
+          capital: capitalCosts,
+          operational: operationalCosts,
+          total: {
+            monthly: totalMonthly,
+            perU,
+            perKw
+          }
+        },
+        utilization: {
+          powerAllocatedKw: rack.powerAllocationKw || 0,
+          powerUsedKw: rackPowerKw,
+          usedU,
+          totalU: rack.uHeight
         }
-      };
-    });
+      });
+    }
+
+    return rackAllocations;
+  }
+
+  /**
+   * Calculate capital cost allocation for a rack
+   */
+  private calculateRackCapitalCosts(
+    rack: RackProfile,
+    facilityBreakdown: FacilityCostBreakdown
+  ): { monthly: number; breakdown: Record<CostCategory, number> } {
+    const capitalLayers = this.facility.costLayers.filter(l => l.type === 'capital');
+    const breakdown: Record<CostCategory, number> = {} as Record<CostCategory, number>;
+    let totalMonthly = 0;
+
+    for (const layer of capitalLayers) {
+      const layerMonthly = this.allocateCostToRack(layer, rack, facilityBreakdown);
+      totalMonthly += layerMonthly;
+      breakdown[layer.category] = (breakdown[layer.category] || 0) + layerMonthly;
+    }
+
+    return { monthly: totalMonthly, breakdown };
+  }
+
+  /**
+   * Calculate operational cost allocation for a rack
+   */
+  private calculateRackOperationalCosts(
+    rack: RackProfile,
+    facilityBreakdown: FacilityCostBreakdown
+  ): { monthly: number; breakdown: Record<CostCategory, number> } {
+    const operationalLayers = this.facility.costLayers.filter(l => l.type === 'operational');
+    const breakdown: Record<CostCategory, number> = {} as Record<CostCategory, number>;
+    let totalMonthly = 0;
+
+    for (const layer of operationalLayers) {
+      const layerMonthly = this.allocateCostToRack(layer, rack, facilityBreakdown);
+      totalMonthly += layerMonthly;
+      breakdown[layer.category] = (breakdown[layer.category] || 0) + layerMonthly;
+    }
+
+    return { monthly: totalMonthly, breakdown };
+  }
+
+  /**
+   * Allocate a specific cost layer to a rack based on allocation method
+   */
+  private allocateCostToRack(
+    layer: CostLayer,
+    rack: RackProfile,
+    facilityBreakdown: FacilityCostBreakdown
+  ): number {
+    let monthlyAmount = 0;
+    
+    if (layer.type === 'capital' && layer.amortizationMonths) {
+      monthlyAmount = layer.amount / layer.amortizationMonths;
+    } else if (layer.type === 'operational') {
+      switch (layer.frequency) {
+        case 'annual':
+          monthlyAmount = layer.amount / 12;
+          break;
+        case 'quarterly':
+          monthlyAmount = layer.amount / 3;
+          break;
+        default:
+          monthlyAmount = layer.amount;
+      }
+    }
+
+    // Apply allocation method
+    const totalRacks = this.assignedRacks.length;
+    const totalPower = this.assignedRacks.reduce((sum, r) => 
+      sum + (r.actualPowerUsageKw || r.powerAllocationKw || 0), 0
+    );
+    const rackPower = rack.actualPowerUsageKw || rack.powerAllocationKw || 0;
+
+    switch (layer.allocationMethod) {
+      case 'per-rack':
+        return totalRacks > 0 ? monthlyAmount / totalRacks : 0;
+      
+      case 'per-kw':
+        return totalPower > 0 ? (rackPower / totalPower) * monthlyAmount : 0;
+      
+      case 'hybrid':
+        const rackWeight = 0.5; // Default 50/50 split
+        const powerWeight = 0.5;
+        const rackAllocation = totalRacks > 0 ? monthlyAmount / totalRacks : 0;
+        const powerAllocation = totalPower > 0 ? (rackPower / totalPower) * monthlyAmount : 0;
+        return (rackAllocation * rackWeight) + (powerAllocation * powerWeight);
+      
+      case 'fixed':
+        // Fixed costs are split evenly
+        return totalRacks > 0 ? monthlyAmount / totalRacks : 0;
+      
+      default:
+        return 0;
+    }
+  }
+
+  /**
+   * Get hierarchy path for a rack
+   */
+  private async getHierarchyPath(rack: RackProfile): Promise<string[]> {
+    if (!rack.facilityId || !rack.hierarchyLevelId) return [];
+    
+    try {
+      // This would call the integration service method
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   /**
@@ -149,17 +271,8 @@ export class DatacenterCostCalculator {
    * Calculate total allocated power across all racks
    */
   private calculateAllocatedPower(): number {
-    return this.racks.reduce((sum, rack) => sum + this.calculateRackPower(rack), 0);
-  }
-
-  /**
-   * Calculate power consumption for a single rack
-   */
-  private calculateRackPower(rack: Rack): number {
-    return rack.placedComponents.reduce((sum, component) => {
-      const powerW = component.power || 0;
-      const quantity = component.quantity || 1;
-      return sum + (powerW * quantity / 1000); // Convert to kW
+    return this.assignedRacks.reduce((sum, rack) => {
+      return sum + (rack.actualPowerUsageKw || rack.powerAllocationKw || 0);
     }, 0);
   }
 
@@ -172,7 +285,7 @@ export class DatacenterCostCalculator {
     newCostPerKW: number;
   } {
     const currentBreakdown = this.calculateFacilityCosts();
-    const newRackCount = this.racks.length + (addRack ? 1 : -1);
+    const newRackCount = this.assignedRacks.length + (addRack ? 1 : -1);
     
     if (newRackCount <= 0) {
       return {
@@ -214,8 +327,8 @@ export class DatacenterCostCalculator {
     for (let month = 0; month <= monthsAhead; month++) {
       const growthFactor = Math.pow(1 + monthlyGrowthRate, month);
       const projectedRacks = Math.min(
-        Math.round(this.racks.length * growthFactor),
-        baseBreakdown.utilizationMetrics.totalRackCount
+        Math.round(this.assignedRacks.length * growthFactor),
+        this.facility.constraints.maxRacks
       );
       const projectedPower = Math.min(
         baseBreakdown.utilizationMetrics.allocatedPowerKW * growthFactor,

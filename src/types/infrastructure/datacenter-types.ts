@@ -24,6 +24,13 @@ export interface HierarchyLevel {
     racks?: number;
     powerKW?: number;
   };
+  // Rack assignment tracking
+  assignedRacks?: number;
+  actualPowerKw?: number;
+  rackCapacity?: {
+    standard?: number;
+    highDensity?: number;
+  };
 }
 
 export interface PowerLayer {
@@ -133,6 +140,50 @@ export interface CostLayerBreakdown {
   monthlyCost: number;
   percentageOfTotal: number;
   allocatedToRacks: Record<string, number>; // rackId -> cost
+}
+
+export interface RackCostAllocation {
+  rackId: string;
+  rackName: string;
+  hierarchyPath: string[];
+  hierarchyLevelId: string;
+  costs: {
+    capital: {
+      monthly: number;
+      breakdown: Record<CostCategory, number>;
+    };
+    operational: {
+      monthly: number;
+      breakdown: Record<CostCategory, number>;
+    };
+    total: {
+      monthly: number;
+      perU: number; // Cost per rack unit
+      perKw: number; // Cost per kW allocated
+    };
+  };
+  utilization: {
+    powerAllocatedKw: number;
+    powerUsedKw: number;
+    usedU: number;
+    totalU: number;
+  };
+}
+
+export interface FacilityRackStats {
+  totalRacks: number;
+  assignedRacks: number;
+  unassignedRacks: number;
+  totalPowerAllocatedKw: number;
+  totalPowerUsedKw: number;
+  averagePowerPerRack: number;
+  racksByHierarchy: Record<string, number>; // hierarchyLevelId -> count
+  costPerRack: {
+    average: number;
+    min: number;
+    max: number;
+    standardDeviation: number;
+  };
 }
 
 export interface CostAllocation {

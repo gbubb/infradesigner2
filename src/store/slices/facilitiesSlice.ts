@@ -1,12 +1,19 @@
 import { StateCreator } from 'zustand';
-import type { DatacenterFacility } from '@/types/infrastructure/datacenter-types';
+import type { DatacenterFacility, FacilityRackStats, RackCostAllocation } from '@/types/infrastructure/datacenter-types';
+import type { RackProfile, RackHierarchyAssignment } from '@/types/infrastructure/rack-types';
 import { supabase } from '@/lib/supabase';
+import { RackFacilityIntegrationService } from '@/services/datacenter/RackFacilityIntegrationService';
 
 export interface FacilitiesSlice {
   facilities: DatacenterFacility[];
   selectedFacilityId: string | null;
   isLoadingFacilities: boolean;
   facilitiesError: string | null;
+  
+  // Rack integration state
+  rackAssignments: Map<string, RackHierarchyAssignment>;
+  facilityRackStats: Map<string, FacilityRackStats>;
+  assignmentLoading: boolean;
   
   // Actions
   loadFacilities: () => Promise<void>;
@@ -15,6 +22,14 @@ export interface FacilitiesSlice {
   updateFacility: (id: string, updates: Partial<DatacenterFacility>) => Promise<void>;
   deleteFacility: (id: string) => Promise<void>;
   getFacilityById: (id: string) => DatacenterFacility | null;
+  
+  // Rack assignment actions
+  loadRackAssignments: (facilityId: string) => Promise<void>;
+  assignRacksToLevel: (rackIds: string[], facilityId: string, levelId: string) => Promise<void>;
+  unassignRacks: (rackIds: string[]) => Promise<void>;
+  moveRacksBetweenLevels: (rackIds: string[], fromLevel: string, toLevel: string) => Promise<void>;
+  refreshFacilityStats: (facilityId: string) => Promise<void>;
+  calculateRackCosts: (facilityId: string) => Promise<RackCostAllocation[]>;
 }
 
 export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) => ({
@@ -22,6 +37,9 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
   selectedFacilityId: null,
   isLoadingFacilities: false,
   facilitiesError: null,
+  rackAssignments: new Map(),
+  facilityRackStats: new Map(),
+  assignmentLoading: false,
 
   loadFacilities: async () => {
     set({ isLoadingFacilities: true, facilitiesError: null });
@@ -259,5 +277,149 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
 
   getFacilityById: (id: string) => {
     return get().facilities.find(f => f.id === id) || null;
+  },
+
+  // Rack assignment methods
+  loadRackAssignments: async (facilityId: string) => {
+    set({ assignmentLoading: true });
+    
+    try {
+      const { data: assignments, error } = await supabase
+        .from('rack_hierarchy_assignments')
+        .select('*')
+        .eq('facility_id', facilityId);
+
+      if (error) throw error;
+
+      const assignmentMap = new Map<string, RackHierarchyAssignment>();
+      (assignments || []).forEach(assignment => {
+        assignmentMap.set(assignment.rack_id, assignment);
+      });
+
+      set(state => ({
+        rackAssignments: assignmentMap,
+        assignmentLoading: false
+      }));
+
+      // Also refresh facility stats
+      await get().refreshFacilityStats(facilityId);
+    } catch (error) {
+      console.error('Error loading rack assignments:', error);
+      set({ assignmentLoading: false });
+      throw error;
+    }
+  },
+
+  assignRacksToLevel: async (rackIds: string[], facilityId: string, levelId: string) => {
+    set({ assignmentLoading: true });
+    
+    try {
+      const assignments = await RackFacilityIntegrationService.bulkAssignRacks(
+        rackIds,
+        facilityId,
+        levelId
+      );
+
+      // Update local state
+      set(state => {
+        const newAssignments = new Map(state.rackAssignments);
+        assignments.forEach(assignment => {
+          newAssignments.set(assignment.rackId, assignment);
+        });
+        return { rackAssignments: newAssignments, assignmentLoading: false };
+      });
+
+      // Refresh stats
+      await get().refreshFacilityStats(facilityId);
+    } catch (error) {
+      console.error('Error assigning racks:', error);
+      set({ assignmentLoading: false });
+      throw error;
+    }
+  },
+
+  unassignRacks: async (rackIds: string[]) => {
+    set({ assignmentLoading: true });
+    
+    try {
+      for (const rackId of rackIds) {
+        await RackFacilityIntegrationService.unassignRackFromFacility(rackId);
+      }
+
+      // Update local state
+      set(state => {
+        const newAssignments = new Map(state.rackAssignments);
+        rackIds.forEach(id => newAssignments.delete(id));
+        return { rackAssignments: newAssignments, assignmentLoading: false };
+      });
+
+      // Refresh stats for affected facility
+      const facility = get().rackAssignments.get(rackIds[0])?.facilityId;
+      if (facility) {
+        await get().refreshFacilityStats(facility);
+      }
+    } catch (error) {
+      console.error('Error unassigning racks:', error);
+      set({ assignmentLoading: false });
+      throw error;
+    }
+  },
+
+  moveRacksBetweenLevels: async (rackIds: string[], fromLevel: string, toLevel: string) => {
+    set({ assignmentLoading: true });
+    
+    try {
+      for (const rackId of rackIds) {
+        await RackFacilityIntegrationService.moveRackToLevel(rackId, toLevel);
+      }
+
+      // Reload assignments
+      const facilityId = get().rackAssignments.get(rackIds[0])?.facilityId;
+      if (facilityId) {
+        await get().loadRackAssignments(facilityId);
+      }
+    } catch (error) {
+      console.error('Error moving racks:', error);
+      set({ assignmentLoading: false });
+      throw error;
+    }
+  },
+
+  refreshFacilityStats: async (facilityId: string) => {
+    try {
+      const stats = await RackFacilityIntegrationService.calculateFacilityRackStats(facilityId);
+      
+      set(state => {
+        const newStats = new Map(state.facilityRackStats);
+        newStats.set(facilityId, stats);
+        return { facilityRackStats: newStats };
+      });
+    } catch (error) {
+      console.error('Error refreshing facility stats:', error);
+    }
+  },
+
+  calculateRackCosts: async (facilityId: string) => {
+    const facility = get().getFacilityById(facilityId);
+    if (!facility) throw new Error('Facility not found');
+
+    try {
+      // Get assigned racks for this facility
+      const { data: assignedRacks, error } = await supabase
+        .from('rack_profiles')
+        .select('*')
+        .eq('facility_id', facilityId);
+
+      if (error) throw error;
+
+      // Import and use the calculator
+      const { DatacenterCostCalculator } = await import('@/services/datacenter/DatacenterCostCalculator');
+      const calculator = new DatacenterCostCalculator(facility, assignedRacks || []);
+      
+      return await calculator.calculatePerRackCosts();
+    } catch (error) {
+      console.error('Error calculating rack costs:', error);
+      throw error;
+    }
   }
 });

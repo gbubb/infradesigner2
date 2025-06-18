@@ -25,6 +25,53 @@ export interface RackProfile {
   availabilityZoneId?: string;
   rackType?: RackType;
   azName?: string; // Added for UI display purposes
+  
+  // Datacenter facility integration
+  facilityId?: string;
+  hierarchyLevelId?: string;
+  positionInLevel?: number;
+  physicalLocation?: PhysicalLocation;
+  powerAllocationKw?: number;
+  actualPowerUsageKw?: number;
+  rackSpecifications?: RackSpecifications;
+}
+
+export interface PhysicalLocation {
+  row?: number;
+  position?: number;
+  coordinates?: {
+    x: number;
+    y: number;
+  };
+  notes?: string;
+}
+
+export interface RackSpecifications {
+  specificationId?: string; // Reference to standard spec
+  manufacturer?: string;
+  model?: string;
+  heightU: number;
+  widthMm: number;
+  depthMm: number;
+  maxPowerKw?: number;
+  maxWeightKg?: number;
+  features?: {
+    pduCount?: number;
+    coolingType?: 'passive' | 'active' | 'liquid';
+    cableManagement?: string[];
+    certifications?: string[];
+  };
+}
+
+export interface RackHierarchyAssignment {
+  id: string;
+  rackId: string;
+  facilityId: string;
+  hierarchyPath: string[]; // IDs from root to leaf
+  hierarchyLevelId: string;
+  assignedAt: Date;
+  assignedBy?: string;
+  metadata?: Record<string, unknown>;
 }
 
 // Cluster placement configuration types
