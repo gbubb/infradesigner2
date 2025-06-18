@@ -4,19 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Search, Server, Zap, Package } from 'lucide-react';
+import { Search, Server, Zap, Package, Import } from 'lucide-react';
 import { useStore } from '@/store';
 import { RackFacilityIntegrationService } from '@/services/datacenter/RackFacilityIntegrationService';
 import type { RackProfile } from '@/types/infrastructure/rack-types';
 import type { HierarchyLevel } from '@/types/infrastructure/datacenter-types';
 import { cn } from '@/lib/utils';
+import { toast } from '@/components/ui/use-toast';
 
 export function RackAssignmentPanel() {
   const { 
     selectedFacilityId, 
     getFacilityById,
     assignRacksToLevel,
-    assignmentLoading 
+    assignmentLoading,
+    activeDesign 
   } = useStore();
   
   const [unassignedRacks, setUnassignedRacks] = useState<RackProfile[]>([]);
@@ -24,6 +26,7 @@ export function RackAssignmentPanel() {
   const [selectedRacks, setSelectedRacks] = useState<Set<string>>(new Set());
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const facility = selectedFacilityId ? getFacilityById(selectedFacilityId) : null;
 
@@ -40,6 +43,40 @@ export function RackAssignmentPanel() {
       console.error('Error loading unassigned racks:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImportFromDesign = async () => {
+    if (!activeDesign?.id) return;
+    
+    setImporting(true);
+    try {
+      const importedRacks = await RackFacilityIntegrationService.importRacksFromDesign(activeDesign.id);
+      
+      if (importedRacks.length > 0) {
+        toast({
+          title: "Racks Imported",
+          description: `Successfully imported ${importedRacks.length} racks from the current design.`,
+        });
+        
+        // Reload unassigned racks
+        await loadUnassignedRacks();
+      } else {
+        toast({
+          title: "No Racks to Import",
+          description: "All racks from the current design have already been imported.",
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.error('Error importing racks:', error);
+      toast({
+        title: "Import Failed",
+        description: "Failed to import racks from the design. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -124,10 +161,23 @@ export function RackAssignmentPanel() {
       {/* Unassigned Racks */}
       <Card className="flex flex-col">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Unassigned Racks</span>
-            <Badge variant="outline">{filteredRacks.length} available</Badge>
-          </CardTitle>
+          <div className="flex items-center justify-between mb-2">
+            <CardTitle className="flex items-center gap-2">
+              <span>Unassigned Racks</span>
+              <Badge variant="outline">{filteredRacks.length} available</Badge>
+            </CardTitle>
+            {activeDesign && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleImportFromDesign}
+                disabled={importing}
+              >
+                <Import className="h-4 w-4 mr-2" />
+                Import from Design
+              </Button>
+            )}
+          </div>
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -146,8 +196,25 @@ export function RackAssignmentPanel() {
                   Loading racks...
                 </div>
               ) : filteredRacks.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  No unassigned racks found.
+                <div className="text-center py-4">
+                  <div className="text-muted-foreground mb-2">
+                    No unassigned racks found.
+                  </div>
+                  {activeDesign?.rackprofiles && activeDesign.rackprofiles.length > 0 && (
+                    <div className="text-sm">
+                      <p className="text-muted-foreground mb-2">
+                        Your design has {activeDesign.rackprofiles.length} racks.
+                      </p>
+                      <Button
+                        size="sm"
+                        onClick={handleImportFromDesign}
+                        disabled={importing}
+                      >
+                        <Import className="h-4 w-4 mr-2" />
+                        Import Design Racks
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 filteredRacks.map(rack => (

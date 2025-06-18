@@ -370,4 +370,66 @@ export class RackFacilityIntegrationService {
 
     if (rackUpdateError) throw rackUpdateError;
   }
+
+  /**
+   * Import racks from a design into the rack_profiles table
+   */
+  static async importRacksFromDesign(designId: string): Promise<RackProfile[]> {
+    // Get the design with its rack profiles
+    const { data: design, error: designError } = await supabase
+      .from('designs')
+      .select('rackprofiles')
+      .eq('id', designId)
+      .single();
+
+    if (designError) throw designError;
+    if (!design?.rackprofiles) return [];
+
+    const rackData = typeof design.rackprofiles === 'string' 
+      ? JSON.parse(design.rackprofiles) 
+      : design.rackprofiles;
+
+    if (!Array.isArray(rackData)) return [];
+
+    const importedRacks: RackProfile[] = [];
+
+    // Import each rack
+    for (const rack of rackData) {
+      // Check if rack already exists in rack_profiles table
+      const { data: existingRack } = await supabase
+        .from('rack_profiles')
+        .select('*')
+        .eq('id', rack.id)
+        .single();
+
+      if (!existingRack) {
+        // Insert new rack
+        const { data: newRack, error: insertError } = await supabase
+          .from('rack_profiles')
+          .insert({
+            id: rack.id,
+            design_id: designId,
+            name: rack.name || 'Unnamed Rack',
+            u_height: rack.uHeight || rack.u_height || 42,
+            devices: rack.devices || [],
+            availability_zone_id: rack.availabilityZoneId,
+            rack_type: rack.rackType,
+            az_name: rack.azName
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error importing rack:', insertError);
+          continue;
+        }
+
+        if (newRack) {
+          importedRacks.push(newRack);
+        }
+      }
+    }
+
+    return importedRacks;
+  }
 }
