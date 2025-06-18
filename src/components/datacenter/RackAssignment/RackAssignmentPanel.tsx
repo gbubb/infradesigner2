@@ -110,26 +110,46 @@ export function RackAssignmentPanel() {
 
   const renderHierarchyLevel = (level: HierarchyLevel, depth: number = 0) => {
     const isSelected = selectedLevel === level.id;
-    const hasCapacity = (level.capacity?.racks || 0) > (level.assignedRacks || 0);
+    const rackCapacity = level.capacity?.racks || 0;
+    const assignedRacks = level.assignedRacks || 0;
+    const hasCapacity = rackCapacity > assignedRacks;
+    const hasDefinedCapacity = rackCapacity > 0;
     
     return (
       <div key={level.id}>
         <button
           className={cn(
-            "w-full text-left px-4 py-2 rounded hover:bg-accent transition-colors",
-            isSelected && "bg-accent",
-            !hasCapacity && "opacity-50 cursor-not-allowed"
+            "w-full text-left px-4 py-2 rounded transition-colors",
+            isSelected && "bg-primary/10 border-primary",
+            hasDefinedCapacity && hasCapacity && "hover:bg-accent border-transparent",
+            !hasDefinedCapacity && "opacity-60 cursor-help",
+            hasDefinedCapacity && !hasCapacity && "opacity-50 cursor-not-allowed",
+            "border"
           )}
           style={{ paddingLeft: `${(depth * 20) + 16}px` }}
-          onClick={() => hasCapacity && setSelectedLevel(level.id)}
-          disabled={!hasCapacity}
+          onClick={() => hasDefinedCapacity && hasCapacity && setSelectedLevel(level.id)}
+          disabled={!hasDefinedCapacity || !hasCapacity}
+          title={
+            !hasDefinedCapacity 
+              ? "No rack capacity defined for this level" 
+              : !hasCapacity 
+              ? "This level is at full capacity" 
+              : `Click to select ${level.name}`
+          }
         >
           <div className="flex items-center justify-between">
             <span className="font-medium">{level.name}</span>
-            <div className="flex items-center gap-2">
-              {level.assignedRacks !== undefined && level.capacity?.racks && (
-                <Badge variant="secondary">
-                  {level.assignedRacks}/{level.capacity.racks} racks
+            <div className="flex items-center gap-2 text-xs">
+              {hasDefinedCapacity ? (
+                <Badge 
+                  variant={hasCapacity ? "secondary" : "destructive"}
+                  className="font-mono"
+                >
+                  {assignedRacks}/{rackCapacity} racks
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-muted-foreground">
+                  No capacity set
                 </Badge>
               )}
               {level.capacity?.powerKW && (
@@ -274,9 +294,25 @@ export function RackAssignmentPanel() {
         <CardContent className="flex-1 overflow-hidden">
           <ScrollArea className="h-full">
             <div className="space-y-1">
-              {facility.hierarchyConfig
-                .filter(h => !h.parentId)
-                .map(level => renderHierarchyLevel(level))}
+              {facility.hierarchyConfig.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No hierarchy levels defined.</p>
+                  <p className="text-sm mt-2">Go to the Space Hierarchy tab to create your facility structure.</p>
+                </div>
+              ) : (
+                <>
+                  {!facility.hierarchyConfig.some(h => h.capacity?.racks) && (
+                    <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                      <p className="text-sm text-amber-800 dark:text-amber-200">
+                        <strong>Note:</strong> Set rack capacity for hierarchy levels in the Space Hierarchy tab to enable rack assignment.
+                      </p>
+                    </div>
+                  )}
+                  {facility.hierarchyConfig
+                    .filter(h => !h.parentId)
+                    .map(level => renderHierarchyLevel(level))}
+                </>
+              )}
             </div>
           </ScrollArea>
         </CardContent>
