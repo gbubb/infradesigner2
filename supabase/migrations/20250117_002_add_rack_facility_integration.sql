@@ -1,12 +1,12 @@
 -- Add facility integration to rack_profiles table
 ALTER TABLE rack_profiles 
-ADD COLUMN facility_id UUID REFERENCES facilities(id) ON DELETE SET NULL,
-ADD COLUMN hierarchy_level_id TEXT,
-ADD COLUMN position_in_level INTEGER,
-ADD COLUMN physical_location JSON DEFAULT '{}',
-ADD COLUMN power_allocation_kw NUMERIC(10,2),
-ADD COLUMN actual_power_usage_kw NUMERIC(10,2),
-ADD COLUMN rack_specifications JSON DEFAULT '{}'::json;
+ADD COLUMN IF NOT EXISTS facility_id UUID REFERENCES facilities(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS hierarchy_level_id TEXT,
+ADD COLUMN IF NOT EXISTS position_in_level INTEGER,
+ADD COLUMN IF NOT EXISTS physical_location JSON DEFAULT '{}',
+ADD COLUMN IF NOT EXISTS power_allocation_kw NUMERIC(10,2),
+ADD COLUMN IF NOT EXISTS actual_power_usage_kw NUMERIC(10,2),
+ADD COLUMN IF NOT EXISTS rack_specifications JSON DEFAULT '{}'::json;
 
 -- Add index for efficient queries
 CREATE INDEX idx_rack_profiles_facility ON rack_profiles(facility_id);
