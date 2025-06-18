@@ -88,6 +88,6 @@ CREATE POLICY "Rack specifications are viewable by everyone" ON rack_specificati
 CREATE POLICY "Users can manage their own rack assignments" ON rack_hierarchy_assignments
   FOR ALL USING (
     facility_id IN (
-      SELECT id FROM facilities WHERE user_id = auth.uid()
+      SELECT id FROM facilities WHERE "createdBy" = auth.uid()
     )
   );
