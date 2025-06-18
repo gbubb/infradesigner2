@@ -13,6 +13,8 @@ import type {
 export class RackFacilityIntegrationService {
   /**
    * Assign a rack to a specific hierarchy level within a facility
+   * Note: hierarchy_level_id is stored as text in the database to match the 
+   * rack_hierarchy_assignments table schema, while facility_hierarchy.id is UUID
    */
   static async assignRackToHierarchy(
     rackId: string,
@@ -30,12 +32,13 @@ export class RackFacilityIntegrationService {
     const hierarchyPath = await this.getHierarchyPath(facilityId, hierarchyLevelId);
 
     // Create the assignment
+    // Ensure hierarchyLevelId is a string (in case it's passed as an object)
     const { data: assignment, error: assignmentError } = await supabase
       .from('rack_hierarchy_assignments')
       .insert({
         rack_id: rackId,
         facility_id: facilityId,
-        hierarchy_level_id: hierarchyLevelId,
+        hierarchy_level_id: String(hierarchyLevelId),
         hierarchy_path: hierarchyPath
       })
       .select()
@@ -48,7 +51,7 @@ export class RackFacilityIntegrationService {
       .from('rack_profiles')
       .update({
         facility_id: facilityId,
-        hierarchy_level_id: hierarchyLevelId,
+        hierarchy_level_id: String(hierarchyLevelId),
         position_in_level: positionInLevel
       })
       .eq('id', rackId);
@@ -353,7 +356,7 @@ export class RackFacilityIntegrationService {
     const { error: updateError } = await supabase
       .from('rack_hierarchy_assignments')
       .update({
-        hierarchy_level_id: newHierarchyLevelId,
+        hierarchy_level_id: String(newHierarchyLevelId),
         hierarchy_path: newPath
       })
       .eq('rack_id', rackId);
@@ -364,7 +367,7 @@ export class RackFacilityIntegrationService {
     const { error: rackUpdateError } = await supabase
       .from('rack_profiles')
       .update({
-        hierarchy_level_id: newHierarchyLevelId
+        hierarchy_level_id: String(newHierarchyLevelId)
       })
       .eq('id', rackId);
 
