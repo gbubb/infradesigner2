@@ -97,6 +97,20 @@ const HierarchyNode: React.FC<HierarchyNodeProps> = ({
       >
         <Icon className="w-4 h-4 text-muted-foreground" />
         <span className="font-medium flex-1">{level.name}</span>
+        {level.capacity && (
+          <div className="flex gap-2">
+            {level.capacity.racks && (
+              <Badge variant="secondary" className="text-xs">
+                {level.capacity.racks} racks
+              </Badge>
+            )}
+            {level.capacity.powerKW && (
+              <Badge variant="outline" className="text-xs">
+                {level.capacity.powerKW} kW
+              </Badge>
+            )}
+          </div>
+        )}
         {level.customAttributes && Object.keys(level.customAttributes).length > 0 && (
           <Badge variant="outline" className="text-xs">
             {Object.keys(level.customAttributes).length} attrs
@@ -148,6 +162,8 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
   const [newLevelName, setNewLevelName] = useState('');
   const [newLevelParentId, setNewLevelParentId] = useState<string | undefined>(undefined);
   const [customAttributes, setCustomAttributes] = useState<Record<string, string>>({});
+  const [newLevelRackCapacity, setNewLevelRackCapacity] = useState<number | undefined>(undefined);
+  const [newLevelPowerCapacity, setNewLevelPowerCapacity] = useState<number | undefined>(undefined);
 
   const rootLevels = facility.hierarchyConfig.filter(l => !l.parentId);
 
@@ -168,7 +184,11 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
       name: newLevelName.trim(),
       parentId: newLevelParentId,
       level: level,
-      customAttributes: Object.keys(customAttributes).length > 0 ? customAttributes : undefined
+      customAttributes: Object.keys(customAttributes).length > 0 ? customAttributes : undefined,
+      capacity: (newLevelRackCapacity || newLevelPowerCapacity) ? {
+        racks: newLevelRackCapacity,
+        powerKW: newLevelPowerCapacity
+      } : undefined
     };
 
     onUpdate({
@@ -179,6 +199,8 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
     setNewLevelName('');
     setNewLevelParentId(undefined);
     setCustomAttributes({});
+    setNewLevelRackCapacity(undefined);
+    setNewLevelPowerCapacity(undefined);
     setIsAddingLevel(false);
   };
 
@@ -258,7 +280,7 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
       { id: floorId, name: 'Floor', parentId: buildingId, level: 1 },
       { id: hallId, name: 'Hall', parentId: floorId, level: 2 },
       { id: podId, name: 'Pod', parentId: hallId, level: 3 },
-      { id: rowId, name: 'Row', parentId: podId, level: 4 },
+      { id: rowId, name: 'Row', parentId: podId, level: 4, capacity: { racks: 10, powerKW: 100 } },
     ];
     
     onUpdate({
@@ -347,6 +369,30 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
                   ))}
                 </select>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="rack-capacity">Rack Capacity</Label>
+                  <Input
+                    id="rack-capacity"
+                    type="number"
+                    min="0"
+                    value={newLevelRackCapacity || ''}
+                    onChange={(e) => setNewLevelRackCapacity(e.target.value ? parseInt(e.target.value) : undefined)}
+                    placeholder="e.g., 10"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="power-capacity">Power Capacity (kW)</Label>
+                  <Input
+                    id="power-capacity"
+                    type="number"
+                    min="0"
+                    value={newLevelPowerCapacity || ''}
+                    onChange={(e) => setNewLevelPowerCapacity(e.target.value ? parseFloat(e.target.value) : undefined)}
+                    placeholder="e.g., 100"
+                  />
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddingLevel(false)}>
@@ -393,6 +439,44 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
                         </option>
                       ))}
                   </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-rack-capacity">Rack Capacity</Label>
+                    <Input
+                      id="edit-rack-capacity"
+                      type="number"
+                      min="0"
+                      value={editingLevel.capacity?.racks || ''}
+                      onChange={(e) => setEditingLevel({
+                        ...editingLevel,
+                        capacity: {
+                          ...editingLevel.capacity,
+                          racks: e.target.value ? parseInt(e.target.value) : undefined,
+                          powerKW: editingLevel.capacity?.powerKW
+                        }
+                      })}
+                      placeholder="e.g., 10"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-power-capacity">Power Capacity (kW)</Label>
+                    <Input
+                      id="edit-power-capacity"
+                      type="number"
+                      min="0"
+                      value={editingLevel.capacity?.powerKW || ''}
+                      onChange={(e) => setEditingLevel({
+                        ...editingLevel,
+                        capacity: {
+                          ...editingLevel.capacity,
+                          racks: editingLevel.capacity?.racks,
+                          powerKW: e.target.value ? parseFloat(e.target.value) : undefined
+                        }
+                      })}
+                      placeholder="e.g., 100"
+                    />
+                  </div>
                 </div>
               </div>
             )}
