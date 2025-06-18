@@ -11,7 +11,7 @@ import { useStore } from '@/store';
 import { DatacenterRackService } from '@/services/datacenter/DatacenterRackService';
 import { RackFacilityIntegrationService } from '@/services/datacenter/RackFacilityIntegrationService';
 import { supabase } from '@/lib/supabase';
-import type { DatacenterRackWithUsage } from '@/types/infrastructure/datacenter-rack-types';
+import type { DatacenterRack, DatacenterRackWithUsage } from '@/types/infrastructure/datacenter-rack-types';
 import type { RackProfile } from '@/types/infrastructure/rack-types';
 import type { HierarchyLevel } from '@/types/infrastructure/datacenter-types';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,7 @@ export function RackMappingPanel() {
   
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const [datacenterRacks, setDatacenterRacks] = useState<DatacenterRackWithUsage[]>([]);
+  const [allFacilityRacks, setAllFacilityRacks] = useState<DatacenterRack[]>([]);
   const [designRacks, setDesignRacks] = useState<RackProfile[]>([]);
   const [selectedDesignRack, setSelectedDesignRack] = useState<string | null>(null);
   const [selectedDatacenterRack, setSelectedDatacenterRack] = useState<string | null>(null);
@@ -33,6 +34,12 @@ export function RackMappingPanel() {
   const [mapping, setMapping] = useState(false);
 
   const facility = selectedFacilityId ? getFacilityById(selectedFacilityId) : null;
+
+  useEffect(() => {
+    if (selectedFacilityId) {
+      loadAllFacilityRacks();
+    }
+  }, [selectedFacilityId]);
 
   useEffect(() => {
     if (selectedLevel) {
@@ -45,6 +52,17 @@ export function RackMappingPanel() {
       loadDesignRacks();
     }
   }, [activeDesign?.id]);
+
+  const loadAllFacilityRacks = async () => {
+    if (!selectedFacilityId) return;
+    
+    try {
+      const racks = await DatacenterRackService.getFacilityRacks(selectedFacilityId);
+      setAllFacilityRacks(racks);
+    } catch (error) {
+      console.error('Error loading facility racks:', error);
+    }
+  };
 
   const loadDatacenterRacks = async () => {
     if (!selectedLevel) return;
@@ -141,7 +159,8 @@ export function RackMappingPanel() {
 
   const renderHierarchyLevel = (level: HierarchyLevel, depth: number = 0) => {
     const isSelected = selectedLevel === level.id;
-    const hasRacks = datacenterRacks.some(r => r.hierarchyLevelId === level.id);
+    const levelRacks = allFacilityRacks.filter(r => r.hierarchyLevelId === level.id);
+    const hasRacks = levelRacks.length > 0;
     
     return (
       <div key={level.id}>
@@ -161,7 +180,7 @@ export function RackMappingPanel() {
             <span className="font-medium">{level.name}</span>
             {hasRacks && (
               <Badge variant="secondary">
-                {datacenterRacks.filter(r => r.hierarchyLevelId === level.id).length} racks
+                {levelRacks.length} racks
               </Badge>
             )}
           </div>

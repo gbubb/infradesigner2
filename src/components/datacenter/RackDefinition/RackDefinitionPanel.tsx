@@ -172,25 +172,15 @@ export function RackDefinitionPanel() {
   const renderRackGrid = () => {
     if (datacenterRacks.length === 0) return null;
 
-    // Group racks by row
-    const rowMap = new Map<string, DatacenterRack[]>();
-    datacenterRacks.forEach(rack => {
-      const rowNumber = rack.rowNumber || 'Row1';
-      if (!rowMap.has(rowNumber)) {
-        rowMap.set(rowNumber, []);
-      }
-      rowMap.get(rowNumber)!.push(rack);
-    });
-
+    // Since all racks are in the same hierarchy level (row), display them in a single row
     return (
       <div className="space-y-4">
-        {Array.from(rowMap.entries())
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([rowNumber, racks]) => (
-            <div key={rowNumber}>
-              <h4 className="text-sm font-medium mb-2">{rowNumber}</h4>
-              <div className="grid grid-cols-10 gap-2">
-                {racks.map(rack => (
+        <div>
+          <h4 className="text-sm font-medium mb-2">{datacenterRacks[0]?.rowNumber || 'Racks'}</h4>
+          <div className="grid grid-cols-10 gap-2">
+            {datacenterRacks
+              .sort((a, b) => (a.positionX || 0) - (b.positionX || 0))
+              .map(rack => (
                   <div
                     key={rack.id}
                     className={cn(
@@ -208,7 +198,6 @@ export function RackDefinitionPanel() {
                 ))}
               </div>
             </div>
-          ))}
       </div>
     );
   };
