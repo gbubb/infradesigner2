@@ -157,7 +157,7 @@ CREATE POLICY "Users can view datacenter racks" ON datacenter_racks
 CREATE POLICY "Users can manage their facility racks" ON datacenter_racks
   FOR ALL USING (
     facility_id IN (
-      SELECT id FROM facilities WHERE createdBy = auth.uid()
+      SELECT id FROM facilities WHERE "createdBy" = auth.uid()
     )
   );
 
