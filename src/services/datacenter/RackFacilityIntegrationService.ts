@@ -176,7 +176,7 @@ export class RackFacilityIntegrationService {
     const { data: hierarchy, error: hierarchyError } = await supabase
       .from('facility_hierarchy')
       .select('*')
-      .eq('facility_id', facilityId)
+      .eq('facilityId', facilityId)
       .eq('id', hierarchyLevelId)
       .single();
 
@@ -214,7 +214,7 @@ export class RackFacilityIntegrationService {
     const { data: allLevels, error } = await supabase
       .from('facility_hierarchy')
       .select('*')
-      .eq('facility_id', facilityId);
+      .eq('facilityId', facilityId);
 
     if (error) throw error;
 
