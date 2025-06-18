@@ -279,7 +279,7 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
         </TabsList>
 
         <TabsContent value="design" className="mt-6">
-          <Card>
+          <Card className="flex flex-col h-full">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>Power Infrastructure Layers</CardTitle>
@@ -296,7 +296,7 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 min-h-0 overflow-hidden">
               {facility.powerInfrastructure.length === 0 ? (
                 <div className="text-center py-8">
                   <Zap className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
@@ -308,7 +308,7 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
                   </p>
                 </div>
               ) : (
-                <ScrollArea className="h-[400px] pr-4">
+                <ScrollArea className="h-full max-h-[600px] pr-4">
                   <div className="space-y-2">
                     {rootLayers.map(layer => (
                       <PowerLayerNode

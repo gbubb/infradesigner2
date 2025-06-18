@@ -214,13 +214,13 @@ export function RackMappingPanel() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0">
       {/* Hierarchy Selection */}
-      <Card className="flex flex-col">
+      <Card className="flex flex-col min-h-0">
         <CardHeader>
           <CardTitle>Select Location</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 overflow-hidden">
+        <CardContent className="flex-1 min-h-0 overflow-hidden">
           <ScrollArea className="h-full">
             <div className="space-y-1">
               {facility.hierarchyConfig
@@ -330,7 +330,7 @@ export function RackMappingPanel() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[400px]">
+                <ScrollArea className="h-full max-h-[600px]">
                   <div className="space-y-3">
                     {datacenterRacks
                       .filter(r => r.mappedRack)

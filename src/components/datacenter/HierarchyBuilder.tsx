@@ -290,7 +290,7 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
   };
 
   return (
-    <Card>
+    <Card className="flex flex-col h-full">
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle>Space Hierarchy</CardTitle>
@@ -307,7 +307,7 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 min-h-0 overflow-hidden">
         {facility.hierarchyConfig.length === 0 ? (
           <div className="text-center py-8">
             <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
@@ -320,7 +320,7 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
           </div>
         ) : (
           <DndProvider backend={HTML5Backend}>
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="h-full max-h-[600px] pr-4">
               <div className="space-y-2">
                 {rootLevels.map(level => (
                   <HierarchyNode
