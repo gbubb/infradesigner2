@@ -80,8 +80,17 @@ export function RackCostVisualization() {
 
   const totalMonthlyCost = rackCosts.reduce((sum, rack) => sum + rack.costs.total.monthly, 0);
   const avgCostPerRack = totalMonthlyCost / rackCosts.length;
-  const avgCostPerU = rackCosts.reduce((sum, rack) => sum + rack.costs.total.perU, 0) / rackCosts.length;
-  const avgCostPerKw = rackCosts.reduce((sum, rack) => sum + rack.costs.total.perKw, 0) / rackCosts.length;
+  
+  // Calculate averages only for racks with valid values
+  const racksWithValidPerU = rackCosts.filter(rack => rack.costs.total.perU > 0 && isFinite(rack.costs.total.perU));
+  const avgCostPerU = racksWithValidPerU.length > 0
+    ? racksWithValidPerU.reduce((sum, rack) => sum + rack.costs.total.perU, 0) / racksWithValidPerU.length
+    : 0;
+  
+  const racksWithValidPerKw = rackCosts.filter(rack => rack.costs.total.perKw > 0 && isFinite(rack.costs.total.perKw));
+  const avgCostPerKw = racksWithValidPerKw.length > 0
+    ? racksWithValidPerKw.reduce((sum, rack) => sum + rack.costs.total.perKw, 0) / racksWithValidPerKw.length
+    : 0;
 
   const costDistribution = rackCosts.map(rack => ({
     name: rack.rackName,

@@ -116,8 +116,11 @@ export class DatacenterCostCalculator {
       
       // Calculate used U space
       const usedU = rack.devices?.reduce((sum, device) => {
-        // This would need to look up the device height from component library
-        return sum + 1; // Placeholder - actual implementation would get real U height
+        // Each device has a startU and endU position
+        if (device.endU && device.startU) {
+          return Math.max(sum, device.endU);
+        }
+        return sum;
       }, 0) || 0;
 
       rackAllocations.push({

@@ -9,6 +9,7 @@ import type {
   FacilityRackStats,
   RackCostAllocation
 } from '@/types/infrastructure/datacenter-types';
+import { RackPowerCalculationService } from './RackPowerCalculationService';
 
 export class RackFacilityIntegrationService {
   /**
@@ -57,6 +58,9 @@ export class RackFacilityIntegrationService {
       .eq('id', rackId);
 
     if (updateError) throw updateError;
+
+    // Calculate and update power usage for the rack
+    await RackPowerCalculationService.updateRackPowerUsage(rackId);
 
     return assignment;
   }
@@ -431,6 +435,20 @@ export class RackFacilityIntegrationService {
           importedRacks.push(newRack);
         }
       }
+    }
+
+    // Calculate power usage for all imported racks
+    if (importedRacks.length > 0) {
+      const rackIds = importedRacks.map(r => r.id);
+      await RackPowerCalculationService.updateImportedRacksPowerUsage(rackIds);
+      
+      // Refresh the imported racks to get updated power data
+      const { data: updatedRacks } = await supabase
+        .from('rack_profiles')
+        .select('*')
+        .in('id', rackIds);
+      
+      return updatedRacks || importedRacks;
     }
 
     return importedRacks;

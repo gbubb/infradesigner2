@@ -331,6 +331,9 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
 
       // Refresh stats
       await get().refreshFacilityStats(facilityId);
+      
+      // Reload the facility to get updated hierarchy data (assignedRacks, actualPowerKw)
+      await get().loadFacilities();
     } catch (error) {
       console.error('Error assigning racks:', error);
       set({ assignmentLoading: false });
@@ -358,6 +361,9 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
       if (facility) {
         await get().refreshFacilityStats(facility);
       }
+      
+      // Reload the facility to get updated hierarchy data
+      await get().loadFacilities();
     } catch (error) {
       console.error('Error unassigning racks:', error);
       set({ assignmentLoading: false });
@@ -377,7 +383,11 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
       const facilityId = get().rackAssignments.get(rackIds[0])?.facilityId;
       if (facilityId) {
         await get().loadRackAssignments(facilityId);
+        await get().refreshFacilityStats(facilityId);
       }
+      
+      // Reload the facility to get updated hierarchy data
+      await get().loadFacilities();
     } catch (error) {
       console.error('Error moving racks:', error);
       set({ assignmentLoading: false });
