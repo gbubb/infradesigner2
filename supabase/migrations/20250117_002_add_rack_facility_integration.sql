@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS rack_hierarchy_assignments (
   hierarchy_path TEXT[], -- Array of hierarchy level IDs from root to leaf
   hierarchy_level_id TEXT NOT NULL,
   assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  assigned_by UUID REFERENCES users(id),
+  assigned_by UUID REFERENCES auth.users(id),
   metadata JSON DEFAULT '{}',
   UNIQUE(rack_id)
 );
