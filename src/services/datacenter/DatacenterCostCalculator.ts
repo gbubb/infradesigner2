@@ -25,11 +25,11 @@ export class DatacenterCostCalculator {
    */
   calculateFacilityCosts(): FacilityCostBreakdown {
     const totalPowerCapacityKW = this.calculateTotalPowerCapacity();
-    const totalRackCount = this.assignedRacks.length;
+    const totalRackCount = this.datacenterRacks?.length || 0;
     const allocatedPowerKW = this.calculateAllocatedPower();
-    const allocatedRackCount = this.assignedRacks.filter(r => r.devices && r.devices.length > 0).length;
+    const allocatedRackCount = this.datacenterRacks?.filter(r => r.mappedRack && r.mappedRack.devices && r.mappedRack.devices.length > 0).length || 0;
 
-    const costLayerBreakdowns = this.facility.costLayers.map(layer => 
+    const costLayerBreakdowns = (this.facility.costLayers || []).map(layer => 
       this.calculateCostLayerBreakdown(layer, totalRackCount, totalPowerCapacityKW)
     );
 
@@ -105,7 +105,7 @@ export class DatacenterCostCalculator {
     const facilityBreakdown = this.calculateFacilityCosts();
     const rackAllocations: RackCostAllocation[] = [];
 
-    for (const rack of this.datacenterRacks) {
+    for (const rack of (this.datacenterRacks || [])) {
       const rackPowerKw = rack.powerUsageKw || rack.maxPowerKw || 0;
       const hierarchyPath = await this.getHierarchyPath(rack);
       
@@ -271,7 +271,7 @@ export class DatacenterCostCalculator {
    */
   private calculateTotalPowerCapacity(): number {
     // Find the rack-level power layer (typically PDU or panel)
-    const rackPowerLayer = this.facility.powerInfrastructure
+    const rackPowerLayer = (this.facility.powerInfrastructure || [])
       .filter(layer => !layer.parentLayerId)
       .sort((a, b) => b.capacityKW - a.capacityKW)[0];
     
@@ -282,8 +282,8 @@ export class DatacenterCostCalculator {
    * Calculate total allocated power across all racks
    */
   private calculateAllocatedPower(): number {
-    return this.assignedRacks.reduce((sum, rack) => {
-      return sum + (rack.actualPowerUsageKw || rack.powerAllocationKw || 0);
+    return (this.datacenterRacks || []).reduce((sum, rack) => {
+      return sum + (rack.mappedRack?.actualPowerUsageKw || rack.mappedRack?.powerAllocationKw || rack.powerUsageKw || 0);
     }, 0);
   }
 
@@ -296,7 +296,7 @@ export class DatacenterCostCalculator {
     newCostPerKW: number;
   } {
     const currentBreakdown = this.calculateFacilityCosts();
-    const newRackCount = this.assignedRacks.length + (addRack ? 1 : -1);
+    const newRackCount = (this.datacenterRacks?.length || 0) + (addRack ? 1 : -1);
     
     if (newRackCount <= 0) {
       return {
@@ -338,8 +338,8 @@ export class DatacenterCostCalculator {
     for (let month = 0; month <= monthsAhead; month++) {
       const growthFactor = Math.pow(1 + monthlyGrowthRate, month);
       const projectedRacks = Math.min(
-        Math.round(this.assignedRacks.length * growthFactor),
-        this.facility.constraints.maxRacks
+        Math.round((this.datacenterRacks?.length || 0) * growthFactor),
+        this.facility.constraints?.maxRacks || 0
       );
       const projectedPower = Math.min(
         baseBreakdown.utilizationMetrics.allocatedPowerKW * growthFactor,
