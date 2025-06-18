@@ -116,14 +116,58 @@ $$;
 ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."update_facilities_updated_at_column"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  NEW."updatedAt" = NOW();
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_facilities_updated_at_column"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_hierarchy_rack_stats"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  -- Update the assigned rack count and power for the hierarchy level
+  UPDATE facility_hierarchy h
+  SET 
+    assigned_racks = (
+      SELECT COUNT(*) 
+      FROM rack_hierarchy_assignments rha
+      WHERE rha.facility_id = h."facilityId" 
+      AND rha.hierarchy_level_id = h.id::text  -- Cast UUID to text for comparison
+    ),
+    actual_power_kw = (
+      SELECT COALESCE(SUM(r.actual_power_usage_kw), 0)
+      FROM rack_profiles r
+      JOIN rack_hierarchy_assignments rha ON r.id = rha.rack_id
+      WHERE rha.facility_id = h."facilityId" 
+      AND rha.hierarchy_level_id = h.id::text  -- Cast UUID to text for comparison
+    )
+  WHERE h."facilityId" = COALESCE(NEW.facility_id, OLD.facility_id)
+  AND h.id::text = COALESCE(NEW.hierarchy_level_id, OLD.hierarchy_level_id);  -- Cast UUID to text
+  
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_hierarchy_rack_stats"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
-  BEGIN
-      NEW."updatedAt" = TIMEZONE('utc', NOW());
-      RETURN NEW;
-  END;
-  $$;
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
 
 
 ALTER FUNCTION "public"."update_updated_at_column"() OWNER TO "postgres";
@@ -263,7 +307,10 @@ CREATE TABLE IF NOT EXISTS "public"."facility_hierarchy" (
     "customAttributes" "jsonb" DEFAULT '{}'::"jsonb",
     "capacity" "jsonb" DEFAULT '{}'::"jsonb",
     "createdAt" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()),
-    "updatedAt" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"())
+    "updatedAt" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()),
+    "assigned_racks" integer DEFAULT 0,
+    "actual_power_kw" numeric(10,2) DEFAULT 0,
+    "rack_capacity" "json" DEFAULT '{"standard": 0, "high_density": 0}'::"json"
 );
 
 
@@ -378,6 +425,64 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
 ALTER TABLE "public"."profiles" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."rack_hierarchy_assignments" (
+    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "rack_id" "uuid" NOT NULL,
+    "facility_id" "uuid" NOT NULL,
+    "hierarchy_path" "text"[],
+    "hierarchy_level_id" "text" NOT NULL,
+    "assigned_at" timestamp with time zone DEFAULT "now"(),
+    "assigned_by" "uuid",
+    "metadata" "json" DEFAULT '{}'::"json"
+);
+
+
+ALTER TABLE "public"."rack_hierarchy_assignments" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."rack_profiles" (
+    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "design_id" "uuid",
+    "name" "text" NOT NULL,
+    "u_height" integer DEFAULT 42 NOT NULL,
+    "devices" "json" DEFAULT '[]'::"json",
+    "availability_zone_id" "text",
+    "rack_type" "text",
+    "az_name" "text",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "facility_id" "uuid",
+    "hierarchy_level_id" "text",
+    "position_in_level" integer,
+    "physical_location" "json" DEFAULT '{}'::"json",
+    "power_allocation_kw" numeric(10,2),
+    "actual_power_usage_kw" numeric(10,2),
+    "rack_specifications" "json" DEFAULT '{}'::"json"
+);
+
+
+ALTER TABLE "public"."rack_profiles" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."rack_specifications" (
+    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "name" "text" NOT NULL,
+    "manufacturer" "text",
+    "model" "text",
+    "height_u" integer DEFAULT 42 NOT NULL,
+    "width_mm" integer DEFAULT 600,
+    "depth_mm" integer DEFAULT 1200,
+    "max_power_kw" numeric(10,2),
+    "max_weight_kg" numeric(10,2),
+    "features" "json" DEFAULT '{}'::"json",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."rack_specifications" OWNER TO "postgres";
+
+
 ALTER TABLE ONLY "public"."components"
     ADD CONSTRAINT "components_pkey" PRIMARY KEY ("id");
 
@@ -433,6 +538,26 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."rack_hierarchy_assignments"
+    ADD CONSTRAINT "rack_hierarchy_assignments_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."rack_hierarchy_assignments"
+    ADD CONSTRAINT "rack_hierarchy_assignments_rack_id_key" UNIQUE ("rack_id");
+
+
+
+ALTER TABLE ONLY "public"."rack_profiles"
+    ADD CONSTRAINT "rack_profiles_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."rack_specifications"
+    ADD CONSTRAINT "rack_specifications_pkey" PRIMARY KEY ("id");
+
+
+
 CREATE INDEX "idx_cost_layers_category" ON "public"."facility_cost_layers" USING "btree" ("category");
 
 
@@ -481,6 +606,18 @@ CREATE INDEX "idx_power_layers_parent" ON "public"."facility_power_layers" USING
 
 
 
+CREATE INDEX "idx_rack_profiles_design_id" ON "public"."rack_profiles" USING "btree" ("design_id");
+
+
+
+CREATE INDEX "idx_rack_profiles_facility" ON "public"."rack_profiles" USING "btree" ("facility_id");
+
+
+
+CREATE INDEX "idx_rack_profiles_hierarchy" ON "public"."rack_profiles" USING "btree" ("facility_id", "hierarchy_level_id");
+
+
+
 CREATE INDEX "idx_templates_public" ON "public"."facility_templates" USING "btree" ("isPublic");
 
 
@@ -493,7 +630,23 @@ CREATE OR REPLACE TRIGGER "update_cost_layers_updated_at" BEFORE UPDATE ON "publ
 
 
 
-CREATE OR REPLACE TRIGGER "update_facilities_updated_at" BEFORE UPDATE ON "public"."facilities" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+CREATE OR REPLACE TRIGGER "update_facilities_updated_at" BEFORE UPDATE ON "public"."facilities" FOR EACH ROW EXECUTE FUNCTION "public"."update_facilities_updated_at_column"();
+
+
+
+CREATE OR REPLACE TRIGGER "update_facility_cost_layers_updated_at" BEFORE UPDATE ON "public"."facility_cost_layers" FOR EACH ROW EXECUTE FUNCTION "public"."update_facilities_updated_at_column"();
+
+
+
+CREATE OR REPLACE TRIGGER "update_facility_hierarchy_updated_at" BEFORE UPDATE ON "public"."facility_hierarchy" FOR EACH ROW EXECUTE FUNCTION "public"."update_facilities_updated_at_column"();
+
+
+
+CREATE OR REPLACE TRIGGER "update_facility_power_layers_updated_at" BEFORE UPDATE ON "public"."facility_power_layers" FOR EACH ROW EXECUTE FUNCTION "public"."update_facilities_updated_at_column"();
+
+
+
+CREATE OR REPLACE TRIGGER "update_hierarchy_on_rack_assignment" AFTER INSERT OR DELETE OR UPDATE ON "public"."rack_hierarchy_assignments" FOR EACH ROW EXECUTE FUNCTION "public"."update_hierarchy_rack_stats"();
 
 
 
@@ -510,6 +663,10 @@ CREATE OR REPLACE TRIGGER "update_npl_updated_at" BEFORE UPDATE ON "public"."fac
 
 
 CREATE OR REPLACE TRIGGER "update_power_layers_updated_at" BEFORE UPDATE ON "public"."facility_power_layers" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+
+
+
+CREATE OR REPLACE TRIGGER "update_rack_profiles_updated_at" BEFORE UPDATE ON "public"."rack_profiles" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
 
 
@@ -577,11 +734,40 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."rack_hierarchy_assignments"
+    ADD CONSTRAINT "rack_hierarchy_assignments_assigned_by_fkey" FOREIGN KEY ("assigned_by") REFERENCES "auth"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."rack_hierarchy_assignments"
+    ADD CONSTRAINT "rack_hierarchy_assignments_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."rack_hierarchy_assignments"
+    ADD CONSTRAINT "rack_hierarchy_assignments_rack_id_fkey" FOREIGN KEY ("rack_id") REFERENCES "public"."rack_profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."rack_profiles"
+    ADD CONSTRAINT "rack_profiles_design_id_fkey" FOREIGN KEY ("design_id") REFERENCES "public"."designs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."rack_profiles"
+    ADD CONSTRAINT "rack_profiles_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE SET NULL;
+
+
+
 CREATE POLICY "Allow all operations on components" ON "public"."components" USING (true);
 
 
 
 CREATE POLICY "Allow all operations on designs" ON "public"."designs" USING (true);
+
+
+
+CREATE POLICY "Rack specifications are viewable by everyone" ON "public"."rack_specifications" FOR SELECT USING (true);
 
 
 
@@ -643,6 +829,18 @@ CREATE POLICY "Users can manage power layers" ON "public"."facility_power_layers
 
 
 
+CREATE POLICY "Users can manage their own rack assignments" ON "public"."rack_hierarchy_assignments" USING (("facility_id" IN ( SELECT "facilities"."id"
+   FROM "public"."facilities"
+  WHERE ("facilities"."createdBy" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Users can manage their own racks" ON "public"."rack_profiles" USING (("design_id" IN ( SELECT "designs"."id"
+   FROM "public"."designs"
+  WHERE ("designs"."user_id" = "auth"."uid"()))));
+
+
+
 CREATE POLICY "Users can update cost layers for their facilities" ON "public"."facility_cost_layers" FOR UPDATE USING ((EXISTS ( SELECT 1
    FROM "public"."facilities"
   WHERE (("facilities"."id" = "facility_cost_layers"."facilityId") AND ("facilities"."createdBy" = "auth"."uid"())))));
@@ -693,6 +891,12 @@ CREATE POLICY "Users can view their own designs" ON "public"."designs" FOR SELEC
 
 
 
+CREATE POLICY "Users can view their own racks" ON "public"."rack_profiles" FOR SELECT USING (("design_id" IN ( SELECT "designs"."id"
+   FROM "public"."designs"
+  WHERE ("designs"."user_id" = "auth"."uid"()))));
+
+
+
 ALTER TABLE "public"."components" ENABLE ROW LEVEL SECURITY;
 
 
@@ -721,6 +925,15 @@ ALTER TABLE "public"."facility_templates" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."rack_hierarchy_assignments" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."rack_profiles" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."rack_specifications" ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -924,6 +1137,18 @@ GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."update_facilities_updated_at_column"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_facilities_updated_at_column"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_facilities_updated_at_column"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_hierarchy_rack_stats"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_hierarchy_rack_stats"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_hierarchy_rack_stats"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "service_role";
@@ -1008,6 +1233,24 @@ GRANT ALL ON TABLE "public"."facility_utilization_summary" TO "service_role";
 GRANT ALL ON TABLE "public"."profiles" TO "anon";
 GRANT ALL ON TABLE "public"."profiles" TO "authenticated";
 GRANT ALL ON TABLE "public"."profiles" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."rack_hierarchy_assignments" TO "anon";
+GRANT ALL ON TABLE "public"."rack_hierarchy_assignments" TO "authenticated";
+GRANT ALL ON TABLE "public"."rack_hierarchy_assignments" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."rack_profiles" TO "anon";
+GRANT ALL ON TABLE "public"."rack_profiles" TO "authenticated";
+GRANT ALL ON TABLE "public"."rack_profiles" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."rack_specifications" TO "anon";
+GRANT ALL ON TABLE "public"."rack_specifications" TO "authenticated";
+GRANT ALL ON TABLE "public"."rack_specifications" TO "service_role";
 
 
 
