@@ -73,11 +73,14 @@ export const recalculateDesign = () => {
       // );
       
       if (state.activeDesign.selectedDisksByRole) {
-        state.selectedDisksByRole = state.activeDesign.selectedDisksByRole;
+        console.log('[designCalculator] Restoring disk configuration from activeDesign:', state.activeDesign.selectedDisksByRole);
+        useDesignStore.setState({ selectedDisksByRole: state.activeDesign.selectedDisksByRole });
+      } else {
+        console.log('[designCalculator] No disk configuration in activeDesign');
       }
       
       if (state.activeDesign.selectedGPUsByRole) {
-        state.selectedGPUsByRole = state.activeDesign.selectedGPUsByRole;
+        useDesignStore.setState({ selectedGPUsByRole: state.activeDesign.selectedGPUsByRole });
       }
       
       updatedRoles.forEach(role => {

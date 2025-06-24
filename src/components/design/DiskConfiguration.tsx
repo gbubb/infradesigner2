@@ -40,6 +40,7 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
   // Add a new disk to the configuration
   const handleAddDisk = () => {
     if (selectedDiskId && quantity > 0) {
+      console.log('[DiskConfiguration] Adding disk:', { roleId, selectedDiskId, quantity });
       addDiskToStorageNode(roleId, selectedDiskId, quantity);
       setSelectedDiskId('');
       setQuantity(1);

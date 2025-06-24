@@ -71,7 +71,15 @@ export const createDesignSlice: StateCreator<
         return state;
       }
       
-      const updatedDesign = updateActiveDesignOperation(state.activeDesign, components);
+      // Include current disk and GPU selections in the design update
+      const designWithSelections = {
+        ...state.activeDesign,
+        selectedDisksByRole: state.selectedDisksByRole,
+        selectedGPUsByRole: state.selectedGPUsByRole,
+        componentRoles: state.componentRoles
+      };
+      
+      const updatedDesign = updateActiveDesignOperation(designWithSelections, components);
       
       const updatedDesigns = state.savedDesigns.map(design => 
         design.id === updatedDesign.id ? updatedDesign : design
@@ -182,6 +190,16 @@ export const createDesignSlice: StateCreator<
       
       toast.success(`Switched to design: ${design.name}`);
       
+      // Debug log to track disk configuration when loading
+      console.log('[setActiveDesign] Loading disk configuration:', {
+        selectedDisksByRole: design.selectedDisksByRole || {},
+        componentRoles: (design.componentRoles || []).filter(r => r.role === 'hyperConvergedNode').map(r => ({
+          id: r.id,
+          role: r.role,
+          clusterId: r.clusterInfo?.clusterId
+        }))
+      });
+      
       return { 
         activeDesign: design,
         componentRoles: design.componentRoles || [],
@@ -198,6 +216,16 @@ export const createDesignSlice: StateCreator<
       toast.error("No active design to save");
       return;
     }
+    
+    // Debug log to track disk configuration
+    console.log('[saveDesign] Saving disk configuration:', {
+      selectedDisksByRole: state.selectedDisksByRole,
+      componentRoles: state.componentRoles.filter(r => r.role === 'hyperConvergedNode').map(r => ({
+        id: r.id,
+        role: r.role,
+        clusterId: r.clusterInfo?.clusterId
+      }))
+    });
     
     const updatedDesign = {
       ...state.activeDesign,
