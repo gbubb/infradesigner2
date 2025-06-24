@@ -185,11 +185,22 @@ export const recalculateDesign = () => {
                 ruSize: componentTemplate.ruSize,
               };
               
-              // For hyper-converged, use disk configuration from compute cluster if available
-              if (computeCluster?.hyperConvergedDiskQuantity && 
-                  computeCluster?.hyperConvergedDiskSizeTB && 
-                  computeCluster?.hyperConvergedDiskType) {
-                // Find a disk template that matches the requirements
+              // For hyper-converged, prioritize manually configured disks
+              if (roleDiskConfigs.length > 0) {
+                // Use manually configured disks from the Design tab
+                roleDiskConfigs.forEach(diskConfig => {
+                  const diskTemplate = state.componentTemplates.find(c => c.id === diskConfig.diskId);
+                  if (diskTemplate) {
+                    attachedDisks.push({
+                      ...diskTemplate,
+                      quantity: diskConfig.quantity,
+                    });
+                  }
+                });
+              } else if (computeCluster?.hyperConvergedDiskQuantity && 
+                         computeCluster?.hyperConvergedDiskSizeTB && 
+                         computeCluster?.hyperConvergedDiskType) {
+                // Fall back to disk configuration from compute cluster if no manual config
                 const diskTemplate = state.componentTemplates.find(c => 
                   c.type === ComponentType.Disk && 
                   'capacityTB' in c && 
@@ -204,17 +215,6 @@ export const recalculateDesign = () => {
                     quantity: computeCluster.hyperConvergedDiskQuantity,
                   });
                 }
-              } else if (roleDiskConfigs.length > 0) {
-                // Fall back to manually configured disks
-                roleDiskConfigs.forEach(diskConfig => {
-                  const diskTemplate = state.componentTemplates.find(c => c.id === diskConfig.diskId);
-                  if (diskTemplate) {
-                    attachedDisks.push({
-                      ...diskTemplate,
-                      quantity: diskConfig.quantity,
-                    });
-                  }
-                });
               }
               
               if (attachedDisks.length > 0) (instanceComponent as ComponentWithPlacement).attachedDisks = attachedDisks;

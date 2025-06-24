@@ -108,17 +108,20 @@ export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
             // Calculate storage capacity per node based on disk configuration
             let storageNodeCapacityTiB = 0;
             
-            // For hyper-converged nodes, use the disk configuration from the compute cluster
-            if (cluster.hyperConvergedDiskQuantity && cluster.hyperConvergedDiskSizeTB) {
+            // First check for manually selected disks in the Design tab
+            const manualCapacity = calculateStorageNodeCapacity(
+              roleId, 
+              selectedDisksByRole, 
+              componentTemplates
+            );
+            
+            if (manualCapacity > 0) {
+              // Use manually configured disks
+              storageNodeCapacityTiB = manualCapacity;
+            } else if (cluster.hyperConvergedDiskQuantity && cluster.hyperConvergedDiskSizeTB) {
+              // Fall back to disk configuration from compute cluster
               // Convert TB to TiB
               storageNodeCapacityTiB = cluster.hyperConvergedDiskQuantity * cluster.hyperConvergedDiskSizeTB * 0.909495;
-            } else {
-              // Fall back to checking selectedDisksByRole
-              storageNodeCapacityTiB = calculateStorageNodeCapacity(
-                roleId, 
-                selectedDisksByRole, 
-                componentTemplates
-              );
             }
             
             if (storageNodeCapacityTiB > 0) {
