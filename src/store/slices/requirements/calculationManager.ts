@@ -118,10 +118,6 @@ export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
             if (manualCapacity > 0) {
               // Use manually configured disks
               storageNodeCapacityTiB = manualCapacity;
-            } else if (cluster.hyperConvergedDiskQuantity && cluster.hyperConvergedDiskSizeTB) {
-              // Fall back to disk configuration from compute cluster
-              // Convert TB to TiB
-              storageNodeCapacityTiB = cluster.hyperConvergedDiskQuantity * cluster.hyperConvergedDiskSizeTB * 0.909495;
             }
             
             if (storageNodeCapacityTiB > 0) {

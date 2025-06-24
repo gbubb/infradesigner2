@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Trash2, Plus } from 'lucide-react';
-import { ComputeClusterRequirement, StorageClusterRequirement, DiskType } from '@/types/infrastructure';
+import { ComputeClusterRequirement, StorageClusterRequirement } from '@/types/infrastructure';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ComputeClusterFormProps {
@@ -169,58 +169,12 @@ export const ComputeClusterForm: React.FC<ComputeClusterFormProps> = ({
               </div>
               
               {isHyperConverged(cluster.id) && (
-                <div className="mt-4 space-y-4 border-t pt-4">
+                <div className="mt-4 space-y-2 border-t pt-4">
                   <div className="space-y-0.5">
-                    <h4 className="text-sm font-medium">Hyper-Converged Storage Configuration</h4>
+                    <h4 className="text-sm font-medium">Hyper-Converged Storage</h4>
                     <p className="text-sm text-muted-foreground">
-                      This cluster is selected for hyper-converged storage
+                      This cluster is selected for hyper-converged storage. Configure disks in the Design tab.
                     </p>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor={`diskQuantity-${index}`}>Disks per Node</Label>
-                      <Input
-                        id={`diskQuantity-${index}`}
-                        type="number"
-                        min="1"
-                        max="24"
-                        placeholder="e.g., 10"
-                        value={cluster.hyperConvergedDiskQuantity || ''}
-                        onChange={(e) => updateCluster(index, 'hyperConvergedDiskQuantity', parseInt(e.target.value, 10) || undefined)}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor={`diskSize-${index}`}>Disk Size (TB)</Label>
-                      <Input
-                        id={`diskSize-${index}`}
-                        type="number"
-                        min="1"
-                        step="0.5"
-                        placeholder="e.g., 4"
-                        value={cluster.hyperConvergedDiskSizeTB || ''}
-                        onChange={(e) => updateCluster(index, 'hyperConvergedDiskSizeTB', parseFloat(e.target.value) || undefined)}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor={`diskType-${index}`}>Disk Type</Label>
-                      <Select
-                        value={cluster.hyperConvergedDiskType || ''}
-                        onValueChange={(value) => updateCluster(index, 'hyperConvergedDiskType', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select disk type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={DiskType.NVMe}>NVMe SSD</SelectItem>
-                          <SelectItem value={DiskType.SSD}>SSD</SelectItem>
-                          <SelectItem value={DiskType.SATASSD}>SATA SSD</SelectItem>
-                          <SelectItem value={DiskType.HDD}>HDD</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </div>
                 </div>
               )}

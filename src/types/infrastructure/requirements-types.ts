@@ -12,10 +12,6 @@ export interface ComputeClusterRequirement {
   availabilityZoneRedundancy: string;
   overcommitRatio: number;
   gpuEnabled: boolean;
-  // Hyper-converged storage configuration
-  hyperConvergedDiskQuantity?: number;
-  hyperConvergedDiskSizeTB?: number;
-  hyperConvergedDiskType?: string;
 }
 
 // Availability Zone definition

@@ -185,9 +185,8 @@ export const recalculateDesign = () => {
                 ruSize: componentTemplate.ruSize,
               };
               
-              // For hyper-converged, prioritize manually configured disks
+              // For hyper-converged, use manually configured disks from the Design tab
               if (roleDiskConfigs.length > 0) {
-                // Use manually configured disks from the Design tab
                 roleDiskConfigs.forEach(diskConfig => {
                   const diskTemplate = state.componentTemplates.find(c => c.id === diskConfig.diskId);
                   if (diskTemplate) {
@@ -197,24 +196,6 @@ export const recalculateDesign = () => {
                     });
                   }
                 });
-              } else if (computeCluster?.hyperConvergedDiskQuantity && 
-                         computeCluster?.hyperConvergedDiskSizeTB && 
-                         computeCluster?.hyperConvergedDiskType) {
-                // Fall back to disk configuration from compute cluster if no manual config
-                const diskTemplate = state.componentTemplates.find(c => 
-                  c.type === ComponentType.Disk && 
-                  'capacityTB' in c && 
-                  c.capacityTB === computeCluster.hyperConvergedDiskSizeTB &&
-                  'diskType' in c && 
-                  c.diskType === computeCluster.hyperConvergedDiskType
-                );
-                
-                if (diskTemplate) {
-                  attachedDisks.push({
-                    ...diskTemplate,
-                    quantity: computeCluster.hyperConvergedDiskQuantity,
-                  });
-                }
               }
               
               if (attachedDisks.length > 0) (instanceComponent as ComponentWithPlacement).attachedDisks = attachedDisks;
