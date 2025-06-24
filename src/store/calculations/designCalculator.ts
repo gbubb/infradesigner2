@@ -72,15 +72,62 @@ export const recalculateDesign = () => {
       //   `Restored assignments to ${updatedRoles.filter(r => r.assignedComponentId).length} roles`
       // );
       
+      // Create mapping from old role IDs to new role IDs based on role type and cluster
+      const roleIdMapping: Record<string, string> = {};
+      const oldRoles = state.activeDesign.componentRoles || [];
+      const newRoles = state.componentRoles || [];
+      
+      // Map old roles to new roles based on role type and cluster info
+      oldRoles.forEach(oldRole => {
+        const matchingNewRole = newRoles.find(newRole => 
+          newRole.role === oldRole.role && 
+          newRole.clusterInfo?.clusterId === oldRole.clusterInfo?.clusterId
+        );
+        
+        if (matchingNewRole) {
+          roleIdMapping[oldRole.id] = matchingNewRole.id;
+        }
+      });
+      
+      console.log('[designCalculator] Role ID mapping:', roleIdMapping);
+      
       if (state.activeDesign.selectedDisksByRole) {
         console.log('[designCalculator] Restoring disk configuration from activeDesign:', state.activeDesign.selectedDisksByRole);
-        useDesignStore.setState({ selectedDisksByRole: state.activeDesign.selectedDisksByRole });
+        
+        // Remap disk selections to new role IDs
+        const remappedDisksByRole: Record<string, { diskId: string, quantity: number }[]> = {};
+        
+        Object.entries(state.activeDesign.selectedDisksByRole).forEach(([oldRoleId, disks]) => {
+          const newRoleId = roleIdMapping[oldRoleId];
+          if (newRoleId) {
+            remappedDisksByRole[newRoleId] = disks;
+          } else {
+            // Keep unmapped entries in case they're still valid
+            remappedDisksByRole[oldRoleId] = disks;
+          }
+        });
+        
+        console.log('[designCalculator] Remapped disk configuration:', remappedDisksByRole);
+        useDesignStore.setState({ selectedDisksByRole: remappedDisksByRole });
       } else {
         console.log('[designCalculator] No disk configuration in activeDesign');
       }
       
       if (state.activeDesign.selectedGPUsByRole) {
-        useDesignStore.setState({ selectedGPUsByRole: state.activeDesign.selectedGPUsByRole });
+        // Remap GPU selections to new role IDs
+        const remappedGPUsByRole: Record<string, { gpuId: string, quantity: number }[]> = {};
+        
+        Object.entries(state.activeDesign.selectedGPUsByRole).forEach(([oldRoleId, gpus]) => {
+          const newRoleId = roleIdMapping[oldRoleId];
+          if (newRoleId) {
+            remappedGPUsByRole[newRoleId] = gpus;
+          } else {
+            // Keep unmapped entries in case they're still valid
+            remappedGPUsByRole[oldRoleId] = gpus;
+          }
+        });
+        
+        useDesignStore.setState({ selectedGPUsByRole: remappedGPUsByRole });
       }
       
       updatedRoles.forEach(role => {
