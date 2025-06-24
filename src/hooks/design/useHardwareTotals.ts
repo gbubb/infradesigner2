@@ -22,9 +22,9 @@ export const useHardwareTotals = () => {
     let computeMemoryGB = 0;
     let totalStorageTB = 0;
     
-    // Compute nodes filter -- no log
+    // Compute nodes filter -- includes hyper-converged nodes
     const computeClusterNodes = activeDesign.components.filter(component => 
-      (component.role === 'computeNode' || component.role === 'gpuNode') && 
+      (component.role === 'computeNode' || component.role === 'gpuNode' || component.role === 'hyperConvergedNode') && 
       component.type === ComponentType.Server &&
       (component as any).clusterInfo
     );
@@ -80,13 +80,45 @@ export const useHardwareTotals = () => {
     // Storage clusters capacity
     const storageClusters = requirements.storageRequirements.storageClusters || [];
     
+    // For hyper-converged storage, we need to map storage clusters to their compute clusters
+    const hyperConvergedStorageMap = new Map<string, string>();
+    storageClusters.forEach(sc => {
+      if (sc.hyperConverged && sc.computeClusterId) {
+        hyperConvergedStorageMap.set(sc.id, sc.computeClusterId);
+      }
+    });
+    
     const storageNodesByCluster = activeDesign.components
-      .filter(component => component.role === 'storageNode' && component.type === ComponentType.Server)
+      .filter(component => {
+        // Include regular storage nodes
+        if (component.role === 'storageNode' && component.type === ComponentType.Server) {
+          return true;
+        }
+        // Include hyper-converged nodes that serve storage
+        if (component.role === 'hyperConvergedNode' && component.type === ComponentType.Server) {
+          return true;
+        }
+        return false;
+      })
       .reduce((acc: Record<string, any[]>, node) => {
         if ((node as any).clusterInfo?.clusterId) {
-          const clusterId = (node as any).clusterInfo.clusterId;
-          if (!acc[clusterId]) acc[clusterId] = [];
-          acc[clusterId].push(node);
+          const nodeClusterId = (node as any).clusterInfo.clusterId;
+          
+          // For hyper-converged nodes, map them to their storage cluster
+          if (node.role === 'hyperConvergedNode') {
+            // Find which storage cluster this compute cluster serves
+            for (const [storageClusterId, computeClusterId] of hyperConvergedStorageMap.entries()) {
+              if (computeClusterId === nodeClusterId) {
+                if (!acc[storageClusterId]) acc[storageClusterId] = [];
+                acc[storageClusterId].push(node);
+                break;
+              }
+            }
+          } else {
+            // Regular storage nodes
+            if (!acc[nodeClusterId]) acc[nodeClusterId] = [];
+            acc[nodeClusterId].push(node);
+          }
         }
         return acc;
       }, {});
@@ -119,7 +151,7 @@ export const useHardwareTotals = () => {
     let otherMemoryGB = 0;
     activeDesign.components
       .filter(component => 
-        !(component.role === 'computeNode' || component.role === 'gpuNode') &&
+        !(component.role === 'computeNode' || component.role === 'gpuNode' || component.role === 'hyperConvergedNode') &&
         component.type === ComponentType.Server
       )
       .forEach(component => {

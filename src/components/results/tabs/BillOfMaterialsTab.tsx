@@ -22,8 +22,8 @@ const useComponentRoleId = (component: InfrastructureComponent & { summarizedQua
   const componentRoles = useDesignStore(state => state.componentRoles);
   if (!component.role) return null;
   
-  // For storage nodes, match by both role and clusterId to find the specific storage cluster
-  if (component.role === 'storageNode') {
+  // For storage nodes and hyper-converged nodes, match by both role and clusterId to find the specific cluster
+  if (component.role === 'storageNode' || component.role === 'hyperConvergedNode') {
     const clusterId = (component as any).clusterInfo?.clusterId;
     const foundRole = componentRoles.find(r => 
       r.role === component.role && r.clusterInfo?.clusterId === clusterId
@@ -38,13 +38,13 @@ const useComponentRoleId = (component: InfrastructureComponent & { summarizedQua
 
 // Helper: generate a unique key that includes template, cluster assignment, and attachedDisks config
 const getStorageNodeGroupKey = (component: InfrastructureComponent): string => {
-  if (component.role === 'storageNode') {
+  if (component.role === 'storageNode' || component.role === 'hyperConvergedNode') {
     const clusterId = (component as any).clusterInfo?.clusterId || 'no-cluster';
     const attachedDisks = ((component as any).attachedDisks || [])
       .map((disk: any) => `${disk.templateId || disk.id || disk.model}-${disk.quantity}`)
       .sort()
       .join('|');
-    return `storageNode:${component.templateId}-${clusterId}-[${attachedDisks}]`;
+    return `${component.role}:${component.templateId}-${clusterId}-[${attachedDisks}]`;
   }
   // Fallback to normal grouping for non-storage nodes
   return getBomGroupKey(component);
@@ -85,7 +85,7 @@ export const BillOfMaterialsTab: React.FC = () => {
 
     components.forEach(instance => {
       const key =
-        instance.role === 'storageNode'
+        (instance.role === 'storageNode' || instance.role === 'hyperConvergedNode')
           ? getStorageNodeGroupKey(instance)
           : getBomGroupKey(instance);
 
@@ -97,8 +97,8 @@ export const BillOfMaterialsTab: React.FC = () => {
       }
       groupedByTemplate[key].summarizedQuantity += instance.quantity || 1;
 
-      // If this is a storage node, also add disk line items with correct cluster assignment
-      if (instance.role === 'storageNode' && (instance as any).attachedDisks) {
+      // If this is a storage node or hyper-converged node, also add disk line items with correct cluster assignment
+      if ((instance.role === 'storageNode' || instance.role === 'hyperConvergedNode') && (instance as any).attachedDisks) {
         const clusterInfo = (instance as any).clusterInfo || {};
         const attachedDisks = (instance as any).attachedDisks || [];
         attachedDisks.forEach((disk: any) => {

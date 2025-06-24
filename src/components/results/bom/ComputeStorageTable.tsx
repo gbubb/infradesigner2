@@ -62,17 +62,25 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
           const quantity = component.summarizedQuantity;
           const totalCost = component.cost * quantity;
           const roleId = useComponentRoleId(component);
+          const clusterName = component.role === 'hyperConvergedNode'
+            ? ((component as any).clusterInfo?.clusterName || (component as any).clusterInfo?.clusterId || 'Unassigned')
+            : '-';
+          const attachedDisks = (component as any).attachedDisks || [];
+          const disksSummary = attachedDisks.length > 0
+            ? attachedDisks.map((d: any) => `${d.quantity}x ${d.capacityTB || 0}TB`).join(', ')
+            : '-';
+            
           return (
             <BomItemHoverCard key={`compute-${getBomGroupKey(component)}`} component={component}>
               <TableRow className="cursor-pointer">
                 <TableCell>{component.type}</TableCell>
                 <TableCell>{component.role || 'Unassigned'}</TableCell>
-                <TableCell>-</TableCell>
+                <TableCell>{clusterName}</TableCell>
                 <TableCell>{component.manufacturer}</TableCell>
                 <TableCell>{component.model}</TableCell>
                 <TableCell>{(component as any).cpuModel || '-'}</TableCell>
                 <TableCell className="text-right">{(component as any).memoryCapacity || (component as any).memoryGB || '-'}</TableCell>
-                <TableCell className="text-right">-</TableCell>
+                <TableCell className="text-right">{disksSummary}</TableCell>
                 <TableCell className="text-right flex items-center gap-1 justify-end">
                   {quantity}
                   {roleId && (

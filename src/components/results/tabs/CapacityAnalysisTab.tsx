@@ -37,8 +37,10 @@ export const CapacityAnalysisTab: React.FC = () => {
     const computeAndStorageRU = (resourceMetrics.totalRackUnits || 0) - (resourceMetrics.networkRackUnits || 0);
     const remainingRU = Math.max(0, totalComputeRackRU - computeAndStorageRU);
     
-    // Find average compute node specs to use for calculations
-    const computeNodes = (activeDesign.components || []).filter(c => c.role === 'computeNode');
+    // Find average compute node specs to use for calculations (including hyper-converged)
+    const computeNodes = (activeDesign.components || []).filter(c => 
+      c.role === 'computeNode' || c.role === 'gpuNode' || c.role === 'hyperConvergedNode'
+    );
     
     if (computeNodes.length === 0) return null;
     
