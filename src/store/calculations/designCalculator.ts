@@ -318,7 +318,7 @@ export const recalculateDesign = () => {
         });
 
       // 4. Update the design's component list
-      const finalComponentList = updatedComponentsArray;
+      const finalComponentList: ComponentWithPlacement[] = updatedComponentsArray;
 
       if (finalComponentList && finalComponentList.length > 0) {
         // console.log(`Updating active design with ${finalComponentList.length} individual component instances`);

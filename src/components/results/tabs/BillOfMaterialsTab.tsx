@@ -101,21 +101,6 @@ export const BillOfMaterialsTab: React.FC = () => {
       if ((instance.role === 'storageNode' || instance.role === 'hyperConvergedNode') && (instance as any).attachedDisks) {
         const clusterInfo = (instance as any).clusterInfo || {};
         const attachedDisks = (instance as any).attachedDisks || [];
-        
-        if (instance.role === 'hyperConvergedNode') {
-          console.log(`[BOM] Hyper-converged node ${instance.name}:`, {
-            nodeName: instance.name,
-            clusterInfo,
-            attachedDisksCount: attachedDisks.length,
-            attachedDisks: attachedDisks.map((d: any) => ({ 
-              model: d.model, 
-              capacityTB: d.capacityTB, 
-              quantity: d.quantity,
-              cost: d.cost
-            }))
-          });
-        }
-        
         attachedDisks.forEach((disk: any) => {
           if (!disk) return;
           // Keyed by disk id+model+size+cluster

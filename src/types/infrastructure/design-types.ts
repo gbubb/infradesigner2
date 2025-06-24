@@ -4,6 +4,7 @@ import { ComponentRole } from './roles-types';
 import { RackProfile, ClusterAZAssignment, RowLayoutConfiguration } from './rack-types';
 import { ConnectionRule } from './connection-rule-types';
 import { NetworkConnection } from './connection-types';
+import { ComponentWithPlacement } from '../service-types';
 
 // Infrastructure Design interface
 export interface InfrastructureDesign {
@@ -13,7 +14,7 @@ export interface InfrastructureDesign {
   createdAt: Date;
   updatedAt: Date;
   requirements: DesignRequirements;
-  components: InfrastructureComponent[];
+  components: (InfrastructureComponent | ComponentWithPlacement)[];
   componentRoles?: ComponentRole[];
   selectedDisksByRole?: Record<string, { diskId: string, quantity: number }[]>;
   selectedGPUsByRole?: Record<string, { gpuId: string, quantity: number }[]>;

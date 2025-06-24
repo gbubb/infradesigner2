@@ -23,6 +23,9 @@ export interface ComponentWithPlacement extends InfrastructureComponent {
     clusterId: string;
     clusterName?: string;
   };
+  attachedDisks?: InfrastructureComponent[];
+  attachedGPUs?: InfrastructureComponent[];
+  clusterId?: string;
 }
 
 export interface PlacementConstraints {
