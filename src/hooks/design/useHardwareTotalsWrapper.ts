@@ -43,7 +43,7 @@ export const useHardwareTotalsWrapper = () => {
       let totalStorageTB = 0;
       
       const computeClusterNodes = activeDesign.components.filter(component => 
-        (component.role === 'computeNode' || component.role === 'gpuNode') && 
+        (component.role === 'computeNode' || component.role === 'gpuNode' || component.role === 'hyperConvergedNode') && 
         component.type === ComponentType.Server
       );
       
@@ -109,8 +109,20 @@ export const useHardwareTotalsWrapper = () => {
       });
       
       const storageClusters = requirements?.storageRequirements?.storageClusters || [];
+      
+      // For hyper-converged storage, we need to map storage clusters to their compute clusters
+      const hyperConvergedStorageMap = new Map<string, string>();
+      storageClusters.forEach(sc => {
+        if (sc.hyperConverged && sc.computeClusterId) {
+          hyperConvergedStorageMap.set(sc.id, sc.computeClusterId);
+        }
+      });
+      
       const storageNodes = activeDesign.components
-        .filter(component => component.role === 'storageNode' && component.type === ComponentType.Server);
+        .filter(component => 
+          (component.role === 'storageNode' || component.role === 'hyperConvergedNode') && 
+          component.type === ComponentType.Server
+        );
       
       console.log('[useHardwareTotalsWrapper] Storage nodes found:', {
         storageNodes: storageNodes.length,
@@ -126,9 +138,23 @@ export const useHardwareTotalsWrapper = () => {
       const storageNodesByCluster = storageNodes
         .reduce((acc, node) => {
           if (node.clusterInfo?.clusterId) {
-            const clusterId = node.clusterInfo.clusterId;
-            if (!acc[clusterId]) acc[clusterId] = [];
-            acc[clusterId].push(node);
+            const nodeClusterId = node.clusterInfo.clusterId;
+            
+            // For hyper-converged nodes, map them to their storage cluster
+            if (node.role === 'hyperConvergedNode') {
+              // Find which storage cluster this compute cluster serves
+              for (const [storageClusterId, computeClusterId] of hyperConvergedStorageMap.entries()) {
+                if (computeClusterId === nodeClusterId) {
+                  if (!acc[storageClusterId]) acc[storageClusterId] = [];
+                  acc[storageClusterId].push(node);
+                  break;
+                }
+              }
+            } else {
+              // Regular storage nodes
+              if (!acc[nodeClusterId]) acc[nodeClusterId] = [];
+              acc[nodeClusterId].push(node);
+            }
           }
           return acc;
         }, {} as Record<string, any[]>);
@@ -158,7 +184,7 @@ export const useHardwareTotalsWrapper = () => {
       let otherMemoryGB = 0;
       activeDesign.components
         .filter(component => 
-          !(component.role === 'computeNode' || component.role === 'gpuNode') &&
+          !(component.role === 'computeNode' || component.role === 'gpuNode' || component.role === 'hyperConvergedNode') &&
           component.type === ComponentType.Server
         )
         .forEach(component => {

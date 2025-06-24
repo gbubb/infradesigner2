@@ -19,16 +19,31 @@ export const useStorageClustersWrapper = () => {
     }
 
     return requirements.storageRequirements.storageClusters.map(cluster => {
-      // Find storage nodes for this cluster
-      const clusterNodes = activeDesign.components.filter(
-        component => component.role === 'storageNode' && 
-        (component as any).clusterInfo?.clusterId === cluster.id
-      );
+      let clusterNodes = [];
+      
+      // Check if this is a hyper-converged storage cluster
+      if (cluster.hyperConverged && cluster.computeClusterId) {
+        // Find hyper-converged nodes from the compute cluster
+        clusterNodes = activeDesign.components.filter(
+          component => component.role === 'hyperConvergedNode' && 
+          (component as any).clusterInfo?.clusterId === cluster.computeClusterId
+        );
+      } else {
+        // Find regular storage nodes for this cluster
+        clusterNodes = activeDesign.components.filter(
+          component => component.role === 'storageNode' && 
+          (component as any).clusterInfo?.clusterId === cluster.id
+        );
+      }
       
       console.log(`[useStorageClustersWrapper] Cluster ${cluster.name}:`, {
         clusterId: cluster.id,
+        isHyperConverged: cluster.hyperConverged,
+        computeClusterId: cluster.computeClusterId,
         nodesFound: clusterNodes.length,
-        allStorageNodes: activeDesign.components.filter(c => c.role === 'storageNode').length
+        nodeTypes: clusterNodes.map(n => n.role),
+        allStorageNodes: activeDesign.components.filter(c => c.role === 'storageNode').length,
+        allHyperConvergedNodes: activeDesign.components.filter(c => c.role === 'hyperConvergedNode').length
       });
       
       // Calculate total raw capacity
