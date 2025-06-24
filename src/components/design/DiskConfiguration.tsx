@@ -21,6 +21,8 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
     selectedDisksByRole,
     addDiskToStorageNode,
     removeDiskFromStorageNode,
+    componentRoles,
+    requirements,
   } = useDesignStore();
   
   // Get available disks
@@ -30,6 +32,32 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
   
   // Get currently selected disks for this role
   const selectedDisks: DiskConfig[] = selectedDisksByRole[roleId] || [];
+  
+  // Check if this is a hyper-converged node and auto-populate disk config
+  React.useEffect(() => {
+    const role = componentRoles.find(r => r.id === roleId);
+    if (role?.role === 'hyperConvergedNode' && selectedDisks.length === 0) {
+      // Find the compute cluster configuration
+      const computeClusters = requirements.computeRequirements?.computeClusters || [];
+      const computeCluster = computeClusters.find(c => c.id === role.clusterInfo?.clusterId);
+      
+      if (computeCluster?.hyperConvergedDiskQuantity && 
+          computeCluster?.hyperConvergedDiskSizeTB && 
+          computeCluster?.hyperConvergedDiskType) {
+        
+        // Find a matching disk template
+        const matchingDisk = availableDisks.find(disk => 
+          disk.capacityTB === computeCluster.hyperConvergedDiskSizeTB &&
+          disk.diskType === computeCluster.hyperConvergedDiskType
+        );
+        
+        if (matchingDisk) {
+          // Auto-add the disk configuration
+          addDiskToStorageNode(roleId, matchingDisk.id, computeCluster.hyperConvergedDiskQuantity);
+        }
+      }
+    }
+  }, [roleId, componentRoles, requirements, selectedDisks.length, availableDisks, addDiskToStorageNode]);
 
   // Local state for new disk form
   const [selectedDiskId, setSelectedDiskId] = useState<string>('');
@@ -54,10 +82,21 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
     return availableDisks.find(disk => disk.id === id);
   };
   
+  // Check if this is a hyper-converged node
+  const role = componentRoles.find(r => r.id === roleId);
+  const isHyperConverged = role?.role === 'hyperConvergedNode';
+  
   return (
     <Card className="mt-4">
       <CardHeader>
-        <CardTitle className="text-base">Storage Configuration</CardTitle>
+        <CardTitle className="text-base">
+          Storage Configuration
+          {isHyperConverged && (
+            <span className="text-xs font-normal text-muted-foreground ml-2">
+              (Hyper-Converged)
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

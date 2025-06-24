@@ -117,6 +117,12 @@ export const DesignPanel: React.FC = () => {
         return componentTemplates.filter(
           (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'storage'
         );
+      case 'hyperConvergedNode':
+        // Hyper-converged nodes can use either compute or storage servers
+        return componentTemplates.filter(
+          (c): c is ServerComponent => c.type === ComponentType.Server && 
+          (c.serverRole === 'compute' || c.serverRole === 'storage')
+        );
       case 'controllerNode':
       case 'infrastructureNode':
         return componentTemplates.filter(
@@ -276,7 +282,7 @@ export const DesignPanel: React.FC = () => {
                           
                           <Separator />
                           
-                          {role.role === 'storageNode' && (
+                          {(role.role === 'storageNode' || role.role === 'hyperConvergedNode') && (
                             <DiskConfiguration roleId={role.id} />
                           )}
                           
