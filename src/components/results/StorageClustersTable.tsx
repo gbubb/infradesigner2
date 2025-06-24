@@ -22,6 +22,13 @@ interface StorageClustersTableProps {
 }
 
 export const StorageClustersTable: React.FC<StorageClustersTableProps> = ({ clusters }) => {
+  console.log('[StorageClustersTable] Received clusters:', clusters.map(c => ({
+    name: c.name,
+    nodeCount: c.nodeCount,
+    totalRawCapacityTB: c.totalRawCapacityTB,
+    usableCapacityTiB: c.usableCapacityTiB
+  })));
+  
   if (clusters.length === 0) {
     return null;
   }

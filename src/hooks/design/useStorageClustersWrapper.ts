@@ -21,6 +21,14 @@ export const useStorageClustersWrapper = () => {
     return requirements.storageRequirements.storageClusters.map(cluster => {
       let clusterNodes = [];
       
+      console.log(`[useStorageClustersWrapper] Processing storage cluster:`, {
+        clusterName: cluster.name,
+        clusterId: cluster.id,
+        isHyperConverged: cluster.hyperConverged,
+        computeClusterId: cluster.computeClusterId,
+        poolType: cluster.poolType
+      });
+      
       // Check if this is a hyper-converged storage cluster
       if (cluster.hyperConverged && cluster.computeClusterId) {
         // Find hyper-converged nodes from the compute cluster
@@ -57,11 +65,24 @@ export const useStorageClustersWrapper = () => {
         // Add attached disks capacity if available
         if ('attachedDisks' in node) {
           const disks = (node as any).attachedDisks || [];
+          console.log(`[useStorageClustersWrapper] Node ${node.name} disks:`, {
+            nodeName: node.name,
+            nodeRole: node.role,
+            hasAttachedDisks: 'attachedDisks' in node,
+            disksCount: disks.length,
+            disks: disks.map((d: any) => ({ 
+              model: d.model, 
+              capacityTB: d.capacityTB, 
+              quantity: d.quantity 
+            }))
+          });
           disks.forEach((disk: any) => {
             if (disk && 'capacityTB' in disk) {
               totalRawCapacityTB += disk.capacityTB * (disk.quantity || 1) * quantity;
             }
           });
+        } else {
+          console.log(`[useStorageClustersWrapper] Node ${node.name} has no attachedDisks property`);
         }
       });
       
