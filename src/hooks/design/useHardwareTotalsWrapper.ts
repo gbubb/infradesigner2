@@ -28,6 +28,12 @@ export const useHardwareTotalsWrapper = () => {
 
       // Ensure we have valid input
       if (!activeDesign?.components || !Array.isArray(activeDesign.components) || activeDesign.components.length === 0) {
+        console.log('[useHardwareTotalsWrapper] No components found in activeDesign', {
+          hasActiveDesign: !!activeDesign,
+          hasComponents: !!activeDesign?.components,
+          isArray: Array.isArray(activeDesign?.components),
+          length: activeDesign?.components?.length || 0
+        });
         return;
       }
 
@@ -40,6 +46,17 @@ export const useHardwareTotalsWrapper = () => {
         (component.role === 'computeNode' || component.role === 'gpuNode') && 
         component.type === ComponentType.Server
       );
+      
+      console.log('[useHardwareTotalsWrapper] Compute nodes found:', {
+        totalComponents: activeDesign.components.length,
+        computeNodes: computeClusterNodes.length,
+        computeNodeDetails: computeClusterNodes.map(n => ({ 
+          name: n.name, 
+          role: n.role, 
+          type: n.type,
+          quantity: n.quantity 
+        }))
+      });
       
       computeClusterNodes.forEach(component => {
         const quantity = component.quantity || 1;
@@ -92,8 +109,21 @@ export const useHardwareTotalsWrapper = () => {
       });
       
       const storageClusters = requirements?.storageRequirements?.storageClusters || [];
-      const storageNodesByCluster = activeDesign.components
-        .filter(component => component.role === 'storageNode' && component.type === ComponentType.Server)
+      const storageNodes = activeDesign.components
+        .filter(component => component.role === 'storageNode' && component.type === ComponentType.Server);
+      
+      console.log('[useHardwareTotalsWrapper] Storage nodes found:', {
+        storageNodes: storageNodes.length,
+        storageClusters: storageClusters.length,
+        storageNodeDetails: storageNodes.map(n => ({ 
+          name: n.name, 
+          role: n.role, 
+          type: n.type,
+          clusterInfo: n.clusterInfo 
+        }))
+      });
+      
+      const storageNodesByCluster = storageNodes
         .reduce((acc, node) => {
           if (node.clusterInfo?.clusterId) {
             const clusterId = node.clusterInfo.clusterId;
@@ -148,6 +178,15 @@ export const useHardwareTotalsWrapper = () => {
       
       const totalMemoryTB = totalMemoryGB / 1024;
       const computeMemoryTB = computeMemoryGB / 1024;
+      
+      console.log('[useHardwareTotalsWrapper] Final calculations:', {
+        totalVCPUs,
+        totalMemoryTB,
+        totalComputeMemoryTB: computeMemoryTB,
+        totalStorageTB,
+        computeMemoryGB,
+        otherMemoryGB
+      });
       
       setActualHardwareTotals({
         totalVCPUs,

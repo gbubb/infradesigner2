@@ -9,6 +9,12 @@ export const useStorageClustersWrapper = () => {
   // Calculate storage clusters metrics
   const storageClustersMetrics = useMemo(() => {
     if (!activeDesign?.components || !requirements.storageRequirements.storageClusters) {
+      console.log('[useStorageClustersWrapper] Missing data:', {
+        hasComponents: !!activeDesign?.components,
+        componentsLength: activeDesign?.components?.length || 0,
+        hasStorageClusters: !!requirements.storageRequirements.storageClusters,
+        storageClustersLength: requirements.storageRequirements.storageClusters?.length || 0
+      });
       return [];
     }
 
@@ -18,6 +24,12 @@ export const useStorageClustersWrapper = () => {
         component => component.role === 'storageNode' && 
         (component as any).clusterInfo?.clusterId === cluster.id
       );
+      
+      console.log(`[useStorageClustersWrapper] Cluster ${cluster.name}:`, {
+        clusterId: cluster.id,
+        nodesFound: clusterNodes.length,
+        allStorageNodes: activeDesign.components.filter(c => c.role === 'storageNode').length
+      });
       
       // Calculate total raw capacity
       let totalRawCapacityTB = 0;
@@ -49,7 +61,7 @@ export const useStorageClustersWrapper = () => {
       // Calculate cost per TiB
       const costPerTiB = usableCapacityTiB > 0 ? totalNodeCost / usableCapacityTiB : 0;
       
-      return {
+      const result = {
         id: cluster.id,
         name: cluster.name,
         poolType: cluster.poolType,
@@ -62,6 +74,10 @@ export const useStorageClustersWrapper = () => {
         costPerTiB,
         nodeCount: clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0)
       };
+      
+      console.log(`[useStorageClustersWrapper] Cluster ${cluster.name} metrics:`, result);
+      
+      return result;
     });
   }, [activeDesign, requirements]);
 
