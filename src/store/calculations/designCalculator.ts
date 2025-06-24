@@ -158,6 +158,75 @@ export const recalculateDesign = () => {
             return instances;
           }
 
+          // -- HYPER-CONVERGED NODE ROLES --
+          if (role.role === 'hyperConvergedNode') {
+            // Hyper-converged nodes need both compute resources AND storage disks
+            const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
+            const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
+            const instances: InfrastructureComponent[] = [];
+            
+            // Find the compute cluster to get disk configuration
+            const computeClusters = state.requirements.computeRequirements?.computeClusters || [];
+            const computeCluster = computeClusters.find(c => c.id === role.clusterInfo?.clusterId);
+            
+            for (let i = 0; i < requiredQuantity; i++) {
+              const templateIdForCount = componentTemplate.id;
+              templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
+              const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
+              
+              const attachedDisks: InfrastructureComponent[] = [];
+              const instanceComponent: InfrastructureComponent = {
+                ...componentTemplate,
+                id: uuidv4(),
+                name: instanceName,
+                templateId: componentTemplate.id,
+                quantity: 1,
+                role: role.role,
+                ruSize: componentTemplate.ruSize,
+              };
+              
+              // For hyper-converged, use disk configuration from compute cluster if available
+              if (computeCluster?.hyperConvergedDiskQuantity && 
+                  computeCluster?.hyperConvergedDiskSizeTB && 
+                  computeCluster?.hyperConvergedDiskType) {
+                // Find a disk template that matches the requirements
+                const diskTemplate = state.componentTemplates.find(c => 
+                  c.type === ComponentType.Disk && 
+                  'capacityTB' in c && 
+                  c.capacityTB === computeCluster.hyperConvergedDiskSizeTB &&
+                  'diskType' in c && 
+                  c.diskType === computeCluster.hyperConvergedDiskType
+                );
+                
+                if (diskTemplate) {
+                  attachedDisks.push({
+                    ...diskTemplate,
+                    quantity: computeCluster.hyperConvergedDiskQuantity,
+                  });
+                }
+              } else if (roleDiskConfigs.length > 0) {
+                // Fall back to manually configured disks
+                roleDiskConfigs.forEach(diskConfig => {
+                  const diskTemplate = state.componentTemplates.find(c => c.id === diskConfig.diskId);
+                  if (diskTemplate) {
+                    attachedDisks.push({
+                      ...diskTemplate,
+                      quantity: diskConfig.quantity,
+                    });
+                  }
+                });
+              }
+              
+              if (attachedDisks.length > 0) (instanceComponent as ComponentWithPlacement).attachedDisks = attachedDisks;
+              if (role.clusterInfo) {
+                (instanceComponent as ComponentWithPlacement).clusterInfo = role.clusterInfo;
+                (instanceComponent as ComponentWithPlacement).clusterId = role.clusterInfo.clusterId;
+              }
+              instances.push(instanceComponent);
+            }
+            return instances;
+          }
+
           // -- GPU NODE ROLES --
           if (role.role === 'gpuNode') {
             const roleGPUConfigs = state.selectedGPUsByRole[role.id] || [];

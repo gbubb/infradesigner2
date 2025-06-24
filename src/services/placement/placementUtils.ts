@@ -29,10 +29,10 @@ export function isPatchPanel(c: any) {
   return k.includes('patchpanel');
 }
 
-// Compute/controller/storage/ipmi/leafswitch type
+// Compute/controller/storage/ipmi/leafswitch/hyperconverged type
 export function isComputeLike(c: any) {
   const k = getTypeKey(c);
-  return ['controller', 'compute', 'storage', 'ipmiswitch', 'leafswitch'].some(t =>
+  return ['controller', 'compute', 'storage', 'hyperconverged', 'ipmiswitch', 'leafswitch'].some(t =>
     k.includes(t) || (c.role && c.role.toLowerCase().includes(t))
   );
 }

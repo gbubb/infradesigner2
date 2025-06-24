@@ -42,4 +42,6 @@ export interface StorageClusterRequirement {
   availabilityZoneQuantity: number;
   poolType: string;
   maxFillFactor: number;
+  hyperConverged?: boolean;
+  computeClusterId?: string;
 }

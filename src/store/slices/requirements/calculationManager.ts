@@ -40,7 +40,7 @@ export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
   console.log(`Starting calculation for ${roleName} (${roleId}) with component ${component.name} (${componentId})`);
   
   // Handle compute node quantity calculation
-  if (role.role === 'computeNode' || role.role === 'gpuNode') {
+  if (role.role === 'computeNode' || role.role === 'gpuNode' || role.role === 'hyperConvergedNode') {
     if (!role.clusterInfo) {
       calculationSteps.push(`No cluster info available - using default count of ${requiredQuantity} nodes`);
     } else {
@@ -94,6 +94,77 @@ export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
           const result = calculateComputeNodeQuantity(role, component, cluster, totalAvailabilityZones, nodeGPUs);
           requiredQuantity = result.requiredQuantity;
           calculationSteps = result.calculationSteps;
+        } else if (role.role === 'hyperConvergedNode') {
+          // For hyper-converged nodes, calculate based on BOTH compute and storage requirements
+          const computeResult = calculateComputeNodeQuantity(role, component, cluster, totalAvailabilityZones);
+          
+          // Find the associated storage cluster
+          const storageClusters = requirements.storageRequirements?.storageClusters || [];
+          const storageCluster = storageClusters.find(sc => 
+            sc.hyperConverged && sc.computeClusterId === cluster.id
+          );
+          
+          if (storageCluster) {
+            // Calculate storage capacity per node based on disk configuration
+            let storageNodeCapacityTiB = 0;
+            
+            // For hyper-converged nodes, use the disk configuration from the compute cluster
+            if (cluster.hyperConvergedDiskQuantity && cluster.hyperConvergedDiskSizeTB) {
+              // Convert TB to TiB
+              storageNodeCapacityTiB = cluster.hyperConvergedDiskQuantity * cluster.hyperConvergedDiskSizeTB * 0.909495;
+            } else {
+              // Fall back to checking selectedDisksByRole
+              storageNodeCapacityTiB = calculateStorageNodeCapacity(
+                roleId, 
+                selectedDisksByRole, 
+                componentTemplates
+              );
+            }
+            
+            if (storageNodeCapacityTiB > 0) {
+              const storageResult = calculateStorageNodeQuantity(role, storageCluster, roleId, storageNodeCapacityTiB);
+              
+              // Use the maximum of compute-based or storage-based node count
+              if (storageResult.requiredQuantity > computeResult.requiredQuantity) {
+                requiredQuantity = storageResult.requiredQuantity;
+                calculationSteps = [
+                  `Hyper-Converged Node Calculation:`,
+                  `Compute-based requirement: ${computeResult.requiredQuantity} nodes`,
+                  `Storage-based requirement: ${storageResult.requiredQuantity} nodes`,
+                  `Using maximum: ${requiredQuantity} nodes`,
+                  ``,
+                  `Compute calculation details:`,
+                  ...computeResult.calculationSteps,
+                  ``,
+                  `Storage calculation details:`,
+                  ...storageResult.calculationSteps
+                ];
+              } else {
+                requiredQuantity = computeResult.requiredQuantity;
+                calculationSteps = [
+                  `Hyper-Converged Node Calculation:`,
+                  `Compute-based requirement: ${computeResult.requiredQuantity} nodes`,
+                  `Storage-based requirement: ${storageResult.requiredQuantity} nodes`,
+                  `Using maximum: ${requiredQuantity} nodes`,
+                  ``,
+                  `Compute calculation details:`,
+                  ...computeResult.calculationSteps
+                ];
+              }
+            } else {
+              // No storage capacity configured, use compute calculation only
+              requiredQuantity = computeResult.requiredQuantity;
+              calculationSteps = [
+                `Hyper-Converged Node Calculation:`,
+                `No storage disks configured - using compute requirements only`,
+                ...computeResult.calculationSteps
+              ];
+            }
+          } else {
+            // No storage cluster found, use compute calculation only
+            requiredQuantity = computeResult.requiredQuantity;
+            calculationSteps = computeResult.calculationSteps;
+          }
         } else {
           // For regular compute nodes
           const result = calculateComputeNodeQuantity(role, component, cluster, totalAvailabilityZones);

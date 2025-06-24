@@ -7,9 +7,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { StoragePoolEfficiencyFactors } from '@/types/infrastructure';
+import { useStore } from '@/store';
 
 export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
+  const computeClusters = useStore((state) => state.requirements.computeRequirements.computeClusters);
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     const numericValue = parseInt(value, 10);
@@ -174,6 +178,51 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
                   }
                 />
               </div>
+            </div>
+
+            <div className="mt-4 space-y-4 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Hyper-Converged</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Use compute nodes to also serve storage
+                  </p>
+                </div>
+                <Switch
+                  checked={cluster.hyperConverged || false}
+                  onCheckedChange={(checked) => 
+                    handleClusterUpdate(cluster.id, 'hyperConverged', checked)
+                  }
+                />
+              </div>
+
+              {cluster.hyperConverged && (
+                <div className="space-y-2">
+                  <Label>Compute Cluster</Label>
+                  <Select
+                    value={cluster.computeClusterId || ''}
+                    onValueChange={(value) => 
+                      handleClusterUpdate(cluster.id, 'computeClusterId', value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select compute cluster" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {computeClusters.map((computeCluster) => (
+                        <SelectItem key={computeCluster.id} value={computeCluster.id}>
+                          {computeCluster.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {computeClusters.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No compute clusters available. Please define compute clusters first.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

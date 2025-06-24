@@ -76,6 +76,14 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
   
   const newRoles: ComponentRole[] = [controllerRole];
   
+  // Build a map of compute clusters that are used for hyper-converged storage
+  const hyperConvergedComputeClusters = new Map<string, any>();
+  storageClusters.forEach(storageCluster => {
+    if (storageCluster.hyperConverged && storageCluster.computeClusterId) {
+      hyperConvergedComputeClusters.set(storageCluster.computeClusterId, storageCluster);
+    }
+  });
+  
   // Add compute cluster nodes
   computeClusters.forEach((cluster, index) => {
     const totalVCPUs = cluster.totalVCPUs || 5000;
@@ -103,22 +111,42 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
       clusterIndex: index
     };
     
-    const roleType = gpuEnabled ? 'gpuNode' : 'computeNode';
-    const roleDescription = gpuEnabled 
-      ? `Provides GPU compute resources for ${cluster.name}` 
-      : `Provides compute resources for ${cluster.name}`;
+    // Check if this compute cluster is used for hyper-converged storage
+    const isHyperConverged = hyperConvergedComputeClusters.has(cluster.id);
+    const storageCluster = isHyperConverged ? hyperConvergedComputeClusters.get(cluster.id) : null;
+    
+    // For hyper-converged clusters, calculate nodes based on both compute AND storage requirements
+    let finalNodeCount = totalComputeNodeCount;
+    if (isHyperConverged && storageCluster) {
+      // Storage node count is typically based on availability zone quantity
+      const storageNodeCount = storageCluster.availabilityZoneQuantity || 3;
+      // Use the maximum of compute-based or storage-based node count
+      finalNodeCount = Math.max(totalComputeNodeCount, storageNodeCount);
+    }
+    
+    const roleType = isHyperConverged ? 'hyperConvergedNode' : (gpuEnabled ? 'gpuNode' : 'computeNode');
+    const roleDescription = isHyperConverged 
+      ? `Provides both compute and storage resources for ${cluster.name}` 
+      : (gpuEnabled 
+        ? `Provides GPU compute resources for ${cluster.name}` 
+        : `Provides compute resources for ${cluster.name}`);
     
     newRoles.push({
       id: uuidv4(),
       role: roleType,
       description: roleDescription,
-      requiredCount: totalComputeNodeCount,
+      requiredCount: finalNodeCount,
       clusterInfo: clusterInfo
     } as ComponentRole);
   });
   
-  // Add storage cluster nodes
+  // Add storage cluster nodes (skip hyper-converged ones)
   storageClusters.forEach((cluster, index) => {
+    // Skip hyper-converged storage clusters as they're handled by compute clusters
+    if (cluster.hyperConverged && cluster.computeClusterId) {
+      return;
+    }
+    
     newRoles.push({
       id: cluster.id || uuidv4(),
       role: 'storageNode',

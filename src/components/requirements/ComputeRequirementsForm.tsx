@@ -7,6 +7,7 @@ import { Plus, X } from 'lucide-react';
 import { ComputeClusterForm } from './ComputeClusterForm';
 import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '@/components/ui/switch';
+import { useStore } from '@/store';
 
 interface ComputeRequirements {
   controllerNodeCount?: number;
@@ -19,6 +20,8 @@ interface ComputeRequirements {
 }
 
 export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
+  const storageClusters = useStore((state) => state.requirements.storageRequirements.storageClusters);
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     const numericValue = parseInt(value);
@@ -160,6 +163,7 @@ export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
             clusters={[cluster]} 
             onUpdate={(updatedClusters) => handleClusterUpdate(cluster.id, updatedClusters[0])}
             showHeader={false}
+            storageClusters={storageClusters}
           />
           <Button
             variant="ghost"
