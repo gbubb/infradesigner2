@@ -28,25 +28,65 @@ export enum NetworkPortType {
   QSFPPlusPlusDD = 'QSFP++/DD'
 }
 
+export enum MemoryType {
+  DDR3 = 'DDR3',
+  DDR4 = 'DDR4',
+  DDR5 = 'DDR5'
+}
+
+export enum PCIeFormFactor {
+  FHFL = 'FHFL',   // Full Height Full Length
+  HHFL = 'HHFL',   // Half Height Full Length
+  FHHL = 'FHHL',   // Full Height Half Length
+  HHHL = 'HHHL',   // Half Height Half Length
+  LP = 'LP'        // Low Profile
+}
+
+export interface PCIeSlot {
+  quantity: number;
+  formFactor: PCIeFormFactor;
+}
+
 // Server interface
 export interface Server extends InfrastructureComponent {
   type: ComponentType.Server;
   serverRole: ServerRole;
-  cpuSockets: number;
-  cpuModel: string;
-  cpuCoresPerSocket: number;
-  coreCount?: number;  // Legacy support
-  memoryCapacity: number;  // Primary memory field, connected to UI
-  memoryGB?: number;      // Legacy field
+  
+  // Physical Attributes
   ruSize: number;
   rackUnitsConsumed?: number;
   diskSlotType: DiskSlotType;
   diskSlotQuantity: number;
+  pcieSlots?: PCIeSlot[];
+  
+  // CPU Section
+  cpuModel: string;
+  cpuSockets: number;
+  cpuCoresPerSocket: number;
+  cpuTdpWatts?: number;
+  cpuFrequencyBaseGhz?: number;
+  cpuFrequencyTurboGhz?: number;
+  coreCount?: number;  // Legacy support
+  
+  // Memory Section
+  memoryType?: MemoryType;
+  memoryDimmSlotCapacity?: number;
+  memoryDimmSlotsConsumed?: number;
+  memoryDimmSize?: number;
+  memoryDimmFrequencyMhz?: number;
+  memoryCapacity: number;  // Primary memory field, connected to UI
+  memoryGB?: number;      // Legacy field
+  
+  // Network (existing)
   networkPortType: NetworkPortType;
   portsConsumedQuantity: number;
   networkPorts?: number;
   networkPortSpeed?: number;
+  
+  // GPU (existing)
   gpuSupported?: boolean;
   gpuSlots?: number;
+  
+  // Storage (existing)
   storageCapacityTB?: number;
 }

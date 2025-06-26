@@ -3,7 +3,9 @@ import {
   ComponentType, 
   ServerRole, 
   DiskSlotType, 
-  NetworkPortType, 
+  NetworkPortType,
+  MemoryType,
+  PCIeFormFactor,
   SwitchRole,
   DiskType,
   ConnectorType,
@@ -34,19 +36,38 @@ const baseComponentSchema = z.object({
   preferredRU: z.number().optional(),
 });
 
+// PCIe slot schema
+const pcieSlotSchema = z.object({
+  quantity: z.number(),
+  formFactor: z.nativeEnum(PCIeFormFactor)
+});
+
 // Server-specific schema
 export const serverSchema = baseComponentSchema.extend({
   serverRole: z.preprocess(
     (val) => (val === "" || val === undefined) ? undefined : val,
     z.nativeEnum(ServerRole).optional()
   ),
+  // Physical Attributes
+  ruSize: z.number().optional(),
+  diskSlotType: z.nativeEnum(DiskSlotType).optional(),
+  diskSlotQuantity: z.number().optional(),
+  pcieSlots: z.array(pcieSlotSchema).optional(),
+  // CPU Section
   cpuModel: z.string().optional(),
   cpuSockets: z.number().optional(),
   cpuCoresPerSocket: z.number().optional(),
+  cpuTdpWatts: z.number().optional(),
+  cpuFrequencyBaseGhz: z.number().optional(),
+  cpuFrequencyTurboGhz: z.number().optional(),
+  // Memory Section
+  memoryType: z.nativeEnum(MemoryType).optional(),
+  memoryDimmSlotCapacity: z.number().optional(),
+  memoryDimmSlotsConsumed: z.number().optional(),
+  memoryDimmSize: z.number().optional(),
+  memoryDimmFrequencyMhz: z.number().optional(),
   memoryCapacity: z.number().optional(),
-  diskSlotType: z.nativeEnum(DiskSlotType).optional(),
-  diskSlotQuantity: z.number().optional(),
-  ruSize: z.number().optional(),
+  // Network
   networkPortType: z.nativeEnum(NetworkPortType).optional(),
   portsConsumedQuantity: z.number().optional(),
 });
@@ -175,13 +196,26 @@ export const legacyFormSchema = z.object({
     (val) => (val === "" || val === undefined) ? undefined : val,
     z.nativeEnum(ServerRole).optional()
   ),
+  // Physical Attributes
+  ruSize: z.number().optional(),
+  diskSlotType: z.nativeEnum(DiskSlotType).optional(),
+  diskSlotQuantity: z.number().optional(),
+  pcieSlots: z.array(pcieSlotSchema).optional(),
+  // CPU Section
   cpuModel: z.string().optional(),
   cpuSockets: z.number().optional(),
   cpuCoresPerSocket: z.number().optional(),
+  cpuTdpWatts: z.number().optional(),
+  cpuFrequencyBaseGhz: z.number().optional(),
+  cpuFrequencyTurboGhz: z.number().optional(),
+  // Memory Section
+  memoryType: z.nativeEnum(MemoryType).optional(),
+  memoryDimmSlotCapacity: z.number().optional(),
+  memoryDimmSlotsConsumed: z.number().optional(),
+  memoryDimmSize: z.number().optional(),
+  memoryDimmFrequencyMhz: z.number().optional(),
   memoryCapacity: z.number().optional(),
-  diskSlotType: z.nativeEnum(DiskSlotType).optional(),
-  diskSlotQuantity: z.number().optional(),
-  ruSize: z.number().optional(),
+  // Network
   networkPortType: z.nativeEnum(NetworkPortType).optional(),
   portsConsumedQuantity: z.number().optional(),
   switchRole: z.preprocess(
