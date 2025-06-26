@@ -48,20 +48,22 @@ export const usePowerCalculation = (
     }));
     
     return {
-      // CPU from server
+      // CPU from server - now using actual component fields
       cpuModel: selectedServer.cpuModel || 'Unknown',
       cpuCount: selectedServer.cpuSockets || 1,
       coresPerCpu: selectedServer.cpuCoresPerSocket || selectedServer.coreCount || 16,
-      baseFrequencyGHz: customInputs.baseFrequencyGHz || 2.4,
-      tdpPerCpu: customInputs.tdpPerCpu || 150,
-      turboEnabled: customInputs.turboEnabled || false,
+      baseFrequencyGHz: customInputs.baseFrequencyGHz || selectedServer.cpuFrequencyBaseGhz || 2.4,
+      tdpPerCpu: customInputs.tdpPerCpu || selectedServer.cpuTdpWatts || 150,
+      turboEnabled: customInputs.turboEnabled !== undefined ? customInputs.turboEnabled : 
+                    (selectedServer.cpuFrequencyTurboGhz ? selectedServer.cpuFrequencyTurboGhz > (selectedServer.cpuFrequencyBaseGhz || 0) : false),
       cpuUtilization: customInputs.cpuUtilization || 50,
       
-      // Memory from server
-      memoryType: customInputs.memoryType || 'DDR4',
-      dimmCount: customInputs.dimmCount || Math.ceil((selectedServer.memoryCapacity || 128) / 32),
-      dimmCapacityGB: customInputs.dimmCapacityGB || 32,
-      memorySpeedMHz: customInputs.memorySpeedMHz || 2933,
+      // Memory from server - using new detailed fields
+      memoryType: customInputs.memoryType || selectedServer.memoryType || 'DDR4',
+      dimmCount: customInputs.dimmCount || selectedServer.memoryDimmSlotsConsumed || 
+                 Math.ceil((selectedServer.memoryCapacity || 128) / (selectedServer.memoryDimmSize || 32)),
+      dimmCapacityGB: customInputs.dimmCapacityGB || selectedServer.memoryDimmSize || 32,
+      memorySpeedMHz: customInputs.memorySpeedMHz || selectedServer.memoryDimmFrequencyMhz || 2933,
       
       // Storage
       hdds,
