@@ -115,7 +115,7 @@ export const PowerPredictionTab: React.FC = () => {
                 <SelectContent>
                   {servers.map(server => (
                     <SelectItem key={server.id} value={server.id}>
-                      {server.manufacturer} {server.productLine} {server.model}
+                      {server.name} - {server.manufacturer} {server.model} - {server.cpuSockets * (server.cpuCoresPerSocket || server.coreCount || 0)}c - {server.memoryCapacity}GB
                     </SelectItem>
                   ))}
                 </SelectContent>
