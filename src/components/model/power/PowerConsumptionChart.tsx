@@ -51,8 +51,9 @@ export const PowerConsumptionChart: React.FC<PowerConsumptionChartProps> = ({ re
     const { linear, quadratic, cubic } = calibration.cpuDynamicCoefficients;
     const scalingFactor = linear * u + quadratic * Math.pow(u, 2) + cubic * Math.pow(u, 3);
     const dcPower = result.dcTotalW.idle + (result.dcTotalW.peak - result.dcTotalW.idle) * scalingFactor;
-    const acPower = result.acTotalW.idle + (result.acTotalW.peak - result.acTotalW.idle) * scalingFactor;
     const efficiency = calculateEfficiency(dcPower);
+    // Calculate AC power from DC power and efficiency (don't use pre-calculated AC values)
+    const acPower = dcPower / (efficiency / 100); // efficiency is in percentage
     
     data.push({
       utilization,
