@@ -19,7 +19,8 @@ import {
   ComponentType, 
   ServerRole, 
   DiskSlotType, 
-  NetworkPortType, 
+  NetworkPortType,
+  MemoryType,
   SwitchRole,
   DiskType,
   ConnectorType,
@@ -114,6 +115,18 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       ruSize: formValues.type === ComponentType.Server ? (formValues.ruSize || 1) : undefined,
       networkPortType: formValues.type === ComponentType.Server ? (formValues.networkPortType || NetworkPortType.SFP) : undefined,
       portsConsumedQuantity: formValues.type === ComponentType.Server ? (formValues.portsConsumedQuantity || 2) : undefined,
+      // New CPU fields
+      cpuTdpWatts: formValues.type === ComponentType.Server ? formValues.cpuTdpWatts : undefined,
+      cpuFrequencyBaseGhz: formValues.type === ComponentType.Server ? formValues.cpuFrequencyBaseGhz : undefined,
+      cpuFrequencyTurboGhz: formValues.type === ComponentType.Server ? formValues.cpuFrequencyTurboGhz : undefined,
+      // New Memory fields
+      memoryType: formValues.type === ComponentType.Server ? formValues.memoryType : undefined,
+      memoryDimmSlotCapacity: formValues.type === ComponentType.Server ? formValues.memoryDimmSlotCapacity : undefined,
+      memoryDimmSlotsConsumed: formValues.type === ComponentType.Server ? formValues.memoryDimmSlotsConsumed : undefined,
+      memoryDimmSize: formValues.type === ComponentType.Server ? formValues.memoryDimmSize : undefined,
+      memoryDimmFrequencyMhz: formValues.type === ComponentType.Server ? formValues.memoryDimmFrequencyMhz : undefined,
+      // PCIe slots
+      pcieSlots: formValues.type === ComponentType.Server ? formValues.pcieSlots : undefined,
       switchRole: formValues.type === ComponentType.Switch ? (formValues.switchRole || SwitchRole.Access) : undefined,
       // portCount: formValues.portCount || 24, // Commented out
       // portSpeed: formValues.portSpeed || '10', // Commented out

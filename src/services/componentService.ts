@@ -109,6 +109,21 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               networkPorts: details.networkPorts || 0,
               networkPortSpeed: details.networkPortSpeed || 0,
               ports: Array.isArray(details.ports) ? details.ports : [],
+              // New CPU fields
+              cpuTdpWatts: details.cpuTdpWatts || undefined,
+              cpuFrequencyBaseGhz: details.cpuFrequencyBaseGhz || undefined,
+              cpuFrequencyTurboGhz: details.cpuFrequencyTurboGhz || undefined,
+              // New Memory fields
+              memoryType: details.memoryType || undefined,
+              memoryDimmSlotCapacity: details.memoryDimmSlotCapacity || undefined,
+              memoryDimmSlotsConsumed: details.memoryDimmSlotsConsumed || undefined,
+              memoryDimmSize: details.memoryDimmSize || undefined,
+              memoryDimmFrequencyMhz: details.memoryDimmFrequencyMhz || undefined,
+              // PCIe slots
+              pcieSlots: Array.isArray(details.pcieSlots) ? details.pcieSlots : undefined,
+              // GPU fields (existing)
+              gpuSupported: details.gpuSupported || undefined,
+              gpuSlots: details.gpuSlots || undefined,
             } as Server;
             
           case ComponentType.Switch:

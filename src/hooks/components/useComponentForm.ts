@@ -46,9 +46,11 @@ export interface ComponentFormValues {
   memoryCapacity?: number;
   memoryType?: string;
   diskSlotQuantity?: number;
+  diskSlotType?: string;
   coreCount?: number;
   ruSize?: number;
   portsConsumedQuantity?: number;
+  networkPortType?: string;
   portCount?: number;
   layer3Capable?: boolean;
   throughput?: number;
@@ -58,6 +60,20 @@ export interface ComponentFormValues {
   writeSpeed?: number;
   breakoutCompatible?: boolean;
   isBreakout?: boolean;
+  // New CPU fields
+  cpuTdpWatts?: number;
+  cpuFrequencyBaseGhz?: number;
+  cpuFrequencyTurboGhz?: number;
+  // New Memory fields
+  memoryDimmSlotCapacity?: number;
+  memoryDimmSlotsConsumed?: number;
+  memoryDimmSize?: number;
+  memoryDimmFrequencyMhz?: number;
+  // PCIe slots
+  pcieSlots?: any;  // Array of {quantity: number, formFactor: string}
+  // Existing GPU fields
+  gpuSupported?: boolean;
+  gpuSlots?: number;
   connectorB_Quantity?: number;
   maxDistanceMeters?: number;
   frontPortQuantity?: number;
