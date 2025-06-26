@@ -335,17 +335,18 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
   const psuEfficiencyPeak = calculatePsuEfficiency(dcWithEnv.peak, inputs.psuRating, inputs.psuEfficiencyRating, cal);
   
   // Redundant PSU adjustment
-  let redundantPsuFactor = 1.0;
+  let efficiencyMultiplier = 1.0;
   if (inputs.redundantPsu) {
     // In load-balancing mode, both PSUs share the load, improving efficiency slightly
-    redundantPsuFactor = cal.redundantPsuEfficiencyBonus;
+    // This increases the effective efficiency, not the power draw
+    efficiencyMultiplier = cal.redundantPsuEfficiencyBonus;
     warnings.push('Redundant PSU configuration assumed to be in load-balancing mode');
   }
   
   const acTotal = {
-    idle: (dcWithEnv.idle / psuEfficiencyIdle) * redundantPsuFactor,
-    average: (dcWithEnv.average / psuEfficiencyAvg) * redundantPsuFactor,
-    peak: (dcWithEnv.peak / psuEfficiencyPeak) * redundantPsuFactor
+    idle: dcWithEnv.idle / (psuEfficiencyIdle * efficiencyMultiplier),
+    average: dcWithEnv.average / (psuEfficiencyAvg * efficiencyMultiplier),
+    peak: dcWithEnv.peak / (psuEfficiencyPeak * efficiencyMultiplier)
   };
   
   // Apply safety margin

@@ -1,8 +1,24 @@
 import { useMemo, useCallback } from 'react';
 import { PowerCalculationInputs, PowerCalculationResult, calculateServerPower } from '@/components/model/power/powerCalculations';
 import { PowerCalibrationProfile } from '@/components/model/power/powerCalibration';
-import { Server } from '@/types/infrastructure/server-types';
+import { Server, PSUEfficiencyRating } from '@/types/infrastructure/server-types';
 import { StorageDevice, NetworkPort } from '@/components/model/power-prediction/types';
+
+// Map PSUEfficiencyRating enum to PowerCalculationInputs format
+const mapPSUEfficiencyRating = (rating: PSUEfficiencyRating | undefined): PowerCalculationInputs['psuEfficiencyRating'] => {
+  if (!rating) return '80PlusGold'; // Default
+  
+  const mappings: Record<PSUEfficiencyRating, PowerCalculationInputs['psuEfficiencyRating']> = {
+    [PSUEfficiencyRating.Standard]: '80Plus',
+    [PSUEfficiencyRating.Bronze]: '80PlusBronze',
+    [PSUEfficiencyRating.Silver]: '80PlusSilver',
+    [PSUEfficiencyRating.Gold]: '80PlusGold',
+    [PSUEfficiencyRating.Platinum]: '80PlusPlatinum',
+    [PSUEfficiencyRating.Titanium]: '80PlusTitanium',
+  };
+  
+  return mappings[rating] || '80PlusGold';
+};
 
 export const usePowerCalculation = (
   selectedServer: Server | undefined,
@@ -74,10 +90,13 @@ export const usePowerCalculation = (
       // Network
       networkPorts: networkPortsArray,
       
-      // PSU
-      psuRating: customInputs.psuRating || (selectedServer.power ? selectedServer.power * 1.5 : 750),
-      psuEfficiencyRating: customInputs.psuEfficiencyRating || '80PlusGold',
-      redundantPsu: customInputs.redundantPsu !== undefined ? customInputs.redundantPsu : true,
+      // PSU - Use server component PSU data if available
+      psuRating: customInputs.psuRating || selectedServer.psuRatingWatts || 
+                 (selectedServer.power ? selectedServer.power * 1.5 : 750),
+      psuEfficiencyRating: customInputs.psuEfficiencyRating || 
+                           mapPSUEfficiencyRating(selectedServer.psuEfficiency),
+      redundantPsu: customInputs.redundantPsu !== undefined ? customInputs.redundantPsu : 
+                    (selectedServer.psuQuantity ? selectedServer.psuQuantity > 1 : true),
       
       // Environmental
       inletTempC: customInputs.inletTempC || 25,

@@ -30,14 +30,14 @@ export const PowerConsumptionChart: React.FC<PowerConsumptionChartProps> = ({ re
       }
     }
     
-    // Default efficiency curves
+    // Default efficiency curves - must match powerCalculations.ts PSU_EFFICIENCY
     const defaultEfficiency = {
       '80Plus': loadPercentage < 0.2 ? 0.75 : loadPercentage > 0.8 ? 0.78 : 0.80,
       '80PlusBronze': loadPercentage < 0.2 ? 0.78 : loadPercentage > 0.8 ? 0.81 : 0.85,
       '80PlusSilver': loadPercentage < 0.2 ? 0.80 : loadPercentage > 0.8 ? 0.85 : 0.88,
       '80PlusGold': loadPercentage < 0.2 ? 0.82 : loadPercentage > 0.8 ? 0.87 : 0.90,
       '80PlusPlatinum': loadPercentage < 0.2 ? 0.85 : loadPercentage > 0.8 ? 0.89 : 0.92,
-      '80PlusTitanium': loadPercentage < 0.2 ? 0.88 : loadPercentage > 0.8 ? 0.90 : 0.94
+      '80PlusTitanium': loadPercentage < 0.2 ? 0.90 : loadPercentage > 0.8 ? 0.91 : 0.96
     };
     
     return (defaultEfficiency[inputs.psuEfficiencyRating] || 0.85) * 100;
@@ -52,8 +52,12 @@ export const PowerConsumptionChart: React.FC<PowerConsumptionChartProps> = ({ re
     const scalingFactor = linear * u + quadratic * Math.pow(u, 2) + cubic * Math.pow(u, 3);
     const dcPower = result.dcTotalW.idle + (result.dcTotalW.peak - result.dcTotalW.idle) * scalingFactor;
     const efficiency = calculateEfficiency(dcPower);
-    // Calculate AC power from DC power and efficiency (don't use pre-calculated AC values)
-    const acPower = dcPower / (efficiency / 100); // efficiency is in percentage
+    
+    // Apply redundant PSU factor if enabled
+    const efficiencyMultiplier = inputs.redundantPsu ? calibration.redundantPsuEfficiencyBonus : 1.0;
+    
+    // Calculate AC power from DC power and efficiency
+    const acPower = dcPower / (efficiency / 100 * efficiencyMultiplier);
     
     data.push({
       utilization,

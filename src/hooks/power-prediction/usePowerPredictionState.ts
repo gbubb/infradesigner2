@@ -61,7 +61,10 @@ export const usePowerPredictionState = (servers: Server[]) => {
         memorySpeedMHz: undefined,
         dimmCount: undefined,
         dimmCapacityGB: undefined,
+        // Remove PSU overrides to use server defaults
         psuRating: undefined,
+        psuEfficiencyRating: undefined,
+        redundantPsu: undefined,
       }));
       
       // Initialize network ports based on server configuration
