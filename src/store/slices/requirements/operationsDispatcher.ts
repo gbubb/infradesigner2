@@ -125,7 +125,7 @@ export const createRequirementsSliceOperations = (
       if (activeDesign?.componentRoles) {
         activeDesign.componentRoles.forEach(role => {
           if (role.assignedComponentId) {
-            const roleKey = role.role === 'storageNode' && role.clusterInfo?.clusterId
+            const roleKey = (role.role === 'storageNode' || role.role === 'hyperConvergedNode') && role.clusterInfo?.clusterId
               ? `${role.role}-${role.clusterInfo.clusterId}`
               : role.role;
             // Only add if not already in existingAssignments
@@ -145,7 +145,7 @@ export const createRequirementsSliceOperations = (
       
       // Restore assignments to the new roles
       const updatedRoles = newRoles.map(role => {
-        const roleKey = role.role === 'storageNode' && role.clusterInfo?.clusterId
+        const roleKey = (role.role === 'storageNode' || role.role === 'hyperConvergedNode') && role.clusterInfo?.clusterId
           ? `${role.role}-${role.clusterInfo.clusterId}`
           : role.role;
         
@@ -163,7 +163,7 @@ export const createRequirementsSliceOperations = (
       const newGPUsByRole: Record<string, Array<{ gpuId: string, quantity: number }>> = {};
       
       updatedRoles.forEach(role => {
-        const roleKey = role.role === 'storageNode' && role.clusterInfo?.clusterId
+        const roleKey = (role.role === 'storageNode' || role.role === 'hyperConvergedNode') && role.clusterInfo?.clusterId
           ? `${role.role}-${role.clusterInfo.clusterId}`
           : role.role;
         
