@@ -124,6 +124,10 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               // GPU fields (existing)
               gpuSupported: details.gpuSupported || undefined,
               gpuSlots: details.gpuSlots || undefined,
+              // Power Supply fields
+              psuRatingWatts: details.psuRatingWatts || undefined,
+              psuQuantity: details.psuQuantity || undefined,
+              psuEfficiency: details.psuEfficiency || undefined,
             } as Server;
             
           case ComponentType.Switch:

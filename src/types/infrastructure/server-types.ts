@@ -42,6 +42,15 @@ export enum PCIeFormFactor {
   LP = 'LP'        // Low Profile
 }
 
+export enum PSUEfficiencyRating {
+  Standard = '80 PLUS',
+  Bronze = '80 PLUS Bronze',
+  Silver = '80 PLUS Silver',
+  Gold = '80 PLUS Gold',
+  Platinum = '80 PLUS Platinum',
+  Titanium = '80 PLUS Titanium'
+}
+
 export interface PCIeSlot {
   quantity: number;
   formFactor: PCIeFormFactor;
@@ -89,4 +98,9 @@ export interface Server extends InfrastructureComponent {
   
   // Storage (existing)
   storageCapacityTB?: number;
+  
+  // Power Supply
+  psuRatingWatts?: number;
+  psuQuantity?: number;
+  psuEfficiency?: PSUEfficiencyRating;
 }

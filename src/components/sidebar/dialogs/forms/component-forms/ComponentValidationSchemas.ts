@@ -6,6 +6,7 @@ import {
   NetworkPortType,
   MemoryType,
   PCIeFormFactor,
+  PSUEfficiencyRating,
   SwitchRole,
   DiskType,
   ConnectorType,
@@ -85,6 +86,10 @@ export const serverSchema = baseComponentSchema.extend({
   // Network
   networkPortType: z.nativeEnum(NetworkPortType).optional(),
   portsConsumedQuantity: z.preprocess(numberPreprocess, z.number().optional()),
+  // Power Supply
+  psuRatingWatts: z.preprocess(numberPreprocess, z.number().optional()),
+  psuQuantity: z.preprocess(numberPreprocess, z.number().optional()),
+  psuEfficiency: z.nativeEnum(PSUEfficiencyRating).optional(),
 });
 
 // Switch-specific schema
@@ -244,6 +249,10 @@ export const legacyFormSchema = z.object({
   // Network
   networkPortType: z.nativeEnum(NetworkPortType).optional(),
   portsConsumedQuantity: z.preprocess(numberPreprocess, z.number().optional()),
+  // Power Supply
+  psuRatingWatts: z.preprocess(numberPreprocess, z.number().optional()),
+  psuQuantity: z.preprocess(numberPreprocess, z.number().optional()),
+  psuEfficiency: z.nativeEnum(PSUEfficiencyRating).optional(),
   switchRole: z.preprocess(
     (val) => (val === "" || val === undefined) ? undefined : val,
     z.nativeEnum(SwitchRole).optional()

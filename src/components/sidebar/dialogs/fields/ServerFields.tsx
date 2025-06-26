@@ -2,7 +2,7 @@ import React from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ServerRole, DiskSlotType, NetworkPortType, MemoryType, PCIeFormFactor } from "@/types/infrastructure";
+import { ServerRole, DiskSlotType, NetworkPortType, MemoryType, PCIeFormFactor, PSUEfficiencyRating } from "@/types/infrastructure";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
@@ -560,6 +560,94 @@ export const ServerFields: React.FC<Props> = ({
             )}
           />
         </div>
+      </div>
+
+      {/* Power Supply Section */}
+      <div className="space-y-4 mt-6">
+        <div>
+          <h4 className="text-sm font-medium mb-3">Power Supply</h4>
+          <Separator className="mb-4" />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={control}
+            name="psuRatingWatts"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>PSU Rating (Watts)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    {...field} 
+                    name="psuRatingWatts"
+                    onChange={e => {
+                      const value = Number(e.target.value) || 0;
+                      field.onChange(value);
+                      onInputChange(e);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={control}
+            name="psuQuantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>PSU Quantity</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    {...field} 
+                    name="psuQuantity"
+                    onChange={e => {
+                      const value = Number(e.target.value) || 0;
+                      field.onChange(value);
+                      onInputChange(e);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <FormField
+          control={control}
+          name="psuEfficiency"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>PSU Efficiency Rating</FormLabel>
+              <Select 
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  onSelectChange('psuEfficiency', value);
+                }}
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select efficiency rating" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={PSUEfficiencyRating.Standard}>{PSUEfficiencyRating.Standard}</SelectItem>
+                  <SelectItem value={PSUEfficiencyRating.Bronze}>{PSUEfficiencyRating.Bronze}</SelectItem>
+                  <SelectItem value={PSUEfficiencyRating.Silver}>{PSUEfficiencyRating.Silver}</SelectItem>
+                  <SelectItem value={PSUEfficiencyRating.Gold}>{PSUEfficiencyRating.Gold}</SelectItem>
+                  <SelectItem value={PSUEfficiencyRating.Platinum}>{PSUEfficiencyRating.Platinum}</SelectItem>
+                  <SelectItem value={PSUEfficiencyRating.Titanium}>{PSUEfficiencyRating.Titanium}</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </div>
 
       {/* Network Section */}

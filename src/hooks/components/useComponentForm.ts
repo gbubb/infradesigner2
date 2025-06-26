@@ -74,6 +74,10 @@ export interface ComponentFormValues {
   // Existing GPU fields
   gpuSupported?: boolean;
   gpuSlots?: number;
+  // Power Supply fields
+  psuRatingWatts?: number;
+  psuQuantity?: number;
+  psuEfficiency?: string;
   connectorB_Quantity?: number;
   maxDistanceMeters?: number;
   frontPortQuantity?: number;
@@ -187,7 +191,8 @@ export const useComponentForm = () => {
          'portsProvidedQuantity', 'throughput', 'capacityTB', 'cassetteCapacity', 
          'portQuantity', 'length', 'validRUStart', 'validRUEnd', 'preferredRU', 'preferredRack', 
          'rpm', 'iops', 'readSpeed', 'writeSpeed', 'connectorB_Quantity', 'maxDistanceMeters',
-         'frontPortQuantity', 'backPortQuantity', 'connectionPerSecond', 'concurrentConnections'].includes(name)) {
+         'frontPortQuantity', 'backPortQuantity', 'connectionPerSecond', 'concurrentConnections',
+         'psuRatingWatts', 'psuQuantity'].includes(name)) {
       parsedValue = value === '' ? 0 : parseFloat(value);
     }
     
