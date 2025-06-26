@@ -349,12 +349,13 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     peak: dcWithEnv.peak / (psuEfficiencyPeak * efficiencyMultiplier)
   };
   
-  // Apply safety margin
+  // Apply safety margin - reduced for peak, none for idle
   const safetyMargin = 1 + (cal.safetyMarginPercent / 100);
+  const peakSafetyMargin = 1 + (cal.safetyMarginPercent / 200); // Half safety margin for peak
   const acWithSafety = {
-    idle: acTotal.idle,
+    idle: acTotal.idle,  // No safety margin for idle
     average: acTotal.average * safetyMargin,
-    peak: acTotal.peak * safetyMargin
+    peak: acTotal.peak * peakSafetyMargin  // Reduced safety margin for peak
   };
   
   // Additional validations and warnings

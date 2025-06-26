@@ -17,6 +17,7 @@ import { PowerValidationDialog } from './PowerValidationDialog';
 import { PowerCalculationParameters } from './PowerCalculationParameters';
 import { PowerBreakdownTable } from './PowerBreakdownTable';
 import { MemoryPowerAnalysis } from './MemoryPowerAnalysis';
+import { PowerCalculationDebug } from './PowerCalculationDebug';
 
 // Configuration Components
 import { CPUConfiguration } from '../power-prediction/configs/CPUConfiguration';
@@ -35,6 +36,7 @@ import { usePowerCalculation } from '@/hooks/power-prediction/usePowerCalculatio
 
 export const PowerPredictionTab: React.FC = () => {
   const { componentTemplates } = useDesignStore();
+  const [showDebug, setShowDebug] = React.useState(false);
   
   // Filter servers from component library
   const servers = useMemo(() => 
@@ -209,13 +211,22 @@ export const PowerPredictionTab: React.FC = () => {
               {showCalibration ? 'Hide' : 'Show'} Calibration
             </Button>
             {calculationResult && (
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => setShowValidation(true)}
-              >
-                Validate Results
-              </Button>
+              <>
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  onClick={() => setShowValidation(true)}
+                >
+                  Validate Results
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  onClick={() => setShowDebug(!showDebug)}
+                >
+                  {showDebug ? 'Hide' : 'Show'} Debug
+                </Button>
+              </>
             )}
           </div>
           
@@ -244,6 +255,12 @@ export const PowerPredictionTab: React.FC = () => {
             calibrationProfile={calibrationProfile}
           />
           
+          {/* Debug View */}
+          <PowerCalculationDebug 
+            result={calculationResult}
+            showDebug={showDebug}
+          />
+          
           {/* Calculation Parameters */}
           {powerInputs && (
             <PowerCalculationParameters 
@@ -268,6 +285,9 @@ export const PowerPredictionTab: React.FC = () => {
               calibrationProfile={calibrationProfile}
             />
           )}
+          
+          {/* Power Calculation Debug */}
+          <PowerCalculationDebug result={calculationResult} />
           
           {/* Warnings and Missing Metrics */}
           {calculationResult.warnings.length > 0 && (

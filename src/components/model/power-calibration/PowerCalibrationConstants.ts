@@ -17,10 +17,10 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
   cpuMulticoreEfficiencyDecay: 0.001,
   
   cpuArchitectureMultipliers: {
-    'Intel Xeon': { idle: 0.15, peak: 1.35 },
-    'AMD EPYC': { idle: 0.12, peak: 1.2 },
+    'Intel Xeon': { idle: 0.15, peak: 1.2 },  // Reduced from 1.35
+    'AMD EPYC': { idle: 0.12, peak: 1.15 },   // Reduced from 1.2
     'ARM': { idle: 0.1, peak: 0.9 },
-    'Default': { idle: 0.15, peak: 1.3 }
+    'Default': { idle: 0.15, peak: 1.15 }     // Reduced from 1.3
   },
   
   memoryPowerModel: {
@@ -105,7 +105,7 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
   fanPowerFactors: {
     idle: 0.05,
     average: 0.10,
-    peak: 0.15
+    peak: 0.12    // Reduced from 0.15
   },
   
   tempCoefficientPerDegree: 0.004,
