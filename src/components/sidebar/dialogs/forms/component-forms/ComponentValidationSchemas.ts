@@ -13,6 +13,13 @@ import {
 } from '@/types/infrastructure';
 import { PortSpeed, MediaType } from '@/types/infrastructure/port-types';
 
+// Helper function to preprocess number values
+const numberPreprocess = (val: unknown) => {
+  if (val === "" || val === undefined || val === null) return undefined;
+  const num = Number(val);
+  return isNaN(num) ? undefined : num;
+};
+
 // Base schema with common fields for all components
 const baseComponentSchema = z.object({
   type: z.nativeEnum(ComponentType),
@@ -25,20 +32,28 @@ const baseComponentSchema = z.object({
   model: z.string().min(2, {
     message: 'Model must be at least 2 characters.',
   }),
-  cost: z.number(),
-  powerRequired: z.number(),
+  cost: z.preprocess((val) => {
+    if (val === "" || val === undefined || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number()),
+  powerRequired: z.preprocess((val) => {
+    if (val === "" || val === undefined || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number()),
   isDefault: z.boolean(),
   // Naming fields
   namingPrefix: z.string().optional(),
   // Placement fields (not for all types)
-  validRUStart: z.number().optional(),
-  validRUEnd: z.number().optional(),
-  preferredRU: z.number().optional(),
+  validRUStart: z.preprocess(numberPreprocess, z.number().optional()),
+  validRUEnd: z.preprocess(numberPreprocess, z.number().optional()),
+  preferredRU: z.preprocess(numberPreprocess, z.number().optional()),
 });
 
 // PCIe slot schema
 const pcieSlotSchema = z.object({
-  quantity: z.number(),
+  quantity: z.preprocess(numberPreprocess, z.number()),
   formFactor: z.nativeEnum(PCIeFormFactor)
 });
 
@@ -49,27 +64,27 @@ export const serverSchema = baseComponentSchema.extend({
     z.nativeEnum(ServerRole).optional()
   ),
   // Physical Attributes
-  ruSize: z.number().optional(),
+  ruSize: z.preprocess(numberPreprocess, z.number().optional()),
   diskSlotType: z.nativeEnum(DiskSlotType).optional(),
-  diskSlotQuantity: z.number().optional(),
+  diskSlotQuantity: z.preprocess(numberPreprocess, z.number().optional()),
   pcieSlots: z.array(pcieSlotSchema).optional(),
   // CPU Section
   cpuModel: z.string().optional(),
-  cpuSockets: z.number().optional(),
-  cpuCoresPerSocket: z.number().optional(),
-  cpuTdpWatts: z.number().optional(),
-  cpuFrequencyBaseGhz: z.number().optional(),
-  cpuFrequencyTurboGhz: z.number().optional(),
+  cpuSockets: z.preprocess(numberPreprocess, z.number().optional()),
+  cpuCoresPerSocket: z.preprocess(numberPreprocess, z.number().optional()),
+  cpuTdpWatts: z.preprocess(numberPreprocess, z.number().optional()),
+  cpuFrequencyBaseGhz: z.preprocess(numberPreprocess, z.number().optional()),
+  cpuFrequencyTurboGhz: z.preprocess(numberPreprocess, z.number().optional()),
   // Memory Section
   memoryType: z.nativeEnum(MemoryType).optional(),
-  memoryDimmSlotCapacity: z.number().optional(),
-  memoryDimmSlotsConsumed: z.number().optional(),
-  memoryDimmSize: z.number().optional(),
-  memoryDimmFrequencyMhz: z.number().optional(),
-  memoryCapacity: z.number().optional(),
+  memoryDimmSlotCapacity: z.preprocess(numberPreprocess, z.number().optional()),
+  memoryDimmSlotsConsumed: z.preprocess(numberPreprocess, z.number().optional()),
+  memoryDimmSize: z.preprocess(numberPreprocess, z.number().optional()),
+  memoryDimmFrequencyMhz: z.preprocess(numberPreprocess, z.number().optional()),
+  memoryCapacity: z.preprocess(numberPreprocess, z.number().optional()),
   // Network
   networkPortType: z.nativeEnum(NetworkPortType).optional(),
-  portsConsumedQuantity: z.number().optional(),
+  portsConsumedQuantity: z.preprocess(numberPreprocess, z.number().optional()),
 });
 
 // Switch-specific schema
@@ -185,39 +200,50 @@ export const legacyFormSchema = z.object({
   model: z.string().min(2, {
     message: 'Model must be at least 2 characters.',
   }),
-  cost: z.number(),
-  powerRequired: z.number(),
+  cost: z.preprocess((val) => {
+    if (val === "" || val === undefined || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number()),
+  powerRequired: z.preprocess((val) => {
+    if (val === "" || val === undefined || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number()),
   isDefault: z.boolean(),
   namingPrefix: z.string().optional(),
-  validRUStart: z.number().optional(),
-  validRUEnd: z.number().optional(),
-  preferredRU: z.number().optional(),
+  validRUStart: z.preprocess(numberPreprocess, z.number().optional()),
+  validRUEnd: z.preprocess(numberPreprocess, z.number().optional()),
+  preferredRU: z.preprocess(numberPreprocess, z.number().optional()),
   serverRole: z.preprocess(
     (val) => (val === "" || val === undefined) ? undefined : val,
     z.nativeEnum(ServerRole).optional()
   ),
   // Physical Attributes
-  ruSize: z.number().optional(),
+  ruSize: z.preprocess(numberPreprocess, z.number().optional()),
   diskSlotType: z.nativeEnum(DiskSlotType).optional(),
-  diskSlotQuantity: z.number().optional(),
+  diskSlotQuantity: z.preprocess(numberPreprocess, z.number().optional()),
   pcieSlots: z.array(pcieSlotSchema).optional(),
   // CPU Section
   cpuModel: z.string().optional(),
-  cpuSockets: z.number().optional(),
-  cpuCoresPerSocket: z.number().optional(),
-  cpuTdpWatts: z.number().optional(),
-  cpuFrequencyBaseGhz: z.number().optional(),
-  cpuFrequencyTurboGhz: z.number().optional(),
+  cpuSockets: z.preprocess(numberPreprocess, z.number().optional()),
+  cpuCoresPerSocket: z.preprocess(numberPreprocess, z.number().optional()),
+  cpuTdpWatts: z.preprocess(numberPreprocess, z.number().optional()),
+  cpuFrequencyBaseGhz: z.preprocess(numberPreprocess, z.number().optional()),
+  cpuFrequencyTurboGhz: z.preprocess(numberPreprocess, z.number().optional()),
   // Memory Section
-  memoryType: z.nativeEnum(MemoryType).optional(),
-  memoryDimmSlotCapacity: z.number().optional(),
-  memoryDimmSlotsConsumed: z.number().optional(),
-  memoryDimmSize: z.number().optional(),
-  memoryDimmFrequencyMhz: z.number().optional(),
-  memoryCapacity: z.number().optional(),
+  memoryType: z.preprocess(
+    (val) => (val === "" || val === undefined) ? undefined : val,
+    z.nativeEnum(MemoryType).optional()
+  ),
+  memoryDimmSlotCapacity: z.preprocess(numberPreprocess, z.number().optional()),
+  memoryDimmSlotsConsumed: z.preprocess(numberPreprocess, z.number().optional()),
+  memoryDimmSize: z.preprocess(numberPreprocess, z.number().optional()),
+  memoryDimmFrequencyMhz: z.preprocess(numberPreprocess, z.number().optional()),
+  memoryCapacity: z.preprocess(numberPreprocess, z.number().optional()),
   // Network
   networkPortType: z.nativeEnum(NetworkPortType).optional(),
-  portsConsumedQuantity: z.number().optional(),
+  portsConsumedQuantity: z.preprocess(numberPreprocess, z.number().optional()),
   switchRole: z.preprocess(
     (val) => (val === "" || val === undefined) ? undefined : val,
     z.nativeEnum(SwitchRole).optional()
