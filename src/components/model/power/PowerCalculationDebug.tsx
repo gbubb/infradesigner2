@@ -56,10 +56,11 @@ export const PowerCalculationDebug: React.FC<PowerCalculationDebugProps> = ({ re
     peak: result.acTotalBeforeSafety.peak / result.dcTotalW.peak
   };
 
+  // No safety margin applied anymore
   const safetyFactor = {
-    idle: result.acTotalW.idle / result.acTotalBeforeSafety.idle,
-    average: result.acTotalW.average / result.acTotalBeforeSafety.average,
-    peak: result.acTotalW.peak / result.acTotalBeforeSafety.peak
+    idle: 1.0,
+    average: 1.0,
+    peak: 1.0
   };
 
   const totalFactor = {
@@ -157,11 +158,11 @@ export const PowerCalculationDebug: React.FC<PowerCalculationDebugProps> = ({ re
                   <TableCell className="text-right">-</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell>+ Fan Power ({Math.round((fanFactor.peak - 1) * 100)}%)</TableCell>
+                  <TableCell>+ Fan Power ({result.componentBreakdown.fans.peak}W)</TableCell>
                   <TableCell className="text-right">{Math.round(withFans.idle)}</TableCell>
                   <TableCell className="text-right">{Math.round(withFans.average)}</TableCell>
                   <TableCell className="text-right">{Math.round(withFans.peak)}</TableCell>
-                  <TableCell className="text-right">×{fanFactor.peak.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">+{result.componentBreakdown.fans.peak}W</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell>× Environmental ({Math.round((envFactor.peak - 1) * 100)}%)</TableCell>
@@ -177,12 +178,12 @@ export const PowerCalculationDebug: React.FC<PowerCalculationDebugProps> = ({ re
                   <TableCell className="text-right">{result.acTotalBeforeSafety.peak}</TableCell>
                   <TableCell className="text-right">×{psuFactor.peak.toFixed(2)}</TableCell>
                 </TableRow>
-                <TableRow className="font-medium">
-                  <TableCell>+ Safety Margin ({Math.round((safetyFactor.peak - 1) * 100)}%)</TableCell>
+                <TableRow className="font-medium bg-green-50">
+                  <TableCell>Final AC Power (No Safety Margin)</TableCell>
                   <TableCell className="text-right">{result.acTotalW.idle}</TableCell>
                   <TableCell className="text-right">{result.acTotalW.average}</TableCell>
                   <TableCell className="text-right">{result.acTotalW.peak}</TableCell>
-                  <TableCell className="text-right">×{safetyFactor.peak.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">-</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -211,14 +212,14 @@ export const PowerCalculationDebug: React.FC<PowerCalculationDebugProps> = ({ re
           <Alert className="border-orange-200">
             <AlertCircle className="h-4 w-4 text-orange-600" />
             <AlertDescription>
-              <strong>Peak Power Analysis:</strong> The peak power is {totalFactor.peak.toFixed(2)}× higher than the base component sum.
+              <strong>Peak Power Analysis:</strong> The peak power is {totalFactor.peak.toFixed(2)}× the base component sum.
               This is due to:
               <ul className="list-disc list-inside mt-2">
-                <li>CPU peak multiplier (built into CPU peak value)</li>
-                <li>Fan power: +{Math.round((fanFactor.peak - 1) * 100)}%</li>
+                <li>CPU architecture multiplier: ×1.05 (built into CPU peak value)</li>
+                <li>Fan power: +{result.componentBreakdown.fans.peak}W</li>
                 <li>Environmental factor: +{Math.round((envFactor.peak - 1) * 100)}%</li>
                 <li>PSU efficiency loss: +{Math.round((psuFactor.peak - 1) * 100)}%</li>
-                <li>Safety margin: +{Math.round((safetyFactor.peak - 1) * 100)}%</li>
+                <li>No safety margin applied (handled at datacenter level)</li>
               </ul>
             </AlertDescription>
           </Alert>

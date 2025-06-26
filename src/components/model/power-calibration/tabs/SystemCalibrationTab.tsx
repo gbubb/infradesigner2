@@ -89,26 +89,71 @@ export const SystemCalibrationTab: React.FC<SystemCalibrationTabProps> = ({
       </div>
       
       <div>
-        <Label className="mb-2 block">Fan Power Factors (% of Total DC)</Label>
-        <div className="grid grid-cols-3 gap-4">
-          <CalibrationInputField
-            label="Idle"
-            value={profile.fanPowerFactors.idle}
-            onChange={(value) => updateNestedValue(['fanPowerFactors', 'idle'], value)}
-            defaultValue="0.05 (5%)"
-          />
-          <CalibrationInputField
-            label="Average"
-            value={profile.fanPowerFactors.average}
-            onChange={(value) => updateNestedValue(['fanPowerFactors', 'average'], value)}
-            defaultValue="0.10 (10%)"
-          />
-          <CalibrationInputField
-            label="Peak"
-            value={profile.fanPowerFactors.peak}
-            onChange={(value) => updateNestedValue(['fanPowerFactors', 'peak'], value)}
-            defaultValue="0.15 (15%)"
-          />
+        <Label className="mb-2 block">Fan Power by Form Factor</Label>
+        <Alert className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Fan power is now based on absolute wattage per form factor, not percentage of total power.
+          </AlertDescription>
+        </Alert>
+        <div className="space-y-4">
+          <div>
+            <Label className="text-sm font-medium">1U Servers</Label>
+            <div className="grid grid-cols-2 gap-4 mt-2">
+              <CalibrationInputField
+                label="Idle"
+                value={profile.fanPowerByFormFactor?.['1U']?.idle || 60}
+                onChange={(value) => updateNestedValue(['fanPowerByFormFactor', '1U', 'idle'], value)}
+                defaultValue="60W"
+                unit="W"
+              />
+              <CalibrationInputField
+                label="Peak"
+                value={profile.fanPowerByFormFactor?.['1U']?.peak || 120}
+                onChange={(value) => updateNestedValue(['fanPowerByFormFactor', '1U', 'peak'], value)}
+                defaultValue="120W"
+                unit="W"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-sm font-medium">2U Servers</Label>
+            <div className="grid grid-cols-2 gap-4 mt-2">
+              <CalibrationInputField
+                label="Idle"
+                value={profile.fanPowerByFormFactor?.['2U']?.idle || 40}
+                onChange={(value) => updateNestedValue(['fanPowerByFormFactor', '2U', 'idle'], value)}
+                defaultValue="40W"
+                unit="W"
+              />
+              <CalibrationInputField
+                label="Peak"
+                value={profile.fanPowerByFormFactor?.['2U']?.peak || 100}
+                onChange={(value) => updateNestedValue(['fanPowerByFormFactor', '2U', 'peak'], value)}
+                defaultValue="100W"
+                unit="W"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-sm font-medium">4U Servers</Label>
+            <div className="grid grid-cols-2 gap-4 mt-2">
+              <CalibrationInputField
+                label="Idle"
+                value={profile.fanPowerByFormFactor?.['4U']?.idle || 50}
+                onChange={(value) => updateNestedValue(['fanPowerByFormFactor', '4U', 'idle'], value)}
+                defaultValue="50W"
+                unit="W"
+              />
+              <CalibrationInputField
+                label="Peak"
+                value={profile.fanPowerByFormFactor?.['4U']?.peak || 150}
+                onChange={(value) => updateNestedValue(['fanPowerByFormFactor', '4U', 'peak'], value)}
+                defaultValue="150W"
+                unit="W"
+              />
+            </div>
+          </div>
         </div>
       </div>
       

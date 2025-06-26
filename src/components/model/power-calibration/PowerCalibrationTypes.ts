@@ -113,11 +113,11 @@ export interface PowerCalibrationProfile {
   };
   bmcPower: number; // Default: 6W
   
-  // Fan Power Scaling
-  fanPowerFactors: {
-    idle: number; // Default: 0.05 (5% of total)
-    average: number; // Default: 0.10 (10% of total)
-    peak: number; // Default: 0.15 (15% of total)
+  // Fan Power by Form Factor (absolute wattage)
+  fanPowerByFormFactor: {
+    '1U': { idle: number; peak: number; };
+    '2U': { idle: number; peak: number; };
+    '4U': { idle: number; peak: number; };
   };
   
   // Environmental Factors

@@ -47,6 +47,11 @@ export function getCalibrationProfiles(): PowerCalibrationProfile[] {
         }
       }
       
+      // Ensure fanPowerByFormFactor exists (for backward compatibility)
+      if (!p.fanPowerByFormFactor) {
+        p.fanPowerByFormFactor = DEFAULT_CALIBRATION_PROFILE.fanPowerByFormFactor;
+      }
+      
       return {
         ...p,
         createdAt: new Date(p.createdAt),
@@ -214,7 +219,7 @@ export function useCalibrationProfiles(onCalibrationChange: (profile: PowerCalib
     if (!editingProfile) return;
     
     const newProfile = { ...editingProfile };
-    let current: Record<string, any> = newProfile;
+    let current: Record<string, unknown> = newProfile;
     
     for (let i = 0; i < path.length - 1; i++) {
       if (!(path[i] in current)) {

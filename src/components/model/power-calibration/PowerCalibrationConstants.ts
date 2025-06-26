@@ -17,10 +17,10 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
   cpuMulticoreEfficiencyDecay: 0.001,
   
   cpuArchitectureMultipliers: {
-    'Intel Xeon': { idle: 0.15, peak: 1.2 },  // Reduced from 1.35
-    'AMD EPYC': { idle: 0.12, peak: 1.15 },   // Reduced from 1.2
+    'Intel Xeon': { idle: 0.15, peak: 1.05 },  // Significantly reduced
+    'AMD EPYC': { idle: 0.12, peak: 1.05 },    // As requested
     'ARM': { idle: 0.1, peak: 0.9 },
-    'Default': { idle: 0.15, peak: 1.15 }     // Reduced from 1.3
+    'Default': { idle: 0.15, peak: 1.05 }      // Match others
   },
   
   memoryPowerModel: {
@@ -102,10 +102,10 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
   },
   bmcPower: 6,
   
-  fanPowerFactors: {
-    idle: 0.05,
-    average: 0.10,
-    peak: 0.12    // Reduced from 0.15
+  fanPowerByFormFactor: {
+    '1U': { idle: 60, peak: 120 },    // 60-120W for 1U servers
+    '2U': { idle: 40, peak: 100 },    // 40-100W for 2U servers (larger, more efficient fans)
+    '4U': { idle: 50, peak: 150 }     // 50-150W for 4U servers
   },
   
   tempCoefficientPerDegree: 0.004,

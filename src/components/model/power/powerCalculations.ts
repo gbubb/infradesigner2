@@ -253,6 +253,19 @@ function calculateEnvironmentalFactor(inletTempC: number, calibration: PowerCali
   return 1 + (calibration.tempCoefficientPerDegree * Math.max(0, inletTempC - calibration.tempBaselineC));
 }
 
+function calculateFanPower(formFactor: '1U' | '2U' | '4U', calibration: PowerCalibrationProfile): { idle: number; average: number; peak: number } {
+  const fanPower = calibration.fanPowerByFormFactor[formFactor];
+  
+  // Linear interpolation for average (50% between idle and peak)
+  const average = fanPower.idle + (fanPower.peak - fanPower.idle) * 0.5;
+  
+  return {
+    idle: fanPower.idle,
+    average: average,
+    peak: fanPower.peak
+  };
+}
+
 function calculatePsuEfficiency(dcPower: number, psuRating: number, efficiencyRating: string, calibration: PowerCalibrationProfile): number {
   const loadPercentage = dcPower / psuRating;
   const loadPercent = loadPercentage * 100;
@@ -307,12 +320,8 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     peak: cpuPower.peak + memoryPower.peak + storagePower.peak + networkPower.peak + motherboardPower.peak
   };
   
-  // Calculate fan power
-  const fansPower = {
-    idle: dcBeforeFans.idle * cal.fanPowerFactors.idle,
-    average: dcBeforeFans.average * cal.fanPowerFactors.average,
-    peak: dcBeforeFans.peak * cal.fanPowerFactors.peak
-  };
+  // Calculate fan power based on form factor (absolute wattage)
+  const fansPower = calculateFanPower(inputs.formFactor, cal);
   
   // Total DC power
   const dcTotal = {
@@ -349,13 +358,11 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     peak: dcWithEnv.peak / (psuEfficiencyPeak * efficiencyMultiplier)
   };
   
-  // Apply safety margin - reduced for peak, none for idle
-  const safetyMargin = 1 + (cal.safetyMarginPercent / 100);
-  const peakSafetyMargin = 1 + (cal.safetyMarginPercent / 200); // Half safety margin for peak
+  // No safety margin - this is accounted for elsewhere in the datacenter
   const acWithSafety = {
-    idle: acTotal.idle,  // No safety margin for idle
-    average: acTotal.average * safetyMargin,
-    peak: acTotal.peak * peakSafetyMargin  // Reduced safety margin for peak
+    idle: acTotal.idle,
+    average: acTotal.average,
+    peak: acTotal.peak
   };
   
   // Additional validations and warnings
