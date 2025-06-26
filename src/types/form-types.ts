@@ -40,7 +40,7 @@ export interface FileInputEvent {
 
 // Validation types
 export type ValidationRule<T> = (value: T) => string | undefined;
-export type ValidationSchema<T> = Partial<Record<keyof T, ValidationRule<any>>>;
+export type ValidationSchema<T> = Partial<Record<keyof T, ValidationRule<unknown>>>;
 
 // Form submission types
 export interface SubmitHandler<T> {
@@ -48,7 +48,7 @@ export interface SubmitHandler<T> {
 }
 
 export interface FormHelpers<T> {
-  setFieldValue: (field: keyof T, value: any) => void;
+  setFieldValue: <K extends keyof T>(field: K, value: T[K]) => void;
   setFieldError: (field: keyof T, error: string) => void;
   setFieldTouched: (field: keyof T, touched: boolean) => void;
   setErrors: (errors: Partial<Record<keyof T, string>>) => void;
@@ -65,7 +65,7 @@ export interface ComponentFormValues {
   model: string;
   cost: number;
   powerRequired: number;
-  [key: string]: any;
+  [key: string]: string | number | boolean | undefined;
 }
 
 export interface RequirementsFormValues {
@@ -112,7 +112,7 @@ export interface FieldConfig {
 // Dynamic form types
 export interface DynamicFormField extends FieldConfig {
   dependsOn?: string;
-  showWhen?: (values: any) => boolean;
-  validate?: ValidationRule<any>;
-  transform?: (value: any) => any;
+  showWhen?: (values: Record<string, unknown>) => boolean;
+  validate?: ValidationRule<unknown>;
+  transform?: (value: unknown) => unknown;
 }

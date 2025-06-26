@@ -107,8 +107,8 @@ export function useRackPersistence() {
             const validDeviceIds = new Set(
               (activeDesign?.components ?? []).map((c) => c.id)
             );
-            const isValid = data.rackprofiles.every((rack: any) =>
-              (rack.devices ?? []).every((dev: any) => validDeviceIds.has(dev.deviceId))
+            const isValid = data.rackprofiles.every((rack: { devices?: Array<{ deviceId: string }> }) =>
+              (rack.devices ?? []).every((dev) => validDeviceIds.has(dev.deviceId))
             );
             
             if (isValid) {
@@ -169,8 +169,8 @@ export function useRackPersistence() {
         const validDeviceIds = new Set(
           (activeDesign?.components ?? []).map((c) => c.id)
         );
-        const isValid = data.rackprofiles.every((rack: any) =>
-          (rack.devices ?? []).every((dev: any) => validDeviceIds.has(dev.deviceId))
+        const isValid = data.rackprofiles.every((rack: { devices?: Array<{ deviceId: string }> }) =>
+          (rack.devices ?? []).every((dev) => validDeviceIds.has(dev.deviceId))
         );
         if (!isValid) {
           toast.error(

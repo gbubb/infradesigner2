@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
 import { Port, PortRole, PortSpeed, MediaType, ConnectorType } from '@/types/infrastructure/port-types';
+import { PCIeSlot } from '@/types/infrastructure/server-types';
 import { useDesignStore } from '@/store/designStore';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -70,7 +71,7 @@ export interface ComponentFormValues {
   memoryDimmSize?: number;
   memoryDimmFrequencyMhz?: number;
   // PCIe slots
-  pcieSlots?: any;  // Array of {quantity: number, formFactor: string}
+  pcieSlots?: PCIeSlot[];
   // Existing GPU fields
   gpuSupported?: boolean;
   gpuSlots?: number;

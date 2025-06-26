@@ -1,16 +1,17 @@
 import { useDesignStore } from '@/store/designStore';
-import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
+import { ClusterAZAssignment, RackProfile } from '@/types/infrastructure/rack-types';
+import { AvailabilityZone } from '@/types/infrastructure/requirements-types';
 
 export class RackOperationsService {
   /**
    * Get AZ name mapping from design requirements
    */
-  static getAzNameMap(rackProfiles: any[]): Record<string, string> {
+  static getAzNameMap(rackProfiles: RackProfile[]): Record<string, string> {
     const activeDesign = useDesignStore.getState().activeDesign;
     const map: Record<string, string> = {};
     
     if (activeDesign?.requirements?.physicalConstraints?.availabilityZones) {
-      activeDesign.requirements.physicalConstraints.availabilityZones.forEach((az: any) => {
+      activeDesign.requirements.physicalConstraints.availabilityZones.forEach((az: AvailabilityZone) => {
         if (az.id && az.name) map[az.id] = az.name;
       });
     }
@@ -28,13 +29,13 @@ export class RackOperationsService {
   /**
    * Get friendly AZ names for UI display
    */
-  static getFriendlyAzNames(rackProfiles: any[]): string[] {
+  static getFriendlyAzNames(rackProfiles: RackProfile[]): string[] {
     const activeDesign = useDesignStore.getState().activeDesign;
     let names: string[] = [];
     const physicalAzs = activeDesign?.requirements?.physicalConstraints?.availabilityZones;
 
     if (physicalAzs && Array.isArray(physicalAzs) && physicalAzs.length > 0) {
-      names = physicalAzs.map((az: any) => az.name).filter(Boolean) as string[];
+      names = physicalAzs.map((az: AvailabilityZone) => az.name).filter(Boolean) as string[];
     } else {
       // Fallback to names found from rack profiles if no AZs are defined in requirements
       names = Array.from(new Set(rackProfiles.map(rp => rp.azName).filter(Boolean) as string[]));

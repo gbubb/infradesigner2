@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
 import { DeviceRoleType } from '@/types/infrastructure/requirements-types';
-import { ComponentType, RackType } from '@/types/infrastructure';
+import { ComponentType, RackType, InfrastructureComponent } from '@/types/infrastructure';
 import { toast } from 'sonner';
 
 export interface RackProfileInitializationData {
@@ -120,7 +120,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       
       // Only distribute components if we have racks and components to distribute
       // Skip if we already have racks with placed devices in the activeDesign
-      const existingPlacedDevices = activeDesign.rackprofiles?.some((rack: any) => 
+      const existingPlacedDevices = activeDesign.rackprofiles?.some((rack) => 
         rack.devices && rack.devices.length > 0
       );
       
@@ -157,7 +157,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
     const coreRacks = racks.filter(rack => rack.azName === 'Core');
     
     // Group components by role
-    const componentsByRole: Record<string, any[]> = {};
+    const componentsByRole: Record<string, InfrastructureComponent[]> = {};
     
     activeDesign.componentRoles.forEach(role => {
       const assignedComponents = activeDesign.components.filter(comp => 
@@ -222,7 +222,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
   };
   
   const distributeComponentsEvenly = (
-    components: any[], 
+    components: InfrastructureComponent[], 
     racksByAZ: Record<string, { id: string; name: string }[]>, 
     azNames: string[]
   ) => {
@@ -246,7 +246,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
   };
   
   const distributeStorageNodes = (
-    components: any[], 
+    components: InfrastructureComponent[], 
     racksByAZ: Record<string, { id: string; name: string }[]>, 
     azNames: string[]
   ) => {
@@ -291,7 +291,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
   };
   
   const placeNetworkDevicesInAZs = (
-    components: any[],
+    components: InfrastructureComponent[],
     racksByAZ: Record<string, { id: string; name: string }[]>,
     azNames: string[]
   ) => {
@@ -338,7 +338,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
     });
   };
   
-  const placeNetworkDevicesInCoreRacks = (components: any[], coreRacks: Array<{ id: string; name: string }>) => {
+  const placeNetworkDevicesInCoreRacks = (components: InfrastructureComponent[], coreRacks: Array<{ id: string; name: string }>) => {
     if (!components.length || !coreRacks.length) return;
     
     const ruStartPosition = 42; // Start from top of rack

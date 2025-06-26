@@ -143,17 +143,17 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
           {hasDedicatedNetworkRacks && powerUsage && 'networkRack' in powerUsage && 'computeRack' in powerUsage ? (
             <>
               {renderPowerBar({
-                minimumPower: (powerUsage as any).computeRack?.minimumPower,
-                operationalPower: (powerUsage as any).computeRack?.operationalPower,
-                maximumPower: (powerUsage as any).computeRack?.maximumPower,
-                availablePower: (powerUsage as any).computeRack?.availablePower
+                minimumPower: powerUsage.computeRack?.minimumPower,
+                operationalPower: powerUsage.computeRack?.operationalPower,
+                maximumPower: powerUsage.computeRack?.maximumPower,
+                availablePower: powerUsage.computeRack?.availablePower
               }, "Compute/Storage Rack Power")}
               
               {renderPowerBar({
-                minimumPower: (powerUsage as any).networkRack?.minimumPower,
-                operationalPower: (powerUsage as any).networkRack?.operationalPower,
-                maximumPower: (powerUsage as any).networkRack?.maximumPower,
-                availablePower: (powerUsage as any).networkRack?.availablePower
+                minimumPower: powerUsage.networkRack?.minimumPower,
+                operationalPower: powerUsage.networkRack?.operationalPower,
+                maximumPower: powerUsage.networkRack?.maximumPower,
+                availablePower: powerUsage.networkRack?.availablePower
               }, "Network Core Rack Power")}
             </>
           ) : (

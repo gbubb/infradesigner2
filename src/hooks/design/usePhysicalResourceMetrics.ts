@@ -47,7 +47,12 @@ export const usePhysicalResourceMetrics = () => {
       
       // Add to total rack units if applicable
       if ('rackUnitsConsumed' in component) {
-        totalRackUnits += (component as any).rackUnitsConsumed * quantity;
+        const rackUnits = (component as { rackUnitsConsumed?: number }).rackUnitsConsumed;
+        if (rackUnits) {
+          totalRackUnits += rackUnits * quantity;
+        }
+      } else if ('ruSize' in component && component.ruSize) {
+        totalRackUnits += component.ruSize * quantity;
       }
       
       // Count servers
@@ -61,7 +66,12 @@ export const usePhysicalResourceMetrics = () => {
           component.type === ComponentType.Firewall) {
         networkPower += component.powerRequired * quantity;
         if ('rackUnitsConsumed' in component) {
-          networkRackUnits += (component as any).rackUnitsConsumed * quantity;
+          const rackUnits = (component as { rackUnitsConsumed?: number }).rackUnitsConsumed;
+          if (rackUnits) {
+            networkRackUnits += rackUnits * quantity;
+          }
+        } else if ('ruSize' in component && component.ruSize) {
+          networkRackUnits += component.ruSize * quantity;
         }
       }
     });

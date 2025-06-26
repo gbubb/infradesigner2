@@ -1,5 +1,8 @@
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { RackService } from './rackService';
+import { InfrastructureComponent } from '@/types/infrastructure/component-types';
+import { ComponentWithPlacement } from '@/types/service-types';
+import { StoreState } from '@/store/types';
 
 // Helper: Try to place device with permitted/preferred RU
 export function tryPlaceDeviceInRacksWithConstraints({
@@ -9,9 +12,9 @@ export function tryPlaceDeviceInRacksWithConstraints({
   activeDesignState
 }: {
   racks: RackProfile[],
-  device: any,
+  device: InfrastructureComponent | ComponentWithPlacement,
   ruHeight: number,
-  activeDesignState: any
+  activeDesignState: StoreState
 }): {
   success: boolean,
   reason?: string,
@@ -96,13 +99,13 @@ function isRUAvailableWithComponentRU(
   rack: RackProfile,
   ruPosition: number,
   ruHeight: number,
-  activeDesignState: any
+  activeDesignState: StoreState
 ): boolean {
   const activeDesign = activeDesignState.activeDesign;
   if (!activeDesign) return false;
 
   for (const device of rack.devices) {
-    const component = activeDesign.components.find((c: any) => c.id === device.deviceId);
+    const component = activeDesign.components.find((c: InfrastructureComponent | ComponentWithPlacement) => c.id === device.deviceId);
     const deviceHeight = component ? (component.ruSize || 1) : 1;
     const existingDeviceEnd = device.ruPosition + deviceHeight - 1;
     // Overlap check

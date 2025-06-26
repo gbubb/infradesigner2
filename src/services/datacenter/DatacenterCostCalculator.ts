@@ -4,7 +4,8 @@ import type {
   FacilityCostBreakdown,
   RackCostAllocation,
   CostLayerBreakdown,
-  CostCategory
+  CostCategory,
+  HierarchyLevel
 } from '@/types/infrastructure/datacenter-types';
 import type { RackProfile } from '@/types/infrastructure/rack-types';
 import type { DatacenterRack, DatacenterRackWithUsage } from '@/types/infrastructure/datacenter-rack-types';
@@ -222,12 +223,13 @@ export class DatacenterCostCalculator {
       case 'per-kw':
         return totalPower > 0 ? (rackPower / totalPower) * monthlyAmount : 0;
       
-      case 'hybrid':
+      case 'hybrid': {
         const rackWeight = 0.5; // Default 50/50 split
         const powerWeight = 0.5;
         const rackAllocation = totalRacks > 0 ? monthlyAmount / totalRacks : 0;
         const powerAllocation = totalPower > 0 ? (rackPower / totalPower) * monthlyAmount : 0;
         return (rackAllocation * rackWeight) + (powerAllocation * powerWeight);
+      }
       
       case 'fixed':
         // Fixed costs are split evenly
@@ -247,7 +249,7 @@ export class DatacenterCostCalculator {
     try {
       // Get hierarchy path from facility configuration
       const facility = this.facility;
-      const hierarchyMap = new Map<string, any>();
+      const hierarchyMap = new Map<string, HierarchyLevel>();
       facility.hierarchyConfig.forEach(level => {
         hierarchyMap.set(level.id, level);
       });

@@ -3,6 +3,7 @@ import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
 import { PlacementReportItem } from '@/types/placement-types';
 import { InfrastructureComponent } from '@/types/infrastructure';
+import { StoreState } from '@/store/types';
 
 /**
  * When placing patch panels, AZ-wide quantities must be split across all racks in that AZ and placed round-robin.
@@ -24,7 +25,7 @@ export function placePatchPanel({
 }: {
   component: InfrastructureComponent,
   rackProfiles: RackProfile[],
-  state: any,
+  state: StoreState,
   components: InfrastructureComponent[],
   typeLabel: string,
   coreRacks: RackProfile[],
@@ -82,9 +83,7 @@ export function placePatchPanel({
             ruPosition: placement.ruPosition,
           };
           return { placed, reportItem };
-        } else {
         }
-      } else {
       }
     }
   }

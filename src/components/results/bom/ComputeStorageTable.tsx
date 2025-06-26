@@ -4,11 +4,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { FileSpreadsheet } from 'lucide-react';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
-import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent, Disk, Server } from '@/types/infrastructure';
+import { ComponentWithPlacement } from '@/types/service-types';
 import { BomItemHoverCard } from './BomItemHoverCard';
 
 interface DiskLineItem {
-  disk: any;
+  disk: Disk;
   summarizedQuantity: number;
   clusterName: string;
   clusterId: string;
@@ -21,7 +22,7 @@ interface ComputeStorageTableProps {
   diskLineItems: Record<string, DiskLineItem>;
   getBomGroupKey: (component: InfrastructureComponent) => string;
   getStorageNodeGroupKey: (component: InfrastructureComponent) => string;
-  useComponentRoleId: (component: InfrastructureComponent & { summarizedQuantity: number }) => string | null;
+  componentRoles: Array<{ id: string; role: string; clusterInfo?: { clusterId: string } }>;
   onExport: (category: string) => void;
 }
 
@@ -30,9 +31,28 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
   diskLineItems,
   getBomGroupKey,
   getStorageNodeGroupKey,
-  useComponentRoleId,
+  componentRoles,
   onExport
-}) => (
+}) => {
+  // Helper function to find roleId for a component
+  const getComponentRoleId = (component: InfrastructureComponent & { summarizedQuantity: number }) => {
+    if (!component.role) return null;
+    
+    // For storage nodes and hyper-converged nodes, match by both role and clusterId to find the specific cluster
+    if (component.role === 'storageNode' || component.role === 'hyperConvergedNode') {
+      const clusterId = (component as ComponentWithPlacement).clusterInfo?.clusterId;
+      const foundRole = componentRoles.find(r => 
+        r.role === component.role && r.clusterInfo?.clusterId === clusterId
+      );
+      return foundRole?.id || null;
+    }
+    
+    // For other roles, match by role only
+    const foundRole = componentRoles.find(r => r.role === component.role);
+    return foundRole?.id || null;
+  };
+
+  return (
   <div>
     <div className="flex flex-row items-center justify-between mb-2">
       <h2 className="text-lg font-semibold">Compute & Storage Components</h2>
@@ -61,13 +81,13 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
         {summarizedComponentsByCategory['Compute']?.map((component) => {
           const quantity = component.summarizedQuantity;
           const totalCost = component.cost * quantity;
-          const roleId = useComponentRoleId(component);
+          const roleId = getComponentRoleId(component);
           const clusterName = component.role === 'hyperConvergedNode'
-            ? ((component as any).clusterInfo?.clusterName || (component as any).clusterInfo?.clusterId || 'Unassigned')
+            ? ((component as ComponentWithPlacement).clusterInfo?.clusterName || (component as ComponentWithPlacement).clusterInfo?.clusterId || 'Unassigned')
             : '-';
-          const attachedDisks = (component as any).attachedDisks || [];
+          const attachedDisks = (component as ComponentWithPlacement).attachedDisks || [];
           const disksSummary = attachedDisks.length > 0
-            ? attachedDisks.map((d: any) => `${d.quantity}x ${d.capacityTB || 0}TB`).join(', ')
+            ? attachedDisks.map((d: Disk & { quantity?: number }) => `${d.quantity || 1}x ${d.capacityTB || 0}TB`).join(', ')
             : '-';
             
           return (
@@ -78,8 +98,8 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
                 <TableCell>{clusterName}</TableCell>
                 <TableCell>{component.manufacturer}</TableCell>
                 <TableCell>{component.model}</TableCell>
-                <TableCell>{(component as any).cpuModel || '-'}</TableCell>
-                <TableCell className="text-right">{(component as any).memoryCapacity || (component as any).memoryGB || '-'}</TableCell>
+                <TableCell>{(component as Server).cpuModel || '-'}</TableCell>
+                <TableCell className="text-right">{(component as Server).memoryCapacity || (component as Server).memoryGB || '-'}</TableCell>
                 <TableCell className="text-right">{disksSummary}</TableCell>
                 <TableCell className="text-right flex items-center gap-1 justify-end">
                   {quantity}
@@ -99,15 +119,15 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
         ).map((server) => {
           const quantity = server.summarizedQuantity;
           const totalCost = server.cost * quantity;
-          const roleId = useComponentRoleId(server);
+          const roleId = getComponentRoleId(server);
           const clusterName =
-            (server as any).clusterInfo?.clusterName ||
-            (server as any).clusterInfo?.clusterId ||
+            (server as ComponentWithPlacement).clusterInfo?.clusterName ||
+            (server as ComponentWithPlacement).clusterInfo?.clusterId ||
             'Unassigned';
-          const attachedDisks = (server as any).attachedDisks || [];
+          const attachedDisks = (server as ComponentWithPlacement).attachedDisks || [];
           const disksSummary = attachedDisks.length > 0
             ? attachedDisks
-                .map((disk: any) =>
+                .map((disk: Disk & { quantity?: number }) =>
                   `${disk.model} (${disk.quantity} × ${disk.capacityTB}TB)`
                 )
                 .join(', ')
@@ -120,8 +140,8 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
                 <TableCell>{clusterName}</TableCell>
                 <TableCell>{server.manufacturer}</TableCell>
                 <TableCell>{server.model}</TableCell>
-                <TableCell>{(server as any).cpuModel || '-'}</TableCell>
-                <TableCell className="text-right">{(server as any).memoryCapacity || (server as any).memoryGB || '-'}</TableCell>
+                <TableCell>{(server as Server).cpuModel || '-'}</TableCell>
+                <TableCell className="text-right">{(server as Server).memoryCapacity || (server as Server).memoryGB || '-'}</TableCell>
                 <TableCell className="text-right">{disksSummary}</TableCell>
                 <TableCell className="text-right flex items-center gap-1 justify-end">
                   {quantity}
@@ -160,7 +180,7 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
         {summarizedComponentsByCategory['Acceleration']?.map((component) => {
           const quantity = component.summarizedQuantity;
           const totalCost = component.cost * quantity;
-          const roleId = useComponentRoleId(component);
+          const roleId = getComponentRoleId(component);
           return (
             <BomItemHoverCard key={`gpu-${getBomGroupKey(component)}`} component={component}>
               <TableRow className="cursor-pointer">
@@ -187,6 +207,7 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
       </TableBody>
     </Table>
   </div>
-);
+  );
+};
 
 export default ComputeStorageTable;

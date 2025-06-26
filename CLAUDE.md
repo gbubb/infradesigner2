@@ -48,9 +48,8 @@ Design calculations are automatically triggered by state changes through the cal
 
 ### Key Application Flows
 
-1. **Component Placement**: Drag components from palette to workspace → Automatic rack placement → Connection rule application
-2. **Design Calculation**: Requirements change → Role calculation → Component sizing → Cost/power analysis
-3. **Data Persistence**: Design changes → Debounced save to Supabase → Shared via unique URL
+1. **Design Calculation**: Requirements change → Role calculation → Component sizing → Cost/power analysis
+2. **Data Persistence**: Design changes → Debounced save to Supabase → Shared via unique URL
 
 ### Component Types
 
@@ -87,3 +86,84 @@ The system supports these infrastructure components:
 - Form validation uses Zod schemas
 - API operations use TanStack Query hooks
 - Component files follow PascalCase naming
+
+## Detailed Architecture & Implementation
+
+### Directory Structure
+```
+src/
+├── components/        # UI components organized by feature
+├── context/          # React context providers
+├── data/             # Static data and constants
+├── hooks/            # Custom React hooks
+├── integrations/     # External service integrations (Supabase)
+├── lib/              # Utilities and helpers
+├── pages/            # Route pages/panels
+├── services/         # Business logic and data operations
+├── store/            # Zustand state management
+├── types/            # TypeScript type definitions
+├── utils/            # Utility functions
+└── workers/          # Web workers for background processing
+```
+
+### Data Flow Architecture
+
+1. **User Input Flow**:
+   - Requirements Entry → State Update → Intelligent Design Updater → Selective Recalculation → Auto-save
+
+2. **Calculation Pipeline**:
+   - Role Calculator → Quantity Calculator → Component Assignment → Placement Service → Connection Generation
+
+3. **State Update Pattern**:
+   - All state changes trigger automatic recalculations through the calculation manager
+   - Intelligent updater performs selective updates to minimize recalculation overhead
+   - Changes are debounced (500ms) before persisting to database
+
+### Service Layer Details
+
+#### Connection Management (`/services/connection/`)
+- **ConnectionGenerator**: Creates network connections based on rules
+- **CableManager**: Manages cable types and lengths
+- **TransceiverManager**: Handles optic selection and compatibility
+- **BreakoutManager**: Manages breakout cable configurations
+- **ConnectionValidator**: Validates port compatibility and connections
+- **PortMatcher**: Matches available ports for connections
+
+#### Placement Services (`/services/placement/`)
+- **computePlacement**: Places compute nodes with availability zone distribution
+- **storageClusterPlacement**: Groups storage nodes into clusters
+- **coreNetworkPlacement**: Places core network devices in dedicated racks
+
+#### Datacenter Services (`/services/datacenter/`)
+- **DatacenterCostCalculator**: Calculates facility and operational costs
+- **PowerEfficiencyCalculator**: Computes PUE and power efficiency
+- **CapacityManagementService**: Manages rack and facility capacity
+- **RackPowerCalculationService**: Calculates per-rack power consumption
+
+### Database Schema
+
+Key tables with their purposes:
+- `components`: Infrastructure component definitions
+- `designs`: User-created designs (JSON structure)
+- `facilities`: Datacenter facility configurations
+- `facility_hierarchy`: Hierarchical datacenter structure (DC → Room → Row → Rack)
+- `facility_power_layers`: Power distribution configurations
+- `facility_cost_layers`: Cost allocation models
+- `rack_profiles`: Rack specifications and constraints
+- `profiles`: User profile information
+
+### Performance Optimizations
+
+1. **Selective Recalculation**: Change detection minimizes unnecessary updates
+2. **Debouncing**: Form inputs (500ms), auto-save (500ms), search (300ms)
+3. **Memoization**: Component filtering, calculation results, derived state
+4. **Lazy Loading**: Tab content, large lists, chart data
+
+
+### Common Workflows
+
+1. **Adding New Features**:
+   - Create new store slice if needed
+   - Add service layer for business logic
+   - Create UI components following existing patterns
+   - Update routes and navigation

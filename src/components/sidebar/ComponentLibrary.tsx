@@ -196,10 +196,10 @@ export const ComponentLibrary: React.FC = () => {
       preferredRack: component.placement?.preferredRack || 1,
       ports: component.ports ?? [], // Ensure ports is always set for type safety
       // Ensure pcieSlots is properly parsed if it comes as a string
-      pcieSlots: component.type === ComponentType.Server && (component as any).pcieSlots
-        ? typeof (component as any).pcieSlots === 'string' 
-          ? JSON.parse((component as any).pcieSlots)
-          : (component as any).pcieSlots
+      pcieSlots: component.type === ComponentType.Server && 'pcieSlots' in component
+        ? typeof (component as { pcieSlots?: string | Array<{ quantity: number; formFactor: string }> }).pcieSlots === 'string' 
+          ? JSON.parse((component as { pcieSlots?: string }).pcieSlots!)
+          : (component as { pcieSlots?: Array<{ quantity: number; formFactor: string }> }).pcieSlots
         : undefined,
     };
     
@@ -220,7 +220,7 @@ export const ComponentLibrary: React.FC = () => {
       ports: componentForm.ports,
     }
 
-    const componentToSave = processFormForSubmission(processedData as any);
+    const componentToSave = processFormForSubmission(processedData);
     
     // Ensure ID is always set for new components but not for edits
     if (!editingComponentId) {

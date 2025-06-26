@@ -13,21 +13,23 @@ import { v4 as uuidv4 } from 'uuid';
 import { AvailabilityZone } from '@/types/infrastructure/requirements-types';
 import { useDesignStore } from '@/store/designStore';
 
+type PhysicalConstraints = {
+  computeStorageRackQuantity?: number;
+  totalAvailabilityZones?: number;
+  availabilityZones?: AvailabilityZone[];
+  rackUnitsPerRack?: number;
+  powerPerRackWatts?: number;
+  useColoRacks?: boolean;
+  rackCostPerMonthEuros?: number;
+  electricityPricePerKwh?: number;
+  operationalLoadPercentage?: number;
+  facilityType?: 'none' | 'colocation' | 'owned';
+  selectedFacilityId?: string;
+};
+
 interface PhysicalConstraintsProps {
-  requirements: {
-    computeStorageRackQuantity?: number;
-    totalAvailabilityZones?: number;
-    availabilityZones?: AvailabilityZone[];
-    rackUnitsPerRack?: number;
-    powerPerRackWatts?: number;
-    useColoRacks?: boolean;
-    rackCostPerMonthEuros?: number;
-    electricityPricePerKwh?: number;
-    operationalLoadPercentage?: number;
-    facilityType?: 'none' | 'colocation' | 'owned';
-    selectedFacilityId?: string;
-  };
-  onUpdate: (physicalConstraints: any) => void;
+  requirements: PhysicalConstraints;
+  onUpdate: (physicalConstraints: PhysicalConstraints) => void;
 }
 
 export const PhysicalConstraintsForm: React.FC<PhysicalConstraintsProps> = ({
@@ -122,7 +124,7 @@ export const PhysicalConstraintsForm: React.FC<PhysicalConstraintsProps> = ({
       }
       onUpdate({ availabilityZones: azs });
     }
-  }, [requirements.totalAvailabilityZones, requirements.availabilityZones]);
+  }, [requirements.totalAvailabilityZones, requirements.availabilityZones, onUpdate]);
 
   return (
     <div className="space-y-6">

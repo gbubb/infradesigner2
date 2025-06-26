@@ -6,7 +6,7 @@ import { ReactNode } from 'react';
 export interface ChartTooltipProps {
   active?: boolean;
   payload?: Array<{
-    payload: any;
+    payload: Record<string, unknown>;
     value?: number;
     name?: string;
     dataKey?: string;
@@ -17,7 +17,7 @@ export interface ChartTooltipProps {
 
 // Chart data types
 export interface ChartPayload {
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   value?: number;
   name?: string;
   dataKey?: string;
@@ -53,7 +53,7 @@ export interface ModalProps extends BaseComponentProps {
 export interface TableColumn<T> {
   key: string;
   label: string;
-  render?: (value: any, row: T) => ReactNode;
+  render?: (value: unknown, row: T) => ReactNode;
   width?: string | number;
   align?: 'left' | 'center' | 'right';
 }
@@ -63,7 +63,7 @@ export interface DragItem {
   id: string;
   type: string;
   index?: number;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 // Tree node types
@@ -71,7 +71,7 @@ export interface TreeNode {
   id: string;
   label: string;
   children?: TreeNode[];
-  data?: any;
+  data?: Record<string, unknown>;
   expanded?: boolean;
   selected?: boolean;
 }
@@ -107,7 +107,7 @@ export interface SortState {
 export interface FilterState {
   field: string;
   operator: 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'gt' | 'lt' | 'gte' | 'lte';
-  value: any;
+  value: string | number | boolean | string[] | number[];
 }
 
 // Search types

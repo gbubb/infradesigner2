@@ -50,7 +50,7 @@ export function generateConnections(
   // Pre-build cable lookup map for efficiency
   const cableLookup = new Map<string, Cable>();
   allCablesToProcess.forEach(cable => {
-    if (typeof (cable as any).connectorA_Type === 'undefined' || typeof (cable as any).connectorB_Type === 'undefined') {
+    if (!('connectorA_Type' in cable) || !('connectorB_Type' in cable)) {
       return;
     }
     if (cable.type !== ComponentType.Cable) {
@@ -83,7 +83,7 @@ export function generateConnections(
 
   const usedSrcPorts = new Set<string>();
   const usedDstPorts = new Set<string>();
-  const breakoutGroups = new Map<string, any>();
+  const breakoutGroups = new Map<string, NetworkConnection[]>();
   const breakoutCableCounter = 1000;
   
   // Map deviceId to rack and ru

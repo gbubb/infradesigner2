@@ -36,72 +36,75 @@ export function RackMappingPanel() {
   const facility = selectedFacilityId ? getFacilityById(selectedFacilityId) : null;
 
   useEffect(() => {
+    const loadAllFacilityRacks = async () => {
+      if (!selectedFacilityId) return;
+      
+      try {
+        const racks = await DatacenterRackService.getFacilityRacks(selectedFacilityId);
+        setAllFacilityRacks(racks);
+      } catch (error) {
+        console.error('Error loading facility racks:', error);
+      }
+    };
+
     if (selectedFacilityId) {
       loadAllFacilityRacks();
     }
   }, [selectedFacilityId]);
 
   useEffect(() => {
+    const loadDatacenterRacks = async () => {
+      if (!selectedLevel) return;
+      
+      setLoading(true);
+      try {
+        const racks = await DatacenterRackService.getRacksWithUsage(selectedLevel);
+        setDatacenterRacks(racks);
+      } catch (error) {
+        console.error('Error loading datacenter racks:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load datacenter racks",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (selectedLevel) {
       loadDatacenterRacks();
     }
   }, [selectedLevel]);
 
   useEffect(() => {
+    const loadDesignRacks = async () => {
+      if (!activeDesign?.id) return;
+      
+      try {
+        // Import racks from the current design if not already imported
+        const importedRacks = await RackFacilityIntegrationService.importRacksFromDesign(activeDesign.id);
+        
+        // Get all design racks
+        const { data: racks } = await supabase
+          .from('rack_profiles')
+          .select('*')
+          .eq('design_id', activeDesign.id)
+          .order('name');
+        
+        setDesignRacks(racks || []);
+      } catch (error) {
+        console.error('Error loading design racks:', error);
+      }
+    };
+
     if (activeDesign?.id) {
       loadDesignRacks();
     }
   }, [activeDesign?.id]);
 
-  const loadAllFacilityRacks = async () => {
-    if (!selectedFacilityId) return;
-    
-    try {
-      const racks = await DatacenterRackService.getFacilityRacks(selectedFacilityId);
-      setAllFacilityRacks(racks);
-    } catch (error) {
-      console.error('Error loading facility racks:', error);
-    }
-  };
 
-  const loadDatacenterRacks = async () => {
-    if (!selectedLevel) return;
-    
-    setLoading(true);
-    try {
-      const racks = await DatacenterRackService.getRacksWithUsage(selectedLevel);
-      setDatacenterRacks(racks);
-    } catch (error) {
-      console.error('Error loading datacenter racks:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load datacenter racks",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const loadDesignRacks = async () => {
-    if (!activeDesign?.id) return;
-    
-    try {
-      // Import racks from the current design if not already imported
-      const importedRacks = await RackFacilityIntegrationService.importRacksFromDesign(activeDesign.id);
-      
-      // Get all design racks
-      const { data: racks } = await supabase
-        .from('rack_profiles')
-        .select('*')
-        .eq('design_id', activeDesign.id)
-        .order('name');
-      
-      setDesignRacks(racks || []);
-    } catch (error) {
-      console.error('Error loading design racks:', error);
-    }
-  };
 
   const handleMapRack = async () => {
     if (!selectedDesignRack || !selectedDatacenterRack || !activeDesign?.id) return;
@@ -120,7 +123,17 @@ export function RackMappingPanel() {
       });
       
       // Reload datacenter racks to update status
-      await loadDatacenterRacks();
+      if (selectedLevel) {
+        setLoading(true);
+        try {
+          const racks = await DatacenterRackService.getRacksWithUsage(selectedLevel);
+          setDatacenterRacks(racks);
+        } catch (error) {
+          console.error('Error loading datacenter racks:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
       
       // Clear selections
       setSelectedDesignRack(null);
@@ -146,7 +159,10 @@ export function RackMappingPanel() {
         description: "Successfully unmapped design rack",
       });
       
-      await loadDatacenterRacks();
+      if (selectedLevel) {
+        const racks = await DatacenterRackService.getRacksWithUsage(selectedLevel);
+        setDatacenterRacks(racks);
+      }
     } catch (error) {
       console.error('Error unmapping rack:', error);
       toast({

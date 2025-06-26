@@ -6,8 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ServerRole, DiskSlotType, NetworkPortType } from '@/types/infrastructure';
 
 interface ServerFormFieldsProps {
-  formValues: any;
-  onChange: (name: string, value: any) => void;
+  formValues: Record<string, unknown>;
+  onChange: (name: string, value: unknown) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 

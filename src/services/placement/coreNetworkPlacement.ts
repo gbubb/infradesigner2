@@ -1,7 +1,9 @@
-
 import { RackProfile } from '@/types/infrastructure/rack-types';
+import { InfrastructureComponent } from '@/types/infrastructure/component-types';
+import { ComponentWithPlacement } from '@/types/service-types';
+import { getTypeKey } from './placementUtils';
 
-export function assignCoreNetworkToRack(component: any, coreRacks: RackProfile[], components: any[]): RackProfile | undefined {
+export function assignCoreNetworkToRack(component: InfrastructureComponent | ComponentWithPlacement, coreRacks: RackProfile[], components: (InfrastructureComponent | ComponentWithPlacement)[]): RackProfile | undefined {
   // Evenly distribute core network devices among core racks
   if (coreRacks.length === 0) return undefined;
   const typeKey = getTypeKey(component);
@@ -18,11 +20,3 @@ export function assignCoreNetworkToRack(component: any, coreRacks: RackProfile[]
   return minRack;
 }
 
-function getTypeKey(component: any) {
-  return (
-    component.namingPrefix ||
-    component.typePrefix ||
-    component.type ||
-    (component.role && component.role.toLowerCase())
-  ).toString().toLowerCase();
-}

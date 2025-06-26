@@ -8,12 +8,13 @@ import { ComputeClusterForm } from './ComputeClusterForm';
 import { v4 as uuidv4 } from 'uuid';
 import { Switch } from '@/components/ui/switch';
 import { useStore } from '@/store';
+import { ComputeClusterRequirement } from '@/types/infrastructure';
 
 interface ComputeRequirements {
   controllerNodeCount?: number;
   infrastructureClusterRequired?: boolean;
   infrastructureNodeCount?: number;
-  computeClusters: any[];
+  computeClusters: ComputeClusterRequirement[];
   deviceLifespanYears?: number;
   averageVMVCPUs?: number;
   averageVMMemoryGB?: number;

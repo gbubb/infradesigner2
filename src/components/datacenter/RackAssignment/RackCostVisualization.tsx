@@ -32,27 +32,28 @@ export function RackCostVisualization() {
   const facility = selectedFacilityId ? getFacilityById(selectedFacilityId) : null;
 
   useEffect(() => {
+    const loadRackCosts = async () => {
+      if (!selectedFacilityId) return;
+      
+      setLoading(true);
+      try {
+        const costs = await calculateRackCosts(selectedFacilityId);
+        setRackCosts(costs);
+        if (costs.length > 0) {
+          setSelectedRack(costs[0]);
+        }
+      } catch (error) {
+        console.error('Error loading rack costs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (selectedFacilityId) {
       loadRackCosts();
     }
   }, [selectedFacilityId, calculateRackCosts]);
 
-  const loadRackCosts = async () => {
-    if (!selectedFacilityId) return;
-    
-    setLoading(true);
-    try {
-      const costs = await calculateRackCosts(selectedFacilityId);
-      setRackCosts(costs);
-      if (costs.length > 0) {
-        setSelectedRack(costs[0]);
-      }
-    } catch (error) {
-      console.error('Error loading rack costs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!facility) {
     return (

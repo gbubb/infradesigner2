@@ -3,6 +3,7 @@ import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
 import { PlacementReportItem } from '@/types/placement-types';
 import { InfrastructureComponent } from '@/types/infrastructure';
+import { StoreState } from '@/store/types';
 
 export function placeDefaultDevice({
   component,
@@ -17,7 +18,7 @@ export function placeDefaultDevice({
   allowedAZs: string[],
   rackProfiles: RackProfile[],
   components: InfrastructureComponent[],
-  state: any,
+  state: StoreState,
   typeLabel: string,
   typeCounters: Record<string, number>
 }): { placed: boolean, reportItem: PlacementReportItem | null } {

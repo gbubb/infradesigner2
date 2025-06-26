@@ -31,8 +31,8 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
     const totalTypePower = components.reduce((sum, comp) => sum + ((comp.powerRequired || 0) * (comp.quantity || 1)), 0);
     
     const totalTypeRU = components.reduce((sum, comp) => {
-      if ('rackUnitsConsumed' in comp) {
-        return sum + ((comp as any).rackUnitsConsumed * (comp.quantity || 1));
+      if ('ruSize' in comp && comp.ruSize) {
+        return sum + (comp.ruSize * (comp.quantity || 1));
       }
       return sum;
     }, 0);
@@ -61,7 +61,15 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
   };
   
   // Format for chart labels
-  const formatLabelValue = (value: number, name: string, props: any) => {
+  interface LabelProps {
+    payload: {
+      type: string;
+      [key: string]: unknown;
+    };
+    percent: number;
+  }
+  
+  const formatLabelValue = (value: number, name: string, props: LabelProps) => {
     const item = props.payload;
     return `${name}: ${item.type} (${props.percent.toFixed(1)}%)`;
   };

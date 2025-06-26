@@ -5,8 +5,14 @@ import { DesignStatisticsTab } from './DesignStatisticsTab';
 import { CapacityAnalysisTab } from './CapacityAnalysisTab';
 import { DesignAlerts } from '../DesignAlerts';
 
+interface DesignError {
+  id: string;
+  title: string;
+  description: string;
+}
+
 interface ResultsTabsProps {
-  designErrors: any[];
+  designErrors: DesignError[];
   hasNoDesign: boolean;
 }
 

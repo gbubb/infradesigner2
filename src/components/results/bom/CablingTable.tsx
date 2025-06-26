@@ -3,12 +3,13 @@ import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { FileSpreadsheet, Cable as CableIcon } from 'lucide-react';
-import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent, FiberPatchPanel, CopperPatchPanel, Cassette, Cable } from '@/types/infrastructure';
 import { BomItemHoverCard } from './BomItemHoverCard';
+import { CableLineItem } from './networkBomUtils';
 
 interface CablingTableProps {
   summarizedComponentsByCategory: Record<string, (InfrastructureComponent & { summarizedQuantity: number })[]>;
-  cableLineItems: Record<string, any>;
+  cableLineItems: Record<string, CableLineItem>;
   getBomGroupKey: (component: InfrastructureComponent) => string;
   onExport: (category: string) => void;
   componentTemplates?: InfrastructureComponent[];
@@ -53,10 +54,10 @@ export const CablingTable: React.FC<CablingTableProps> = ({
           const quantity = component.summarizedQuantity;
           const totalCost = component.cost * quantity;
           let details = '-';
-          if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${(component as any).cassetteCapacity} cassettes`;
-          else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${(component as any).portQuantity} ports`;
-          else if (component.type === ComponentType.Cassette) details = `${(component as any).portType}, ${(component as any).portQuantity} ports`;
-          else if (component.type === ComponentType.Cable) details = `${(component as any).length}m, ${(component as any).connectorA_Type} to ${(component as any).connectorB_Type}, ${(component as any).mediaType}`;
+          if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${(component as FiberPatchPanel).cassetteCapacity} cassettes`;
+          else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${(component as CopperPatchPanel).portQuantity} ports`;
+          else if (component.type === ComponentType.Cassette) details = `${(component as Cassette).portType}, ${(component as Cassette).portQuantity} ports`;
+          else if (component.type === ComponentType.Cable) details = `${(component as Cable).length}m, ${(component as Cable).connectorA_Type} to ${(component as Cable).connectorB_Type}, ${(component as Cable).mediaType}`;
           return (
             <BomItemHoverCard key={`cabling-${getBomGroupKey(component)}`} component={component}>
               <TableRow className="cursor-pointer">
@@ -72,7 +73,7 @@ export const CablingTable: React.FC<CablingTableProps> = ({
           );
         })}
         {/* Cable Line Items (from Network Connections) */}
-        {Object.values(cableLineItems).map((item: any, idx: number) => {
+        {Object.values(cableLineItems).map((item: CableLineItem, idx: number) => {
           const cableTemplate = getCableTemplate(item.cableTemplateId);
           const rowContent = (
             <TableRow className={cableTemplate ? "cursor-pointer" : ""}>

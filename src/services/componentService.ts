@@ -36,7 +36,7 @@ interface ComponentRow {
   serverrole: string | null;
   switchrole: string | null;
   isdefault: boolean | null;
-  details: Record<string, any> | null;
+  details: Record<string, unknown> | null;
   created_at?: string | null;
 }
 
@@ -83,7 +83,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
         
         // Ensure we correctly assign ports array where present
         switch (component.type) {
-          case ComponentType.Server:
+          case ComponentType.Server: {
             const memoryCapacity = details.memoryCapacity || details.memoryGB || 
               (details.memoryTB ? details.memoryTB * 1024 : 0);
             const coreCount = details.cpuSockets && details.cpuCoresPerSocket ?
@@ -129,8 +129,9 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
               psuQuantity: details.psuQuantity || undefined,
               psuEfficiency: details.psuEfficiency || undefined,
             } as Server;
+          }
             
-          case ComponentType.Switch:
+          case ComponentType.Switch: {
             const switchComponent = {
               ...baseComponent,
               ...commonFields,
@@ -154,6 +155,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
             });
             
             return switchComponent;
+          }
             
           case ComponentType.Disk:
             return {
@@ -291,13 +293,13 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
       description: componentWithValidID.description || '',
       cost: componentWithValidID.cost || 0,
       powerrequired: componentWithValidID.powerRequired || 0,
-      serverrole: (componentWithValidID as any).serverRole || null,
-      switchrole: (componentWithValidID as any).switchRole || null,
+      serverrole: componentWithValidID.type === ComponentType.Server ? (componentWithValidID as Server).serverRole || null : null,
+      switchrole: componentWithValidID.type === ComponentType.Switch ? (componentWithValidID as Switch).switchRole || null : null,
       isdefault: componentWithValidID.isDefault || false
     };
     
     // Extract specialized fields based on component type
-    const specializedFields: Record<string, any> = {};
+    const specializedFields: Record<string, unknown> = {};
     
     // Remove base fields to avoid duplication
     const { 
@@ -307,10 +309,10 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
     
     // Remove serverRole and switchRole as they're already handled
     if ('serverRole' in rest) {
-      const { serverRole, ...remaining } = rest as any;
+      const { serverRole, ...remaining } = rest as Server;
       Object.assign(specializedFields, remaining);
     } else if ('switchRole' in rest) {
-      const { switchRole, ...remaining } = rest as any;
+      const { switchRole, ...remaining } = rest as Switch;
       Object.assign(specializedFields, remaining);
     } else {
       Object.assign(specializedFields, rest);
@@ -330,7 +332,7 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
         specializedFields.portType = (componentWithValidID as Cassette).portType;
         specializedFields.portQuantity = (componentWithValidID as Cassette).portQuantity || 0;
         break;
-      case ComponentType.Cable:
+      case ComponentType.Cable: {
         const cable = componentWithValidID as Cable;
         specializedFields.length = cable.length || 0;
         specializedFields.connectorA_Type = cable.connectorA_Type || ConnectorType.RJ45;
@@ -339,7 +341,8 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
         specializedFields.isBreakout = cable.isBreakout || false;
         specializedFields.connectorB_Quantity = cable.connectorB_Quantity || 1;
         break;
-      case ComponentType.Transceiver:
+      }
+      case ComponentType.Transceiver: {
         const transceiver = componentWithValidID as Transceiver;
         specializedFields.mediaTypeSupported = transceiver.mediaTypeSupported || [];
         specializedFields.connectorType = transceiver.connectorType;
@@ -349,6 +352,7 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
         specializedFields.wavelengthNm = transceiver.wavelengthNm;
         specializedFields.breakoutCompatible = transceiver.breakoutCompatible || false;
         break;
+      }
     }
     
     // Ensure ports field is always saved if present

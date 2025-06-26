@@ -6,6 +6,7 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { ResultsHeader } from './ResultsHeader';
 import { ResultsTabs } from './tabs/ResultsTabs';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
+import { RackProfile } from '@/types/infrastructure';
 
 export const ResultsPanel: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
@@ -30,7 +31,7 @@ export const ResultsPanel: React.FC = () => {
           // Also check if we have rack profiles with devices - if so, avoid recalculation to preserve layouts
           const hasRackLayouts = activeDesign?.rackprofiles && 
             Array.isArray(activeDesign.rackprofiles) && 
-            activeDesign.rackprofiles.some((rack: any) => rack.devices && rack.devices.length > 0);
+            activeDesign.rackprofiles.some((rack: RackProfile) => rack.devices && rack.devices.length > 0);
           
           const needsRecalculation = (!hasValidDesign || !componentRoles || componentRoles.length === 0) && !hasRackLayouts;
           

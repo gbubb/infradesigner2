@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType, DesignRequirements } from '@/types/infrastructure';
+import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType, DesignRequirements, StorageClusterRequirement } from '@/types/infrastructure';
 
 /**
  * Calculates component roles based on requirements
@@ -7,7 +7,7 @@ import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType,
 export const calculateComponentRoles = (requirements: DesignRequirements): ComponentRole[] => {
   const getValue = <T>(obj: DesignRequirements, path: string, defaultValue: T): T => {
     try {
-      return path.split('.').reduce((o: Record<string, any>, key) => o?.[key], obj as Record<string, any>) || defaultValue;
+      return path.split('.').reduce((o: Record<string, unknown>, key) => o?.[key], obj as Record<string, unknown>) || defaultValue;
     } catch (error) {
       return defaultValue;
     }
@@ -77,7 +77,7 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
   const newRoles: ComponentRole[] = [controllerRole];
   
   // Build a map of compute clusters that are used for hyper-converged storage
-  const hyperConvergedComputeClusters = new Map<string, any>();
+  const hyperConvergedComputeClusters = new Map<string, StorageClusterRequirement>();
   storageClusters.forEach(storageCluster => {
     if (storageCluster.hyperConverged && storageCluster.computeClusterId) {
       hyperConvergedComputeClusters.set(storageCluster.computeClusterId, storageCluster);

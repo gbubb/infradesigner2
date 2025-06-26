@@ -2,6 +2,9 @@
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
+import { InfrastructureComponent } from '@/types/infrastructure';
+import { ClusterInfo } from '@/types/infrastructure/roles-types';
+import { DiskAttachment } from '@/types/infrastructure/storage-types';
 
 export const useStorageClustersWrapper = () => {
   const { activeDesign, requirements, componentTemplates } = useDesignStore();
@@ -26,13 +29,13 @@ export const useStorageClustersWrapper = () => {
         // Find hyper-converged nodes from the compute cluster
         clusterNodes = activeDesign.components.filter(
           component => component.role === 'hyperConvergedNode' && 
-          (component as any).clusterInfo?.clusterId === cluster.computeClusterId
+          component.clusterInfo?.clusterId === cluster.computeClusterId
         );
       } else {
         // Find regular storage nodes for this cluster
         clusterNodes = activeDesign.components.filter(
           component => component.role === 'storageNode' && 
-          (component as any).clusterInfo?.clusterId === cluster.id
+          component.clusterInfo?.clusterId === cluster.id
         );
       }
       
@@ -47,12 +50,12 @@ export const useStorageClustersWrapper = () => {
         totalNodeCost += nodeCost;
         
         // Add attached disks capacity and calculate storage-specific costs
-        if ('attachedDisks' in node) {
-          const disks = (node as any).attachedDisks || [];
+        if ('attachedDisks' in node && node.attachedDisks) {
+          const disks = node.attachedDisks || [];
           let totalDisksInNode = 0;
           let diskCostForNode = 0;
           
-          disks.forEach((disk: any) => {
+          disks.forEach((disk) => {
             if (disk && 'capacityTB' in disk) {
               const diskQuantity = disk.quantity || 1;
               totalRawCapacityTB += disk.capacityTB * diskQuantity * quantity;
@@ -68,7 +71,7 @@ export const useStorageClustersWrapper = () => {
             // Find the server template to get CPU core count
             const serverTemplate = componentTemplates.find(t => t.id === node.componentId);
             if (serverTemplate && serverTemplate.type === 'server') {
-              const server = serverTemplate as any;
+              const server = serverTemplate as { cpuSockets?: number; cpuCoresPerSocket?: number };
               const totalCores = (server.cpuSockets || 0) * (server.cpuCoresPerSocket || 0);
               
               if (totalCores > 0) {

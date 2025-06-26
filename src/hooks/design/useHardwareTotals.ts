@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { ClusterInfo } from '@/types/infrastructure/roles-types';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/types/infrastructure';
 
 export const useHardwareTotals = () => {
@@ -26,7 +27,7 @@ export const useHardwareTotals = () => {
     const computeClusterNodes = activeDesign.components.filter(component => 
       (component.role === 'computeNode' || component.role === 'gpuNode' || component.role === 'hyperConvergedNode') && 
       component.type === ComponentType.Server &&
-      (component as any).clusterInfo
+      component.clusterInfo
     );
     
     // Calculate compute cluster totals separately
@@ -46,8 +47,9 @@ export const useHardwareTotals = () => {
       }
       
       // Get overcommit ratio from cluster if available
-      if ((component as any).clusterInfo) {
-        const clusterId = (component as any).clusterInfo.clusterId;
+      if (component.clusterInfo) {
+        const clusterInfo = component.clusterInfo as ClusterInfo;
+        const clusterId = clusterInfo.clusterId;
         const matchingCluster = requirements.computeRequirements.computeClusters.find(c => c.id === clusterId);
         if (matchingCluster) {
           overcommitRatio = matchingCluster.overcommitRatio || 1;
@@ -65,8 +67,8 @@ export const useHardwareTotals = () => {
       } else if ('memoryGB' in component && component.memoryGB > 0) {
         componentMemoryGB = component.memoryGB;
       }
-      else if ('memoryTB' in component && (component as any).memoryTB > 0) {
-        componentMemoryGB = (component as any).memoryTB * 1024;
+      else if ('memoryTB' in component && (component as { memoryTB?: number }).memoryTB && (component as { memoryTB?: number }).memoryTB! > 0) {
+        componentMemoryGB = (component as { memoryTB?: number }).memoryTB! * 1024;
       }
       if (componentMemoryGB === 0) {
         // Keep this warn for missing configuration
@@ -100,9 +102,9 @@ export const useHardwareTotals = () => {
         }
         return false;
       })
-      .reduce((acc: Record<string, any[]>, node) => {
-        if ((node as any).clusterInfo?.clusterId) {
-          const nodeClusterId = (node as any).clusterInfo.clusterId;
+      .reduce((acc: Record<string, InfrastructureComponent[]>, node) => {
+        if (node.clusterInfo?.clusterId) {
+          const nodeClusterId = node.clusterInfo.clusterId;
           
           // For hyper-converged nodes, map them to their storage cluster
           if (node.role === 'hyperConvergedNode') {
@@ -136,7 +138,7 @@ export const useHardwareTotals = () => {
       nodes.forEach(node => {
         const quantity = node.quantity || 1;
         if ('attachedDisks' in node && Array.isArray(node.attachedDisks)) {
-          node.attachedDisks.forEach((disk: any) => {
+          node.attachedDisks.forEach((disk) => {
             if (disk && 'capacityTB' in disk) {
               clusterRawCapacityTB += disk.capacityTB * (disk.quantity || 1) * quantity;
             }
@@ -161,8 +163,8 @@ export const useHardwareTotals = () => {
           componentMemoryGB = component.memoryCapacity;
         } else if ('memoryGB' in component && component.memoryGB > 0) {
           componentMemoryGB = component.memoryGB;
-        } else if ('memoryTB' in component && (component as any).memoryTB > 0) {
-          componentMemoryGB = (component as any).memoryTB * 1024;
+        } else if ('memoryTB' in component && (component as { memoryTB?: number }).memoryTB && (component as { memoryTB?: number }).memoryTB! > 0) {
+          componentMemoryGB = (component as { memoryTB?: number }).memoryTB! * 1024;
         }
         otherMemoryGB += componentMemoryGB * quantity;
       });

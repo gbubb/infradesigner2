@@ -4,24 +4,60 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { FileSpreadsheet } from 'lucide-react';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
-import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent, Switch, Router, Firewall, Transceiver } from '@/types/infrastructure';
+import { ComponentWithPlacement } from '@/types/service-types';
+import { MediaType } from '@/types/infrastructure';
 import { BomItemHoverCard } from './BomItemHoverCard';
+
+interface TransceiverLineItem {
+  transceiverTemplateId: string;
+  speed: string;
+  connectorType: string;
+  manufacturer: string;
+  model: string;
+  mediaTypeSupported: MediaType[];
+  maxDistance: string;
+  count: number;
+  costPer: number;
+  total: number;
+}
 
 interface NetworkTableProps {
   summarizedComponentsByCategory: Record<string, (InfrastructureComponent & { summarizedQuantity: number })[]>;
-  transceiverLineItems: Record<string, any>;
+  transceiverLineItems: Record<string, TransceiverLineItem>;
   getBomGroupKey: (component: InfrastructureComponent) => string;
-  useComponentRoleId: (component: InfrastructureComponent & { summarizedQuantity: number }) => string | null;
+  componentRoles: Array<{ id: string; role: string; clusterInfo?: { clusterId: string } }>;
   onExport: (category: string) => void;
 }
+
+type NetworkComponent = Switch | Router | Firewall;
 
 export const NetworkTable: React.FC<NetworkTableProps> = ({
   summarizedComponentsByCategory,
   transceiverLineItems,
   getBomGroupKey,
-  useComponentRoleId,
+  componentRoles,
   onExport
-}) => (
+}) => {
+  // Helper function to find roleId for a component
+  const getComponentRoleId = (component: InfrastructureComponent & { summarizedQuantity: number }) => {
+    if (!component.role) return null;
+    
+    // For storage nodes and hyper-converged nodes, match by both role and clusterId to find the specific cluster
+    if (component.role === 'storageNode' || component.role === 'hyperConvergedNode') {
+      const clusterId = (component as ComponentWithPlacement).clusterInfo?.clusterId;
+      const foundRole = componentRoles.find(r => 
+        r.role === component.role && r.clusterInfo?.clusterId === clusterId
+      );
+      return foundRole?.id || null;
+    }
+    
+    // For other roles, match by role only
+    const foundRole = componentRoles.find(r => r.role === component.role);
+    return foundRole?.id || null;
+  };
+
+  return (
   <div>
     <div className="flex flex-row items-center justify-between mb-2">
       <h2 className="text-lg font-semibold">Network Components</h2>
@@ -48,16 +84,16 @@ export const NetworkTable: React.FC<NetworkTableProps> = ({
         {[...(summarizedComponentsByCategory['Network'] || []), ...(summarizedComponentsByCategory['Security'] || [])].map((component) => {
           const quantity = component.summarizedQuantity;
           const totalCost = component.cost * quantity;
-          const roleId = useComponentRoleId(component);
+          const roleId = getComponentRoleId(component);
           return (
             <BomItemHoverCard key={`network-${getBomGroupKey(component)}`} component={component}>
               <TableRow className="cursor-pointer">
                 <TableCell>{component.type}</TableCell>
-                <TableCell>{component.role || component.switchRole || 'Unassigned'}</TableCell>
+                <TableCell>{component.role || ('switchRole' in component ? component.switchRole : null) || 'Unassigned'}</TableCell>
                 <TableCell>{component.manufacturer}</TableCell>
                 <TableCell>{component.model}</TableCell>
-                <TableCell>{(component as any).portCount || (component as any).portsProvidedQuantity || '-'}</TableCell>
-                <TableCell>{(component as any).portSpeed || (component as any).portSpeedType || '-'}</TableCell>
+                <TableCell>{'portCount' in component ? component.portCount : ('portsProvidedQuantity' in component ? component.portsProvidedQuantity : '-')}</TableCell>
+                <TableCell>{'portSpeed' in component ? component.portSpeed : ('portSpeedType' in component ? component.portSpeedType : '-')}</TableCell>
                 <TableCell className="text-right flex items-center gap-1 justify-end">
                   {quantity}
                   {roleId && (
@@ -71,7 +107,7 @@ export const NetworkTable: React.FC<NetworkTableProps> = ({
           );
         })}
         {/* Transceivers */}
-        {Object.values(transceiverLineItems).map((item: any, idx: number) => (
+        {Object.values(transceiverLineItems).map((item: TransceiverLineItem, idx: number) => (
           <TableRow key={`trxline-${item.transceiverTemplateId}-${idx}`}>
             <TableCell>Transceiver</TableCell>
             <TableCell>{item.speed} {item.connectorType}</TableCell>
@@ -87,6 +123,7 @@ export const NetworkTable: React.FC<NetworkTableProps> = ({
       </TableBody>
     </Table>
   </div>
-);
+  );
+};
 
 export default NetworkTable;

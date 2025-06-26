@@ -33,29 +33,30 @@ export function RackDefinitionPanel() {
   const facility = selectedFacilityId ? getFacilityById(selectedFacilityId) : null;
 
   useEffect(() => {
+    const loadDatacenterRacks = async () => {
+      if (!selectedLevel) return;
+      
+      setLoading(true);
+      try {
+        const racks = await DatacenterRackService.getRacksByHierarchyLevel(selectedLevel);
+        setDatacenterRacks(racks);
+      } catch (error) {
+        console.error('Error loading datacenter racks:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load datacenter racks",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (selectedLevel) {
       loadDatacenterRacks();
     }
   }, [selectedLevel]);
 
-  const loadDatacenterRacks = async () => {
-    if (!selectedLevel) return;
-    
-    setLoading(true);
-    try {
-      const racks = await DatacenterRackService.getRacksByHierarchyLevel(selectedLevel);
-      setDatacenterRacks(racks);
-    } catch (error) {
-      console.error('Error loading datacenter racks:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load datacenter racks",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleCreateRacks = async () => {
     if (!selectedLevel) return;
@@ -87,7 +88,10 @@ export function RackDefinitionPanel() {
       });
       
       // Reload racks
-      await loadDatacenterRacks();
+      if (selectedLevel) {
+        const racks = await DatacenterRackService.getRacksByHierarchyLevel(selectedLevel);
+        setDatacenterRacks(racks);
+      }
       
       // Reset form
       setRackCount('10');
@@ -110,7 +114,10 @@ export function RackDefinitionPanel() {
         title: "Racks Deleted",
         description: `Successfully deleted ${rackIds.length} rack(s)`,
       });
-      await loadDatacenterRacks();
+      if (selectedLevel) {
+        const racks = await DatacenterRackService.getRacksByHierarchyLevel(selectedLevel);
+        setDatacenterRacks(racks);
+      }
     } catch (error) {
       console.error('Error deleting racks:', error);
       toast({

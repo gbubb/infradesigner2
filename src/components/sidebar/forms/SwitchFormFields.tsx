@@ -7,8 +7,8 @@ import { SwitchRole } from '@/types/infrastructure';
 import { PortSpeed } from '@/types/infrastructure/port-types';
 
 interface SwitchFormFieldsProps {
-  formValues: any;
-  onChange: (name: string, value: any) => void;
+  formValues: Record<string, unknown>;
+  onChange: (name: string, value: unknown) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 

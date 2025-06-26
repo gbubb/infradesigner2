@@ -71,7 +71,7 @@ export const LicensingRequirementsForm: React.FC<LicensingRequirementsFormProps>
     });
   };
 
-  const handleUpdateCost = (id: string, field: keyof LicensingCost, value: any) => {
+  const handleUpdateCost = (id: string, field: keyof LicensingCost, value: string | number) => {
     onUpdate({
       ...requirements,
       additionalCosts: requirements.additionalCosts.map(cost =>

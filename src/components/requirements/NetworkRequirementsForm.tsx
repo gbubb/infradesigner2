@@ -20,7 +20,7 @@ export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
         ipmiNetwork: 'Dedicated IPMI switch'
       });
     }
-  }, [isConvergedManagement]);
+  }, [isConvergedManagement, onUpdate, requirements]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

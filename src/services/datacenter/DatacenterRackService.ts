@@ -7,7 +7,41 @@ import type {
   RackLayoutConfig,
   RackRow
 } from '@/types/infrastructure/datacenter-rack-types';
-import type { RackProfile } from '@/types/infrastructure/rack-types';
+import type { RackProfile, PlacedDevice } from '@/types/infrastructure/rack-types';
+
+// Database row types
+interface DatacenterRackDatabaseRow {
+  id: string;
+  facility_id: string;
+  hierarchy_level_id: string;
+  name: string;
+  rack_number: string;
+  row_number?: string;
+  u_height: number;
+  max_power_kw?: number;
+  rack_type?: string;
+  status?: string;
+  reserved_for_design_id?: string;
+  position_x?: number;
+  position_y?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface RackMappingDatabaseRow {
+  id: string;
+  design_rack_id: string;
+  datacenter_rack_id: string;
+  design_id: string;
+  mapped_at?: string;
+  mapped_by?: string;
+  rack_profiles?: RackProfileDatabaseRow;
+}
+
+interface RackProfileDatabaseRow extends RackProfile {
+  actual_power_usage_kw?: number;
+  power_allocation_kw?: number;
+}
 
 export class DatacenterRackService {
   /**
@@ -61,7 +95,7 @@ export class DatacenterRackService {
     if (mappingError) throw mappingError;
 
     // Create a map of datacenter rack ID to design rack
-    const rackMappingMap = new Map<string, any>();
+    const rackMappingMap = new Map<string, RackProfileDatabaseRow>();
     mappings?.forEach(mapping => {
       if (mapping.rack_profiles) {
         rackMappingMap.set(mapping.datacenter_rack_id, mapping.rack_profiles);
@@ -264,21 +298,20 @@ export class DatacenterRackService {
   /**
    * Calculate space usage from devices
    */
-  private static calculateSpaceUsage(devices: any[]): number {
+  private static calculateSpaceUsage(devices: PlacedDevice[]): number {
     if (!devices || devices.length === 0) return 0;
     
     return devices.reduce((maxU, device) => {
-      if (device.endU) {
-        return Math.max(maxU, device.endU);
-      }
-      return maxU;
+      // Calculate end position based on ruPosition
+      const endPosition = device.ruPosition || 0;
+      return Math.max(maxU, endPosition);
     }, 0);
   }
 
   /**
    * Map database record to DatacenterRack type
    */
-  private static mapFromDatabase(record: any): DatacenterRack {
+  private static mapFromDatabase(record: DatacenterRackDatabaseRow): DatacenterRack {
     return {
       id: record.id,
       facilityId: record.facility_id,
@@ -301,8 +334,8 @@ export class DatacenterRackService {
   /**
    * Map DatacenterRack type to database format
    */
-  private static mapToDatabase(rack: Partial<DatacenterRack>): any {
-    const dbRecord: any = {};
+  private static mapToDatabase(rack: Partial<DatacenterRack>): Partial<DatacenterRackDatabaseRow> {
+    const dbRecord: Partial<DatacenterRackDatabaseRow> = {};
     
     if (rack.name !== undefined) dbRecord.name = rack.name;
     if (rack.rackNumber !== undefined) dbRecord.rack_number = rack.rackNumber;
@@ -321,7 +354,7 @@ export class DatacenterRackService {
   /**
    * Map database record to RackMapping type
    */
-  private static mapMappingFromDatabase(record: any): RackMapping {
+  private static mapMappingFromDatabase(record: RackMappingDatabaseRow): RackMapping {
     return {
       id: record.id,
       designRackId: record.design_rack_id,

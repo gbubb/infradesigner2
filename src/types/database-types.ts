@@ -32,6 +32,6 @@ export interface ComponentDatabaseRow {
   serverrole?: string;
   switchrole?: string;
   isdefault?: boolean;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   created_at?: string;
 }

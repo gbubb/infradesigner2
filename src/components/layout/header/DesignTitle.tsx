@@ -16,7 +16,7 @@ export const DesignTitle: React.FC = () => {
     if (activeDesign && !isEditingName) {
       setEditedName(activeDesign.name);
     }
-  }, [activeDesign?.id, isEditingName]);
+  }, [activeDesign, isEditingName]);
   
   const startEditingName = () => {
     if (activeDesign) {

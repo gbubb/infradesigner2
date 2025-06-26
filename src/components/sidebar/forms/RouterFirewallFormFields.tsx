@@ -4,7 +4,7 @@ import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/for
 import { Input } from '@/components/ui/input';
 
 interface RouterFirewallFormFieldsProps {
-  register: any;
+  register: Record<string, unknown>;
 }
 
 export const RouterFirewallFormFields: React.FC<RouterFirewallFormFieldsProps> = ({ register }) => {

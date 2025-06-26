@@ -35,8 +35,8 @@ const Auth = () => {
       if (error) throw error;
       toast.success('Signed in successfully');
       navigate('/');
-    } catch (error: any) {
-      toast.error(`Sign in failed: ${error.message}`);
+    } catch (error) {
+      toast.error(`Sign in failed: ${(error as Error).message}`);
     } finally {
       setIsLoading(false);
     }
@@ -50,8 +50,8 @@ const Auth = () => {
       const { error } = await signUp(email, password, { full_name: fullName });
       if (error) throw error;
       toast.success('Account created successfully! Please check your email to confirm your account.');
-    } catch (error: any) {
-      toast.error(`Sign up failed: ${error.message}`);
+    } catch (error) {
+      toast.error(`Sign up failed: ${(error as Error).message}`);
     } finally {
       setIsLoading(false);
     }

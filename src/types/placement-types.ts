@@ -1,8 +1,9 @@
 // Placement Service Types
 
-import { InfrastructureComponent } from './infrastructure';
+import { InfrastructureComponent, InfrastructureDesign } from './infrastructure';
 import { RackProfile } from './infrastructure/rack-types';
 import { PlacementResult } from './service-types';
+import { ComputeClusterRequirement, StorageClusterRequirement } from './infrastructure/requirements-types';
 
 export interface PlacementConfig {
   component: InfrastructureComponent;
@@ -11,7 +12,7 @@ export interface PlacementConfig {
   allowedAZsMap: Record<string, string[]>;
   computeRacks: RackProfile[];
   components: InfrastructureComponent[];
-  state: any; // Active design state
+  state: InfrastructureDesign;
   typeLabel: string;
   typeCounters: Record<string, number>;
 }
@@ -31,7 +32,7 @@ export interface PlacementPanelConfig {
   panelId: string;
   targetRacks: RackProfile[];
   racks: RackProfile[];
-  activeDesignState: any;
+  activeDesignState: InfrastructureDesign;
   placementReport: PlacementReportItem[];
   sortByIndex?: (p1: InfrastructureComponent, p2: InfrastructureComponent) => number;
   sortByCapacity?: (p1: InfrastructureComponent, p2: InfrastructureComponent) => number;
@@ -44,17 +45,17 @@ export interface DevicePlacementConfig {
   ruHeight: number;
   startRackIndex?: number;
   racks: RackProfile[];
-  activeDesignState: any;
+  activeDesignState: InfrastructureDesign;
 }
 
 export interface ClusterPlacementConfig {
   components: InfrastructureComponent[];
-  clusters: any[]; // Could be ComputeClusterRequirement or StorageClusterRequirement
+  clusters: (ComputeClusterRequirement | StorageClusterRequirement)[];
   allAZs: string[];
   coreAZId: string;
   allowedAZsMap: Record<string, string[]>;
   racks: RackProfile[];
-  state: any;
+  state: InfrastructureDesign;
   placementReport: PlacementReportItem[];
 }
 

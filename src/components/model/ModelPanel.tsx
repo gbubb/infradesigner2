@@ -340,7 +340,7 @@ export const ModelPanel: React.FC = () => {
     });
     
     return analysis;
-  }, [clusterConsumption, clusterDeviceCounts, computePricing, storagePricing, operationalCosts, requirements, actualHardwareTotals, storageClustersMetrics, storageOverallocationRatios]);
+  }, [clusterConsumption, clusterDeviceCounts, computePricing, storagePricing, operationalCosts, requirements, actualHardwareTotals, storageClustersMetrics, storageOverallocationRatios, activeDesign?.components, activeDesign?.requirements?.computeRequirements?.deviceLifespanYears, activeDesign?.requirements?.storageRequirements?.deviceLifespanYears]);
 
   // Calculate overall totals
   const overallAnalysis = useMemo(() => {

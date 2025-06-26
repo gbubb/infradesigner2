@@ -1,3 +1,5 @@
+import { InfrastructureComponent } from './component-types';
+
 /**
  * Physical datacenter rack definition
  */
@@ -50,7 +52,7 @@ export interface DatacenterRackWithUsage extends DatacenterRack {
   mappedRack?: {
     id: string;
     name: string;
-    devices: any[];
+    devices: InfrastructureComponent[];
     actualPowerUsageKw: number;
     powerAllocationKw: number;
   };

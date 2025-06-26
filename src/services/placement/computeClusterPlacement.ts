@@ -2,12 +2,13 @@ import { RackProfile } from '@/types/infrastructure/rack-types';
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { PlacementReportItem } from '@/types/placement-types';
+import { StoreState } from '@/store/types';
 
 interface ComputeClusterPlacementParams {
   clusterComponents: InfrastructureComponent[];
   allowedAZs: string[];
   computeRacks: RackProfile[];
-  state: any;
+  state: StoreState;
   typeCounters: Record<string, number>;
 }
 
@@ -73,15 +74,15 @@ export function placeComputeCluster({
     const sortedAZRacks = [...azRacks].sort((a, b) => {
       const aCount = a.devices.filter(d => {
         // Check both in placed components and templates
-        const placedComponent = state.activeDesign?.components?.find((c: any) => c.id === d.deviceId);
-        const templateComponent = state.componentTemplates.find((c: any) => c.id === d.deviceId);
+        const placedComponent = state.activeDesign?.components?.find((c: InfrastructureComponent) => c.id === d.deviceId);
+        const templateComponent = state.componentTemplates.find((c: InfrastructureComponent) => c.id === d.deviceId);
         const component = placedComponent || templateComponent;
         return component?.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role);
       }).length;
       const bCount = b.devices.filter(d => {
         // Check both in placed components and templates
-        const placedComponent = state.activeDesign?.components?.find((c: any) => c.id === d.deviceId);
-        const templateComponent = state.componentTemplates.find((c: any) => c.id === d.deviceId);
+        const placedComponent = state.activeDesign?.components?.find((c: InfrastructureComponent) => c.id === d.deviceId);
+        const templateComponent = state.componentTemplates.find((c: InfrastructureComponent) => c.id === d.deviceId);
         const component = placedComponent || templateComponent;
         return component?.role && ['computeNode', 'gpuNode', 'controllerNode', 'infrastructureNode'].includes(component.role);
       }).length;

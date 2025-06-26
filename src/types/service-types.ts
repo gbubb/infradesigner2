@@ -1,6 +1,6 @@
 // Service Layer Types
 
-import { InfrastructureComponent, ComponentType } from './infrastructure';
+import { InfrastructureComponent, ComponentType, InfrastructureDesign } from './infrastructure';
 
 export interface PlacementResult {
   success: boolean;
@@ -39,12 +39,12 @@ export interface PlacementConstraints {
 export interface RackOperationResult {
   success: boolean;
   message?: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 export interface DesignLoadResult {
   success: boolean;
-  design?: any;
+  design?: InfrastructureDesign;
   error?: string;
 }
 

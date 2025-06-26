@@ -1,7 +1,8 @@
 
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType, ManagementNetworkType, IPMINetworkType } from '@/types/infrastructure';
+import { ComponentType, ManagementNetworkType, IPMINetworkType, InfrastructureComponent } from '@/types/infrastructure';
+import { Server, Switch } from '@/types/infrastructure';
 
 export const useNetworkPortsMetrics = () => {
   const { activeDesign } = useDesignStore();
@@ -54,8 +55,9 @@ export const useNetworkPortsMetrics = () => {
         
         // Calculate ports used by servers for leaf connections
         let serverLeafPortsUsed = 2; // Default if not specified
-        if ('portsConsumedQuantity' in component && (component as any).portsConsumedQuantity > 0) {
-          serverLeafPortsUsed = (component as any).portsConsumedQuantity;
+        const serverComponent = component as Server;
+        if ('portsConsumedQuantity' in serverComponent && serverComponent.portsConsumedQuantity && serverComponent.portsConsumedQuantity > 0) {
+          serverLeafPortsUsed = serverComponent.portsConsumedQuantity;
         }
         
         // Allocate ports based on node type and network configuration
@@ -102,10 +104,11 @@ export const useNetworkPortsMetrics = () => {
         let portCount = 0;
         
         // Try different properties for port counts
-        if ('portsProvidedQuantity' in component && (component as any).portsProvidedQuantity > 0) {
-          portCount = (component as any).portsProvidedQuantity;
-        } else if ('portCount' in component && (component as any).portCount > 0) {
-          portCount = (component as any).portCount;
+        const switchComponent = component as Switch;
+        if ('portsProvidedQuantity' in switchComponent && switchComponent.portsProvidedQuantity && switchComponent.portsProvidedQuantity > 0) {
+          portCount = switchComponent.portsProvidedQuantity;
+        } else if ('portCount' in component && component.portCount && component.portCount > 0) {
+          portCount = component.portCount;
         }
         
         // Add ports based on switch role - ensure IPMI switches are counted separately

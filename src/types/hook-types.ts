@@ -22,7 +22,7 @@ export interface ComponentFormData {
   capacityTB?: number;
   diskType?: string;
   // Add other component-specific fields as needed
-  [key: string]: any;
+  [key: string]: string | number | boolean | undefined;
 }
 
 export interface UseComponentFormReturn {
@@ -33,8 +33,8 @@ export interface UseComponentFormReturn {
 }
 
 export interface UseRackPersistenceReturn {
-  saveRackConfiguration: (config: any) => Promise<void>;
-  loadRackConfiguration: () => Promise<any>;
+  saveRackConfiguration: (config: Record<string, unknown>) => Promise<void>;
+  loadRackConfiguration: () => Promise<Record<string, unknown>>;
   isLoading: boolean;
   error: Error | null;
 }
@@ -59,11 +59,13 @@ export interface UseStorageClusterData {
   redundancyFactor: number;
 }
 
+import { CalibrationProfile } from './model-types';
+
 export interface UseCalibrationProfilesReturn {
-  profiles: any[]; // This should use CalibrationProfile from model-types
-  saveProfile: (profile: any) => Promise<void>;
+  profiles: CalibrationProfile[];
+  saveProfile: (profile: CalibrationProfile) => Promise<void>;
   deleteProfile: (profileId: string) => Promise<void>;
-  applyProfile: (profile: any) => void;
+  applyProfile: (profile: CalibrationProfile) => void;
   isLoading: boolean;
   error: Error | null;
 }

@@ -183,9 +183,20 @@ export function createPortUtilizationRows(
     };
   });
 
-  const rows: any[] = [];
+  const rows: Array<{
+    deviceId: string;
+    deviceName: string;
+    portName: string;
+    portType: string;
+    portSpeed: string;
+    portMedia: string;
+    portConnector: string;
+    status: string;
+    transceiver: string;
+    connectedTo: string;
+  }> = [];
   devices.forEach(device => {
-    const ports: any[] = (device.ports ?? []);
+    const ports = (device.ports ?? []);
     ports.forEach(port => {
       const pk = `${device.id}:${port.id}`;
       const status = portStatusMap[pk]?.status ?? "Available";

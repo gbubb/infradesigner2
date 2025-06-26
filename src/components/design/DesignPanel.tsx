@@ -32,6 +32,78 @@ export const DesignPanel: React.FC = () => {
   const [designName, setDesignName] = useState('');
   const [designDescription, setDesignDescription] = useState('');
 
+  const getComponentsForRole = React.useCallback((role: string): InfrastructureComponent[] => {
+    switch (role) {
+      case 'computeNode':
+        return componentTemplates.filter(
+          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'compute'
+        );
+      case 'gpuNode':
+        return componentTemplates.filter(
+          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'gpu'
+        );
+      case 'storageNode':
+        return componentTemplates.filter(
+          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'storage'
+        );
+      case 'hyperConvergedNode':
+        // Hyper-converged nodes can use either compute or storage servers
+        return componentTemplates.filter(
+          (c): c is ServerComponent => c.type === ComponentType.Server && 
+          (c.serverRole === 'compute' || c.serverRole === 'storage')
+        );
+      case 'controllerNode':
+      case 'infrastructureNode':
+        return componentTemplates.filter(
+          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'controller'
+        );
+      case 'managementSwitch':
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'management'
+        );
+      case 'ipmiSwitch': // Updated from 'ipmiSwitch' to filter to show only management switches
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'management'
+        );
+      case 'leafSwitch':
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'leaf'
+        );
+      case 'borderLeafSwitch':
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'leaf'
+        );
+      case 'spineSwitch':
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'spine'
+        );
+      case 'coreSwitch':
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'core'
+        );
+      case 'distributionSwitch':
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'distribution'
+        );
+      case 'accessSwitch':
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'access'
+        );
+      case 'storageSwitch':
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'storage'
+        );
+      case 'firewall':
+        return componentTemplates.filter(c => c.type === ComponentType.Firewall);
+      case 'copperPatchPanel':
+        return componentTemplates.filter(c => c.type === ComponentType.CopperPatchPanel);
+      case 'fiberPatchPanel':
+        return componentTemplates.filter(c => c.type === ComponentType.FiberPatchPanel);
+      default:
+        return [];
+    }
+  }, [componentTemplates]);
+
   useEffect(() => {
     if (activeDesign) {
       const design = activeDesign as ActiveDesign;
@@ -101,67 +173,7 @@ export const DesignPanel: React.FC = () => {
         }
       });
     }
-  }, [componentRoles, componentTemplates, findDefaultComponent, assignComponentToRole, activeDesign]);
-
-  const getComponentsForRole = (role: string): InfrastructureComponent[] => {
-    switch (role) {
-      case 'computeNode':
-        return componentTemplates.filter(
-          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'compute'
-        );
-      case 'gpuNode':
-        return componentTemplates.filter(
-          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'gpu'
-        );
-      case 'storageNode':
-        return componentTemplates.filter(
-          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'storage'
-        );
-      case 'hyperConvergedNode':
-        // Hyper-converged nodes can use either compute or storage servers
-        return componentTemplates.filter(
-          (c): c is ServerComponent => c.type === ComponentType.Server && 
-          (c.serverRole === 'compute' || c.serverRole === 'storage')
-        );
-      case 'controllerNode':
-      case 'infrastructureNode':
-        return componentTemplates.filter(
-          (c): c is ServerComponent => c.type === ComponentType.Server && c.serverRole === 'controller'
-        );
-      case 'managementSwitch':
-        return componentTemplates.filter(
-          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'management'
-        );
-      case 'ipmiSwitch': // Updated from 'ipmiSwitch' to filter to show only management switches
-        return componentTemplates.filter(
-          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'management'
-        );
-      case 'leafSwitch':
-        return componentTemplates.filter(
-          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'leaf'
-        );
-      case 'borderLeafSwitch':
-        return componentTemplates.filter(
-          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'leaf'
-        );
-      case 'spineSwitch':
-        return componentTemplates.filter(
-          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'spine'
-        );
-      case 'storageSwitch':
-        return componentTemplates.filter(
-          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'leaf'
-        );
-      case 'firewall':
-        return componentTemplates.filter(c => c.type === ComponentType.Firewall);
-      case 'copperPatchPanel':
-        return componentTemplates.filter(c => c.type === ComponentType.CopperPatchPanel);
-      case 'fiberPatchPanel':
-        return componentTemplates.filter(c => c.type === ComponentType.FiberPatchPanel);
-      default:
-        return componentTemplates;
-    }
-  };
+  }, [componentRoles, componentTemplates, findDefaultComponent, assignComponentToRole, activeDesign, getComponentsForRole]);
 
   const handleSaveDesign = () => {
     if (!activeDesign) {

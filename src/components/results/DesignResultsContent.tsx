@@ -2,8 +2,14 @@
 import React from 'react';
 import { ResultsTabs } from './tabs/ResultsTabs';
 
+interface DesignError {
+  id: string;
+  title: string;
+  description: string;
+}
+
 interface DesignResultsContentProps {
-  designErrors: any[];
+  designErrors: DesignError[];
   hasNoDesign: boolean;
 }
 

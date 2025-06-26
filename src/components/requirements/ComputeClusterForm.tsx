@@ -41,7 +41,7 @@ export const ComputeClusterForm: React.FC<ComputeClusterFormProps> = ({
     onUpdate([...clusters, newCluster]);
   };
 
-  const updateCluster = (index: number, field: string, value: any) => {
+  const updateCluster = (index: number, field: string, value: string | number | boolean | undefined) => {
     const updatedClusters = [...clusters];
     updatedClusters[index] = {
       ...updatedClusters[index],

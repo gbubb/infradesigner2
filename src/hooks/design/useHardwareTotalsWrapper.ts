@@ -157,7 +157,7 @@ export const useHardwareTotalsWrapper = () => {
             }
           }
           return acc;
-        }, {} as Record<string, any[]>);
+        }, {} as Record<string, InfrastructureComponent[]>);
       
       Object.entries(storageNodesByCluster).forEach(([clusterId, nodes]) => {
         const cluster = storageClusters.find(c => c.id === clusterId);

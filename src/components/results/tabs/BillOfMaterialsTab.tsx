@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
 import { CableMediaType } from '@/types/infrastructure/port-types';
+import { ClusterInfo } from '@/types/infrastructure/roles-types';
 import { summarizeCablesFromConnections, summarizeTransceiversFromConnections, createPortUtilizationRows } from '../bom/networkBomUtils';
 import ComputeStorageTable from '../bom/ComputeStorageTable';
 import NetworkTable from '../bom/NetworkTable';
@@ -24,7 +25,8 @@ const useComponentRoleId = (component: InfrastructureComponent & { summarizedQua
   
   // For storage nodes and hyper-converged nodes, match by both role and clusterId to find the specific cluster
   if (component.role === 'storageNode' || component.role === 'hyperConvergedNode') {
-    const clusterId = (component as any).clusterInfo?.clusterId;
+    const clusterInfo = component.clusterInfo as ClusterInfo | undefined;
+    const clusterId = clusterInfo?.clusterId;
     const foundRole = componentRoles.find(r => 
       r.role === component.role && r.clusterInfo?.clusterId === clusterId
     );
@@ -39,9 +41,10 @@ const useComponentRoleId = (component: InfrastructureComponent & { summarizedQua
 // Helper: generate a unique key that includes template, cluster assignment, and attachedDisks config
 const getStorageNodeGroupKey = (component: InfrastructureComponent): string => {
   if (component.role === 'storageNode' || component.role === 'hyperConvergedNode') {
-    const clusterId = (component as any).clusterInfo?.clusterId || 'no-cluster';
-    const attachedDisks = ((component as any).attachedDisks || [])
-      .map((disk: any) => `${disk.templateId || disk.id || disk.model}-${disk.quantity}`)
+    const clusterInfo = component.clusterInfo as ClusterInfo | undefined;
+    const clusterId = clusterInfo?.clusterId || 'no-cluster';
+    const attachedDisks = (component.attachedDisks || [])
+      .map((disk) => `${disk.templateId || disk.id || disk.model}-${disk.quantity}`)
       .sort()
       .join('|');
     return `${component.role}:${component.templateId}-${clusterId}-[${attachedDisks}]`;
@@ -53,6 +56,7 @@ const getStorageNodeGroupKey = (component: InfrastructureComponent): string => {
 export const BillOfMaterialsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const componentTemplates = useDesignStore(state => state.componentTemplates);
+  const componentRoles = useDesignStore(state => state.componentRoles);
   const components = activeDesign?.components || [];
   const networkConnections = activeDesign?.networkConnections || [];
   
@@ -60,7 +64,7 @@ export const BillOfMaterialsTab: React.FC = () => {
   const cableTemplates = useMemo(() => (componentTemplates || []).filter(c => c.type === ComponentType.Cable), [componentTemplates]);
   const transceiverTemplates = useMemo(() => (componentTemplates || []).filter(c => c.type === ComponentType.Transceiver), [componentTemplates]);
   const devices = components.filter(c =>
-    [ComponentType.Switch, ComponentType.Router, ComponentType.Firewall, ComponentType.Server].includes(c.type as any)
+    [ComponentType.Switch, ComponentType.Router, ComponentType.Firewall, ComponentType.Server].includes(c.type as ComponentType)
   );
 
   // Build a lookup for Disk costs associated with specific clusters/configurations:
@@ -98,10 +102,10 @@ export const BillOfMaterialsTab: React.FC = () => {
       groupedByTemplate[key].summarizedQuantity += instance.quantity || 1;
 
       // If this is a storage node or hyper-converged node, also add disk line items with correct cluster assignment
-      if ((instance.role === 'storageNode' || instance.role === 'hyperConvergedNode') && (instance as any).attachedDisks) {
-        const clusterInfo = (instance as any).clusterInfo || {};
-        const attachedDisks = (instance as any).attachedDisks || [];
-        attachedDisks.forEach((disk: any) => {
+      if ((instance.role === 'storageNode' || instance.role === 'hyperConvergedNode') && instance.attachedDisks) {
+        const clusterInfo = (instance.clusterInfo as ClusterInfo) || {} as ClusterInfo;
+        const attachedDisks = instance.attachedDisks || [];
+        attachedDisks.forEach((disk) => {
           if (!disk) return;
           // Keyed by disk id+model+size+cluster
           const diskKey =
@@ -159,7 +163,7 @@ export const BillOfMaterialsTab: React.FC = () => {
   // --- ENHANCED CSV Export logic including cables and transceivers --- //
   const generateCSVData = (category?: string) => {
     let csvContent = "data:text/csv;charset=utf-8,Category,Type,Role/Model,Manufacturer,Model,Details,Quantity,Unit Cost,Total Cost,Cable Type,Length,Connector Types,Speed,Media Support,Max Distance\r\n";
-    const dataToExport: any[] = [];
+    const dataToExport: Array<InfrastructureComponent & { summarizedQuantity: number }> = [];
     // --- Standard hardware/export
     if (!category || ["Compute", "Storage", "Acceleration", "Network", "Cabling", "Cables"].includes(category)) {
       Object.values(summarizedComponentsByCategory).forEach(componentsArr => dataToExport.push(...componentsArr));
@@ -261,7 +265,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                 diskLineItems={diskLineItems}
                 getBomGroupKey={getBomGroupKey}
                 getStorageNodeGroupKey={getStorageNodeGroupKey}
-                useComponentRoleId={useComponentRoleId}
+                componentRoles={componentRoles}
                 onExport={handleExport}
               />
             </CardContent>
@@ -278,7 +282,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                 summarizedComponentsByCategory={summarizedComponentsByCategory}
                 transceiverLineItems={transceiverLineItems}
                 getBomGroupKey={getBomGroupKey}
-                useComponentRoleId={useComponentRoleId}
+                componentRoles={componentRoles}
                 onExport={handleExport}
               />
             </CardContent>

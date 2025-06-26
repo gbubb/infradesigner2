@@ -123,8 +123,9 @@ export const usePowerCalculations = () => {
     
     // If we have dedicated network racks, calculate their energy costs separately
     if ('networkRack' in powerUsage) {
-      const networkOperationalPowerKw = (powerUsage as any).networkRack.operationalPower / 1000;
-      const computeOperationalPowerKw = (powerUsage as any).computeRack.operationalPower / 1000;
+      const powerWithRacks = powerUsage as { networkRack: { operationalPower: number }; computeRack: { operationalPower: number } };
+      const networkOperationalPowerKw = powerWithRacks.networkRack.operationalPower / 1000;
+      const computeOperationalPowerKw = powerWithRacks.computeRack.operationalPower / 1000;
       
       return {
         hourlyEnergyCost,

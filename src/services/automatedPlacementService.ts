@@ -5,6 +5,7 @@ import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from './placementHelpers';
 import { defaultRequirements } from '@/store/slices/requirements/types';
 import { getTypeKey, isCoreNet, isPatchPanel, isComputeLike, getCoreAndComputeRacks } from './placement/placementUtils';
+import { ComponentWithPlacement } from '@/types/service-types';
 import { placePatchPanel } from './placement/patchPanelPlacement';
 import { placeCoreDevice } from './placement/coreDevicePlacement';
 import { placeComputeLike } from './placement/computePlacement';
@@ -122,8 +123,8 @@ export class AutomatedPlacementService {
           console.warn(`Component ${component.name} missing cluster info, setting clusterId to role ID: ${clusterId}`);
           
           // Add the cluster info to the component for downstream processing
-          (component as any).clusterId = clusterId;
-          (component as any).clusterInfo = matchingRole.clusterInfo || {
+          (component as ComponentWithPlacement).clusterId = clusterId;
+          (component as ComponentWithPlacement).clusterInfo = matchingRole.clusterInfo || {
             clusterId: clusterId,
             clusterName: component.role === 'controllerNode' ? 'Controller Cluster' : 'Infrastructure Cluster',
             clusterIndex: 0
@@ -133,8 +134,8 @@ export class AutomatedPlacementService {
           if (component.role === 'controllerNode') {
             clusterId = 'controller-cluster';
             console.warn(`Component ${component.name} missing cluster info and no matching role found, setting to controller-cluster`);
-            (component as any).clusterId = clusterId;
-            (component as any).clusterInfo = {
+            (component as ComponentWithPlacement).clusterId = clusterId;
+            (component as ComponentWithPlacement).clusterInfo = {
               clusterId: 'controller-cluster',
               clusterName: 'Controller Cluster',
               clusterIndex: 0
@@ -142,8 +143,8 @@ export class AutomatedPlacementService {
           } else if (component.role === 'infrastructureNode') {
             clusterId = 'infrastructure-cluster';
             console.warn(`Component ${component.name} missing cluster info and no matching role found, setting to infrastructure-cluster`);
-            (component as any).clusterId = clusterId;
-            (component as any).clusterInfo = {
+            (component as ComponentWithPlacement).clusterId = clusterId;
+            (component as ComponentWithPlacement).clusterInfo = {
               clusterId: 'infrastructure-cluster',
               clusterName: 'Infrastructure Cluster',
               clusterIndex: 0

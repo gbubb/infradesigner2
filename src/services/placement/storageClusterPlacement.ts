@@ -2,12 +2,14 @@ import { RackProfile } from '@/types/infrastructure/rack-types';
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { PlacementReportItem } from '@/types/placement-types';
+import { StoreState } from '@/store/types';
+import { ComponentWithPlacement } from '@/types/service-types';
 
 interface StorageClusterPlacementParams {
-  clusterComponents: InfrastructureComponent[];
+  clusterComponents: (InfrastructureComponent | ComponentWithPlacement)[];
   allowedAZs: string[];
   computeRacks: RackProfile[];
-  state: any;
+  state: StoreState;
   typeCounters: Record<string, number>;
 }
 
@@ -52,11 +54,11 @@ export function placeStorageCluster({
   // Sort racks by current storage node count (ascending) to fill emptier racks first
   const sortedRacks = [...availableRacks].sort((a, b) => {
     const aCount = a.devices.filter(d => {
-      const component = state.componentTemplates.find((c: any) => c.id === d.deviceId);
+      const component = state.componentTemplates.find((c: InfrastructureComponent) => c.id === d.deviceId);
       return component?.category === 'Storage';
     }).length;
     const bCount = b.devices.filter(d => {
-      const component = state.componentTemplates.find((c: any) => c.id === d.deviceId);
+      const component = state.componentTemplates.find((c: InfrastructureComponent) => c.id === d.deviceId);
       return component?.category === 'Storage';
     }).length;
     return aCount - bCount;

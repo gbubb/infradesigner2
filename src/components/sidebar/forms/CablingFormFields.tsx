@@ -8,7 +8,7 @@ import { ConnectorType } from '@/types/infrastructure';
 import { PortSpeed, CableMediaType, PortSide } from '@/types/infrastructure/port-types';
 
 interface CablingFormFieldsProps {
-  register: any;
+  register: Record<string, unknown>;
   componentType: string;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectChange: (name: string, value: string) => void;

@@ -42,7 +42,7 @@ const formSchema = legacyFormSchema;
 interface ComponentFormDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  formValues: any;
+  formValues: Record<string, unknown>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectChange: (name: string, value: string) => void;
   onTypeChange: (value: string) => void;
@@ -52,7 +52,7 @@ interface ComponentFormDialogProps {
   isEditing: boolean;
   addPort: () => void;
   removePort: (index: number) => void;
-  updatePort: (index: number, field: keyof import('@/types/infrastructure/port-types').Port, value: any) => void;
+  updatePort: (index: number, field: keyof import('@/types/infrastructure/port-types').Port, value: unknown) => void;
 }
 
 // NEW — import sub components for modularization
@@ -204,7 +204,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   };
 
   // --- ADDED LOG HANDLER ---
-  const handleFormErrors = (errors: any) => {
+  const handleFormErrors = (errors: Record<string, unknown>) => {
     console.error('[ComponentFormDialog] Form validation failed (onInvalid):', errors);
     // You can add more specific error handling or user notification here if needed
   };

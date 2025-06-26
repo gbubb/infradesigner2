@@ -1,14 +1,14 @@
 
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType, Server, Switch } from '@/types/infrastructure';
+import { ComponentType, Server, Switch, InfrastructureComponent } from '@/types/infrastructure';
 
 export const useComponentsByType = () => {
   const { activeDesign, componentTemplates } = useDesignStore();
   
   // Component types grouping
   const componentsByType = useMemo(() => {
-    if (!activeDesign?.components) return {} as Record<ComponentType, any[]>;
+    if (!activeDesign?.components) return {} as Record<ComponentType, InfrastructureComponent[]>;
     
     return activeDesign.components.reduce((groups, component) => {
       const type = component.type;
@@ -17,7 +17,7 @@ export const useComponentsByType = () => {
       }
       groups[type].push(component);
       return groups;
-    }, {} as Record<ComponentType, any[]>);
+    }, {} as Record<ComponentType, InfrastructureComponent[]>);
   }, [activeDesign]);
 
   // Find default component for each type/role combination

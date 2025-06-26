@@ -70,7 +70,6 @@ export class IntelligentDesignUpdater {
     // Step 3: Update rack configuration (preserving structure where possible)
     if (context.impact.requiresNewRacks || context.impact.requiresRackRebalancing) {
       this.updateRackConfiguration(context);
-    } else {
     }
     
     // Step 4: Save the updated design

@@ -137,7 +137,7 @@ export const RackView: React.FC<RackViewProps> = ({
                   manufacturer={component.manufacturer}
                   powerRequired={component.powerRequired}
                   portsCount={component.ports?.length}
-                  serverRole={(component as any).serverRole}
+                  serverRole={'serverRole' in component ? component.serverRole as string : undefined}
                 />
               );
             })}
