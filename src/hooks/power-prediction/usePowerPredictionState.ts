@@ -28,9 +28,6 @@ export const usePowerPredictionState = (servers: Server[]) => {
   const [selectedServerId, setSelectedServerId] = useState<string>('');
   const [customInputs, setCustomInputs] = useState<Partial<PowerCalculationInputs>>({
     cpuUtilization: 50,
-    turboEnabled: true,
-    memoryType: 'DDR4',
-    memorySpeedMHz: 2933,
     raidController: false,
     psuEfficiencyRating: '80PlusGold',
     redundantPsu: true,
@@ -50,20 +47,39 @@ export const usePowerPredictionState = (servers: Server[]) => {
     [servers, selectedServerId]
   );
   
-  // Initialize network ports based on selected server
+  // Initialize network ports and reset relevant customInputs when server changes
   useEffect(() => {
-    if (selectedServer && selectedServer.networkPortType && selectedServer.portsConsumedQuantity > 0) {
-      // Only initialize if networkPorts is empty (user hasn't configured custom ports)
-      if (networkPorts.length === 0) {
+    if (selectedServer) {
+      // Reset server-specific custom inputs to let server values take precedence
+      setCustomInputs(current => ({
+        ...current,
+        // Remove any CPU/Memory overrides to use server defaults
+        baseFrequencyGHz: undefined,
+        tdpPerCpu: undefined,
+        turboEnabled: undefined,
+        memoryType: undefined,
+        memorySpeedMHz: undefined,
+        dimmCount: undefined,
+        dimmCapacityGB: undefined,
+        psuRating: undefined,
+      }));
+      
+      // Initialize network ports based on server configuration
+      if (selectedServer.networkPortType && selectedServer.portsConsumedQuantity > 0) {
         const defaultPort: NetworkPort = {
           id: '1',
           count: selectedServer.portsConsumedQuantity,
           speedGbps: getNetworkPortSpeed(selectedServer.networkPortType)
         };
         setNetworkPorts([defaultPort]);
+      } else {
+        setNetworkPorts([]);
       }
+      
+      // Clear any previous calculation results
+      setCalculationResult(null);
     }
-  }, [selectedServer]); // Note: intentionally not including networkPorts to avoid infinite loop
+  }, [selectedServerId]); // Trigger when selectedServerId changes
   
   const updateCustomInputs = (updates: Partial<PowerCalculationInputs>) => {
     setCustomInputs(current => ({ ...current, ...updates }));

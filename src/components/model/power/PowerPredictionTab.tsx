@@ -127,8 +127,17 @@ export const PowerPredictionTab: React.FC = () => {
                 <AlertDescription>
                   <div className="text-sm space-y-1">
                     <div><strong>Selected:</strong> {selectedServer.manufacturer} {selectedServer.productLine} {selectedServer.model}</div>
-                    <div><strong>CPU:</strong> {selectedServer.cpuSockets}x {selectedServer.cpuModel} ({selectedServer.cpuCoresPerSocket || selectedServer.coreCount} cores each)</div>
-                    <div><strong>Memory:</strong> {selectedServer.memoryCapacity}GB</div>
+                    <div><strong>CPU:</strong> {selectedServer.cpuSockets}x {selectedServer.cpuModel} ({selectedServer.cpuCoresPerSocket || selectedServer.coreCount} cores each)
+                      {selectedServer.cpuFrequencyBaseGhz && ` @ ${selectedServer.cpuFrequencyBaseGhz}GHz`}
+                      {selectedServer.cpuFrequencyTurboGhz && ` (turbo: ${selectedServer.cpuFrequencyTurboGhz}GHz)`}
+                      {selectedServer.cpuTdpWatts && `, ${selectedServer.cpuTdpWatts}W TDP`}
+                    </div>
+                    <div><strong>Memory:</strong> {selectedServer.memoryCapacity}GB
+                      {selectedServer.memoryType && ` ${selectedServer.memoryType}`}
+                      {selectedServer.memoryDimmFrequencyMhz && ` @ ${selectedServer.memoryDimmFrequencyMhz}MHz`}
+                      {selectedServer.memoryDimmSlotsConsumed && selectedServer.memoryDimmSize && ` (${selectedServer.memoryDimmSlotsConsumed}x ${selectedServer.memoryDimmSize}GB)`}
+                    </div>
+                    <div><strong>Network:</strong> {selectedServer.portsConsumedQuantity}x {selectedServer.networkPortType}</div>
                     <div><strong>Form Factor:</strong> {selectedServer.ruSize}U</div>
                   </div>
                 </AlertDescription>
@@ -148,6 +157,7 @@ export const PowerPredictionTab: React.FC = () => {
           <TabsContent value="specifications" className="space-y-4">
             <CPUConfiguration
               customInputs={customInputs}
+              selectedServer={selectedServer}
               onUpdate={updateCustomInputs}
             />
             
