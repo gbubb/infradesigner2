@@ -96,6 +96,18 @@ export function useCalibrationProfiles(onCalibrationChange: (profile: PowerCalib
       setActiveProfileId(activeProfile.id);
       setEditingProfile(activeProfile);
       onCalibrationChange(activeProfile);
+    } else {
+      // If no active profile, create a default editable profile
+      // This ensures the calibration inputs are always editable
+      const defaultEditableProfile: PowerCalibrationProfile = {
+        ...DEFAULT_CALIBRATION_PROFILE,
+        id: 'temp-default',
+        name: 'Default Settings',
+        description: 'Default calibration values (not saved)',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setEditingProfile(defaultEditableProfile);
     }
   }, [onCalibrationChange]);
   
@@ -126,7 +138,23 @@ export function useCalibrationProfiles(onCalibrationChange: (profile: PowerCalib
   const handleSaveProfile = () => {
     if (!editingProfile) return;
     
-    saveCalibrationProfile(editingProfile);
+    // If saving the temporary default profile, create a new profile with a unique ID
+    let profileToSave = editingProfile;
+    if (editingProfile.id === 'temp-default') {
+      profileToSave = {
+        ...editingProfile,
+        id: uuidv4(),
+        name: editingProfile.name === 'Default Settings' ? `Custom Profile ${profiles.length + 1}` : editingProfile.name,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setEditingProfile(profileToSave);
+      setActiveProfileId(profileToSave.id);
+      setActiveCalibrationProfile(profileToSave.id);
+      onCalibrationChange(profileToSave);
+    }
+    
+    saveCalibrationProfile(profileToSave);
     const updatedProfiles = getCalibrationProfiles();
     setProfiles(updatedProfiles);
     setShowSaveSuccess(true);
@@ -149,9 +177,18 @@ export function useCalibrationProfiles(onCalibrationChange: (profile: PowerCalib
   const handleSelectProfile = (id: string) => {
     if (id === 'none') {
       setActiveProfileId(null);
-      setEditingProfile(null);
       setActiveCalibrationProfile(null);
       onCalibrationChange(null);
+      // Keep a default editable profile when "none" is selected
+      const defaultEditableProfile: PowerCalibrationProfile = {
+        ...DEFAULT_CALIBRATION_PROFILE,
+        id: 'temp-default',
+        name: 'Default Settings',
+        description: 'Default calibration values (not saved)',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setEditingProfile(defaultEditableProfile);
     } else {
       const profile = profiles.find(p => p.id === id);
       if (profile) {
