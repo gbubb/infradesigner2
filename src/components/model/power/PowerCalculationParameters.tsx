@@ -235,11 +235,16 @@ export const PowerCalculationParameters: React.FC<PowerCalculationParametersProp
                 </div>
                 
                 <div>
-                  <h5 className="font-medium mb-1">Fan Power Factors</h5>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div><span className="text-muted-foreground">Idle:</span> {(params.fanPowerFactors.idle * 100).toFixed(0)}%</div>
-                    <div><span className="text-muted-foreground">Average:</span> {(params.fanPowerFactors.average * 100).toFixed(0)}%</div>
-                    <div><span className="text-muted-foreground">Peak:</span> {(params.fanPowerFactors.peak * 100).toFixed(0)}%</div>
+                  <h5 className="font-medium mb-1">Fan Power by Form Factor</h5>
+                  <div className="space-y-2">
+                    {Object.entries(params.fanPowerByFormFactor).map(([formFactor, power]) => (
+                      <div key={formFactor} className="grid grid-cols-4 gap-2">
+                        <div className="text-muted-foreground">{formFactor}:</div>
+                        <div>Idle: {power.idle}W</div>
+                        <div>Peak: {power.peak}W</div>
+                        <div>Avg: {Math.round((power.idle + (power.peak - power.idle) * 0.5) * 10) / 10}W</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

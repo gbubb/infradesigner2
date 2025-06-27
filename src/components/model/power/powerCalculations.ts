@@ -380,11 +380,16 @@ function calculateEnvironmentalFactor(inletTempC: number, calibration: PowerCali
 }
 
 function calculateFanPower(formFactor: '1U' | '2U' | '4U', calibration: PowerCalibrationProfile): { idle: number; average: number; peak: number } {
+  console.log('calculateFanPower called with:', { formFactor, calibration: calibration.name });
+  console.log('fanPowerByFormFactor:', calibration.fanPowerByFormFactor);
+  
   const fanPower = calibration.fanPowerByFormFactor[formFactor];
+  console.log('fanPower for formFactor', formFactor, ':', fanPower);
   
   // Defensive programming: use default values if form factor not found
   if (!fanPower) {
     console.warn(`Fan power not found for form factor ${formFactor}, using 2U defaults`);
+    console.warn('Available form factors:', Object.keys(calibration.fanPowerByFormFactor));
     const defaultFanPower = { idle: 40, peak: 100 };
     const average = defaultFanPower.idle + (defaultFanPower.peak - defaultFanPower.idle) * 0.5;
     return {
@@ -396,6 +401,8 @@ function calculateFanPower(formFactor: '1U' | '2U' | '4U', calibration: PowerCal
   
   // Linear interpolation for average (50% between idle and peak)
   const average = fanPower.idle + (fanPower.peak - fanPower.idle) * 0.5;
+  
+  console.log('Fan power result:', { idle: fanPower.idle, average, peak: fanPower.peak });
   
   return {
     idle: fanPower.idle,
@@ -432,6 +439,9 @@ function calculatePsuEfficiency(dcPower: number, psuRating: number, efficiencyRa
 }
 
 export function calculateServerPower(inputs: PowerCalculationInputs, calibration?: PowerCalibrationProfile): PowerCalculationResult {
+  console.log('calculateServerPower called with inputs:', inputs);
+  console.log('calibration:', calibration);
+  
   // Use provided calibration or create a complete default profile
   const cal = calibration || {
     ...DEFAULT_CALIBRATION_PROFILE,
@@ -439,6 +449,10 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     createdAt: new Date(),
     updatedAt: new Date()
   } as PowerCalibrationProfile;
+  
+  console.log('Using calibration:', cal.name);
+  console.log('Form factor:', inputs.formFactor);
+  
   const warnings: string[] = [];
   const missingMetrics: string[] = [];
   
@@ -453,12 +467,23 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     inputs.tdpPerCpu = inputs.coresPerCpu * 8; // Rough estimate
   }
   
+  console.log('Starting component power calculations...');
+  
   // Calculate component power
   const cpuPower = calculateCpuPower(inputs, cal);
+  console.log('CPU power calculated:', cpuPower);
+  
   const memoryPower = calculateMemoryPower(inputs, cal);
+  console.log('Memory power calculated:', memoryPower);
+  
   const storagePower = calculateStoragePower(inputs, cal);
+  console.log('Storage power calculated:', storagePower);
+  
   const networkPower = calculateNetworkPower(inputs, cal);
+  console.log('Network power calculated:', networkPower);
+  
   const { motherboard: motherboardPower } = calculateOtherComponentsPower(inputs, cal);
+  console.log('Motherboard power calculated:', motherboardPower);
   
   // Calculate DC totals before fans
   const dcBeforeFans = {
@@ -466,9 +491,12 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     average: cpuPower.average + memoryPower.average + storagePower.average + networkPower.average + motherboardPower.average,
     peak: cpuPower.peak + memoryPower.peak + storagePower.peak + networkPower.peak + motherboardPower.peak
   };
+  console.log('DC before fans:', dcBeforeFans);
   
   // Calculate fan power based on form factor (absolute wattage)
+  console.log('Calculating fan power for form factor:', inputs.formFactor);
   const fansPower = calculateFanPower(inputs.formFactor, cal);
+  console.log('Fan power calculated:', fansPower);
   
   // Total DC power
   const dcTotal = {
@@ -476,6 +504,7 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     average: dcBeforeFans.average + fansPower.average,
     peak: dcBeforeFans.peak + fansPower.peak
   };
+  console.log('DC total:', dcTotal);
   
   // Apply environmental factor
   const envFactor = calculateEnvironmentalFactor(inputs.inletTempC, cal);
@@ -484,6 +513,7 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     average: dcTotal.average * envFactor,
     peak: dcTotal.peak * envFactor
   };
+  console.log('DC with environmental factor:', dcWithEnv);
   
   // Calculate AC power
   const psuEfficiencyIdle = calculatePsuEfficiency(dcWithEnv.idle, inputs.psuRating, inputs.psuEfficiencyRating, cal);
@@ -504,6 +534,7 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     average: dcWithEnv.average / (psuEfficiencyAvg * efficiencyMultiplier),
     peak: dcWithEnv.peak / (psuEfficiencyPeak * efficiencyMultiplier)
   };
+  console.log('AC total:', acTotal);
   
   // No safety margin - this is accounted for elsewhere in the datacenter
   const acWithSafety = {
@@ -538,7 +569,7 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
   missingMetrics.push('Ambient humidity levels');
   missingMetrics.push('Altitude/air pressure for fan efficiency');
   
-  return {
+  const result = {
     idlePowerW: Math.round(acWithSafety.idle),
     averagePowerW: Math.round(acWithSafety.average),
     peakPowerW: Math.round(acWithSafety.peak),
@@ -603,4 +634,7 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     warnings,
     missingMetrics
   };
+  
+  console.log('Final result:', result);
+  return result;
 }
