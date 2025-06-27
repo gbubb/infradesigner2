@@ -81,7 +81,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
       rack.devices.forEach(device => {
         rackInfo.set(device.deviceId, {
           rackId: rack.id,
-          az: rack.availabilityZone
+          az: rack.availabilityZoneId // Fixed: use availabilityZoneId instead of availabilityZone
         });
       });
     });
@@ -235,9 +235,9 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
   // Determine media type based on port types
   const determineMediaType = (sourceType: string, destType: string): CableMediaType => {
     if (sourceType === "RJ45" || destType === "RJ45") {
-      return CableMediaType.Copper;
+      return 'COPPER' as CableMediaType; // Fixed: use string value instead of enum property
     }
-    return CableMediaType.Fiber;
+    return 'FIBER' as CableMediaType; // Fixed: use string value instead of enum property
   };
 
   // Remove a connection

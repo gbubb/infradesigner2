@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -12,10 +13,11 @@ import { CapacityPlanningView } from './views/CapacityPlanningView';
 import { DatacenterCostCalculator } from '@/services/datacenter/DatacenterCostCalculator';
 import { PowerEfficiencyCalculator } from '@/services/datacenter/PowerEfficiencyCalculator';
 import { CapacityManagementService } from '@/services/datacenter/CapacityManagementService';
+import { PowerLayer } from '@/types/infrastructure/datacenter-types';
 
 export const DatacenterAnalyticsTab: React.FC = () => {
   const { requirements, activeDesign } = useDesignStore();
-  const selectedFacilityId = requirements.physicalConstraints?.facilityId;
+  const selectedFacilityId = requirements.physicalConstraints?.selectedFacilityId; // Fixed: use selectedFacilityId
 
   // Mock facility data until we integrate with the backend
   const mockFacility = useMemo(() => {
@@ -27,11 +29,11 @@ export const DatacenterAnalyticsTab: React.FC = () => {
       name: 'Primary Datacenter',
       location: 'Northern Virginia',
       powerInfrastructure: [
-        { id: 'grid', name: 'Grid Input', capacityKW: 10000, efficiency: 1.0 },
-        { id: 'ups', name: 'UPS System', capacityKW: 8000, efficiency: 0.95, parentLayerId: 'grid' },
-        { id: 'pdu', name: 'PDU', capacityKW: 7600, efficiency: 0.98, parentLayerId: 'ups' },
-        { id: 'rack', name: 'Rack PDU', capacityKW: 7400, efficiency: 0.99, parentLayerId: 'pdu' }
-      ],
+        { id: 'grid', name: 'Grid Input', type: 'grid' as const, capacityKW: 10000, efficiency: 1.0 },
+        { id: 'ups', name: 'UPS System', type: 'ups' as const, capacityKW: 8000, efficiency: 0.95, parentLayerId: 'grid' },
+        { id: 'pdu', name: 'PDU', type: 'pdu' as const, capacityKW: 7600, efficiency: 0.98, parentLayerId: 'ups' },
+        { id: 'rack', name: 'Rack PDU', type: 'rack' as const, capacityKW: 7400, efficiency: 0.99, parentLayerId: 'pdu' }
+      ] as PowerLayer[],
       costLayers: [
         { id: 'real-estate', name: 'Real Estate', type: 'capital' as const, amount: 50000000, currency: 'USD', amortizationMonths: 360, allocationMethod: 'per-rack' as const },
         { id: 'building', name: 'Building Infrastructure', type: 'capital' as const, amount: 30000000, currency: 'USD', amortizationMonths: 240, allocationMethod: 'per-rack' as const },
@@ -55,12 +57,17 @@ export const DatacenterAnalyticsTab: React.FC = () => {
     const powerCalculator = new PowerEfficiencyCalculator();
     const capacityService = new CapacityManagementService();
 
-    // Calculate current usage
-    const currentRacks = activeDesign.racks?.length || 0;
-    const currentPowerKW = activeDesign.racks?.reduce((sum, rack) => {
-      const components = activeDesign.components.filter(c => c.rackId === rack.id);
+    // Calculate current usage - Fixed: use rackprofiles instead of racks
+    const currentRacks = activeDesign.rackprofiles?.length || 0;
+    const currentPowerKW = activeDesign.rackprofiles?.reduce((sum, rack) => {
+      const components = activeDesign.components.filter(c => {
+        // Check if component is in this rack by checking device placement
+        const isInRack = rack.devices.some(device => device.deviceId === c.id);
+        return isInRack;
+      });
       return sum + components.reduce((rackSum, component) => {
-        return rackSum + ((component.powerConsumption || 0) * (component.quantity || 1)) / 1000;
+        // Fixed: use powerRequired instead of powerConsumption
+        return rackSum + ((component.powerRequired || 0) * (component.quantity || 1)) / 1000;
       }, 0);
     }, 0) || 0;
 
@@ -153,7 +160,7 @@ export const DatacenterAnalyticsTab: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <CostBreakdownChart costLayers={analytics.costBreakdown} />
+            <CostBreakdownChart costLayers={analytics.costBreakdown.layers} />
           </CardContent>
         </Card>
 
@@ -201,7 +208,12 @@ export const DatacenterAnalyticsTab: React.FC = () => {
             <PUETrendingChart 
               currentPUE={analytics.pue.total}
               targetPUE={1.5}
-              breakdown={analytics.pue.breakdown}
+              breakdown={{
+                itLoad: analytics.pue.breakdown.itLoad,
+                coolingLoad: analytics.pue.breakdown.coolingLoad,
+                powerLosses: 0, // Added missing powerLosses property
+                otherLoads: analytics.pue.breakdown.otherLoads
+              }}
             />
           </CardContent>
         </Card>
