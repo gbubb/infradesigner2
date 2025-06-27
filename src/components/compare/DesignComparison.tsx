@@ -265,10 +265,10 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
     let rackUnits = 0;
     let usableStorageTB = 0;
 
-    // Calculate total rack units from all components
+    // Calculate total rack units from all components - fix property access
     design.components.forEach(component => {
       const quantity = component.quantity || 1;
-      const ruSize = component.ruSize || component.rackMountSize || 1; // Support both property names
+      const ruSize = component.ruSize || 1; // Use ruSize consistently
       rackUnits += ruSize * quantity;
     });
 

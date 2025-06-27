@@ -86,13 +86,13 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
         <div className="bg-background border rounded-lg p-3 shadow-lg">
           <p className="font-semibold mb-2">{metricName}</p>
           <p className="text-sm">
-            {designAName}: {values.A.toLocaleString()}{values.unit}
+            {designAName}: {(Number(values.A) || 0).toLocaleString()}{values.unit}
           </p>
           <p className="text-sm">
-            {designBName}: {values.B.toLocaleString()}{values.unit}
+            {designBName}: {(Number(values.B) || 0).toLocaleString()}{values.unit}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Difference: {values.A > 0 ? ((values.B - values.A) / values.A * 100).toFixed(1) : 'N/A'}%
+            Difference: {(Number(values.A) || 0) > 0 ? (((Number(values.B) || 0) - (Number(values.A) || 0)) / (Number(values.A) || 1) * 100).toFixed(1) : 'N/A'}%
           </p>
         </div>
       );
@@ -103,15 +103,15 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
   // Calculate efficiency metrics
   const calculateEfficiencyMetrics = () => {
     const designAEfficiency = {
-      cpuPerRU: designAMetrics.rackUnits > 0 ? designAMetrics.vCPUs / designAMetrics.rackUnits : 0,
-      tbPerRU: designAMetrics.rackUnits > 0 ? designAMetrics.storageTB / designAMetrics.rackUnits : 0,
-      cpuPerKW: designAMetrics.powerKW > 0 ? designAMetrics.vCPUs / designAMetrics.powerKW : 0,
+      cpuPerRU: (designAMetrics.rackUnits || 0) > 0 ? (designAMetrics.vCPUs || 0) / (designAMetrics.rackUnits || 1) : 0,
+      tbPerRU: (designAMetrics.rackUnits || 0) > 0 ? (designAMetrics.storageTB || 0) / (designAMetrics.rackUnits || 1) : 0,
+      cpuPerKW: (designAMetrics.powerKW || 0) > 0 ? (designAMetrics.vCPUs || 0) / (designAMetrics.powerKW || 1) : 0,
     };
 
     const designBEfficiency = {
-      cpuPerRU: designBMetrics.rackUnits > 0 ? designBMetrics.vCPUs / designBMetrics.rackUnits : 0,
-      tbPerRU: designBMetrics.rackUnits > 0 ? designBMetrics.storageTB / designBMetrics.rackUnits : 0,
-      cpuPerKW: designBMetrics.powerKW > 0 ? designBMetrics.vCPUs / designBMetrics.powerKW : 0,
+      cpuPerRU: (designBMetrics.rackUnits || 0) > 0 ? (designBMetrics.vCPUs || 0) / (designBMetrics.rackUnits || 1) : 0,
+      tbPerRU: (designBMetrics.rackUnits || 0) > 0 ? (designBMetrics.storageTB || 0) / (designBMetrics.rackUnits || 1) : 0,
+      cpuPerKW: (designBMetrics.powerKW || 0) > 0 ? (designBMetrics.vCPUs || 0) / (designBMetrics.powerKW || 1) : 0,
     };
 
     return { designAEfficiency, designBEfficiency };
