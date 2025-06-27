@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { CostPerTiBBreakdown } from './CostPerTiBBreakdown';
 
 interface StorageClusterMetric {
   id: string;
@@ -15,6 +16,8 @@ interface StorageClusterMetric {
   totalNodeCost: number;
   costPerTiB: number;
   nodeCount: number;
+  isHyperConverged?: boolean;
+  totalStorageCost?: number;
 }
 
 interface StorageClustersTableProps {
@@ -50,7 +53,21 @@ export const StorageClustersTable: React.FC<StorageClustersTableProps> = ({ clus
                 <TableCell>{cluster.poolType}</TableCell>
                 <TableCell>{cluster.totalRawCapacityTB.toFixed(2)} TB</TableCell>
                 <TableCell>{cluster.usableCapacityTiB.toFixed(2)} TiB</TableCell>
-                <TableCell>${cluster.costPerTiB.toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                <TableCell>
+                  ${cluster.costPerTiB.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  <CostPerTiBBreakdown
+                    clusterName={cluster.name}
+                    poolType={cluster.poolType}
+                    totalRawCapacityTB={cluster.totalRawCapacityTB}
+                    usableCapacityTB={cluster.usableCapacityTB}
+                    usableCapacityTiB={cluster.usableCapacityTiB}
+                    totalNodeCost={cluster.totalNodeCost}
+                    costPerTiB={cluster.costPerTiB}
+                    nodeCount={cluster.nodeCount}
+                    isHyperConverged={cluster.isHyperConverged}
+                    totalStorageCost={cluster.totalStorageCost}
+                  />
+                </TableCell>
                 <TableCell>{cluster.nodeCount}</TableCell>
               </TableRow>
             ))}

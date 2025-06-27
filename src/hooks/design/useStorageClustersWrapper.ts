@@ -121,7 +121,9 @@ export const useStorageClustersWrapper = () => {
         effectiveCapacityTiB,
         totalNodeCost,
         costPerTiB,
-        nodeCount: clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0)
+        nodeCount: clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0),
+        isHyperConverged: cluster.hyperConverged || false,
+        totalStorageCost: cluster.hyperConverged ? totalStorageCost : undefined
       };
     });
   }, [activeDesign, requirements, componentTemplates]);

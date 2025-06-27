@@ -35,7 +35,7 @@ export const PowerConsumptionTable: React.FC<PowerConsumptionTableProps> = ({
       
       // Determine category and device type based on component type and role
       const componentCategory = componentTypeToCategory[component.type];
-      let category = componentCategory || 'Other';
+      const category = componentCategory || 'Other';
       let deviceType = 'Unknown Device';
       
       // Determine device type based on component type and role
