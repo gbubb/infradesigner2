@@ -6,10 +6,12 @@ import { ServerRole, DiskSlotType, NetworkPortType, MemoryType, PCIeFormFactor, 
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
+import { Control } from "react-hook-form";
+import { LegacyFormData } from "../forms/component-forms/ComponentValidationSchemas";
 
 interface Props {
-  control: any;
-  formValues: any;
+  control: Control<LegacyFormData>;
+  formValues: Record<string, unknown>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectChange: (name: string, value: string) => void;
 }
@@ -66,7 +68,7 @@ export const ServerFields: React.FC<Props> = ({
     onInputChange(syntheticEvent);
   };
 
-  const updatePcieSlot = (index: number, field: 'quantity' | 'formFactor', value: any) => {
+  const updatePcieSlot = (index: number, field: 'quantity' | 'formFactor', value: string | number) => {
     const updatedSlots = [...pcieSlots];
     updatedSlots[index][field] = field === 'quantity' ? Number(value) : value;
     setPcieSlots(updatedSlots);

@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
 import { CableMediaType } from '@/types/infrastructure/port-types';
-import { ClusterInfo } from '@/types/infrastructure/roles-types';
+import { ClusterInfo, ComponentRole } from '@/types/infrastructure/roles-types';
 import { summarizeCablesFromConnections, summarizeTransceiversFromConnections, createPortUtilizationRows } from '../bom/networkBomUtils';
 import ComputeStorageTable from '../bom/ComputeStorageTable';
 import NetworkTable from '../bom/NetworkTable';
@@ -18,9 +18,8 @@ const getBomGroupKey = (component: InfrastructureComponent): string => {
   return component.templateId || `${component.manufacturer}-${component.model}-${component.type}-${component.role || ''}`;
 };
 
-// Helper: For a summarized component, attempt to find its roleId in useDesignStore.componentRoles
-const useComponentRoleId = (component: InfrastructureComponent & { summarizedQuantity: number }) => {
-  const componentRoles = useDesignStore(state => state.componentRoles);
+// Helper: For a summarized component, attempt to find its roleId in componentRoles
+const getComponentRoleId = (component: InfrastructureComponent & { summarizedQuantity: number }, componentRoles: ComponentRole[]) => {
   if (!component.role) return null;
   
   // For storage nodes and hyper-converged nodes, match by both role and clusterId to find the specific cluster
@@ -220,6 +219,9 @@ export const BillOfMaterialsTab: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  // --- Use helper for port utilization rows (moved before conditional return)
+  const portUtilizationRows = React.useMemo(() => createPortUtilizationRows(devices, networkConnections, transceiverTemplates), [devices, networkConnections, transceiverTemplates]);
+
   if (components.length === 0) {
     return (
       <div className="p-4 text-center">
@@ -231,9 +233,6 @@ export const BillOfMaterialsTab: React.FC = () => {
       </div>
     );
   }
-
-  // --- Use helper for port utilization rows
-  const portUtilizationRows = React.useMemo(() => createPortUtilizationRows(devices, networkConnections, transceiverTemplates), [devices, networkConnections, transceiverTemplates]);
 
   return (
     <div className="space-y-6">
@@ -339,7 +338,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                       {categoryComponents.map(component => {
                         const quantity = component.summarizedQuantity;
                         const totalCost = component.cost * quantity;
-                        const roleId = useComponentRoleId(component);
+                        const roleId = getComponentRoleId(component, componentRoles);
                         return (
                           <TableRow key={`all-${getBomGroupKey(component)}`}>
                             <TableCell></TableCell> 

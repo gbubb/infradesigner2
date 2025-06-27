@@ -17,7 +17,7 @@ import { GPUComponentForm } from './GPUComponentForm';
 interface ComponentFormFactoryProps {
   control: Control<LegacyFormData>;
   componentType: ComponentType;
-  formValues: any;
+  formValues: Record<string, unknown>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectChange: (name: string, value: string) => void;
 }

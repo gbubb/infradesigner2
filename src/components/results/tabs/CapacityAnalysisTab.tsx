@@ -140,7 +140,7 @@ export const CapacityAnalysisTab: React.FC = () => {
           spaceUtilization={resourceUtilization?.spaceUtilization}
           leafNetworkUtilization={resourceUtilization?.leafNetworkUtilization}
           mgmtNetworkUtilization={resourceUtilization?.mgmtNetworkUtilization}
-          storageNetworkUtilization={(resourceUtilization as any)?.storageNetworkUtilization}
+          storageNetworkUtilization={resourceUtilization?.storageNetworkUtilization}
           hasDedicatedStorageNetwork={hasDedicatedStorageNetwork}
           hasDedicatedNetworkRacks={hasDedicatedNetworkRacks}
         />

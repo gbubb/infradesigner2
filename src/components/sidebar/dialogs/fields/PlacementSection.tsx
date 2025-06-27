@@ -1,13 +1,16 @@
 import React from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Control } from "react-hook-form";
+import { ComponentType as ComponentTypeEnum } from "@/types/infrastructure";
+import { LegacyFormData } from "../forms/component-forms/ComponentValidationSchemas";
 
 interface Props {
-  control: any;
-  formValues: any;
+  control: Control<LegacyFormData>;
+  formValues: Record<string, unknown>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   maxRackUnits: number;
-  ComponentType: any;
+  ComponentType: typeof ComponentTypeEnum;
 }
 
 export const PlacementSection: React.FC<Props> = ({

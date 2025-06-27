@@ -7,9 +7,10 @@ import { Checkbox } from '@/components/ui/checkbox'; // For multi-select mediaTy
 import { Switch } from '@/components/ui/switch';
 import { ComponentType, ConnectorType } from '@/types/infrastructure';
 import { PortSpeed, MediaType } from '@/types/infrastructure/port-types';
+import { LegacyFormData } from '../forms/component-forms/ComponentValidationSchemas';
 
 interface OpticsFieldsProps {
-  control: Control<any>;
+  control: Control<LegacyFormData>;
   // formValues: any; // If needed for conditional rendering or complex logic not handled by RHF control
   // onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   // onSelectChange: (name: string, value: string | string[]) => void; // For multi-select

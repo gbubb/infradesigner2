@@ -253,7 +253,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
     if (!components.length || !azNames.length) return;
     
     // Group storage nodes by cluster
-    const nodesByCluster: Record<string, any[]> = {};
+    const nodesByCluster: Record<string, InfrastructureComponent[]> = {};
     
     components.forEach(component => {
       if (component.clusterInfo && component.clusterInfo.clusterId) {

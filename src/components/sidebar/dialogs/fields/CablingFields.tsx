@@ -1,9 +1,11 @@
 
 import React from "react";
 import { CablingFormFields } from "../../forms/CablingFormFields";
+import { Control } from "react-hook-form";
+import { LegacyFormData } from "../forms/component-forms/ComponentValidationSchemas";
 
 interface Props {
-  control: any;
+  control: Control<LegacyFormData>;
   componentType: string;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectChange: (name: string, value: string) => void;

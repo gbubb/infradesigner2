@@ -8,7 +8,7 @@ import { LegacyFormData } from './ComponentValidationSchemas';
 
 interface DiskComponentFormProps {
   control: Control<LegacyFormData>;
-  formValues: any;
+  formValues: Record<string, unknown>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectChange: (name: string, value: string) => void;
 }

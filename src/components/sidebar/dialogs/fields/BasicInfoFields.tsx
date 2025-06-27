@@ -3,10 +3,12 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ComponentType } from "@/types/infrastructure";
+import { Control } from "react-hook-form";
+import { LegacyFormData } from "../forms/component-forms/ComponentValidationSchemas";
 
 interface Props {
-  control: any;
-  formValues: any;
+  control: Control<LegacyFormData>;
+  formValues: Record<string, unknown>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectChange: (name: string, value: string) => void;
   onTypeChange: (value: string) => void;

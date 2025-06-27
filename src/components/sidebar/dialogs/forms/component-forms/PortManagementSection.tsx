@@ -6,10 +6,10 @@ import { PortSpeed, PortRole, MediaType, Port } from '@/types/infrastructure/por
 
 interface PortManagementSectionProps {
   componentType: ComponentType;
-  formValues: any;
+  formValues: Record<string, unknown>;
   addPort: () => void;
   removePort: (index: number) => void;
-  updatePort: (index: number, field: keyof Port, value: any) => void;
+  updatePort: (index: number, field: keyof Port, value: string | undefined) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -76,7 +76,7 @@ export const PortManagementSection: React.FC<PortManagementSectionProps> = ({
           name: "ports",
           value: updatedPorts,
         },
-      } as any);
+      } as React.ChangeEvent<HTMLInputElement>);
     }
     setBulkPort((prev) => ({ ...prev, quantity: 1 }));
   };
@@ -194,7 +194,7 @@ export const PortManagementSection: React.FC<PortManagementSectionProps> = ({
         </div>
         {formValues.ports && formValues.ports.length > 0 ? (
           <div className="space-y-2">
-            {formValues.ports.map((port: any, idx: number) => (
+            {(formValues.ports as Port[]).map((port, idx: number) => (
               <div
                 key={port.id || idx}
                 className="border rounded p-3 flex flex-col sm:flex-row gap-2 items-center flex-wrap"

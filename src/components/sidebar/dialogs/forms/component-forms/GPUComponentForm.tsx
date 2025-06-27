@@ -6,7 +6,7 @@ import { LegacyFormData } from './ComponentValidationSchemas';
 
 interface GPUComponentFormProps {
   control: Control<LegacyFormData>;
-  formValues: any;
+  formValues: Record<string, unknown>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectChange: (name: string, value: string) => void;
 }

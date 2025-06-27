@@ -10,6 +10,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
+import { InfrastructureDesign } from '@/types/infrastructure/design-types';
 import { useDesignStore } from '@/store/designStore';
 
 interface ClusterAZAssignmentDialogProps {
@@ -22,7 +23,7 @@ interface ClusterAZAssignmentDialogProps {
 }
 
 // Helper to extract all unique cluster/device lines (unchanged, but now expects AZ names, not IDs)
-const getAllConfigurableRoles = (activeDesign: any, availabilityZones: string[]) => {
+const getAllConfigurableRoles = (activeDesign: InfrastructureDesign, availabilityZones: string[]) => {
   if (!activeDesign || !activeDesign.componentRoles) return [];
 
   const coreAzStandardName = "Core";
