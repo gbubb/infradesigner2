@@ -297,3 +297,237 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     throw new Error(`Power calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
+
+// Component Power Calculation Functions
+
+function calculateCpuPower(
+  inputs: PowerCalculationInputs,
+  cal: PowerCalibrationProfile
+): { idle: number; average: number; peak: number } {
+  const totalCores = inputs.cpuCount * inputs.coresPerCpu;
+  const totalTdp = inputs.cpuCount * inputs.tdpPerCpu;
+  
+  // Idle power is typically 10-30% of TDP
+  const idlePower = totalTdp * cal.cpuIdleMultiplier;
+  
+  // Average power based on utilization
+  const utilizationFactor = inputs.cpuUtilization / 100;
+  const averagePower = idlePower + (totalTdp - idlePower) * utilizationFactor;
+  
+  // Peak power can exceed TDP with turbo
+  let peakPower = totalTdp;
+  if (inputs.turboEnabled) {
+    // Turbo can add 15-25% more power
+    peakPower = totalTdp * cal.cpuTurboMultiplier;
+  }
+  
+  return {
+    idle: idlePower,
+    average: averagePower,
+    peak: peakPower
+  };
+}
+
+function calculateMemoryPower(
+  inputs: PowerCalculationInputs,
+  cal: PowerCalibrationProfile
+): { idle: number; average: number; peak: number } {
+  // Power per DIMM varies by type and speed
+  let powerPerDimm = 3; // Default DDR4
+  
+  if (inputs.memoryType === 'DDR3') {
+    powerPerDimm = 2.5;
+  } else if (inputs.memoryType === 'DDR5') {
+    powerPerDimm = 4.5;
+  }
+  
+  // Adjust for speed
+  const speedFactor = inputs.memorySpeedMHz / 2933; // Normalize to DDR4-2933
+  powerPerDimm *= speedFactor;
+  
+  // Adjust for capacity
+  const capacityFactor = Math.sqrt(inputs.dimmCapacityGB / 16); // Non-linear scaling
+  powerPerDimm *= capacityFactor;
+  
+  const totalMemoryPower = inputs.dimmCount * powerPerDimm;
+  
+  return {
+    idle: totalMemoryPower * 0.7, // Memory is always active
+    average: totalMemoryPower * 0.85,
+    peak: totalMemoryPower
+  };
+}
+
+function calculateStoragePower(
+  inputs: PowerCalculationInputs,
+  cal: PowerCalibrationProfile
+): { idle: number; average: number; peak: number } {
+  let idlePower = 0;
+  let activePower = 0;
+  let peakPower = 0;
+  
+  // HDDs
+  inputs.hdds.forEach(hdd => {
+    const powerPerDrive = hdd.rpm >= 10000 ? 12 : 8; // High-RPM drives use more power
+    idlePower += hdd.count * powerPerDrive * 0.5; // Spin-down in idle
+    activePower += hdd.count * powerPerDrive * 0.8;
+    peakPower += hdd.count * powerPerDrive;
+  });
+  
+  // SATA SSDs
+  inputs.ssdSata.forEach(ssd => {
+    const powerPerDrive = 2.5;
+    idlePower += ssd.count * powerPerDrive * 0.2;
+    activePower += ssd.count * powerPerDrive * 0.6;
+    peakPower += ssd.count * powerPerDrive;
+  });
+  
+  // NVMe drives
+  inputs.nvme.forEach(nvme => {
+    const powerPerDrive = nvme.generation === 5 ? 12 : nvme.generation === 4 ? 8 : 6;
+    idlePower += nvme.count * powerPerDrive * 0.1;
+    activePower += nvme.count * powerPerDrive * 0.7;
+    peakPower += nvme.count * powerPerDrive;
+  });
+  
+  // RAID controller
+  if (inputs.raidController) {
+    idlePower += 15;
+    activePower += 20;
+    peakPower += 25;
+  }
+  
+  return {
+    idle: idlePower,
+    average: activePower,
+    peak: peakPower
+  };
+}
+
+function calculateNetworkPower(
+  inputs: PowerCalculationInputs,
+  cal: PowerCalibrationProfile
+): { idle: number; average: number; peak: number } {
+  let totalPower = 0;
+  
+  inputs.networkPorts.forEach(port => {
+    let powerPerPort = 0;
+    
+    switch (port.speedGbps) {
+      case 1:
+        powerPerPort = 1;
+        break;
+      case 10:
+        powerPerPort = 3;
+        break;
+      case 25:
+        powerPerPort = 5;
+        break;
+      case 40:
+        powerPerPort = 8;
+        break;
+      case 100:
+        powerPerPort = 15;
+        break;
+    }
+    
+    totalPower += port.count * powerPerPort;
+  });
+  
+  return {
+    idle: totalPower * 0.8, // Network ports typically stay active
+    average: totalPower * 0.9,
+    peak: totalPower
+  };
+}
+
+function calculateOtherComponentsPower(
+  inputs: PowerCalculationInputs,
+  cal: PowerCalibrationProfile
+): { motherboard: { idle: number; average: number; peak: number } } {
+  // Motherboard power scales with form factor and features
+  let basePower = 30; // Base chipset power
+  
+  // Add power for PCIe slots, USB, etc.
+  if (inputs.formFactor === '2U' || inputs.formFactor === '4U') {
+    basePower += 15; // More expansion slots
+  }
+  
+  // Scale with CPU count (more VRMs, etc.)
+  basePower *= Math.sqrt(inputs.cpuCount);
+  
+  return {
+    motherboard: {
+      idle: basePower * 0.8,
+      average: basePower * 0.9,
+      peak: basePower
+    }
+  };
+}
+
+function calculateFanPower(
+  formFactor: '1U' | '2U' | '4U',
+  cal: PowerCalibrationProfile
+): { idle: number; average: number; peak: number } {
+  // Fan power based on form factor
+  let fanPower = 20; // 1U baseline
+  
+  if (formFactor === '2U') {
+    fanPower = 35;
+  } else if (formFactor === '4U') {
+    fanPower = 50;
+  }
+  
+  return {
+    idle: fanPower * 0.3, // Fans spin down at idle
+    average: fanPower * 0.6,
+    peak: fanPower // Full speed under load
+  };
+}
+
+function calculateEnvironmentalFactor(
+  inletTempC: number,
+  cal: PowerCalibrationProfile
+): number {
+  // Power increases with temperature due to leakage and fan speed
+  const baseTemp = 25; // Reference temperature
+  const tempDelta = inletTempC - baseTemp;
+  
+  // Approximately 0.4% increase per degree C
+  return 1 + (tempDelta * cal.tempCoefficientPerDegree);
+}
+
+function calculatePsuEfficiency(
+  loadW: number,
+  psuRatingW: number,
+  efficiencyRating: PowerCalculationInputs['psuEfficiencyRating'],
+  cal: PowerCalibrationProfile
+): number {
+  const loadPercent = (loadW / psuRatingW) * 100;
+  
+  // PSU efficiency curves based on 80 Plus standards
+  const efficiencyCurves: Record<PowerCalculationInputs['psuEfficiencyRating'], { [key: number]: number }> = {
+    '80Plus': { 20: 0.80, 50: 0.80, 100: 0.80 },
+    '80PlusBronze': { 20: 0.82, 50: 0.85, 100: 0.82 },
+    '80PlusSilver': { 20: 0.85, 50: 0.88, 100: 0.85 },
+    '80PlusGold': { 20: 0.87, 50: 0.90, 100: 0.87 },
+    '80PlusPlatinum': { 20: 0.90, 50: 0.92, 100: 0.89 },
+    '80PlusTitanium': { 20: 0.92, 50: 0.94, 100: 0.90 }
+  };
+  
+  const curve = efficiencyCurves[efficiencyRating];
+  
+  // Interpolate efficiency based on load
+  if (loadPercent <= 20) {
+    return curve[20];
+  } else if (loadPercent <= 50) {
+    const factor = (loadPercent - 20) / 30;
+    return curve[20] + (curve[50] - curve[20]) * factor;
+  } else if (loadPercent <= 100) {
+    const factor = (loadPercent - 50) / 50;
+    return curve[50] + (curve[100] - curve[50]) * factor;
+  } else {
+    // Over 100% load, efficiency drops
+    return curve[100] * 0.95;
+  }
+}
