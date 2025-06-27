@@ -1,4 +1,3 @@
-
 import { PowerCalibrationProfile, DEFAULT_CALIBRATION_PROFILE } from './powerCalibration';
 
 export interface PowerCalculationInputs {
@@ -73,479 +72,388 @@ export interface PowerCalculationResult {
   missingMetrics: string[];
 }
 
-export function calculateServerPower(inputs: PowerCalculationInputs, calibration?: PowerCalibrationProfile): PowerCalculationResult {
-  // Validate inputs
-  if (!inputs) {
-    throw new Error('Power calculation inputs are required');
-  }
-  
-  if (!inputs.cpuModel || inputs.cpuModel.trim() === '') {
-    throw new Error('CPU model is required');
-  }
-  
-  if (inputs.cpuCount <= 0) {
-    throw new Error('CPU count must be greater than 0');
-  }
-  
-  if (inputs.coresPerCpu <= 0) {
-    throw new Error('Cores per CPU must be greater than 0');
-  }
-  
-  if (inputs.tdpPerCpu <= 0) {
-    throw new Error('CPU TDP must be greater than 0');
-  }
-  
-  if (inputs.dimmCount <= 0) {
-    throw new Error('DIMM count must be greater than 0');
-  }
-  
-  if (inputs.dimmCapacityGB <= 0) {
-    throw new Error('DIMM capacity must be greater than 0');
-  }
-  
-  if (inputs.psuRating <= 0) {
-    throw new Error('PSU rating must be greater than 0');
-  }
-  
-  // Use provided calibration or default
-  const cal = calibration || DEFAULT_CALIBRATION_PROFILE as PowerCalibrationProfile;
-  
-  if (!cal) {
-    throw new Error('No calibration profile available');
-  }
-  
-  const warnings: string[] = [];
-  const missingMetrics: string[] = [];
-  
-  try {
-    // Validate inputs
-    if (!inputs.cpuModel || inputs.cpuModel === 'Unknown') {
-      missingMetrics.push('Specific CPU model for accurate architecture detection');
-    }
-    
-    if (inputs.tdpPerCpu === 0) {
-      missingMetrics.push('CPU TDP (Thermal Design Power) rating');
-      warnings.push('Using estimated TDP based on core count');
-      inputs.tdpPerCpu = inputs.coresPerCpu * 8; // Rough estimate
-    }
-    
-    // Calculate component power with error handling
-    const cpuPower = calculateCpuPower(inputs, cal);
-    const memoryPower = calculateMemoryPower(inputs, cal);
-    const storagePower = calculateStoragePower(inputs, cal);
-    const networkPower = calculateNetworkPower(inputs, cal);
-    const otherComponents = calculateOtherComponentsPower(inputs, cal);
-    const motherboardPower = otherComponents.motherboard;
-    
-    // Validate calculated values
-    if (!cpuPower || cpuPower.idle < 0 || cpuPower.average < 0 || cpuPower.peak < 0) {
-      throw new Error('Invalid CPU power calculation result');
-    }
-    
-    if (!memoryPower || memoryPower.idle < 0 || memoryPower.average < 0 || memoryPower.peak < 0) {
-      throw new Error('Invalid memory power calculation result');
-    }
-    
-    if (!storagePower || storagePower.idle < 0 || storagePower.average < 0 || storagePower.peak < 0) {
-      throw new Error('Invalid storage power calculation result');
-    }
-    
-    if (!networkPower || networkPower.idle < 0 || networkPower.average < 0 || networkPower.peak < 0) {
-      throw new Error('Invalid network power calculation result');
-    }
-    
-    if (!motherboardPower || motherboardPower.idle < 0 || motherboardPower.average < 0 || motherboardPower.peak < 0) {
-      throw new Error('Invalid motherboard power calculation result');
-    }
-    
-    // Calculate DC totals before fans
-    const dcBeforeFans = {
-      idle: cpuPower.idle + memoryPower.idle + storagePower.idle + networkPower.idle + motherboardPower.idle,
-      average: cpuPower.average + memoryPower.average + storagePower.average + networkPower.average + motherboardPower.average,
-      peak: cpuPower.peak + memoryPower.peak + storagePower.peak + networkPower.peak + motherboardPower.peak
-    };
-    
-    // Calculate fan power based on form factor (absolute wattage)
-    const fansPower = calculateFanPower(inputs.formFactor, cal);
-    
-    if (!fansPower || fansPower.idle < 0 || fansPower.average < 0 || fansPower.peak < 0) {
-      throw new Error('Invalid fan power calculation result');
-    }
-    
-    // Total DC power
-    const dcTotal = {
-      idle: dcBeforeFans.idle + fansPower.idle,
-      average: dcBeforeFans.average + fansPower.average,
-      peak: dcBeforeFans.peak + fansPower.peak
-    };
-    
-    // Apply environmental factor
-    const envFactor = calculateEnvironmentalFactor(inputs.inletTempC, cal);
-    const dcWithEnv = {
-      idle: dcTotal.idle * envFactor,
-      average: dcTotal.average * envFactor,
-      peak: dcTotal.peak * envFactor
-    };
-    
-    // Calculate AC power
-    const psuEfficiencyIdle = calculatePsuEfficiency(dcWithEnv.idle, inputs.psuRating, inputs.psuEfficiencyRating, cal);
-    const psuEfficiencyAvg = calculatePsuEfficiency(dcWithEnv.average, inputs.psuRating, inputs.psuEfficiencyRating, cal);
-    const psuEfficiencyPeak = calculatePsuEfficiency(dcWithEnv.peak, inputs.psuRating, inputs.psuEfficiencyRating, cal);
-    
-    // Validate PSU efficiency values
-    if (psuEfficiencyIdle <= 0 || psuEfficiencyAvg <= 0 || psuEfficiencyPeak <= 0) {
-      throw new Error('Invalid PSU efficiency calculation');
-    }
-    
-    // Redundant PSU adjustment
-    let efficiencyMultiplier = 1.0;
-    if (inputs.redundantPsu) {
-      // In load-balancing mode, both PSUs share the load, improving efficiency slightly
-      // This increases the effective efficiency, not the power draw
-      efficiencyMultiplier = cal.redundantPsuEfficiencyBonus;
-      warnings.push('Redundant PSU configuration assumed to be in load-balancing mode');
-    }
-    
-    const acTotal = {
-      idle: dcWithEnv.idle / (psuEfficiencyIdle * efficiencyMultiplier),
-      average: dcWithEnv.average / (psuEfficiencyAvg * efficiencyMultiplier),
-      peak: dcWithEnv.peak / (psuEfficiencyPeak * efficiencyMultiplier)
-    };
-    
-    // No safety margin - this is accounted for elsewhere in the datacenter
-    const acWithSafety = {
-      idle: acTotal.idle,
-      average: acTotal.average,
-      peak: acTotal.peak
-    };
-    
-    // Additional validations and warnings
-    if (inputs.cpuUtilization > 80) {
-      warnings.push('High CPU utilization may result in thermal throttling');
-    }
-    
-    if (dcWithEnv.peak > inputs.psuRating * 0.8) {
-      warnings.push('Peak power exceeds 80% of PSU rating - consider higher capacity PSU');
-    }
-    
-    if (inputs.inletTempC > 30) {
-      warnings.push('High inlet temperature will increase fan power consumption');
-    }
-    
-    // Missing metrics that would improve accuracy
-    if (!inputs.turboEnabled) {
-      missingMetrics.push('Turbo boost frequency and probability data');
-    }
-    
-    if (inputs.networkPorts.length === 0) {
-      missingMetrics.push('Network port configuration');
-    }
-    
-    missingMetrics.push('Specific workload profile (CPU vs memory vs I/O intensive)');
-    missingMetrics.push('Ambient humidity levels');
-    missingMetrics.push('Altitude/air pressure for fan efficiency');
-    
-    return {
-      idlePowerW: Math.round(acWithSafety.idle),
-      averagePowerW: Math.round(acWithSafety.average),
-      peakPowerW: Math.round(acWithSafety.peak),
-      
-      componentBreakdown: {
-        cpu: {
-          idle: Math.round(cpuPower.idle),
-          average: Math.round(cpuPower.average),
-          peak: Math.round(cpuPower.peak)
-        },
-        memory: {
-          idle: Math.round(memoryPower.idle),
-          average: Math.round(memoryPower.average),
-          peak: Math.round(memoryPower.peak)
-        },
-        storage: {
-          idle: Math.round(storagePower.idle),
-          average: Math.round(storagePower.average),
-          peak: Math.round(storagePower.peak)
-        },
-        network: {
-          idle: Math.round(networkPower.idle),
-          average: Math.round(networkPower.average),
-          peak: Math.round(networkPower.peak)
-        },
-        motherboard: {
-          idle: Math.round(motherboardPower.idle),
-          average: Math.round(motherboardPower.average),
-          peak: Math.round(motherboardPower.peak)
-        },
-        fans: {
-          idle: Math.round(fansPower.idle),
-          average: Math.round(fansPower.average),
-          peak: Math.round(fansPower.peak)
-        }
-      },
-      
-      dcTotalW: {
-        idle: Math.round(dcWithEnv.idle),
-        average: Math.round(dcWithEnv.average),
-        peak: Math.round(dcWithEnv.peak)
-      },
-      
-      acTotalW: {
-        idle: Math.round(acWithSafety.idle),
-        average: Math.round(acWithSafety.average),
-        peak: Math.round(acWithSafety.peak)
-      },
-      
-      psuEfficiency: {
-        idle: psuEfficiencyIdle,
-        average: psuEfficiencyAvg,
-        peak: psuEfficiencyPeak
-      },
-      
-      acTotalBeforeSafety: {
-        idle: Math.round(acTotal.idle),
-        average: Math.round(acTotal.average),
-        peak: Math.round(acTotal.peak)
-      },
-      
-      warnings,
-      missingMetrics
-    };
-  } catch (error) {
-    console.error('Error in power calculation:', error);
-    throw new Error(`Power calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+// Remove hardcoded multipliers - now comes from calibration
+
+// PSU Efficiency curves (based on 80 Plus certification requirements)
+const PSU_EFFICIENCY: Record<string, (load: number) => number> = {
+  '80Plus': (load) => load < 0.2 ? 0.75 : load > 0.8 ? 0.78 : 0.80,
+  '80PlusBronze': (load) => load < 0.2 ? 0.78 : load > 0.8 ? 0.81 : 0.85,
+  '80PlusSilver': (load) => load < 0.2 ? 0.80 : load > 0.8 ? 0.85 : 0.88,
+  '80PlusGold': (load) => load < 0.2 ? 0.82 : load > 0.8 ? 0.87 : 0.90,
+  '80PlusPlatinum': (load) => load < 0.2 ? 0.85 : load > 0.8 ? 0.89 : 0.92,
+  '80PlusTitanium': (load) => load < 0.2 ? 0.90 : load > 0.8 ? 0.91 : 0.96
+};
+
+function getCpuArchitecture(cpuModel: string): string {
+  const model = cpuModel.toLowerCase();
+  if (model.includes('xeon')) return 'Intel Xeon';
+  if (model.includes('epyc')) return 'AMD EPYC';
+  if (model.includes('arm') || model.includes('graviton')) return 'ARM';
+  return 'Default';
 }
 
-// Component Power Calculation Functions
-
-function calculateCpuPower(
-  inputs: PowerCalculationInputs,
-  cal: PowerCalibrationProfile
-): { idle: number; average: number; peak: number } {
+function calculateCpuPower(inputs: PowerCalculationInputs, calibration: PowerCalibrationProfile): { idle: number; average: number; peak: number } {
+  const architecture = getCpuArchitecture(inputs.cpuModel);
+  const multipliers = calibration.cpuArchitectureMultipliers[architecture] || calibration.cpuArchitectureMultipliers['Default'];
+  
+  const totalTdp = inputs.tdpPerCpu * inputs.cpuCount;
+  
+  // Idle power
+  const idlePower = totalTdp * calibration.cpuIdleMultiplier;
+  
+  // Dynamic power based on utilization with non-linear scaling
+  const u = inputs.cpuUtilization / 100;
+  const { linear, quadratic, cubic } = calibration.cpuDynamicCoefficients;
+  const dynamicPower = totalTdp * (linear * u + quadratic * Math.pow(u, 2) + cubic * Math.pow(u, 3));
+  
+  // Turbo adjustment
+  const turboAdjustment = inputs.turboEnabled ? totalTdp * calibration.cpuTurboMultiplier * calibration.cpuTurboProbability : 0;
+  
+  // Multi-core efficiency factor (decreases with more cores)
   const totalCores = inputs.cpuCount * inputs.coresPerCpu;
-  const totalTdp = inputs.cpuCount * inputs.tdpPerCpu;
+  const efficiencyFactor = calibration.cpuMulticoreEfficiencyBase - (calibration.cpuMulticoreEfficiencyDecay * totalCores);
   
-  // Idle power is typically 10-30% of TDP
-  const idlePower = totalTdp * cal.cpuIdleMultiplier;
+  const averagePower = (idlePower + dynamicPower) * efficiencyFactor + turboAdjustment;
+  const peakPower = totalTdp * multipliers.peak;
   
-  // Average power based on utilization
-  const utilizationFactor = inputs.cpuUtilization / 100;
-  const averagePower = idlePower + (totalTdp - idlePower) * utilizationFactor;
+  return { idle: idlePower, average: averagePower, peak: peakPower };
+}
+
+function calculateMemoryPower(inputs: PowerCalculationInputs, calibration: PowerCalibrationProfile): { idle: number; average: number; peak: number } {
+  const memModel = calibration.memoryPowerModel;
   
-  // Peak power can exceed TDP with turbo
-  let peakPower = totalTdp;
-  if (inputs.turboEnabled) {
-    // Turbo can add 15-25% more power
-    peakPower = totalTdp * cal.cpuTurboMultiplier;
+  // Handle missing memoryPowerModel gracefully
+  if (!memModel || !memModel.controllerBasePower || !memModel.chipsPerGB || !memModel.powerPerChip) {
+    // Fallback to conservative estimate
+    const conservativePower = inputs.dimmCount * calibration.memoryConservativeMultiplier;
+    return {
+      idle: conservativePower * 0.35,
+      average: conservativePower * 0.7,
+      peak: conservativePower
+    };
   }
   
+  // Calculate power per DIMM using chip-based model
+  const controllerPower = memModel.controllerBasePower[inputs.memoryType] || 1.0;
+  const chipsPerDimm = inputs.dimmCapacityGB * (memModel.chipsPerGB[inputs.memoryType] || 0.5);
+  const chipPower = chipsPerDimm * (memModel.powerPerChip[inputs.memoryType] || 0.18);
+  
+  // Speed scaling (logarithmic)
+  const baseSpeed = memModel.speedScaling?.baseSpeedMHz?.[inputs.memoryType] || 2400;
+  const speedRatio = inputs.memorySpeedMHz / baseSpeed;
+  const speedMultiplier = Math.pow(speedRatio, memModel.speedScaling?.scalingExponent || 0.3);
+  
+  // Total power per DIMM at peak
+  const peakPowerPerDimm = (controllerPower + chipPower) * speedMultiplier;
+  
+  // Apply activity multipliers
+  const idlePowerPerDimm = peakPowerPerDimm * (memModel.activityMultipliers?.idle || 0.34);
+  const avgPowerPerDimm = peakPowerPerDimm * (memModel.activityMultipliers?.average || 1.0);
+  
+  // Total for all DIMMs
+  const totalIdle = inputs.dimmCount * idlePowerPerDimm;
+  const totalAvg = inputs.dimmCount * avgPowerPerDimm;
+  const totalPeak = inputs.dimmCount * peakPowerPerDimm;
+  
+  // Conservative estimate check
+  const conservativePower = inputs.dimmCount * calibration.memoryConservativeMultiplier;
+  
   return {
-    idle: idlePower,
-    average: averagePower,
-    peak: peakPower
+    idle: totalIdle,
+    average: Math.max(totalAvg, conservativePower * 0.7),
+    peak: Math.max(totalPeak, conservativePower)
   };
 }
 
-function calculateMemoryPower(
-  inputs: PowerCalculationInputs,
-  cal: PowerCalibrationProfile
-): { idle: number; average: number; peak: number } {
-  // Power per DIMM varies by type and speed
-  let powerPerDimm = 3; // Default DDR4
-  
-  if (inputs.memoryType === 'DDR3') {
-    powerPerDimm = 2.5;
-  } else if (inputs.memoryType === 'DDR5') {
-    powerPerDimm = 4.5;
-  }
-  
-  // Adjust for speed
-  const speedFactor = inputs.memorySpeedMHz / 2933; // Normalize to DDR4-2933
-  powerPerDimm *= speedFactor;
-  
-  // Adjust for capacity
-  const capacityFactor = Math.sqrt(inputs.dimmCapacityGB / 16); // Non-linear scaling
-  powerPerDimm *= capacityFactor;
-  
-  const totalMemoryPower = inputs.dimmCount * powerPerDimm;
-  
-  return {
-    idle: totalMemoryPower * 0.7, // Memory is always active
-    average: totalMemoryPower * 0.85,
-    peak: totalMemoryPower
-  };
-}
-
-function calculateStoragePower(
-  inputs: PowerCalculationInputs,
-  cal: PowerCalibrationProfile
-): { idle: number; average: number; peak: number } {
-  let idlePower = 0;
-  let activePower = 0;
-  let peakPower = 0;
+function calculateStoragePower(inputs: PowerCalculationInputs, calibration: PowerCalibrationProfile): { idle: number; average: number; peak: number } {
+  let totalIdle = 0;
+  let totalAverage = 0;
+  let totalPeak = 0;
   
   // HDDs
   inputs.hdds.forEach(hdd => {
-    const powerPerDrive = hdd.rpm >= 10000 ? 12 : 8; // High-RPM drives use more power
-    idlePower += hdd.count * powerPerDrive * 0.5; // Spin-down in idle
-    activePower += hdd.count * powerPerDrive * 0.8;
-    peakPower += hdd.count * powerPerDrive;
+    const basePower = calibration.storageBasePower.hddBase + (hdd.capacityTB * calibration.storageBasePower.hddCapacityScaling);
+    const rpmPenalty = hdd.rpm > 10000 ? calibration.storageBasePower.hddRpmPenalty.rpm15000 : 
+                      hdd.rpm > 7200 ? calibration.storageBasePower.hddRpmPenalty.rpm10000 : 
+                      calibration.storageBasePower.hddRpmPenalty.rpm7200;
+    const power = basePower + rpmPenalty;
+    
+    totalIdle += hdd.count * power * calibration.storageActivityFactors.hddIdle;
+    totalAverage += hdd.count * power;
+    totalPeak += hdd.count * power * calibration.storageActivityFactors.hddPeak;
   });
   
   // SATA SSDs
   inputs.ssdSata.forEach(ssd => {
-    const powerPerDrive = 2.5;
-    idlePower += ssd.count * powerPerDrive * 0.2;
-    activePower += ssd.count * powerPerDrive * 0.6;
-    peakPower += ssd.count * powerPerDrive;
+    const power = calibration.storageBasePower.ssdSataBase + (ssd.capacityTB * calibration.storageBasePower.ssdSataCapacityScaling);
+    
+    totalIdle += ssd.count * power * calibration.storageActivityFactors.ssdIdle;
+    totalAverage += ssd.count * power;
+    totalPeak += ssd.count * power * calibration.storageActivityFactors.ssdPeak;
   });
   
-  // NVMe drives
+  // NVMe SSDs
   inputs.nvme.forEach(nvme => {
-    const powerPerDrive = nvme.generation === 5 ? 12 : nvme.generation === 4 ? 8 : 6;
-    idlePower += nvme.count * powerPerDrive * 0.1;
-    activePower += nvme.count * powerPerDrive * 0.7;
-    peakPower += nvme.count * powerPerDrive;
+    const genFactor = nvme.generation - 3; // 0 for Gen3, 1 for Gen4, 2 for Gen5
+    const power = calibration.storageBasePower.nvmeBase + (genFactor * calibration.storageBasePower.nvmeGenScaling) + (nvme.capacityTB * calibration.storageBasePower.nvmeCapacityScaling);
+    
+    totalIdle += nvme.count * power * calibration.storageActivityFactors.nvmeIdle;
+    totalAverage += nvme.count * power;
+    totalPeak += nvme.count * power * calibration.storageActivityFactors.nvmePeak;
   });
   
   // RAID controller
   if (inputs.raidController) {
-    idlePower += 15;
-    activePower += 20;
-    peakPower += 25;
+    totalIdle += calibration.raidControllerPower.idle;
+    totalAverage += calibration.raidControllerPower.average;
+    totalPeak += calibration.raidControllerPower.peak;
   }
   
-  return {
-    idle: idlePower,
-    average: activePower,
-    peak: peakPower
-  };
+  return { idle: totalIdle, average: totalAverage, peak: totalPeak };
 }
 
-function calculateNetworkPower(
-  inputs: PowerCalculationInputs,
-  cal: PowerCalibrationProfile
-): { idle: number; average: number; peak: number } {
+function calculateNetworkPower(inputs: PowerCalculationInputs, calibration: PowerCalibrationProfile): { idle: number; average: number; peak: number } {
   let totalPower = 0;
-  
   inputs.networkPorts.forEach(port => {
-    let powerPerPort = 0;
-    
-    switch (port.speedGbps) {
-      case 1:
-        powerPerPort = 1;
-        break;
-      case 10:
-        powerPerPort = 3;
-        break;
-      case 25:
-        powerPerPort = 5;
-        break;
-      case 40:
-        powerPerPort = 8;
-        break;
-      case 100:
-        powerPerPort = 15;
-        break;
-    }
-    
-    totalPower += port.count * powerPerPort;
+    totalPower += port.count * calibration.networkPowerBySpeed[port.speedGbps];
   });
   
+  // Network power is relatively constant
   return {
-    idle: totalPower * 0.8, // Network ports typically stay active
-    average: totalPower * 0.9,
-    peak: totalPower
+    idle: totalPower * calibration.networkActivityFactors.idle,
+    average: totalPower,
+    peak: totalPower * calibration.networkActivityFactors.peak
   };
 }
 
-function calculateOtherComponentsPower(
-  inputs: PowerCalculationInputs,
-  cal: PowerCalibrationProfile
-): { motherboard: { idle: number; average: number; peak: number } } {
-  // Motherboard power scales with form factor and features
-  let basePower = 30; // Base chipset power
+function calculateOtherComponentsPower(inputs: PowerCalculationInputs, calibration: PowerCalibrationProfile): {
+  motherboard: { idle: number; average: number; peak: number };
+  fans: { idle: number; average: number; peak: number };
+} {
+  // Motherboard base power
+  const motherboardBase = calibration.motherboardBasePower[inputs.formFactor];
   
-  // Add power for PCIe slots, USB, etc.
-  if (inputs.formFactor === '2U' || inputs.formFactor === '4U') {
-    basePower += 15; // More expansion slots
-  }
+  // BMC/Management
+  const bmcPower = calibration.bmcPower;
   
-  // Scale with CPU count (more VRMs, etc.)
-  basePower *= Math.sqrt(inputs.cpuCount);
+  const motherboard = {
+    idle: motherboardBase + bmcPower,
+    average: motherboardBase + bmcPower,
+    peak: motherboardBase + bmcPower
+  };
+  
+  // Fan power (5-15% of total, varies by load)
+  // This is calculated later based on total DC power
+  const fans = { idle: 0, average: 0, peak: 0 };
+  
+  return { motherboard, fans };
+}
+
+function calculateEnvironmentalFactor(inletTempC: number, calibration: PowerCalibrationProfile): number {
+  return 1 + (calibration.tempCoefficientPerDegree * Math.max(0, inletTempC - calibration.tempBaselineC));
+}
+
+function calculateFanPower(formFactor: '1U' | '2U' | '4U', calibration: PowerCalibrationProfile): { idle: number; average: number; peak: number } {
+  const fanPower = calibration.fanPowerByFormFactor[formFactor];
+  
+  // Linear interpolation for average (50% between idle and peak)
+  const average = fanPower.idle + (fanPower.peak - fanPower.idle) * 0.5;
   
   return {
-    motherboard: {
-      idle: basePower * 0.8,
-      average: basePower * 0.9,
-      peak: basePower
+    idle: fanPower.idle,
+    average: average,
+    peak: fanPower.peak
+  };
+}
+
+function calculatePsuEfficiency(dcPower: number, psuRating: number, efficiencyRating: string, calibration: PowerCalibrationProfile): number {
+  const loadPercentage = dcPower / psuRating;
+  const loadPercent = loadPercentage * 100;
+  
+  // Check for calibration overrides
+  if (calibration.psuEfficiencyOverrides && calibration.psuEfficiencyOverrides[efficiencyRating]) {
+    const overrides = calibration.psuEfficiencyOverrides[efficiencyRating];
+    
+    // Check each range
+    if (loadPercent >= 0 && loadPercent <= 20 && overrides['0-20']) {
+      return overrides['0-20'];
+    } else if (loadPercent > 20 && loadPercent <= 80 && overrides['20-80']) {
+      return overrides['20-80'];
+    } else if (loadPercent > 80 && loadPercent <= 100 && overrides['80-100']) {
+      return overrides['80-100'];
     }
-  };
+  }
+  
+  // Fall back to default curves
+  const efficiencyFunc = PSU_EFFICIENCY[efficiencyRating];
+  return efficiencyFunc(loadPercentage);
 }
 
-function calculateFanPower(
-  formFactor: '1U' | '2U' | '4U',
-  cal: PowerCalibrationProfile
-): { idle: number; average: number; peak: number } {
-  // Fan power based on form factor
-  let fanPower = 20; // 1U baseline
+export function calculateServerPower(inputs: PowerCalculationInputs, calibration?: PowerCalibrationProfile): PowerCalculationResult {
+  // Use provided calibration or default
+  const cal = calibration || DEFAULT_CALIBRATION_PROFILE as PowerCalibrationProfile;
+  const warnings: string[] = [];
+  const missingMetrics: string[] = [];
   
-  if (formFactor === '2U') {
-    fanPower = 35;
-  } else if (formFactor === '4U') {
-    fanPower = 50;
+  // Validate inputs
+  if (!inputs.cpuModel || inputs.cpuModel === 'Unknown') {
+    missingMetrics.push('Specific CPU model for accurate architecture detection');
   }
+  
+  if (inputs.tdpPerCpu === 0) {
+    missingMetrics.push('CPU TDP (Thermal Design Power) rating');
+    warnings.push('Using estimated TDP based on core count');
+    inputs.tdpPerCpu = inputs.coresPerCpu * 8; // Rough estimate
+  }
+  
+  // Calculate component power
+  const cpuPower = calculateCpuPower(inputs, cal);
+  const memoryPower = calculateMemoryPower(inputs, cal);
+  const storagePower = calculateStoragePower(inputs, cal);
+  const networkPower = calculateNetworkPower(inputs, cal);
+  const { motherboard: motherboardPower } = calculateOtherComponentsPower(inputs, cal);
+  
+  // Calculate DC totals before fans
+  const dcBeforeFans = {
+    idle: cpuPower.idle + memoryPower.idle + storagePower.idle + networkPower.idle + motherboardPower.idle,
+    average: cpuPower.average + memoryPower.average + storagePower.average + networkPower.average + motherboardPower.average,
+    peak: cpuPower.peak + memoryPower.peak + storagePower.peak + networkPower.peak + motherboardPower.peak
+  };
+  
+  // Calculate fan power based on form factor (absolute wattage)
+  const fansPower = calculateFanPower(inputs.formFactor, cal);
+  
+  // Total DC power
+  const dcTotal = {
+    idle: dcBeforeFans.idle + fansPower.idle,
+    average: dcBeforeFans.average + fansPower.average,
+    peak: dcBeforeFans.peak + fansPower.peak
+  };
+  
+  // Apply environmental factor
+  const envFactor = calculateEnvironmentalFactor(inputs.inletTempC, cal);
+  const dcWithEnv = {
+    idle: dcTotal.idle * envFactor,
+    average: dcTotal.average * envFactor,
+    peak: dcTotal.peak * envFactor
+  };
+  
+  // Calculate AC power
+  const psuEfficiencyIdle = calculatePsuEfficiency(dcWithEnv.idle, inputs.psuRating, inputs.psuEfficiencyRating, cal);
+  const psuEfficiencyAvg = calculatePsuEfficiency(dcWithEnv.average, inputs.psuRating, inputs.psuEfficiencyRating, cal);
+  const psuEfficiencyPeak = calculatePsuEfficiency(dcWithEnv.peak, inputs.psuRating, inputs.psuEfficiencyRating, cal);
+  
+  // Redundant PSU adjustment
+  let efficiencyMultiplier = 1.0;
+  if (inputs.redundantPsu) {
+    // In load-balancing mode, both PSUs share the load, improving efficiency slightly
+    // This increases the effective efficiency, not the power draw
+    efficiencyMultiplier = cal.redundantPsuEfficiencyBonus;
+    warnings.push('Redundant PSU configuration assumed to be in load-balancing mode');
+  }
+  
+  const acTotal = {
+    idle: dcWithEnv.idle / (psuEfficiencyIdle * efficiencyMultiplier),
+    average: dcWithEnv.average / (psuEfficiencyAvg * efficiencyMultiplier),
+    peak: dcWithEnv.peak / (psuEfficiencyPeak * efficiencyMultiplier)
+  };
+  
+  // No safety margin - this is accounted for elsewhere in the datacenter
+  const acWithSafety = {
+    idle: acTotal.idle,
+    average: acTotal.average,
+    peak: acTotal.peak
+  };
+  
+  // Additional validations and warnings
+  if (inputs.cpuUtilization > 80) {
+    warnings.push('High CPU utilization may result in thermal throttling');
+  }
+  
+  if (dcWithEnv.peak > inputs.psuRating * 0.8) {
+    warnings.push('Peak power exceeds 80% of PSU rating - consider higher capacity PSU');
+  }
+  
+  if (inputs.inletTempC > 30) {
+    warnings.push('High inlet temperature will increase fan power consumption');
+  }
+  
+  // Missing metrics that would improve accuracy
+  if (!inputs.turboEnabled) {
+    missingMetrics.push('Turbo boost frequency and probability data');
+  }
+  
+  if (inputs.networkPorts.length === 0) {
+    missingMetrics.push('Network port configuration');
+  }
+  
+  missingMetrics.push('Specific workload profile (CPU vs memory vs I/O intensive)');
+  missingMetrics.push('Ambient humidity levels');
+  missingMetrics.push('Altitude/air pressure for fan efficiency');
   
   return {
-    idle: fanPower * 0.3, // Fans spin down at idle
-    average: fanPower * 0.6,
-    peak: fanPower // Full speed under load
+    idlePowerW: Math.round(acWithSafety.idle),
+    averagePowerW: Math.round(acWithSafety.average),
+    peakPowerW: Math.round(acWithSafety.peak),
+    
+    componentBreakdown: {
+      cpu: {
+        idle: Math.round(cpuPower.idle),
+        average: Math.round(cpuPower.average),
+        peak: Math.round(cpuPower.peak)
+      },
+      memory: {
+        idle: Math.round(memoryPower.idle),
+        average: Math.round(memoryPower.average),
+        peak: Math.round(memoryPower.peak)
+      },
+      storage: {
+        idle: Math.round(storagePower.idle),
+        average: Math.round(storagePower.average),
+        peak: Math.round(storagePower.peak)
+      },
+      network: {
+        idle: Math.round(networkPower.idle),
+        average: Math.round(networkPower.average),
+        peak: Math.round(networkPower.peak)
+      },
+      motherboard: {
+        idle: Math.round(motherboardPower.idle),
+        average: Math.round(motherboardPower.average),
+        peak: Math.round(motherboardPower.peak)
+      },
+      fans: {
+        idle: Math.round(fansPower.idle),
+        average: Math.round(fansPower.average),
+        peak: Math.round(fansPower.peak)
+      }
+    },
+    
+    dcTotalW: {
+      idle: Math.round(dcWithEnv.idle),
+      average: Math.round(dcWithEnv.average),
+      peak: Math.round(dcWithEnv.peak)
+    },
+    
+    acTotalW: {
+      idle: Math.round(acWithSafety.idle),
+      average: Math.round(acWithSafety.average),
+      peak: Math.round(acWithSafety.peak)
+    },
+    
+    psuEfficiency: {
+      idle: psuEfficiencyIdle,
+      average: psuEfficiencyAvg,
+      peak: psuEfficiencyPeak
+    },
+    
+    acTotalBeforeSafety: {
+      idle: Math.round(acTotal.idle),
+      average: Math.round(acTotal.average),
+      peak: Math.round(acTotal.peak)
+    },
+    
+    warnings,
+    missingMetrics
   };
-}
-
-function calculateEnvironmentalFactor(
-  inletTempC: number,
-  cal: PowerCalibrationProfile
-): number {
-  // Power increases with temperature due to leakage and fan speed
-  const baseTemp = 25; // Reference temperature
-  const tempDelta = inletTempC - baseTemp;
-  
-  // Approximately 0.4% increase per degree C
-  return 1 + (tempDelta * cal.tempCoefficientPerDegree);
-}
-
-function calculatePsuEfficiency(
-  loadW: number,
-  psuRatingW: number,
-  efficiencyRating: PowerCalculationInputs['psuEfficiencyRating'],
-  cal: PowerCalibrationProfile
-): number {
-  const loadPercent = (loadW / psuRatingW) * 100;
-  
-  // PSU efficiency curves based on 80 Plus standards
-  const efficiencyCurves: Record<PowerCalculationInputs['psuEfficiencyRating'], { [key: number]: number }> = {
-    '80Plus': { 20: 0.80, 50: 0.80, 100: 0.80 },
-    '80PlusBronze': { 20: 0.82, 50: 0.85, 100: 0.82 },
-    '80PlusSilver': { 20: 0.85, 50: 0.88, 100: 0.85 },
-    '80PlusGold': { 20: 0.87, 50: 0.90, 100: 0.87 },
-    '80PlusPlatinum': { 20: 0.90, 50: 0.92, 100: 0.89 },
-    '80PlusTitanium': { 20: 0.92, 50: 0.94, 100: 0.90 }
-  };
-  
-  const curve = efficiencyCurves[efficiencyRating];
-  
-  // Interpolate efficiency based on load
-  if (loadPercent <= 20) {
-    return curve[20];
-  } else if (loadPercent <= 50) {
-    const factor = (loadPercent - 20) / 30;
-    return curve[20] + (curve[50] - curve[20]) * factor;
-  } else if (loadPercent <= 100) {
-    const factor = (loadPercent - 50) / 50;
-    return curve[50] + (curve[100] - curve[50]) * factor;
-  } else {
-    // Over 100% load, efficiency drops
-    return curve[100] * 0.95;
-  }
 }

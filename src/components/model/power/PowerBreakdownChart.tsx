@@ -8,25 +8,11 @@ interface PowerBreakdownChartProps {
 }
 
 export const PowerBreakdownChart: React.FC<PowerBreakdownChartProps> = ({ breakdown }) => {
-  // Check if breakdown exists and has required properties
-  if (!breakdown) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Component Power Breakdown</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">No breakdown data available</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  
   const data = Object.entries(breakdown).map(([component, values]) => ({
     component: component.charAt(0).toUpperCase() + component.slice(1),
-    idle: values?.idle || 0,
-    average: values?.average || 0,
-    peak: values?.peak || 0
+    idle: values.idle,
+    average: values.average,
+    peak: values.peak
   }));
   
   return (

@@ -16,25 +16,6 @@ interface PowerBreakdownTableProps {
 export const PowerBreakdownTable: React.FC<PowerBreakdownTableProps> = ({ result, selectedState }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   
-  // Check if required properties exist
-  if (!result || !result.componentBreakdown || !result.dcTotalW || !result.acTotalW) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Component Power Breakdown</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Power calculation results are incomplete. Please recalculate.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-  
   // Get the appropriate power values based on selected state
   const getPowerValue = (component: { idle: number; average: number; peak: number }) => {
     return component[selectedState];

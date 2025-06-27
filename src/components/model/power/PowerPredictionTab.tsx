@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -38,7 +37,6 @@ import { usePowerCalculation } from '@/hooks/power-prediction/usePowerCalculatio
 export const PowerPredictionTab: React.FC = () => {
   const { componentTemplates } = useDesignStore();
   const [showDebug, setShowDebug] = React.useState(false);
-  const [calculationError, setCalculationError] = React.useState<string | null>(null);
   
   // Filter servers from component library
   const servers = useMemo(() => 
@@ -82,7 +80,7 @@ export const PowerPredictionTab: React.FC = () => {
   // Power calculation
   const {
     powerInputs,
-    handleCalculate: originalHandleCalculate,
+    handleCalculate,
     handleCalibrationChange
   } = usePowerCalculation(
     selectedServer,
@@ -93,59 +91,10 @@ export const PowerPredictionTab: React.FC = () => {
     setCalculationResult
   );
   
-  // Enhanced calculate function with error handling
-  const handleCalculate = async () => {
-    try {
-      setCalculationError(null);
-      
-      // Validate inputs before calculation
-      if (!selectedServer) {
-        throw new Error('No server selected');
-      }
-      
-      if (!powerInputs) {
-        throw new Error('Invalid power calculation inputs');
-      }
-      
-      // Validate required server properties
-      if (!selectedServer.cpuModel || selectedServer.cpuModel.trim() === '') {
-        throw new Error('Server CPU model is required');
-      }
-      
-      if (!selectedServer.cpuSockets || selectedServer.cpuSockets <= 0) {
-        throw new Error('Server must have at least one CPU socket');
-      }
-      
-      if (!selectedServer.cpuCoresPerSocket || selectedServer.cpuCoresPerSocket <= 0) {
-        throw new Error('Server must have at least one core per CPU socket');
-      }
-      
-      if (!selectedServer.memoryCapacity || selectedServer.memoryCapacity <= 0) {
-        throw new Error('Server must have memory capacity specified');
-      }
-      
-      console.log('Starting power calculation with inputs:', powerInputs);
-      
-      // Perform the calculation
-      await originalHandleCalculate();
-      
-      console.log('Power calculation completed successfully');
-      
-    } catch (error) {
-      console.error('Power calculation failed:', error);
-      setCalculationError(error instanceof Error ? error.message : 'Unknown calculation error');
-    }
-  };
-  
   // Handle calibration profile changes
   const onCalibrationChange = (profile: PowerCalibrationProfile | null) => {
-    try {
-      setCalibrationProfile(profile);
-      handleCalibrationChange(profile);
-    } catch (error) {
-      console.error('Calibration change failed:', error);
-      setCalculationError(error instanceof Error ? error.message : 'Calibration error');
-    }
+    setCalibrationProfile(profile);
+    handleCalibrationChange(profile);
   };
   
   return (
@@ -193,16 +142,6 @@ export const PowerPredictionTab: React.FC = () => {
                     <div><strong>Network:</strong> {selectedServer.portsConsumedQuantity}x {selectedServer.networkPortType}</div>
                     <div><strong>Form Factor:</strong> {selectedServer.ruSize}U</div>
                   </div>
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            {calculationError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="font-medium mb-2">Calculation Error:</div>
-                  <p className="text-sm">{calculationError}</p>
                 </AlertDescription>
               </Alert>
             )}
@@ -307,18 +246,14 @@ export const PowerPredictionTab: React.FC = () => {
           />
           
           {/* Component Breakdown Chart */}
-          {calculationResult.componentBreakdown && (
-            <PowerBreakdownChart breakdown={calculationResult.componentBreakdown} />
-          )}
+          <PowerBreakdownChart breakdown={calculationResult.componentBreakdown} />
           
           {/* Power Consumption Chart */}
-          {powerInputs && (
-            <PowerConsumptionChart 
-              result={calculationResult} 
-              inputs={powerInputs}
-              calibrationProfile={calibrationProfile}
-            />
-          )}
+          <PowerConsumptionChart 
+            result={calculationResult} 
+            inputs={powerInputs}
+            calibrationProfile={calibrationProfile}
+          />
           
           {/* Debug View */}
           <PowerCalculationDebug 
@@ -350,6 +285,9 @@ export const PowerPredictionTab: React.FC = () => {
               calibrationProfile={calibrationProfile}
             />
           )}
+          
+          {/* Power Calculation Debug */}
+          <PowerCalculationDebug result={calculationResult} />
           
           {/* Warnings and Missing Metrics */}
           {calculationResult.warnings.length > 0 && (
@@ -421,10 +359,7 @@ export const PowerPredictionTab: React.FC = () => {
           calculationResult={calculationResult}
           serverModel={`${selectedServer.manufacturer} ${selectedServer.productLine} ${selectedServer.model}`}
           onValidationSave={(observedValues) => {
-            if (calibrationProfile && calculationResult && 
-                calculationResult.idlePowerW !== undefined &&
-                calculationResult.averagePowerW !== undefined &&
-                calculationResult.peakPowerW !== undefined) {
+            if (calibrationProfile) {
               // Add validation data to the calibration profile
               const updatedProfile = {
                 ...calibrationProfile,

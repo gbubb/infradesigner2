@@ -1,141 +1,144 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { HelpCircle } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { PowerCalculationInputs } from '@/components/model/power/powerCalculations';
+import { PowerCalculationInputs } from '../../power/powerCalculations';
 import { Server } from '@/types/infrastructure/server-types';
+import { AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface MemoryConfigurationProps {
   customInputs: Partial<PowerCalculationInputs>;
-  selectedServer: Server;
+  selectedServer: Server | undefined;
   onUpdate: (updates: Partial<PowerCalculationInputs>) => void;
 }
 
-export const MemoryConfiguration: React.FC<MemoryConfigurationProps> = ({
-  customInputs,
+export const MemoryConfiguration: React.FC<MemoryConfigurationProps> = ({ 
+  customInputs, 
   selectedServer,
-  onUpdate
+  onUpdate 
 }) => {
-  // Calculate default values
-  const memoryCapacity = selectedServer.memoryCapacity || 128;
-  const dimmSize = selectedServer.memoryDimmSize || 32;
-  const dimmCount = selectedServer.memoryDimmSlotsConsumed || Math.ceil(memoryCapacity / dimmSize);
+  // Determine actual values - prioritize customInputs over server defaults
+  const memoryType = customInputs.memoryType !== undefined 
+    ? customInputs.memoryType 
+    : (selectedServer?.memoryType || 'DDR4');
+    
+  const memorySpeed = customInputs.memorySpeedMHz !== undefined
+    ? customInputs.memorySpeedMHz
+    : (selectedServer?.memoryDimmFrequencyMhz || 2933);
+    
+  const dimmCount = customInputs.dimmCount !== undefined
+    ? customInputs.dimmCount
+    : (selectedServer?.memoryDimmSlotsConsumed || 
+       (selectedServer?.memoryCapacity && selectedServer?.memoryDimmSize 
+         ? Math.ceil(selectedServer.memoryCapacity / selectedServer.memoryDimmSize)
+         : Math.ceil((selectedServer?.memoryCapacity || 128) / 32)));
+         
+  const dimmCapacity = customInputs.dimmCapacityGB !== undefined
+    ? customInputs.dimmCapacityGB
+    : (selectedServer?.memoryDimmSize || 32);
+    
+  // Check which fields are missing from the server definition
+  const isMissingMemType = !selectedServer?.memoryType;
+  const isMissingMemSpeed = !selectedServer?.memoryDimmFrequencyMhz;
+  const isMissingDimmCount = !selectedServer?.memoryDimmSlotsConsumed;
+  const isMissingDimmSize = !selectedServer?.memoryDimmSize;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Memory Configuration</CardTitle>
+        <CardTitle className="text-lg">Memory Configuration</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="memory-type">Memory Type</Label>
-            <Select
-              value={customInputs.memoryType || selectedServer.memoryType || 'DDR4'}
-              onValueChange={(value: 'DDR3' | 'DDR4' | 'DDR5') => onUpdate({ memoryType: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select memory type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="DDR3">DDR3</SelectItem>
-                <SelectItem value="DDR4">DDR4</SelectItem>
-                <SelectItem value="DDR5">DDR5</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="memory-speed">Memory Speed (MHz)</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Operating frequency of the memory modules</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <Input
-              id="memory-speed"
-              type="number"
-              min="1000"
-              max="6000"
-              value={customInputs.memorySpeedMHz || selectedServer.memoryDimmFrequencyMhz || 2933}
-              onChange={(e) => onUpdate({ memorySpeedMHz: parseInt(e.target.value) })}
-            />
-          </div>
+      <CardContent className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="mem-type" className="flex items-center gap-1">
+            Memory Type
+            {isMissingMemType && (
+              <AlertCircle className="h-3 w-3 text-amber-500" title="Value not defined in component" />
+            )}
+          </Label>
+          <Select 
+            value={memoryType} 
+            onValueChange={(value: 'DDR3' | 'DDR4' | 'DDR5') => onUpdate({ memoryType: value })}
+          >
+            <SelectTrigger id="mem-type" className={cn(isMissingMemType && "border-amber-500")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="DDR3">DDR3</SelectItem>
+              <SelectItem value="DDR4">DDR4</SelectItem>
+              <SelectItem value="DDR5">DDR5</SelectItem>
+            </SelectContent>
+          </Select>
+          {selectedServer?.memoryType && (
+            <p className="text-xs text-muted-foreground mt-1">From component: {selectedServer.memoryType}</p>
+          )}
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="dimm-count">DIMM Count</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Number of memory modules installed</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <Input
-              id="dimm-count"
-              type="number"
-              min="1"
-              max="48"
-              value={customInputs.dimmCount || dimmCount}
-              onChange={(e) => onUpdate({ dimmCount: parseInt(e.target.value) })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="dimm-capacity">DIMM Capacity (GB)</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Capacity of each memory module</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <Input
-              id="dimm-capacity"
-              type="number"
-              min="1"
-              max="128"
-              value={customInputs.dimmCapacityGB || dimmSize}
-              onChange={(e) => onUpdate({ dimmCapacityGB: parseInt(e.target.value) })}
-            />
-          </div>
+        <div>
+          <Label htmlFor="mem-speed" className="flex items-center gap-1">
+            Memory Speed (MHz)
+            {isMissingMemSpeed && (
+              <AlertCircle className="h-3 w-3 text-amber-500" title="Value not defined in component" />
+            )}
+          </Label>
+          <Input
+            id="mem-speed"
+            type="number"
+            value={memorySpeed}
+            onChange={(e) => onUpdate({ memorySpeedMHz: parseInt(e.target.value) })}
+            className={cn(isMissingMemSpeed && "border-amber-500")}
+          />
+          {selectedServer?.memoryDimmFrequencyMhz && (
+            <p className="text-xs text-muted-foreground mt-1">From component: {selectedServer.memoryDimmFrequencyMhz} MHz</p>
+          )}
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-          <div className="space-y-1">
-            <Label className="text-sm text-muted-foreground">Total Memory Capacity</Label>
-            <p className="text-sm font-medium">
-              {((customInputs.dimmCount || dimmCount) * (customInputs.dimmCapacityGB || dimmSize)).toLocaleString()} GB
+        <div>
+          <Label htmlFor="dimm-count" className="flex items-center gap-1">
+            Number of DIMMs
+            {isMissingDimmCount && (
+              <AlertCircle className="h-3 w-3 text-amber-500" title="Value not defined in component" />
+            )}
+          </Label>
+          <Input
+            id="dimm-count"
+            type="number"
+            value={dimmCount}
+            onChange={(e) => onUpdate({ dimmCount: parseInt(e.target.value) })}
+            className={cn(isMissingDimmCount && "border-amber-500")}
+          />
+          {selectedServer?.memoryDimmSlotsConsumed && (
+            <p className="text-xs text-muted-foreground mt-1">From component: {selectedServer.memoryDimmSlotsConsumed} DIMMs</p>
+          )}
+          {selectedServer?.memoryDimmSlotCapacity && (
+            <p className="text-xs text-muted-foreground">Total slots: {selectedServer.memoryDimmSlotCapacity}</p>
+          )}
+        </div>
+        <div>
+          <Label htmlFor="dimm-cap" className="flex items-center gap-1">
+            DIMM Capacity (GB)
+            {isMissingDimmSize && (
+              <AlertCircle className="h-3 w-3 text-amber-500" title="Value not defined in component" />
+            )}
+          </Label>
+          <Input
+            id="dimm-cap"
+            type="number"
+            value={dimmCapacity}
+            onChange={(e) => onUpdate({ dimmCapacityGB: parseInt(e.target.value) })}
+            className={cn(isMissingDimmSize && "border-amber-500")}
+          />
+          {selectedServer?.memoryDimmSize && (
+            <p className="text-xs text-muted-foreground mt-1">From component: {selectedServer.memoryDimmSize} GB</p>
+          )}
+        </div>
+        {selectedServer?.memoryCapacity && (
+          <div className="col-span-2">
+            <p className="text-xs text-muted-foreground">
+              Total memory capacity: {selectedServer.memoryCapacity} GB
             </p>
           </div>
-          <div className="space-y-1">
-            <Label className="text-sm text-muted-foreground">Server Default</Label>
-            <p className="text-sm font-medium">{memoryCapacity.toLocaleString()} GB</p>
-          </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

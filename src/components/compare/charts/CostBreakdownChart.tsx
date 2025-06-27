@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -74,12 +73,12 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({
           <p className="font-semibold mb-2">{payload[0].payload.category}</p>
           {payload.map((entry: TooltipPayloadEntry) => (
             <p key={entry.dataKey} className="text-sm" style={{ color: entry.color }}>
-              {entry.dataKey === 'designA' ? designAName : designBName}: ${(Number(entry.value) || 0).toLocaleString()}
+              {entry.dataKey === 'designA' ? designAName : designBName}: ${entry.value.toLocaleString()}
             </p>
           ))}
           <p className="text-sm text-muted-foreground mt-2">
-            Difference: ${Math.abs((Number(payload[0].value) || 0) - (Number(payload[1].value) || 0)).toLocaleString()} 
-            {(Number(payload[0].value) || 0) > 0 ? `(${((Math.abs((Number(payload[0].value) || 0) - (Number(payload[1].value) || 0)) / (Number(payload[0].value) || 1)) * 100).toFixed(1)}%)` : ''}
+            Difference: ${Math.abs(payload[0].value - payload[1].value).toLocaleString()} 
+            {payload[0].value > 0 ? `(${((Math.abs(payload[0].value - payload[1].value) / payload[0].value) * 100).toFixed(1)}%)` : ''}
           </p>
         </div>
       );

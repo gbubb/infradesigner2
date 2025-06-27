@@ -12,21 +12,6 @@ interface PowerConsumptionChartProps {
 
 export const PowerConsumptionChart: React.FC<PowerConsumptionChartProps> = ({ result, inputs, calibrationProfile }) => {
   const calibration = calibrationProfile || (DEFAULT_CALIBRATION_PROFILE as PowerCalibrationProfile);
-  
-  // Early return if result is missing required properties
-  if (!result || !result.dcTotalW || !result.acTotalW) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Power Consumption vs Utilization</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">No power calculation results available</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  
   // Function to calculate PSU efficiency based on load
   const calculateEfficiency = (dcPower: number): number => {
     const loadPercentage = dcPower / inputs.psuRating;

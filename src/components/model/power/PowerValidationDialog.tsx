@@ -29,14 +29,6 @@ export const PowerValidationDialog: React.FC<PowerValidationDialogProps> = ({
     peak: 0
   });
   
-  // Check if calculationResult has required properties
-  if (!calculationResult || 
-      calculationResult.idlePowerW === undefined || 
-      calculationResult.averagePowerW === undefined || 
-      calculationResult.peakPowerW === undefined) {
-    return null;
-  }
-  
   const handleSave = () => {
     onValidationSave(observedValues);
     onOpenChange(false);

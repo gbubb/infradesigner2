@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,17 +29,17 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
   designBCosts,
 }) => {
   const designAData: CostData[] = [
-    { name: 'Compute', value: Number(designACosts.compute) || 0 },
-    { name: 'Storage', value: Number(designACosts.storage) || 0 },
-    { name: 'Network', value: Number(designACosts.network) || 0 },
-    { name: 'Cabling', value: Number(designACosts.cabling) || 0 },
+    { name: 'Compute', value: designACosts.compute || 0 },
+    { name: 'Storage', value: designACosts.storage || 0 },
+    { name: 'Network', value: designACosts.network || 0 },
+    { name: 'Cabling', value: designACosts.cabling || 0 },
   ].filter(item => item.value > 0 && isFinite(item.value));
 
   const designBData: CostData[] = [
-    { name: 'Compute', value: Number(designBCosts.compute) || 0 },
-    { name: 'Storage', value: Number(designBCosts.storage) || 0 },
-    { name: 'Network', value: Number(designBCosts.network) || 0 },
-    { name: 'Cabling', value: Number(designBCosts.cabling) || 0 },
+    { name: 'Compute', value: designBCosts.compute || 0 },
+    { name: 'Storage', value: designBCosts.storage || 0 },
+    { name: 'Network', value: designBCosts.network || 0 },
+    { name: 'Cabling', value: designBCosts.cabling || 0 },
   ].filter(item => item.value > 0 && isFinite(item.value));
 
   const designATotal = designAData.reduce((sum, item) => sum + item.value, 0);
@@ -49,11 +48,11 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
   const CustomTooltip = ({ active, payload }: ChartTooltipPayload) => {
     if (active && payload && payload.length) {
       const data = payload[0];
-      const percentage = Number(data.payload.total) > 0 ? ((Number(data.value) / Number(data.payload.total)) * 100).toFixed(1) : '0';
+      const percentage = data.payload.total > 0 ? ((data.value / data.payload.total) * 100).toFixed(1) : '0';
       return (
         <div className="bg-background border rounded-lg p-3 shadow-lg">
           <p className="font-semibold">{data.name}</p>
-          <p className="text-sm">${(Number(data.value) || 0).toLocaleString()}</p>
+          <p className="text-sm">${data.value.toLocaleString()}</p>
           <p className="text-sm text-muted-foreground">{percentage}% of total</p>
         </div>
       );
@@ -173,8 +172,8 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
           <h5 className="font-medium mb-2">Key Differences</h5>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             {Object.keys(COLORS).map((category) => {
-              const designAValue = Number(designACosts[category.toLowerCase() as keyof typeof designACosts]) || 0;
-              const designBValue = Number(designBCosts[category.toLowerCase() as keyof typeof designBCosts]) || 0;
+              const designAValue = designACosts[category.toLowerCase() as keyof typeof designACosts];
+              const designBValue = designBCosts[category.toLowerCase() as keyof typeof designBCosts];
               const diff = designBValue - designAValue;
               const percentDiff = designAValue > 0 ? (diff / designAValue) * 100 : 0;
               

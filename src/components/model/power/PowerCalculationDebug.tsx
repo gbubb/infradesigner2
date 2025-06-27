@@ -12,25 +12,6 @@ interface PowerCalculationDebugProps {
 
 export const PowerCalculationDebug: React.FC<PowerCalculationDebugProps> = ({ result, showDebug }) => {
   if (!showDebug || !result) return null;
-  
-  // Check if required properties exist
-  if (!result.componentBreakdown || !result.dcTotalW || !result.acTotalW || !result.psuEfficiency) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Power Calculation Debug</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Power calculation results are incomplete. Please recalculate.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
 
   // Calculate the multiplication factors
   const componentSum = {
