@@ -153,11 +153,10 @@ export const PowerPredictionTab: React.FC = () => {
         <Tabs defaultValue="specifications" className="w-full">
           <TabsList>
             <TabsTrigger value="specifications">Specifications</TabsTrigger>
-            <TabsTrigger value="environmental">Environmental</TabsTrigger>
           </TabsList>
           
           <TabsContent value="specifications" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* CPU and Memory Configuration */}
               <div className="space-y-4">
                 <CPUConfiguration
@@ -191,15 +190,16 @@ export const PowerPredictionTab: React.FC = () => {
                   onRemovePort={removeNetworkPort}
                 />
               </div>
+              
+              {/* Power Supply & Environmental */}
+              <div className="space-y-4">
+                <UtilizationConfiguration
+                  customInputs={customInputs}
+                  selectedServer={selectedServer}
+                  onUpdate={updateCustomInputs}
+                />
+              </div>
             </div>
-          </TabsContent>
-          
-          <TabsContent value="environmental" className="space-y-4">
-            <UtilizationConfiguration
-              customInputs={customInputs}
-              selectedServer={selectedServer}
-              onUpdate={updateCustomInputs}
-            />
           </TabsContent>
         </Tabs>
       )}

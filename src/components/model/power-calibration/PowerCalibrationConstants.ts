@@ -17,10 +17,10 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
   cpuMulticoreEfficiencyDecay: 0.001,
   
   cpuArchitectureMultipliers: {
-    'Intel Xeon': { idle: 0.15, peak: 1.05 },  // Significantly reduced
-    'AMD EPYC': { idle: 0.12, peak: 1.05 },    // As requested
+    'Intel Xeon': { idle: 0.15, peak: 1.0 },
+    'AMD EPYC': { idle: 0.12, peak: 1.0 },
     'ARM': { idle: 0.1, peak: 0.9 },
-    'Default': { idle: 0.15, peak: 1.05 }      // Match others
+    'Default': { idle: 0.15, peak: 1.0 }
   },
   
   memoryPowerModel: {
