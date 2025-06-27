@@ -1,3 +1,4 @@
+
 import { PowerCalibrationProfile, DEFAULT_CALIBRATION_PROFILE } from './powerCalibration';
 
 export interface PowerCalculationInputs {
@@ -133,7 +134,8 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     const memoryPower = calculateMemoryPower(inputs, cal);
     const storagePower = calculateStoragePower(inputs, cal);
     const networkPower = calculateNetworkPower(inputs, cal);
-    const { motherboard: motherboardPower } = calculateOtherComponentsPower(inputs, cal);
+    const otherComponents = calculateOtherComponentsPower(inputs, cal);
+    const motherboardPower = otherComponents.motherboard;
     
     // Validate calculated values
     if (!cpuPower || cpuPower.idle < 0 || cpuPower.average < 0 || cpuPower.peak < 0) {
@@ -142,6 +144,18 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     
     if (!memoryPower || memoryPower.idle < 0 || memoryPower.average < 0 || memoryPower.peak < 0) {
       throw new Error('Invalid memory power calculation result');
+    }
+    
+    if (!storagePower || storagePower.idle < 0 || storagePower.average < 0 || storagePower.peak < 0) {
+      throw new Error('Invalid storage power calculation result');
+    }
+    
+    if (!networkPower || networkPower.idle < 0 || networkPower.average < 0 || networkPower.peak < 0) {
+      throw new Error('Invalid network power calculation result');
+    }
+    
+    if (!motherboardPower || motherboardPower.idle < 0 || motherboardPower.average < 0 || motherboardPower.peak < 0) {
+      throw new Error('Invalid motherboard power calculation result');
     }
     
     // Calculate DC totals before fans
@@ -153,6 +167,10 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     
     // Calculate fan power based on form factor (absolute wattage)
     const fansPower = calculateFanPower(inputs.formFactor, cal);
+    
+    if (!fansPower || fansPower.idle < 0 || fansPower.average < 0 || fansPower.peak < 0) {
+      throw new Error('Invalid fan power calculation result');
+    }
     
     // Total DC power
     const dcTotal = {
