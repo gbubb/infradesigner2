@@ -9,7 +9,7 @@ import { PowerEnergySection } from '../PowerEnergySection';
 export const CapacityAnalysisTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const { resourceMetrics, resourceUtilization } = useDesignCalculations();
-  const { powerUsage, energyCosts, hasDedicatedNetworkRacks, hasDedicatedStorageNetwork } = usePowerCalculations();
+  const { powerUsage, energyCosts, hasDedicatedNetworkRacks, hasDedicatedStorageNetwork, operationalLoadPercentage, components } = usePowerCalculations();
   
   // Calculate potential additional capacity, correcting rack & adding network port constraint
   const additionalCapacity = useMemo(() => {
@@ -132,6 +132,8 @@ export const CapacityAnalysisTab: React.FC = () => {
         powerUsage={powerUsage}
         energyCosts={energyCosts}
         hasDedicatedNetworkRacks={hasDedicatedNetworkRacks}
+        operationalLoadPercentage={operationalLoadPercentage}
+        components={components}
       />
       
       <div className="mb-8">

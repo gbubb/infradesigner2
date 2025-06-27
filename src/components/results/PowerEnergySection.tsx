@@ -3,6 +3,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PowerUsage } from '@/types/infrastructure';
 import { useResourceUtilization } from '@/hooks/design/useResourceUtilization';
+import { PowerConsumptionTable } from './PowerConsumptionTable';
+import { ComponentWithPlacement } from '@/types/design';
 
 interface PowerEnergySectionProps {
   powerUsage: PowerUsage;
@@ -25,12 +27,16 @@ interface PowerEnergySectionProps {
     };
   };
   hasDedicatedNetworkRacks?: boolean;
+  operationalLoadPercentage?: number;
+  components?: ComponentWithPlacement[];
 }
 
 export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({ 
   powerUsage,
   energyCosts,
-  hasDedicatedNetworkRacks
+  hasDedicatedNetworkRacks,
+  operationalLoadPercentage = 50,
+  components = []
 }) => {
   const { minimumPower, operationalPower, maximumPower, totalAvailablePower } = powerUsage || {};
   const resourceUtilization = useResourceUtilization();
@@ -207,6 +213,16 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
                 `${Math.round(operationalPower)} W`) : '0 W'}
             </p>
           </div>
+          
+          {/* Power Consumption Table */}
+          {components.length > 0 && (
+            <div className="pt-6 border-t">
+              <PowerConsumptionTable 
+                components={components}
+                operationalLoadPercentage={operationalLoadPercentage}
+              />
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

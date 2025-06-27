@@ -186,6 +186,8 @@ export const usePowerCalculations = () => {
     powerUsage,
     energyCosts,
     hasDedicatedNetworkRacks,
-    hasDedicatedStorageNetwork
+    hasDedicatedStorageNetwork,
+    operationalLoadPercentage,
+    components: activeDesign?.components || []
   };
 };
