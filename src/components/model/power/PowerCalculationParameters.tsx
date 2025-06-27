@@ -167,9 +167,8 @@ export const PowerCalculationParameters: React.FC<PowerCalculationParametersProp
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   <div><span className="text-muted-foreground">Speed Scaling Exponent:</span> {params.memoryPowerModel?.speedScaling?.scalingExponent ?? 0.3}</div>
-                  <div><span className="text-muted-foreground">Conservative Override:</span> {params.memoryConservativeMultiplier}W per DIMM</div>
                 </div>
                 
                 <div>

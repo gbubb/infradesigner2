@@ -61,7 +61,6 @@ export interface PowerCalibrationProfile {
       scalingExponent: number; // Default: 0.3 (logarithmic scaling)
     };
   };
-  memoryConservativeMultiplier: number; // Default: 5W per DIMM (legacy/override)
   
   // Storage Calibration Parameters
   storageBasePower: {

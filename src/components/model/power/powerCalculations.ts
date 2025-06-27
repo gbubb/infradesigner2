@@ -151,12 +151,11 @@ function calculateMemoryPower(inputs: PowerCalculationInputs, calibration: Power
   
   // Handle missing memoryPowerModel gracefully
   if (!memModel || !memModel.controllerBasePower || !memModel.chipsPerGB || !memModel.powerPerChip) {
-    // Fallback to conservative estimate
-    const conservativePower = inputs.dimmCount * calibration.memoryConservativeMultiplier;
+    console.warn('Memory power model is missing from calibration profile');
     return {
-      idle: conservativePower * 0.35,
-      average: conservativePower * 0.7,
-      peak: conservativePower
+      idle: 0,
+      average: 0,
+      peak: 0
     };
   }
   
@@ -188,13 +187,10 @@ function calculateMemoryPower(inputs: PowerCalculationInputs, calibration: Power
     const totalAvg = inputs.dimmCount * avgPowerPerDimm;
     const totalPeak = inputs.dimmCount * peakPowerPerDimm;
     
-    // Conservative estimate check
-    const conservativePower = inputs.dimmCount * calibration.memoryConservativeMultiplier;
-    
     return {
       idle: totalIdle,
-      average: Math.max(totalAvg, conservativePower * 0.7),
-      peak: Math.max(totalPeak, conservativePower)
+      average: totalAvg,
+      peak: totalPeak
     };
   }
   
@@ -220,13 +216,10 @@ function calculateMemoryPower(inputs: PowerCalculationInputs, calibration: Power
   const totalAvg = inputs.dimmCount * avgPowerPerDimm;
   const totalPeak = inputs.dimmCount * peakPowerPerDimm;
   
-  // Conservative estimate check
-  const conservativePower = inputs.dimmCount * calibration.memoryConservativeMultiplier;
-  
   return {
     idle: totalIdle,
-    average: Math.max(totalAvg, conservativePower * 0.7),
-    peak: Math.max(totalPeak, conservativePower)
+    average: totalAvg,
+    peak: totalPeak
   };
 }
 

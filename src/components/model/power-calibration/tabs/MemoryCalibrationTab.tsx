@@ -127,20 +127,12 @@ export const MemoryCalibrationTab: React.FC<MemoryCalibrationTabProps> = ({
       
       <div>
         <Label className="mb-2 block">Speed Scaling</Label>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <CalibrationInputField
             label="Scaling Exponent"
             value={profile.memoryPowerModel?.speedScaling?.scalingExponent || 0.3}
             onChange={(value) => updateNestedValue(['memoryPowerModel', 'speedScaling', 'scalingExponent'], value)}
             defaultValue="0.3 (logarithmic)"
-          />
-          <CalibrationInputField
-            label="Conservative Override"
-            value={profile.memoryConservativeMultiplier}
-            onChange={(value) => updateProfile({ memoryConservativeMultiplier: value })}
-            step={0.5}
-            defaultValue="5W"
-            unit="W/DIMM"
           />
         </div>
       </div>

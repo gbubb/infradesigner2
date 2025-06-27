@@ -53,7 +53,6 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
       scalingExponent: 0.3
     }
   },
-  memoryConservativeMultiplier: 5,
   
   storageBasePower: {
     hddBase: 6,
