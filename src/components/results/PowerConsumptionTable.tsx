@@ -32,26 +32,64 @@ export const PowerConsumptionTable: React.FC<PowerConsumptionTableProps> = ({
     components.forEach(component => {
       const quantity = component.quantity || 1;
       
-      // Determine category based on component type and role
+      // Determine category and device type based on component type and role
       let category = 'Other';
+      let deviceType = 'Unknown Device';
+      
       if (component.type === 'compute') {
         category = 'Compute';
+        // Use role for device type
+        if (component.role === 'computeNode') {
+          deviceType = 'Compute Node';
+        } else if (component.role === 'gpuNode') {
+          deviceType = 'GPU Node';
+        } else if (component.role === 'hyperConvergedNode') {
+          deviceType = 'Hyper-Converged Node';
+        } else {
+          deviceType = component.role || 'Compute Server';
+        }
       } else if (component.type === 'storage') {
         category = 'Storage';
+        if (component.role === 'storageNode') {
+          deviceType = 'Storage Node';
+        } else if (component.role === 'storageController') {
+          deviceType = 'Storage Controller';
+        } else {
+          deviceType = component.role || 'Storage Device';
+        }
       } else if (component.type === 'network') {
         if (component.subType === 'router') {
           category = 'Router';
+          deviceType = component.role || 'Router';
         } else if (component.subType === 'firewall') {
           category = 'Firewall';
+          deviceType = component.role || 'Firewall';
         } else {
           category = 'Switch';
+          // Use role for switch type
+          if (component.role === 'spineSwitch') {
+            deviceType = 'Spine Switch';
+          } else if (component.role === 'leafSwitch') {
+            deviceType = 'Leaf Switch';
+          } else if (component.role === 'borderLeafSwitch') {
+            deviceType = 'Border Leaf Switch';
+          } else if (component.role === 'coreSwitch') {
+            deviceType = 'Core Switch';
+          } else if (component.role === 'managementSwitch') {
+            deviceType = 'Management Switch';
+          } else if (component.role === 'storageSwitch') {
+            deviceType = 'Storage Switch';
+          } else {
+            deviceType = component.role || 'Network Switch';
+          }
         }
       } else if (component.type === 'accessory') {
         category = 'Accessory';
+        deviceType = component.subType || component.role || 'Accessory';
       }
 
-      const deviceType = component.name || 'Unknown Device';
-      const key = `${category}-${deviceType}`;
+      // Create a key based on category and role/type
+      const key = `${category}-${component.role || component.subType || deviceType}`;
 
       // Calculate power values
       let idlePower = 0;
