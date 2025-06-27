@@ -102,9 +102,9 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
   bmcPower: 6,
   
   fanPowerByFormFactor: {
-    '1U': { idle: 60, peak: 120 },    // 60-120W for 1U servers
-    '2U': { idle: 40, peak: 100 },    // 40-100W for 2U servers (larger, more efficient fans)
-    '4U': { idle: 50, peak: 150 }     // 50-150W for 4U servers
+    '1U': { idle: 24, peak: 96 },     // 1U: 96W peak, 24W idle (1/4 of peak)
+    '2U': { idle: 11.25, peak: 45 },  // 2U: 45W peak, 11.25W idle (1/4 of peak)
+    '4U': { idle: 50, peak: 150 }     // 4U: 50-150W for 4U servers (unchanged)
   },
   
   tempCoefficientPerDegree: 0.004,

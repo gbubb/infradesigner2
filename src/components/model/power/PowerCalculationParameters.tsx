@@ -44,54 +44,60 @@ export const PowerCalculationParameters: React.FC<PowerCalculationParametersProp
           <AccordionItem value="inputs">
             <AccordionTrigger>Input Configuration</AccordionTrigger>
             <AccordionContent>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-2">CPU Configuration</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="text-muted-foreground">Model:</span> {inputs.cpuModel}</div>
-                    <div><span className="text-muted-foreground">Count:</span> {inputs.cpuCount}</div>
-                    <div><span className="text-muted-foreground">Cores per CPU:</span> {inputs.coresPerCpu}</div>
-                    <div><span className="text-muted-foreground">Base Frequency:</span> {inputs.baseFrequencyGHz} GHz</div>
-                    <div><span className="text-muted-foreground">TDP per CPU:</span> {inputs.tdpPerCpu}W</div>
-                    <div><span className="text-muted-foreground">Utilization:</span> {inputs.cpuUtilization}%</div>
-                    <div><span className="text-muted-foreground">Turbo Enabled:</span> {inputs.turboEnabled ? 'Yes' : 'No'}</div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* CPU and Memory Configuration */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">CPU Configuration</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Model:</span> {inputs.cpuModel}</div>
+                      <div><span className="text-muted-foreground">Count:</span> {inputs.cpuCount}</div>
+                      <div><span className="text-muted-foreground">Cores per CPU:</span> {inputs.coresPerCpu}</div>
+                      <div><span className="text-muted-foreground">Base Frequency:</span> {inputs.baseFrequencyGHz} GHz</div>
+                      <div><span className="text-muted-foreground">TDP per CPU:</span> {inputs.tdpPerCpu}W</div>
+                      <div><span className="text-muted-foreground">Utilization:</span> {inputs.cpuUtilization}%</div>
+                      <div><span className="text-muted-foreground">Turbo Enabled:</span> {inputs.turboEnabled ? 'Yes' : 'No'}</div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium mb-2">Memory Configuration</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Type:</span> {inputs.memoryType}</div>
+                      <div><span className="text-muted-foreground">DIMM Count:</span> {inputs.dimmCount}</div>
+                      <div><span className="text-muted-foreground">DIMM Capacity:</span> {inputs.dimmCapacityGB}GB</div>
+                      <div><span className="text-muted-foreground">Speed:</span> {inputs.memorySpeedMHz} MHz</div>
+                    </div>
                   </div>
                 </div>
                 
-                <div>
-                  <h4 className="font-medium mb-2">Memory Configuration</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="text-muted-foreground">Type:</span> {inputs.memoryType}</div>
-                    <div><span className="text-muted-foreground">DIMM Count:</span> {inputs.dimmCount}</div>
-                    <div><span className="text-muted-foreground">DIMM Capacity:</span> {inputs.dimmCapacityGB}GB</div>
-                    <div><span className="text-muted-foreground">Speed:</span> {inputs.memorySpeedMHz} MHz</div>
+                {/* Storage and Other Configuration */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Storage Configuration</h4>
+                    <div className="space-y-1 text-sm">
+                      {inputs.hdds.length > 0 && (
+                        <div>HDDs: {inputs.hdds.map(h => `${h.count}x ${h.capacityTB}TB @ ${h.rpm}RPM`).join(', ')}</div>
+                      )}
+                      {inputs.ssdSata.length > 0 && (
+                        <div>SATA SSDs: {inputs.ssdSata.map(s => `${s.count}x ${s.capacityTB}TB`).join(', ')}</div>
+                      )}
+                      {inputs.nvme.length > 0 && (
+                        <div>NVMe: {inputs.nvme.map(n => `${n.count}x ${n.capacityTB}TB Gen${n.generation}`).join(', ')}</div>
+                      )}
+                      <div><span className="text-muted-foreground">RAID Controller:</span> {inputs.raidController ? 'Yes' : 'No'}</div>
+                    </div>
                   </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium mb-2">Storage Configuration</h4>
-                  <div className="space-y-1 text-sm">
-                    {inputs.hdds.length > 0 && (
-                      <div>HDDs: {inputs.hdds.map(h => `${h.count}x ${h.capacityTB}TB @ ${h.rpm}RPM`).join(', ')}</div>
-                    )}
-                    {inputs.ssdSata.length > 0 && (
-                      <div>SATA SSDs: {inputs.ssdSata.map(s => `${s.count}x ${s.capacityTB}TB`).join(', ')}</div>
-                    )}
-                    {inputs.nvme.length > 0 && (
-                      <div>NVMe: {inputs.nvme.map(n => `${n.count}x ${n.capacityTB}TB Gen${n.generation}`).join(', ')}</div>
-                    )}
-                    <div><span className="text-muted-foreground">RAID Controller:</span> {inputs.raidController ? 'Yes' : 'No'}</div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium mb-2">Other Configuration</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="text-muted-foreground">Form Factor:</span> {inputs.formFactor}</div>
-                    <div><span className="text-muted-foreground">Inlet Temp:</span> {inputs.inletTempC}°C</div>
-                    <div><span className="text-muted-foreground">PSU Rating:</span> {inputs.psuRating}W</div>
-                    <div><span className="text-muted-foreground">PSU Efficiency:</span> {inputs.psuEfficiencyRating}</div>
-                    <div><span className="text-muted-foreground">Redundant PSU:</span> {inputs.redundantPsu ? 'Yes' : 'No'}</div>
+                  
+                  <div>
+                    <h4 className="font-medium mb-2">Other Configuration</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Form Factor:</span> {inputs.formFactor}</div>
+                      <div><span className="text-muted-foreground">Inlet Temp:</span> {inputs.inletTempC}°C</div>
+                      <div><span className="text-muted-foreground">PSU Rating:</span> {inputs.psuRating}W</div>
+                      <div><span className="text-muted-foreground">PSU Efficiency:</span> {inputs.psuEfficiencyRating}</div>
+                      <div><span className="text-muted-foreground">Redundant PSU:</span> {inputs.redundantPsu ? 'Yes' : 'No'}</div>
+                    </div>
                   </div>
                 </div>
               </div>

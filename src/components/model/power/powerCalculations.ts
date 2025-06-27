@@ -67,9 +67,6 @@ export interface PowerCalculationResult {
   acTotalW: { idle: number; average: number; peak: number };
   psuEfficiency: { idle: number; average: number; peak: number };
   acTotalBeforeSafety: { idle: number; average: number; peak: number };
-  
-  warnings: string[];
-  missingMetrics: string[];
 }
 
 // Remove hardcoded multipliers - now comes from calibration
@@ -446,17 +443,13 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
   console.log('Using calibration:', cal.name);
   console.log('Form factor:', inputs.formFactor);
   
-  const warnings: string[] = [];
-  const missingMetrics: string[] = [];
-  
   // Validate inputs
   if (!inputs.cpuModel || inputs.cpuModel === 'Unknown') {
-    missingMetrics.push('Specific CPU model for accurate architecture detection');
+    console.warn('Specific CPU model not provided for accurate architecture detection');
   }
   
   if (inputs.tdpPerCpu === 0) {
-    missingMetrics.push('CPU TDP (Thermal Design Power) rating');
-    warnings.push('Using estimated TDP based on core count');
+    console.warn('Using estimated TDP based on core count');
     inputs.tdpPerCpu = inputs.coresPerCpu * 8; // Rough estimate
   }
   
@@ -519,7 +512,6 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     // In load-balancing mode, both PSUs share the load, improving efficiency slightly
     // This increases the effective efficiency, not the power draw
     efficiencyMultiplier = cal.redundantPsuEfficiencyBonus;
-    warnings.push('Redundant PSU configuration assumed to be in load-balancing mode');
   }
   
   const acTotal = {
@@ -535,32 +527,6 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
     average: acTotal.average,
     peak: acTotal.peak
   };
-  
-  // Additional validations and warnings
-  if (inputs.cpuUtilization > 80) {
-    warnings.push('High CPU utilization may result in thermal throttling');
-  }
-  
-  if (dcWithEnv.peak > inputs.psuRating * 0.8) {
-    warnings.push('Peak power exceeds 80% of PSU rating - consider higher capacity PSU');
-  }
-  
-  if (inputs.inletTempC > 30) {
-    warnings.push('High inlet temperature will increase fan power consumption');
-  }
-  
-  // Missing metrics that would improve accuracy
-  if (!inputs.turboEnabled) {
-    missingMetrics.push('Turbo boost frequency and probability data');
-  }
-  
-  if (inputs.networkPorts.length === 0) {
-    missingMetrics.push('Network port configuration');
-  }
-  
-  missingMetrics.push('Specific workload profile (CPU vs memory vs I/O intensive)');
-  missingMetrics.push('Ambient humidity levels');
-  missingMetrics.push('Altitude/air pressure for fan efficiency');
   
   const result = {
     idlePowerW: Math.round(acWithSafety.idle),
@@ -622,10 +588,7 @@ export function calculateServerPower(inputs: PowerCalculationInputs, calibration
       idle: Math.round(acTotal.idle),
       average: Math.round(acTotal.average),
       peak: Math.round(acTotal.peak)
-    },
-    
-    warnings,
-    missingMetrics
+    }
   };
   
   console.log('Final result:', result);

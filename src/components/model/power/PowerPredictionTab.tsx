@@ -157,33 +157,41 @@ export const PowerPredictionTab: React.FC = () => {
           </TabsList>
           
           <TabsContent value="specifications" className="space-y-4">
-            <CPUConfiguration
-              customInputs={customInputs}
-              selectedServer={selectedServer}
-              onUpdate={updateCustomInputs}
-            />
-            
-            <MemoryConfiguration
-              customInputs={customInputs}
-              selectedServer={selectedServer}
-              onUpdate={updateCustomInputs}
-            />
-            
-            <StorageConfiguration
-              raidController={customInputs.raidController || false}
-              storageDevices={storageDevices}
-              onRaidControllerChange={(enabled) => updateCustomInputs({ raidController: enabled })}
-              onAddDevice={addStorageDevice}
-              onUpdateDevice={updateStorageDevice}
-              onRemoveDevice={removeStorageDevice}
-            />
-            
-            <NetworkConfiguration
-              networkPorts={networkPorts}
-              onAddPort={addNetworkPort}
-              onUpdatePort={updateNetworkPort}
-              onRemovePort={removeNetworkPort}
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* CPU and Memory Configuration */}
+              <div className="space-y-4">
+                <CPUConfiguration
+                  customInputs={customInputs}
+                  selectedServer={selectedServer}
+                  onUpdate={updateCustomInputs}
+                />
+                
+                <MemoryConfiguration
+                  customInputs={customInputs}
+                  selectedServer={selectedServer}
+                  onUpdate={updateCustomInputs}
+                />
+              </div>
+              
+              {/* Storage and Network Configuration */}
+              <div className="space-y-4">
+                <StorageConfiguration
+                  raidController={customInputs.raidController || false}
+                  storageDevices={storageDevices}
+                  onRaidControllerChange={(enabled) => updateCustomInputs({ raidController: enabled })}
+                  onAddDevice={addStorageDevice}
+                  onUpdateDevice={updateStorageDevice}
+                  onRemoveDevice={removeStorageDevice}
+                />
+                
+                <NetworkConfiguration
+                  networkPorts={networkPorts}
+                  onAddPort={addNetworkPort}
+                  onUpdatePort={updateNetworkPort}
+                  onRemovePort={removeNetworkPort}
+                />
+              </div>
+            </div>
           </TabsContent>
           
           <TabsContent value="environmental" className="space-y-4">
@@ -288,35 +296,6 @@ export const PowerPredictionTab: React.FC = () => {
           
           {/* Power Calculation Debug */}
           <PowerCalculationDebug result={calculationResult} showDebug={showDebug} />
-          
-          {/* Warnings and Missing Metrics */}
-          {calculationResult.warnings.length > 0 && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="font-medium mb-2">Warnings:</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {calculationResult.warnings.map((warning, i) => (
-                    <li key={i} className="text-sm">{warning}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {calculationResult.missingMetrics.length > 0 && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="font-medium mb-2">Missing metrics that would improve accuracy:</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {calculationResult.missingMetrics.map((metric, i) => (
-                    <li key={i} className="text-sm">{metric}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          )}
           
           {/* Real vs Predicted Comparison */}
           {calibrationProfile && (
