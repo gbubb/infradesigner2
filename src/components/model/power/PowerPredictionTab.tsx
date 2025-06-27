@@ -246,14 +246,18 @@ export const PowerPredictionTab: React.FC = () => {
           />
           
           {/* Component Breakdown Chart */}
-          <PowerBreakdownChart breakdown={calculationResult.componentBreakdown} />
+          {calculationResult.componentBreakdown && (
+            <PowerBreakdownChart breakdown={calculationResult.componentBreakdown} />
+          )}
           
           {/* Power Consumption Chart */}
-          <PowerConsumptionChart 
-            result={calculationResult} 
-            inputs={powerInputs}
-            calibrationProfile={calibrationProfile}
-          />
+          {powerInputs && (
+            <PowerConsumptionChart 
+              result={calculationResult} 
+              inputs={powerInputs}
+              calibrationProfile={calibrationProfile}
+            />
+          )}
           
           {/* Debug View */}
           <PowerCalculationDebug 
@@ -359,7 +363,10 @@ export const PowerPredictionTab: React.FC = () => {
           calculationResult={calculationResult}
           serverModel={`${selectedServer.manufacturer} ${selectedServer.productLine} ${selectedServer.model}`}
           onValidationSave={(observedValues) => {
-            if (calibrationProfile) {
+            if (calibrationProfile && calculationResult && 
+                calculationResult.idlePowerW !== undefined &&
+                calculationResult.averagePowerW !== undefined &&
+                calculationResult.peakPowerW !== undefined) {
               // Add validation data to the calibration profile
               const updatedProfile = {
                 ...calibrationProfile,
