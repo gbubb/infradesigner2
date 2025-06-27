@@ -55,11 +55,11 @@ export const PowerResultsDisplay: React.FC<PowerResultsDisplayProps> = ({
         <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="text-muted-foreground">DC Power (at average load):</span>
-            <span className="ml-2 font-medium">{calculationResult.dcTotalW.average}W</span>
+            <span className="ml-2 font-medium">{calculationResult.dcTotalW?.average || 0}W</span>
           </div>
           <div>
             <span className="text-muted-foreground">AC Power (at average load):</span>
-            <span className="ml-2 font-medium">{calculationResult.acTotalW.average}W</span>
+            <span className="ml-2 font-medium">{calculationResult.acTotalW?.average || 0}W</span>
           </div>
         </div>
       </CardContent>
