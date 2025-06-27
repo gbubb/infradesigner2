@@ -64,7 +64,7 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
     },
     ssdSataBase: 3,
     ssdSataCapacityScaling: 0.1,
-    nvmeBase: 5,
+    nvmeBase: 10,
     nvmeGenScaling: 2,
     nvmeCapacityScaling: 0.2
   },
@@ -73,7 +73,7 @@ export const DEFAULT_CALIBRATION_PROFILE: Omit<PowerCalibrationProfile, 'id' | '
     hddPeak: 1.2,
     ssdIdle: 0.5,
     ssdPeak: 1.5,
-    nvmeIdle: 0.3,
+    nvmeIdle: 0.5,
     nvmePeak: 1.8
   },
   raidControllerPower: {
