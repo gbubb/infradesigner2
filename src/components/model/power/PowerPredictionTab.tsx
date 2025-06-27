@@ -18,6 +18,7 @@ import { PowerCalculationParameters } from './PowerCalculationParameters';
 import { PowerBreakdownTable } from './PowerBreakdownTable';
 import { MemoryPowerAnalysis } from './MemoryPowerAnalysis';
 import { PowerCalculationDebug } from './PowerCalculationDebug';
+import { PowerValuesPushCard } from './PowerValuesPushCard';
 
 // Configuration Components
 import { CPUConfiguration } from '../power-prediction/configs/CPUConfiguration';
@@ -327,6 +328,12 @@ export const PowerPredictionTab: React.FC = () => {
               </CardContent>
             </Card>
           )}
+          
+          {/* Power Values Push Card */}
+          <PowerValuesPushCard
+            selectedServer={selectedServer}
+            calculationResult={calculationResult}
+          />
         </div>
       )}
       
