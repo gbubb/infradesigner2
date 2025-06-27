@@ -1,6 +1,7 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ComponentWithPlacement } from '@/types/design';
+import { ComponentType, componentTypeToCategory } from '@/types/infrastructure/component-types';
 
 interface PowerConsumptionTableProps {
   components: ComponentWithPlacement[];
@@ -33,40 +34,35 @@ export const PowerConsumptionTable: React.FC<PowerConsumptionTableProps> = ({
       const quantity = component.quantity || 1;
       
       // Determine category and device type based on component type and role
-      let category = 'Other';
+      const componentCategory = componentTypeToCategory[component.type];
+      let category = componentCategory || 'Other';
       let deviceType = 'Unknown Device';
       
-      if (component.type === 'compute') {
-        category = 'Compute';
-        // Use role for device type
-        if (component.role === 'computeNode') {
-          deviceType = 'Compute Node';
-        } else if (component.role === 'gpuNode') {
-          deviceType = 'GPU Node';
-        } else if (component.role === 'hyperConvergedNode') {
-          deviceType = 'Hyper-Converged Node';
-        } else {
-          deviceType = component.role || 'Compute Server';
-        }
-      } else if (component.type === 'storage') {
-        category = 'Storage';
-        if (component.role === 'storageNode') {
-          deviceType = 'Storage Node';
-        } else if (component.role === 'storageController') {
-          deviceType = 'Storage Controller';
-        } else {
-          deviceType = component.role || 'Storage Device';
-        }
-      } else if (component.type === 'network') {
-        if (component.subType === 'router') {
-          category = 'Router';
-          deviceType = component.role || 'Router';
-        } else if (component.subType === 'firewall') {
-          category = 'Firewall';
-          deviceType = component.role || 'Firewall';
-        } else {
-          category = 'Switch';
-          // Use role for switch type
+      // Determine device type based on component type and role
+      switch (component.type) {
+        case ComponentType.Server:
+          if (component.role === 'computeNode') {
+            deviceType = 'Compute Node';
+          } else if (component.role === 'gpuNode') {
+            deviceType = 'GPU Node';
+          } else if (component.role === 'hyperConvergedNode') {
+            deviceType = 'Hyper-Converged Node';
+          } else {
+            deviceType = 'Server';
+          }
+          break;
+          
+        case ComponentType.Disk:
+          if (component.role === 'storageNode') {
+            deviceType = 'Storage Node';
+          } else if (component.role === 'storageController') {
+            deviceType = 'Storage Controller';
+          } else {
+            deviceType = 'Storage Device';
+          }
+          break;
+          
+        case ComponentType.Switch:
           if (component.role === 'spineSwitch') {
             deviceType = 'Spine Switch';
           } else if (component.role === 'leafSwitch') {
@@ -80,16 +76,36 @@ export const PowerConsumptionTable: React.FC<PowerConsumptionTableProps> = ({
           } else if (component.role === 'storageSwitch') {
             deviceType = 'Storage Switch';
           } else {
-            deviceType = component.role || 'Network Switch';
+            deviceType = 'Network Switch';
           }
-        }
-      } else if (component.type === 'accessory') {
-        category = 'Accessory';
-        deviceType = component.subType || component.role || 'Accessory';
+          break;
+          
+        case ComponentType.Router:
+          deviceType = 'Router';
+          break;
+          
+        case ComponentType.Firewall:
+          deviceType = 'Firewall';
+          break;
+          
+        case ComponentType.GPU:
+          deviceType = 'GPU';
+          break;
+          
+        case ComponentType.Transceiver:
+          deviceType = 'Transceiver';
+          break;
+          
+        case ComponentType.PDU:
+          deviceType = 'PDU';
+          break;
+          
+        default:
+          deviceType = component.type;
       }
 
-      // Create a key based on category and role/type
-      const key = `${category}-${component.role || component.subType || deviceType}`;
+      // Create a key based on component type and role
+      const key = `${component.type}-${component.role || 'default'}`;
 
       // Calculate power values
       let idlePower = 0;
