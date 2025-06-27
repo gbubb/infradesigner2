@@ -29,47 +29,72 @@ export const usePowerCalculations = () => {
       return { minimumPower: 0, operationalPower: 0, maximumPower: 0 };
     }
     
-    // Calculate maximum power for all components
+    // Calculate power for all components
     let totalMaximumPower = 0;
+    let totalMinimumPower = 0;
+    let totalOperationalPower = 0;
     let networkRackMaximumPower = 0;
+    let networkRackMinimumPower = 0;
+    let networkRackOperationalPower = 0;
     let computeRackMaximumPower = 0;
+    let computeRackMinimumPower = 0;
+    let computeRackOperationalPower = 0;
     
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
-      const power = component.powerRequired || 0;
-      const componentPower = power * quantity;
+      
+      // Calculate minimum (idle), operational, and maximum (peak) power
+      let minPower = component.powerRequired || 0;
+      let operationalPower = component.powerRequired || 0;
+      let maxPower = component.powerRequired || 0;
+      
+      if (component.powerIdle !== undefined && component.powerTypical !== undefined && component.powerPeak !== undefined 
+          && (component.powerIdle > 0 || component.powerTypical > 0 || component.powerPeak > 0)) {
+        // Use enhanced power values
+        minPower = component.powerIdle;
+        maxPower = component.powerPeak;
+        
+        // Calculate operational power based on load percentage
+        if (operationalLoadPercentage <= 10) {
+          operationalPower = component.powerIdle;
+        } else if (operationalLoadPercentage <= 50) {
+          const ratio = (operationalLoadPercentage - 10) / 40;
+          operationalPower = component.powerIdle + (component.powerTypical - component.powerIdle) * ratio;
+        } else if (operationalLoadPercentage <= 80) {
+          const ratio = (operationalLoadPercentage - 50) / 30;
+          operationalPower = component.powerTypical + (component.powerPeak - component.powerTypical) * ratio;
+        } else {
+          operationalPower = component.powerPeak;
+        }
+      } else {
+        // Fallback to legacy calculation: min = 1/3 of max
+        minPower = maxPower / 3;
+        const remainingPower = maxPower - minPower;
+        const loadFactor = operationalLoadPercentage / 100;
+        operationalPower = minPower + (remainingPower * loadFactor);
+      }
+      
+      const componentMinPower = minPower * quantity;
+      const componentOperationalPower = operationalPower * quantity;
+      const componentMaxPower = maxPower * quantity;
       
       // Separate network components if needed
       if (hasDedicatedNetworkRacks && 
           ['spineSwitch', 'coreSwitch', 'borderLeafSwitch']
           .includes(component.role || '')) {
-        networkRackMaximumPower += componentPower;
+        networkRackMinimumPower += componentMinPower;
+        networkRackOperationalPower += componentOperationalPower;
+        networkRackMaximumPower += componentMaxPower;
       } else {
-        computeRackMaximumPower += componentPower;
+        computeRackMinimumPower += componentMinPower;
+        computeRackOperationalPower += componentOperationalPower;
+        computeRackMaximumPower += componentMaxPower;
       }
       
-      totalMaximumPower += componentPower;
+      totalMinimumPower += componentMinPower;
+      totalOperationalPower += componentOperationalPower;
+      totalMaximumPower += componentMaxPower;
     });
-    
-    // Calculate minimum power (1/3 of maximum)
-    const totalMinimumPower = totalMaximumPower / 3;
-    const networkRackMinimumPower = networkRackMaximumPower / 3;
-    const computeRackMinimumPower = computeRackMaximumPower / 3;
-    
-    // Calculate operational power: minimum power + (operational load % * remaining power)
-    const remainingPower = totalMaximumPower - totalMinimumPower;
-    const networkRackRemainingPower = networkRackMaximumPower - networkRackMinimumPower;
-    const computeRackRemainingPower = computeRackMaximumPower - computeRackMinimumPower;
-    
-    const loadFactor = operationalLoadPercentage / 100;
-    
-    const totalOperationalComponent = remainingPower * loadFactor;
-    const networkRackOperationalComponent = networkRackRemainingPower * loadFactor;
-    const computeRackOperationalComponent = computeRackRemainingPower * loadFactor;
-    
-    const totalOperationalPower = totalMinimumPower + totalOperationalComponent;
-    const networkRackOperationalPower = networkRackMinimumPower + networkRackOperationalComponent;
-    const computeRackOperationalPower = computeRackMinimumPower + computeRackOperationalComponent;
     
     // Calculate available power based on rack type - FIX: Use the correct rack quantities
     const powerPerRack = activeDesign?.requirements?.physicalConstraints?.powerPerRackWatts || 0;

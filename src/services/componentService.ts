@@ -33,6 +33,9 @@ interface ComponentRow {
   description: string | null;
   cost: number | null;
   powerrequired: number | null;
+  power_idle: number | null;
+  power_typical: number | null;
+  power_peak: number | null;
   serverrole: string | null;
   switchrole: string | null;
   isdefault: boolean | null;
@@ -63,6 +66,9 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
           description: component.description || '',
           cost: Number(component.cost) || 0,
           powerRequired: Number(component.powerrequired) || 0,
+          powerIdle: Number(component.power_idle) || 0,
+          powerTypical: Number(component.power_typical) || 0,
+          powerPeak: Number(component.power_peak) || 0,
           isDefault: component.isdefault || false,
         };
 
@@ -293,6 +299,9 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
       description: componentWithValidID.description || '',
       cost: componentWithValidID.cost || 0,
       powerrequired: componentWithValidID.powerRequired || 0,
+      power_idle: componentWithValidID.powerIdle || 0,
+      power_typical: componentWithValidID.powerTypical || 0,
+      power_peak: componentWithValidID.powerPeak || 0,
       serverrole: componentWithValidID.type === ComponentType.Server ? (componentWithValidID as Server).serverRole || null : null,
       switchrole: componentWithValidID.type === ComponentType.Switch ? (componentWithValidID as Switch).switchRole || null : null,
       isdefault: componentWithValidID.isDefault || false
@@ -304,7 +313,7 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
     // Remove base fields to avoid duplication
     const { 
       id, name, type, manufacturer, model, description, cost, 
-      powerRequired, isDefault, ...rest 
+      powerRequired, powerIdle, powerTypical, powerPeak, isDefault, ...rest 
     } = componentWithValidID;
     
     // Remove serverRole and switchRole as they're already handled
