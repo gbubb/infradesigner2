@@ -6,14 +6,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalibrationProfile } from '@/types/model-types';
+import { PowerCalibrationProfile } from '../power-calibration/PowerCalibrationTypes';
 
 interface MemoryPowerAnalysisProps {
   dimmCount: number;
   dimmCapacityGB: number;
   memoryType: 'DDR3' | 'DDR4' | 'DDR5';
   memorySpeedMHz: number;
-  calibrationProfile?: CalibrationProfile;
+  calibrationProfile?: PowerCalibrationProfile;
 }
 
 export const MemoryPowerAnalysis: React.FC<MemoryPowerAnalysisProps> = ({

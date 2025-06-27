@@ -96,6 +96,33 @@ function calculateCpuPower(inputs: PowerCalculationInputs, calibration: PowerCal
   const architecture = getCpuArchitecture(inputs.cpuModel);
   const multipliers = calibration.cpuArchitectureMultipliers[architecture] || calibration.cpuArchitectureMultipliers['Default'];
   
+  // Defensive programming: use default multipliers if not found
+  if (!multipliers) {
+    console.warn(`CPU architecture multipliers not found for ${architecture}, using Default`);
+    const defaultMultipliers = { idle: 0.15, peak: 1.05 };
+    const totalTdp = inputs.tdpPerCpu * inputs.cpuCount;
+    
+    // Idle power
+    const idlePower = totalTdp * calibration.cpuIdleMultiplier;
+    
+    // Dynamic power based on utilization with non-linear scaling
+    const u = inputs.cpuUtilization / 100;
+    const { linear, quadratic, cubic } = calibration.cpuDynamicCoefficients;
+    const dynamicPower = totalTdp * (linear * u + quadratic * Math.pow(u, 2) + cubic * Math.pow(u, 3));
+    
+    // Turbo adjustment
+    const turboAdjustment = inputs.turboEnabled ? totalTdp * calibration.cpuTurboMultiplier * calibration.cpuTurboProbability : 0;
+    
+    // Multi-core efficiency factor (decreases with more cores)
+    const totalCores = inputs.cpuCount * inputs.coresPerCpu;
+    const efficiencyFactor = calibration.cpuMulticoreEfficiencyBase - (calibration.cpuMulticoreEfficiencyDecay * totalCores);
+    
+    const averagePower = (idlePower + dynamicPower) * efficiencyFactor + turboAdjustment;
+    const peakPower = totalTdp * defaultMultipliers.peak;
+    
+    return { idle: idlePower, average: averagePower, peak: peakPower };
+  }
+  
   const totalTdp = inputs.tdpPerCpu * inputs.cpuCount;
   
   // Idle power
@@ -130,6 +157,44 @@ function calculateMemoryPower(inputs: PowerCalculationInputs, calibration: Power
       idle: conservativePower * 0.35,
       average: conservativePower * 0.7,
       peak: conservativePower
+    };
+  }
+  
+  // Defensive programming: check if memory type exists in the model
+  if (!memModel.controllerBasePower[inputs.memoryType] || 
+      !memModel.powerPerChip[inputs.memoryType] || 
+      !memModel.chipsPerGB[inputs.memoryType]) {
+    console.warn(`Memory type ${inputs.memoryType} not found in calibration, using DDR4 defaults`);
+    // Use DDR4 as fallback
+    const fallbackType = 'DDR4' as const;
+    const controllerPower = memModel.controllerBasePower[fallbackType] || 1.0;
+    const chipsPerDimm = inputs.dimmCapacityGB * (memModel.chipsPerGB[fallbackType] || 0.5);
+    const chipPower = chipsPerDimm * (memModel.powerPerChip[fallbackType] || 0.18);
+    
+    // Speed scaling (logarithmic)
+    const baseSpeed = memModel.speedScaling?.baseSpeedMHz?.[fallbackType] || 2400;
+    const speedRatio = inputs.memorySpeedMHz / baseSpeed;
+    const speedMultiplier = Math.pow(speedRatio, memModel.speedScaling?.scalingExponent || 0.3);
+    
+    // Total power per DIMM at peak
+    const peakPowerPerDimm = (controllerPower + chipPower) * speedMultiplier;
+    
+    // Apply activity multipliers
+    const idlePowerPerDimm = peakPowerPerDimm * (memModel.activityMultipliers?.idle || 0.34);
+    const avgPowerPerDimm = peakPowerPerDimm * (memModel.activityMultipliers?.average || 1.0);
+    
+    // Total for all DIMMs
+    const totalIdle = inputs.dimmCount * idlePowerPerDimm;
+    const totalAvg = inputs.dimmCount * avgPowerPerDimm;
+    const totalPeak = inputs.dimmCount * peakPowerPerDimm;
+    
+    // Conservative estimate check
+    const conservativePower = inputs.dimmCount * calibration.memoryConservativeMultiplier;
+    
+    return {
+      idle: totalIdle,
+      average: Math.max(totalAvg, conservativePower * 0.7),
+      peak: Math.max(totalPeak, conservativePower)
     };
   }
   
@@ -170,6 +235,42 @@ function calculateStoragePower(inputs: PowerCalculationInputs, calibration: Powe
   let totalAverage = 0;
   let totalPeak = 0;
   
+  // Defensive programming: check if storage calibration exists
+  if (!calibration.storageBasePower || !calibration.storageActivityFactors) {
+    console.warn('Storage calibration not found, using conservative defaults');
+    // Conservative defaults
+    const hddPower = 8; // 8W per HDD
+    const ssdPower = 4; // 4W per SSD
+    const nvmePower = 6; // 6W per NVMe
+    
+    inputs.hdds.forEach(hdd => {
+      totalIdle += hdd.count * hddPower * 0.7;
+      totalAverage += hdd.count * hddPower;
+      totalPeak += hdd.count * hddPower * 1.2;
+    });
+    
+    inputs.ssdSata.forEach(ssd => {
+      totalIdle += ssd.count * ssdPower * 0.5;
+      totalAverage += ssd.count * ssdPower;
+      totalPeak += ssd.count * ssdPower * 1.5;
+    });
+    
+    inputs.nvme.forEach(nvme => {
+      totalIdle += nvme.count * nvmePower * 0.3;
+      totalAverage += nvme.count * nvmePower;
+      totalPeak += nvme.count * nvmePower * 1.8;
+    });
+    
+    // RAID controller
+    if (inputs.raidController) {
+      totalIdle += 15;
+      totalAverage += 25;
+      totalPeak += 40;
+    }
+    
+    return { idle: totalIdle, average: totalAverage, peak: totalPeak };
+  }
+  
   // HDDs
   inputs.hdds.forEach(hdd => {
     const basePower = calibration.storageBasePower.hddBase + (hdd.capacityTB * calibration.storageBasePower.hddCapacityScaling);
@@ -204,9 +305,9 @@ function calculateStoragePower(inputs: PowerCalculationInputs, calibration: Powe
   
   // RAID controller
   if (inputs.raidController) {
-    totalIdle += calibration.raidControllerPower.idle;
-    totalAverage += calibration.raidControllerPower.average;
-    totalPeak += calibration.raidControllerPower.peak;
+    totalIdle += calibration.raidControllerPower?.idle || 15;
+    totalAverage += calibration.raidControllerPower?.average || 25;
+    totalPeak += calibration.raidControllerPower?.peak || 40;
   }
   
   return { idle: totalIdle, average: totalAverage, peak: totalPeak };
@@ -215,14 +316,20 @@ function calculateStoragePower(inputs: PowerCalculationInputs, calibration: Powe
 function calculateNetworkPower(inputs: PowerCalculationInputs, calibration: PowerCalibrationProfile): { idle: number; average: number; peak: number } {
   let totalPower = 0;
   inputs.networkPorts.forEach(port => {
-    totalPower += port.count * calibration.networkPowerBySpeed[port.speedGbps];
+    const portPower = calibration.networkPowerBySpeed[port.speedGbps];
+    if (portPower === undefined) {
+      console.warn(`Network power not found for speed ${port.speedGbps}Gbps, using 10Gbps default`);
+      totalPower += port.count * (calibration.networkPowerBySpeed[10] || 10);
+    } else {
+      totalPower += port.count * portPower;
+    }
   });
   
   // Network power is relatively constant
   return {
-    idle: totalPower * calibration.networkActivityFactors.idle,
+    idle: totalPower * (calibration.networkActivityFactors?.idle || 0.9),
     average: totalPower,
-    peak: totalPower * calibration.networkActivityFactors.peak
+    peak: totalPower * (calibration.networkActivityFactors?.peak || 1.1)
   };
 }
 
@@ -232,6 +339,25 @@ function calculateOtherComponentsPower(inputs: PowerCalculationInputs, calibrati
 } {
   // Motherboard base power
   const motherboardBase = calibration.motherboardBasePower[inputs.formFactor];
+  
+  // Defensive programming: use default values if form factor not found
+  if (motherboardBase === undefined) {
+    console.warn(`Motherboard power not found for form factor ${inputs.formFactor}, using 2U defaults`);
+    const defaultMotherboardBase = 45; // 2U default
+    const bmcPower = calibration.bmcPower || 6;
+    
+    const motherboard = {
+      idle: defaultMotherboardBase + bmcPower,
+      average: defaultMotherboardBase + bmcPower,
+      peak: defaultMotherboardBase + bmcPower
+    };
+    
+    // Fan power (5-15% of total, varies by load)
+    // This is calculated later based on total DC power
+    const fans = { idle: 0, average: 0, peak: 0 };
+    
+    return { motherboard, fans };
+  }
   
   // BMC/Management
   const bmcPower = calibration.bmcPower;
@@ -255,6 +381,18 @@ function calculateEnvironmentalFactor(inletTempC: number, calibration: PowerCali
 
 function calculateFanPower(formFactor: '1U' | '2U' | '4U', calibration: PowerCalibrationProfile): { idle: number; average: number; peak: number } {
   const fanPower = calibration.fanPowerByFormFactor[formFactor];
+  
+  // Defensive programming: use default values if form factor not found
+  if (!fanPower) {
+    console.warn(`Fan power not found for form factor ${formFactor}, using 2U defaults`);
+    const defaultFanPower = { idle: 40, peak: 100 };
+    const average = defaultFanPower.idle + (defaultFanPower.peak - defaultFanPower.idle) * 0.5;
+    return {
+      idle: defaultFanPower.idle,
+      average: average,
+      peak: defaultFanPower.peak
+    };
+  }
   
   // Linear interpolation for average (50% between idle and peak)
   const average = fanPower.idle + (fanPower.peak - fanPower.idle) * 0.5;
@@ -286,12 +424,21 @@ function calculatePsuEfficiency(dcPower: number, psuRating: number, efficiencyRa
   
   // Fall back to default curves
   const efficiencyFunc = PSU_EFFICIENCY[efficiencyRating];
+  if (!efficiencyFunc) {
+    console.warn(`PSU efficiency function not found for rating ${efficiencyRating}, using 80PlusGold`);
+    return PSU_EFFICIENCY['80PlusGold'](loadPercentage);
+  }
   return efficiencyFunc(loadPercentage);
 }
 
 export function calculateServerPower(inputs: PowerCalculationInputs, calibration?: PowerCalibrationProfile): PowerCalculationResult {
-  // Use provided calibration or default
-  const cal = calibration || DEFAULT_CALIBRATION_PROFILE as PowerCalibrationProfile;
+  // Use provided calibration or create a complete default profile
+  const cal = calibration || {
+    ...DEFAULT_CALIBRATION_PROFILE,
+    id: 'default',
+    createdAt: new Date(),
+    updatedAt: new Date()
+  } as PowerCalibrationProfile;
   const warnings: string[] = [];
   const missingMetrics: string[] = [];
   

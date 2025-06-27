@@ -128,7 +128,7 @@ export const PowerPredictionTab: React.FC = () => {
               <Alert>
                 <AlertDescription>
                   <div className="text-sm space-y-1">
-                    <div><strong>Selected:</strong> {selectedServer.manufacturer} {selectedServer.productLine} {selectedServer.model}</div>
+                    <div><strong>Selected:</strong> {selectedServer.manufacturer} {selectedServer.model}</div>
                     <div><strong>CPU:</strong> {selectedServer.cpuSockets}x {selectedServer.cpuModel} ({selectedServer.cpuCoresPerSocket || selectedServer.coreCount} cores each)
                       {selectedServer.cpuFrequencyBaseGhz && ` @ ${selectedServer.cpuFrequencyBaseGhz}GHz`}
                       {selectedServer.cpuFrequencyTurboGhz && ` (turbo: ${selectedServer.cpuFrequencyTurboGhz}GHz)`}
@@ -287,7 +287,7 @@ export const PowerPredictionTab: React.FC = () => {
           )}
           
           {/* Power Calculation Debug */}
-          <PowerCalculationDebug result={calculationResult} />
+          <PowerCalculationDebug result={calculationResult} showDebug={showDebug} />
           
           {/* Warnings and Missing Metrics */}
           {calculationResult.warnings.length > 0 && (
@@ -357,7 +357,7 @@ export const PowerPredictionTab: React.FC = () => {
           open={showValidation}
           onOpenChange={setShowValidation}
           calculationResult={calculationResult}
-          serverModel={`${selectedServer.manufacturer} ${selectedServer.productLine} ${selectedServer.model}`}
+          serverModel={`${selectedServer.manufacturer} ${selectedServer.model}`}
           onValidationSave={(observedValues) => {
             if (calibrationProfile) {
               // Add validation data to the calibration profile
@@ -366,7 +366,7 @@ export const PowerPredictionTab: React.FC = () => {
                 validationData: [
                   ...(calibrationProfile.validationData || []),
                   {
-                    serverModel: `${selectedServer.manufacturer} ${selectedServer.productLine} ${selectedServer.model}`,
+                    serverModel: `${selectedServer.manufacturer} ${selectedServer.model}`,
                     observedPower: observedValues,
                     predictedPower: {
                       idle: calculationResult.idlePowerW,
