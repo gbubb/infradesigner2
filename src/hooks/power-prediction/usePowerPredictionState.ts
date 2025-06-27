@@ -24,8 +24,8 @@ const getNetworkPortSpeed = (portType: NetworkPortType): 1 | 10 | 25 | 40 | 100 
   }
 };
 
-export const usePowerPredictionState = (servers: Server[]) => {
-  const [selectedServerId, setSelectedServerId] = useState<string>('');
+export const usePowerPredictionState = (servers: Server[], preselectedComponentId?: string) => {
+  const [selectedServerId, setSelectedServerId] = useState<string>(preselectedComponentId || '');
   const [customInputs, setCustomInputs] = useState<Partial<PowerCalculationInputs>>({
     cpuUtilization: 50,
     raidController: false,
@@ -83,6 +83,13 @@ export const usePowerPredictionState = (servers: Server[]) => {
       setCalculationResult(null);
     }
   }, [selectedServerId]); // Trigger when selectedServerId changes
+  
+  // Update selectedServerId when preselectedComponentId changes
+  useEffect(() => {
+    if (preselectedComponentId && preselectedComponentId !== selectedServerId) {
+      setSelectedServerId(preselectedComponentId);
+    }
+  }, [preselectedComponentId]);
   
   const updateCustomInputs = (updates: Partial<PowerCalculationInputs>) => {
     setCustomInputs(current => ({ ...current, ...updates }));

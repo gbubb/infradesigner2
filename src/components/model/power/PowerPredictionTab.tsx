@@ -35,7 +35,11 @@ import { usePowerPredictionState } from '@/hooks/power-prediction/usePowerPredic
 import { useDeviceManagement } from '@/hooks/power-prediction/useDeviceManagement';
 import { usePowerCalculation } from '@/hooks/power-prediction/usePowerCalculation';
 
-export const PowerPredictionTab: React.FC = () => {
+interface PowerPredictionTabProps {
+  selectedComponentId?: string;
+}
+
+export const PowerPredictionTab: React.FC<PowerPredictionTabProps> = ({ selectedComponentId }) => {
   const { componentTemplates } = useDesignStore();
   const [showDebug, setShowDebug] = React.useState(false);
   
@@ -66,7 +70,7 @@ export const PowerPredictionTab: React.FC = () => {
     setShowCalibration,
     setShowValidation,
     setSelectedPowerState
-  } = usePowerPredictionState(servers);
+  } = usePowerPredictionState(servers, selectedComponentId);
   
   // Device management
   const {

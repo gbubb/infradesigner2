@@ -1,10 +1,17 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Pencil, Copy, Trash } from 'lucide-react';
-import { InfrastructureComponent } from '@/types/infrastructure';
+import { Pencil, Copy, Trash, Zap } from 'lucide-react';
+import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ComponentsTableProps {
   components: InfrastructureComponent[];
@@ -23,8 +30,21 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({
   onClone,
   onDelete
 }) => {
+  const navigate = useNavigate();
+
+  const handlePowerPrediction = (component: InfrastructureComponent) => {
+    // Navigate to model page with power tab and selected component
+    navigate('/model', { 
+      state: { 
+        selectedTab: 'power',
+        selectedComponentId: component.id 
+      } 
+    });
+  };
+
   return (
-    <div className="rounded-md border">
+    <TooltipProvider>
+      <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -62,6 +82,18 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({
                     <Button variant="ghost" size="icon" onClick={() => onClone(component.id)}>
                       <Copy className="h-4 w-4" />
                     </Button>
+                    {component.type === ComponentType.Server && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => handlePowerPrediction(component)}>
+                            <Zap className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Use in Power Prediction</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                     <Button variant="ghost" size="icon" onClick={() => onDelete(component.id)}>
                       <Trash className="h-4 w-4" />
                     </Button>
@@ -79,5 +111,6 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({
         </TableBody>
       </Table>
     </div>
+    </TooltipProvider>
   );
 };

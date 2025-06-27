@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
@@ -15,6 +16,7 @@ import { ClusterAnalysis } from '@/types/model-types';
 import { ComponentWithPlacement } from '@/types/service-types';
 
 export const ModelPanel: React.FC = () => {
+  const location = useLocation();
   const { requirements } = useDesignStore();
   const { 
     hasValidDesign, 
@@ -31,6 +33,25 @@ export const ModelPanel: React.FC = () => {
   // Get pricing data from requirements
   const computePricing = requirements.pricingRequirements?.computePricing || [];
   const storagePricing = requirements.pricingRequirements?.storagePricing || [];
+
+  // Handle navigation state
+  const [selectedTab, setSelectedTab] = useState('revenue');
+  const [selectedComponentId, setSelectedComponentId] = useState<string | undefined>();
+
+  useEffect(() => {
+    // Check if we have navigation state with a selected tab and component
+    if (location.state) {
+      const state = location.state as { selectedTab?: string; selectedComponentId?: string };
+      if (state.selectedTab) {
+        setSelectedTab(state.selectedTab);
+      }
+      if (state.selectedComponentId) {
+        setSelectedComponentId(state.selectedComponentId);
+      }
+      // Clear the location state to prevent it from persisting
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   // Initialize state for consumption sliders - one per cluster
   const [clusterConsumption, setClusterConsumption] = useState<Record<string, number>>(() => {
@@ -375,7 +396,7 @@ export const ModelPanel: React.FC = () => {
     <div className="w-full p-6">
       <h2 className="text-2xl font-semibold mb-4">Model</h2>
       
-      <Tabs defaultValue="revenue" className="w-full">
+      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
         <TabsList className="grid w-full max-w-[800px] grid-cols-4">
           <TabsTrigger value="revenue">Revenue Model</TabsTrigger>
           <TabsTrigger value="scenario">Scenario</TabsTrigger>
@@ -449,7 +470,7 @@ export const ModelPanel: React.FC = () => {
         </TabsContent>
         
         <TabsContent value="power" className="mt-6">
-          <PowerPredictionTab />
+          <PowerPredictionTab selectedComponentId={selectedComponentId} />
         </TabsContent>
         
         <TabsContent value="datacenter" className="mt-6">
