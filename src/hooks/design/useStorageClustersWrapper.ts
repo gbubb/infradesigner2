@@ -43,11 +43,36 @@ export const useStorageClustersWrapper = () => {
       let totalRawCapacityTB = 0;
       let totalNodeCost = 0;
       let totalStorageCost = 0;
+      let totalDiskCost = 0;
+      let totalServerCost = 0;
+      let totalDisks = 0;
+      let storageAttributedServerCost = 0;
+      const cpuCoresPerDisk = 4;
+      let totalCpuCores = 0;
+      let storageCpuCores = 0;
+      
+      // Detailed breakdown for cost calculation
+      const costBreakdown = {
+        nodes: [] as Array<{
+          name: string;
+          quantity: number;
+          serverCost: number;
+          diskCost: number;
+          diskCount: number;
+          diskDetails: Array<{ name: string; capacityTB: number; quantity: number; cost: number }>;
+        }>
+      };
       
       clusterNodes.forEach(node => {
         const quantity = node.quantity || 1;
-        const nodeCost = node.cost * quantity;
+        const serverUnitCost = node.cost || 0;
+        const nodeCost = serverUnitCost * quantity;
         totalNodeCost += nodeCost;
+        totalServerCost += nodeCost;
+        
+        const nodeDisks: Array<{ name: string; capacityTB: number; quantity: number; cost: number }> = [];
+        let nodeDiskCost = 0;
+        let nodeDiskCount = 0;
         
         // Add attached disks capacity and calculate storage-specific costs
         if ('attachedDisks' in node && node.attachedDisks) {
@@ -58,11 +83,26 @@ export const useStorageClustersWrapper = () => {
           disks.forEach((disk) => {
             if (disk && 'capacityTB' in disk) {
               const diskQuantity = disk.quantity || 1;
+              const diskUnitCost = disk.cost || 0;
+              const diskTotalCost = diskUnitCost * diskQuantity * quantity;
+              
               totalRawCapacityTB += disk.capacityTB * diskQuantity * quantity;
               totalDisksInNode += diskQuantity;
-              diskCostForNode += disk.cost * diskQuantity * quantity;
+              diskCostForNode += diskTotalCost;
+              totalDiskCost += diskTotalCost;
+              totalDisks += diskQuantity * quantity;
+              
+              nodeDisks.push({
+                name: disk.name || `${disk.capacityTB}TB Disk`,
+                capacityTB: disk.capacityTB,
+                quantity: diskQuantity * quantity,
+                cost: diskTotalCost
+              });
             }
           });
+          
+          nodeDiskCost = diskCostForNode;
+          nodeDiskCount = totalDisksInNode;
           
           // For hyper-converged nodes, calculate storage-specific cost
           // This provides a more accurate Cost per TiB by only including the 
@@ -71,17 +111,21 @@ export const useStorageClustersWrapper = () => {
             // Find the server template to get CPU core count
             const serverTemplate = componentTemplates.find(t => t.id === node.componentId);
             if (serverTemplate && serverTemplate.type === 'server') {
-              const server = serverTemplate as { cpuSockets?: number; cpuCoresPerSocket?: number };
-              const totalCores = (server.cpuSockets || 0) * (server.cpuCoresPerSocket || 0);
+              const server = serverTemplate as { cpuSockets?: number; cpuCoresPerSocket?: number; name?: string };
+              const cores = (server.cpuSockets || 0) * (server.cpuCoresPerSocket || 0);
+              totalCpuCores += cores * quantity;
               
-              if (totalCores > 0) {
+              if (cores > 0) {
                 // Assign 4 CPU cores per disk for storage operations
-                const storageCores = totalDisksInNode * 4;
-                const storageRatio = Math.min(storageCores / totalCores, 1); // Cap at 100%
+                const storageCoresForNode = totalDisksInNode * cpuCoresPerDisk;
+                storageCpuCores += storageCoresForNode * quantity;
+                const storageRatio = Math.min(storageCoresForNode / cores, 1); // Cap at 100%
                 
                 // Storage cost = disk cost + proportional server cost
                 // Example: 2 disks = 8 cores, on 64-core server = 12.5% of server cost
-                const serverStorageCost = (nodeCost - diskCostForNode) * storageRatio;
+                const serverCostWithoutDisks = nodeCost - diskCostForNode;
+                const serverStorageCost = serverCostWithoutDisks * storageRatio;
+                storageAttributedServerCost += serverStorageCost;
                 totalStorageCost += diskCostForNode + serverStorageCost;
               } else {
                 // Fallback if no CPU info available
@@ -96,6 +140,19 @@ export const useStorageClustersWrapper = () => {
             totalStorageCost += nodeCost;
           }
         }
+        
+        // Find server name from template
+        const serverTemplate = componentTemplates.find(t => t.id === node.componentId);
+        const serverName = serverTemplate?.name || node.name || 'Server';
+        
+        costBreakdown.nodes.push({
+          name: serverName,
+          quantity: quantity,
+          serverCost: nodeCost,
+          diskCost: nodeDiskCost,
+          diskCount: nodeDiskCount,
+          diskDetails: nodeDisks
+        });
       });
       
       // Calculate usable capacity based on pool type
@@ -123,7 +180,16 @@ export const useStorageClustersWrapper = () => {
         costPerTiB,
         nodeCount: clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0),
         isHyperConverged: cluster.hyperConverged || false,
-        totalStorageCost: cluster.hyperConverged ? totalStorageCost : undefined
+        totalStorageCost: cluster.hyperConverged ? totalStorageCost : undefined,
+        // Additional detailed breakdown
+        totalDiskCost,
+        totalServerCost,
+        totalDisks,
+        storageAttributedServerCost: cluster.hyperConverged ? storageAttributedServerCost : undefined,
+        totalCpuCores: cluster.hyperConverged ? totalCpuCores : undefined,
+        storageCpuCores: cluster.hyperConverged ? storageCpuCores : undefined,
+        cpuCoresPerDisk: cluster.hyperConverged ? cpuCoresPerDisk : undefined,
+        costBreakdown
       };
     });
   }, [activeDesign, requirements, componentTemplates]);

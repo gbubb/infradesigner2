@@ -18,6 +18,23 @@ interface StorageClusterMetric {
   nodeCount: number;
   isHyperConverged?: boolean;
   totalStorageCost?: number;
+  totalDiskCost?: number;
+  totalServerCost?: number;
+  totalDisks?: number;
+  storageAttributedServerCost?: number;
+  totalCpuCores?: number;
+  storageCpuCores?: number;
+  cpuCoresPerDisk?: number;
+  costBreakdown?: {
+    nodes: Array<{
+      name: string;
+      quantity: number;
+      serverCost: number;
+      diskCost: number;
+      diskCount: number;
+      diskDetails: Array<{ name: string; capacityTB: number; quantity: number; cost: number }>;
+    }>;
+  };
 }
 
 interface StorageClustersTableProps {
@@ -66,6 +83,14 @@ export const StorageClustersTable: React.FC<StorageClustersTableProps> = ({ clus
                     nodeCount={cluster.nodeCount}
                     isHyperConverged={cluster.isHyperConverged}
                     totalStorageCost={cluster.totalStorageCost}
+                    totalDiskCost={cluster.totalDiskCost}
+                    totalServerCost={cluster.totalServerCost}
+                    totalDisks={cluster.totalDisks}
+                    storageAttributedServerCost={cluster.storageAttributedServerCost}
+                    totalCpuCores={cluster.totalCpuCores}
+                    storageCpuCores={cluster.storageCpuCores}
+                    cpuCoresPerDisk={cluster.cpuCoresPerDisk}
+                    costBreakdown={cluster.costBreakdown}
                   />
                 </TableCell>
                 <TableCell>{cluster.nodeCount}</TableCell>
