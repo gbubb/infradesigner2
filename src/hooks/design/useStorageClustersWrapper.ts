@@ -96,8 +96,8 @@ export const useStorageClustersWrapper = () => {
               nodeDisks.push({
                 name: disk.name || `${disk.capacityTB}TB Disk`,
                 capacityTB: disk.capacityTB,
-                quantity: diskQuantity * quantity,
-                cost: diskTotalCost
+                quantity: diskQuantity,
+                cost: diskUnitCost
               });
             }
           });
@@ -108,54 +108,67 @@ export const useStorageClustersWrapper = () => {
           // For hyper-converged nodes, calculate storage-specific cost
           // This provides a more accurate Cost per TiB by only including the 
           // portion of server cost attributable to storage operations
-          if (cluster.hyperConverged && cluster.computeClusterId && node.componentId) {
-            // Find the server template to get CPU core count
-            const serverTemplate = componentTemplates.find(t => t.id === node.componentId);
+          if (cluster.hyperConverged && cluster.computeClusterId) {
+            // Try to get CPU info from the node itself first (if it's a Server type)
+            let cores = 0;
             
-            // Debug logging
-            console.log('[StorageCluster] Looking for server template:', {
-              nodeComponentId: node.componentId,
-              templateFound: !!serverTemplate,
-              templateType: serverTemplate?.type,
-              expectedType: ComponentType.Server,
-              typeMatch: serverTemplate?.type === ComponentType.Server
-            });
-            
-            if (serverTemplate && serverTemplate.type === ComponentType.Server) {
-              const server = serverTemplate as Server;
-              const cores = (server.cpuSockets || 0) * (server.cpuCoresPerSocket || 0);
-              totalCpuCores += cores * quantity;
+            if (node.type === ComponentType.Server && 'cpuSockets' in node && 'cpuCoresPerSocket' in node) {
+              // Node is already a Server type with CPU info
+              const serverNode = node as Server;
+              cores = (serverNode.cpuSockets || 0) * (serverNode.cpuCoresPerSocket || 0);
+              
+              console.log('[StorageCluster] Using CPU info from node directly:', {
+                nodeName: node.name,
+                cpuSockets: serverNode.cpuSockets,
+                cpuCoresPerSocket: serverNode.cpuCoresPerSocket,
+                totalCores: cores
+              });
+            } else if (node.componentId) {
+              // Find the server template to get CPU core count
+              const serverTemplate = componentTemplates.find(t => t.id === node.componentId);
               
               // Debug logging
-              console.log('[StorageCluster] CPU calculation for node:', {
-                nodeName: node.name,
-                componentId: node.componentId,
-                serverName: server.name,
-                cpuSockets: server.cpuSockets,
-                cpuCoresPerSocket: server.cpuCoresPerSocket,
-                totalCores: cores,
-                quantity: quantity,
-                totalCpuCores: cores * quantity
+              console.log('[StorageCluster] Looking for server template:', {
+                nodeComponentId: node.componentId,
+                nodeType: node.type,
+                templateFound: !!serverTemplate,
+                templateType: serverTemplate?.type,
+                expectedType: ComponentType.Server,
+                typeMatch: serverTemplate?.type === ComponentType.Server
               });
               
-              if (cores > 0) {
-                // Assign 4 CPU cores per disk for storage operations
-                const storageCoresForNode = totalDisksInNode * cpuCoresPerDisk;
-                storageCpuCores += storageCoresForNode * quantity;
-                const storageRatio = Math.min(storageCoresForNode / cores, 1); // Cap at 100%
+              if (serverTemplate && serverTemplate.type === ComponentType.Server) {
+                const server = serverTemplate as Server;
+                cores = (server.cpuSockets || 0) * (server.cpuCoresPerSocket || 0);
                 
-                // Storage cost = disk cost + proportional server cost
-                // Example: 2 disks = 8 cores, on 64-core server = 12.5% of server cost
-                const serverCostWithoutDisks = nodeCost - diskCostForNode;
-                const serverStorageCost = serverCostWithoutDisks * storageRatio;
-                storageAttributedServerCost += serverStorageCost;
-                totalStorageCost += diskCostForNode + serverStorageCost;
-              } else {
-                // Fallback if no CPU info available
-                totalStorageCost += diskCostForNode;
+                console.log('[StorageCluster] CPU calculation from template:', {
+                  nodeName: node.name,
+                  componentId: node.componentId,
+                  serverName: server.name,
+                  cpuSockets: server.cpuSockets,
+                  cpuCoresPerSocket: server.cpuCoresPerSocket,
+                  totalCores: cores
+                });
               }
+            }
+            
+            if (cores > 0) {
+              totalCpuCores += cores * quantity;
+              
+              // Assign 4 CPU cores per disk for storage operations
+              const storageCoresForNode = totalDisksInNode * cpuCoresPerDisk;
+              storageCpuCores += storageCoresForNode * quantity;
+              const storageRatio = Math.min(storageCoresForNode / cores, 1); // Cap at 100%
+              
+              // Storage cost = disk cost + proportional server cost
+              // Example: 2 disks = 8 cores, on 64-core server = 12.5% of server cost
+              const serverCostWithoutDisks = serverUnitCost - (diskCostForNode / quantity);
+              const serverStorageCost = serverCostWithoutDisks * storageRatio * quantity;
+              storageAttributedServerCost += serverStorageCost;
+              totalStorageCost += diskCostForNode + serverStorageCost;
             } else {
-              // Fallback if template not found
+              // Fallback if no CPU info available
+              console.log('[StorageCluster] No CPU info available for node:', node.name);
               totalStorageCost += diskCostForNode;
             }
           } else {
@@ -171,8 +184,8 @@ export const useStorageClustersWrapper = () => {
         const nodeBreakdown = {
           name: serverName,
           quantity: quantity,
-          serverCost: nodeCost,
-          diskCost: nodeDiskCost,
+          serverCost: serverUnitCost,  // Use unit cost, not total
+          diskCost: nodeDiskCost / quantity,  // Per-node disk cost
           diskCount: nodeDiskCount,
           diskDetails: nodeDisks
         };
