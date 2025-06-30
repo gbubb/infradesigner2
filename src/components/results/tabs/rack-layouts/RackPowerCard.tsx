@@ -230,7 +230,9 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
     }>();
     
     rackPowerStats.powerByComponent.forEach(comp => {
-      const key = `${comp.name}-${comp.manufacturer}-${comp.model}`;
+      // Remove numeric suffix from component name for grouping
+      const baseName = comp.name.replace(/-\d+$/, '');
+      const key = `${baseName}-${comp.manufacturer}-${comp.model}`;
       const powerValue = comp[popoverPowerState];
       
       if (powerValue > 0) {
@@ -240,7 +242,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
           existing.totalPower += powerValue;
         } else {
           groupedComponents.set(key, {
-            name: comp.name,
+            name: baseName,
             type: comp.type,
             manufacturer: comp.manufacturer,
             model: comp.model,
