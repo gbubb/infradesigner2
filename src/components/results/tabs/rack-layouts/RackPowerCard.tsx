@@ -58,12 +58,29 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
   
   const { activeDesign } = useDesignStore();
   
+  // Debug: Log the entire activeDesign structure
+  console.log('🔍 RackPowerCard mounted/updated', {
+    rackProfileId,
+    powerCapacity,
+    hasActiveDesign: !!activeDesign,
+    componentCount: activeDesign?.components?.length || 0,
+    rackCount: activeDesign?.rackprofiles?.length || 0
+  });
+  
   // Calculate power statistics for the rack
   const rackPowerStats = useMemo<RackPowerStats | null>(() => {
+    console.log('🔍 RackPowerCard - Starting power calculation for rack:', rackProfileId);
+    console.log('activeDesign?.rackprofiles:', activeDesign?.rackprofiles);
+    console.log('activeDesign?.components:', activeDesign?.components);
+    
     if (!activeDesign?.rackprofiles || !rackProfileId || !activeDesign?.components) return null;
     
     const rack = activeDesign.rackprofiles.find(r => r.id === rackProfileId);
+    console.log('Found rack:', rack);
+    console.log('Rack devices:', rack?.devices);
+    
     if (!rack || !rack.devices || rack.devices.length === 0) {
+      console.log('⚠️ No rack or devices found, returning empty stats');
       return {
         idlePower: 0,
         typicalPower: 0,
@@ -81,12 +98,25 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
     const componentsWithoutPower: Array<{ name: string; type: ComponentType }> = [];
     let totalDevices = 0;
     
+    console.log(`📋 Processing ${rack.devices.length} devices in rack`);
+    
     rack.devices.forEach(device => {
+      console.log('Processing device:', device);
+      console.log('Looking for component with deviceId:', device.deviceId);
+      
       // Find the component by its deviceId
       const component = activeDesign.components.find(c => c.id === device.deviceId);
+      console.log('Found component:', component);
       
       if (component) {
         totalDevices++;
+        console.log('Component power data:', {
+          name: component.name,
+          powerIdle: component.powerIdle,
+          powerTypical: component.powerTypical,
+          powerPeak: component.powerPeak,
+          powerRequired: component.powerRequired
+        });
         
         // Check if component has all power fields
         const hasCompletePowerData = 
@@ -94,6 +124,8 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
           component.powerTypical !== undefined && 
           component.powerPeak !== undefined &&
           (component.powerIdle > 0 || component.powerTypical > 0 || component.powerPeak > 0);
+        
+        console.log('Has complete power data:', hasCompletePowerData);
         
         if (!hasCompletePowerData && component.powerRequired === undefined) {
           componentsWithoutPower.push({
@@ -111,17 +143,25 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
           deviceIdlePower = component.powerIdle || 0;
           deviceTypicalPower = component.powerTypical || 0;
           devicePeakPower = component.powerPeak || 0;
+          console.log('✅ Using complete power data:', { deviceIdlePower, deviceTypicalPower, devicePeakPower });
         } else if (component.powerRequired) {
           // Fallback to powerRequired
           devicePeakPower = component.powerRequired;
           deviceIdlePower = devicePeakPower / 3;
           deviceTypicalPower = devicePeakPower * 0.6;
+          console.log('⚡ Using powerRequired fallback:', { deviceIdlePower, deviceTypicalPower, devicePeakPower });
+        } else {
+          console.log('❌ No power data available for component');
         }
         
         const quantity = component.quantity || 1;
+        console.log('Component quantity:', quantity);
+        
         idlePower += deviceIdlePower * quantity;
         typicalPower += deviceTypicalPower * quantity;
         peakPower += devicePeakPower * quantity;
+        
+        console.log('Running totals:', { idlePower, typicalPower, peakPower });
         
         // Aggregate by type
         const componentType = component.type as ComponentType;
@@ -132,7 +172,19 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
         powerByType[componentType].typical += deviceTypicalPower * quantity;
         powerByType[componentType].peak += devicePeakPower * quantity;
         powerByType[componentType].count += quantity;
+      } else {
+        console.log('❗ Component not found for deviceId:', device.deviceId);
+        console.log('Available component IDs:', activeDesign.components.map(c => c.id));
       }
+    });
+    
+    console.log('📊 Final power calculation results:', {
+      idlePower,
+      typicalPower,
+      peakPower,
+      powerByType,
+      componentsWithoutPower,
+      totalDevices
     });
     
     return {
