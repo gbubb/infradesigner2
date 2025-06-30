@@ -60,9 +60,9 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
   
   // Calculate power statistics for the rack
   const rackPowerStats = useMemo<RackPowerStats | null>(() => {
-    if (!activeDesign?.rackProfiles || !rackProfileId) return null;
+    if (!activeDesign?.rackprofiles || !rackProfileId || !activeDesign?.components) return null;
     
-    const rack = activeDesign.rackProfiles.find(r => r.id === rackProfileId);
+    const rack = activeDesign.rackprofiles.find(r => r.id === rackProfileId);
     if (!rack || !rack.devices || rack.devices.length === 0) {
       return {
         idlePower: 0,
@@ -82,55 +82,56 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
     let totalDevices = 0;
     
     rack.devices.forEach(device => {
-      if (device.components) {
-        device.components.forEach(component => {
-          totalDevices++;
-          
-          // Check if component has all power fields
-          const hasCompletePowerData = 
-            component.powerIdle !== undefined && 
-            component.powerTypical !== undefined && 
-            component.powerPeak !== undefined &&
-            (component.powerIdle > 0 || component.powerTypical > 0 || component.powerPeak > 0);
-          
-          if (!hasCompletePowerData && component.powerRequired === undefined) {
-            componentsWithoutPower.push({
-              name: component.name || 'Unknown',
-              type: component.type as ComponentType
-            });
-          }
-          
-          // Calculate power values
-          let deviceIdlePower = 0;
-          let deviceTypicalPower = 0;
-          let devicePeakPower = 0;
-          
-          if (hasCompletePowerData) {
-            deviceIdlePower = component.powerIdle || 0;
-            deviceTypicalPower = component.powerTypical || 0;
-            devicePeakPower = component.powerPeak || 0;
-          } else if (component.powerRequired) {
-            // Fallback to powerRequired
-            devicePeakPower = component.powerRequired;
-            deviceIdlePower = devicePeakPower / 3;
-            deviceTypicalPower = devicePeakPower * 0.6;
-          }
-          
-          const quantity = component.quantity || 1;
-          idlePower += deviceIdlePower * quantity;
-          typicalPower += deviceTypicalPower * quantity;
-          peakPower += devicePeakPower * quantity;
-          
-          // Aggregate by type
-          const componentType = component.type as ComponentType;
-          if (!powerByType[componentType]) {
-            powerByType[componentType] = { idle: 0, typical: 0, peak: 0, count: 0 };
-          }
-          powerByType[componentType].idle += deviceIdlePower * quantity;
-          powerByType[componentType].typical += deviceTypicalPower * quantity;
-          powerByType[componentType].peak += devicePeakPower * quantity;
-          powerByType[componentType].count += quantity;
-        });
+      // Find the component by its deviceId
+      const component = activeDesign.components.find(c => c.id === device.deviceId);
+      
+      if (component) {
+        totalDevices++;
+        
+        // Check if component has all power fields
+        const hasCompletePowerData = 
+          component.powerIdle !== undefined && 
+          component.powerTypical !== undefined && 
+          component.powerPeak !== undefined &&
+          (component.powerIdle > 0 || component.powerTypical > 0 || component.powerPeak > 0);
+        
+        if (!hasCompletePowerData && component.powerRequired === undefined) {
+          componentsWithoutPower.push({
+            name: component.name || 'Unknown',
+            type: component.type as ComponentType
+          });
+        }
+        
+        // Calculate power values
+        let deviceIdlePower = 0;
+        let deviceTypicalPower = 0;
+        let devicePeakPower = 0;
+        
+        if (hasCompletePowerData) {
+          deviceIdlePower = component.powerIdle || 0;
+          deviceTypicalPower = component.powerTypical || 0;
+          devicePeakPower = component.powerPeak || 0;
+        } else if (component.powerRequired) {
+          // Fallback to powerRequired
+          devicePeakPower = component.powerRequired;
+          deviceIdlePower = devicePeakPower / 3;
+          deviceTypicalPower = devicePeakPower * 0.6;
+        }
+        
+        const quantity = component.quantity || 1;
+        idlePower += deviceIdlePower * quantity;
+        typicalPower += deviceTypicalPower * quantity;
+        peakPower += devicePeakPower * quantity;
+        
+        // Aggregate by type
+        const componentType = component.type as ComponentType;
+        if (!powerByType[componentType]) {
+          powerByType[componentType] = { idle: 0, typical: 0, peak: 0, count: 0 };
+        }
+        powerByType[componentType].idle += deviceIdlePower * quantity;
+        powerByType[componentType].typical += deviceTypicalPower * quantity;
+        powerByType[componentType].peak += devicePeakPower * quantity;
+        powerByType[componentType].count += quantity;
       }
     });
     
@@ -142,7 +143,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
       componentsWithoutPower,
       totalDevices
     };
-  }, [activeDesign?.rackProfiles, rackProfileId]);
+  }, [activeDesign?.rackprofiles, activeDesign?.components, rackProfileId]);
   
   // Get current power based on selected state
   const getCurrentPower = (stats: RackPowerStats | null, state: PowerState) => {
@@ -188,10 +189,11 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
     const additionalByPower = remainingPower > 0 ? Math.floor(remainingPower / avgPower) : 0;
     
     // Get available RU from rack stats if available
-    const rack = activeDesign?.rackProfiles?.find(r => r.id === rackProfileId);
-    const totalRU = rack?.totalRU || 42;
+    const rack = activeDesign?.rackprofiles?.find(r => r.id === rackProfileId);
+    const totalRU = rack?.uHeight || 42;
     const usedRU = rack?.devices?.reduce((sum, device) => {
-      const deviceRU = device.components?.[0]?.ruSize || 1;
+      const component = activeDesign?.components?.find(c => c.id === device.deviceId);
+      const deviceRU = component?.ruSize || 1;
       return sum + deviceRU;
     }, 0) || 0;
     const availableRU = totalRU - usedRU;
@@ -203,7 +205,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
       averageDevicePower: avgPower,
       additionalDevicesPossible: Math.min(additionalByPower, additionalBySpace)
     };
-  }, [rackPowerStats, popoverPowerState, powerCapacity, activeDesign?.rackProfiles, rackProfileId]);
+  }, [rackPowerStats, popoverPowerState, powerCapacity, activeDesign?.rackprofiles, activeDesign?.components, rackProfileId]);
   
   return (
     <Card>
