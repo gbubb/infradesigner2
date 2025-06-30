@@ -74,6 +74,9 @@ export const RackPDFExport: React.FC<RackPDFExportProps> = ({
         };
       });
 
+      // Get power per rack from requirements
+      const powerPerRack = activeDesign?.requirements?.physicalConstraints?.powerPerRackWatts || 0;
+      
       // Export to PDF
       await RackExportService.exportRackLayoutsToPDF(
         racksWithDevices,
@@ -83,7 +86,8 @@ export const RackPDFExport: React.FC<RackPDFExportProps> = ({
           includeDetailedView,
           selectedRacks: exportOnlySelected && selectedRackId ? [selectedRackId] : undefined,
           groupByAZ
-        }
+        },
+        powerPerRack
       );
 
       toast({

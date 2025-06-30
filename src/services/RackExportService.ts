@@ -29,7 +29,8 @@ export class RackExportService {
   static async exportRackLayoutsToPDF(
     racks: RackWithDevices[],
     azNameMap: Record<string, string>,
-    options: ExportOptions
+    options: ExportOptions,
+    powerPerRack?: number
   ): Promise<void> {
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -52,7 +53,7 @@ export class RackExportService {
 
     // Add detailed rack views
     if (options.includeDetailedView) {
-      await this.addDetailedRackPages(pdf, groupedRacks, azNameMap);
+      await this.addDetailedRackPages(pdf, groupedRacks, azNameMap, powerPerRack);
     }
 
     // Save the PDF
@@ -237,7 +238,8 @@ export class RackExportService {
   private static async addDetailedRackPages(
     pdf: jsPDF,
     groupedRacks: Record<string, RackWithDevices[]>,
-    azNameMap: Record<string, string>
+    azNameMap: Record<string, string>,
+    powerPerRack?: number
   ): Promise<void> {
     for (const [azName, racks] of Object.entries(groupedRacks)) {
       for (const rackData of racks) {
@@ -255,8 +257,8 @@ export class RackExportService {
         // Draw detailed rack
         this.drawDetailedRack(pdf, rackData, this.MARGIN, 40, 60, 200);
         
-        // Device list
-        this.drawDeviceList(pdf, rackData, 90, 40);
+        // Device list with power breakdown
+        this.drawDeviceList(pdf, rackData, 90, 40, powerPerRack);
       }
     }
   }
@@ -321,7 +323,8 @@ export class RackExportService {
     pdf: jsPDF,
     rackData: RackWithDevices,
     x: number,
-    y: number
+    y: number,
+    powerPerRack?: number
   ): void {
     pdf.setFontSize(12);
     pdf.text('Device Summary:', x, y);
@@ -402,6 +405,114 @@ export class RackExportService {
       
       currentY += 35;
     });
+    
+    // Add Power Breakdown section if powerPerRack is provided
+    if (powerPerRack && powerPerRack > 0) {
+      // Check if we need a new page for power breakdown
+      if (currentY > this.PAGE_HEIGHT - 80) {
+        pdf.addPage();
+        currentY = 20;
+      }
+      
+      // Power Breakdown Header
+      pdf.setFontSize(12);
+      pdf.text('Power Breakdown:', x, currentY);
+      currentY += 10;
+      
+      // Calculate power statistics
+      let totalIdlePower = 0;
+      let totalTypicalPower = 0;
+      let totalPeakPower = 0;
+      const powerByType: Partial<Record<ComponentType, { idle: number; typical: number; peak: number; count: number }>> = {};
+      
+      rackData.devices.forEach(({ component }) => {
+        const quantity = 1; // Each device in rack is counted individually
+        
+        // Check if component has enhanced power data
+        const hasEnhancedPower = 
+          component.powerIdle !== undefined && 
+          component.powerTypical !== undefined && 
+          component.powerPeak !== undefined &&
+          (component.powerIdle > 0 || component.powerTypical > 0 || component.powerPeak > 0);
+        
+        let idlePower = 0;
+        let typicalPower = 0;
+        let peakPower = 0;
+        
+        if (hasEnhancedPower) {
+          idlePower = component.powerIdle || 0;
+          typicalPower = component.powerTypical || 0;
+          peakPower = component.powerPeak || 0;
+        } else if (component.powerRequired) {
+          // Fallback to powerRequired
+          peakPower = component.powerRequired;
+          idlePower = peakPower / 3;
+          typicalPower = peakPower * 0.6;
+        }
+        
+        totalIdlePower += idlePower * quantity;
+        totalTypicalPower += typicalPower * quantity;
+        totalPeakPower += peakPower * quantity;
+        
+        // Aggregate by type
+        const componentType = component.type as ComponentType;
+        if (!powerByType[componentType]) {
+          powerByType[componentType] = { idle: 0, typical: 0, peak: 0, count: 0 };
+        }
+        powerByType[componentType].idle += idlePower * quantity;
+        powerByType[componentType].typical += typicalPower * quantity;
+        powerByType[componentType].peak += peakPower * quantity;
+        powerByType[componentType].count += quantity;
+      });
+      
+      // Power capacity and utilization
+      pdf.setFontSize(9);
+      const peakUtilization = (totalPeakPower / powerPerRack) * 100;
+      
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`Power Capacity: ${powerPerRack}W`, x + 5, currentY);
+      pdf.setFont(undefined, 'normal');
+      currentY += 5;
+      
+      // Power states
+      pdf.text(`Idle Power: ${Math.round(totalIdlePower)}W`, x + 5, currentY);
+      currentY += 5;
+      pdf.text(`Typical Power: ${Math.round(totalTypicalPower)}W`, x + 5, currentY);
+      currentY += 5;
+      pdf.text(`Peak Power: ${Math.round(totalPeakPower)}W (${peakUtilization.toFixed(1)}% utilization)`, x + 5, currentY);
+      currentY += 10;
+      
+      // Power by component type
+      if (Object.keys(powerByType).length > 0) {
+        pdf.text('Power by Component Type (Peak):', x + 5, currentY);
+        currentY += 5;
+        
+        Object.entries(powerByType).forEach(([type, data]) => {
+          if (data.peak > 0) {
+            const percentage = (data.peak / totalPeakPower) * 100;
+            pdf.text(`• ${type}: ${Math.round(data.peak)}W (${percentage.toFixed(1)}%)`, x + 10, currentY);
+            currentY += 5;
+          }
+        });
+      }
+      
+      // Add warning if over capacity
+      if (peakUtilization > 100) {
+        currentY += 5;
+        pdf.setTextColor(255, 0, 0);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('⚠ Warning: Peak power exceeds rack capacity!', x + 5, currentY);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont(undefined, 'normal');
+      } else if (peakUtilization > 80) {
+        currentY += 5;
+        pdf.setTextColor(255, 140, 0);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('⚠ Warning: Peak power above 80% of capacity', x + 5, currentY);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont(undefined, 'normal');
+      }
+    }
   }
 
   private static getDeviceColorForPDF(type: string, component?: Component): { r: number; g: number; b: number } {

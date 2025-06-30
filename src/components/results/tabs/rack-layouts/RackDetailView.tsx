@@ -2,6 +2,8 @@ import React from 'react';
 import { RackView } from '@/components/visualization/RackView';
 import { RackUtilizationCard } from './RackUtilizationCard';
 import { RackPropertiesCard } from './RackPropertiesCard';
+import { RackPowerCard } from './RackPowerCard';
+import { useDesignStore } from '@/store/designStore';
 
 interface RackDetailViewProps {
   rackProfileId: string;
@@ -29,6 +31,9 @@ export const RackDetailView: React.FC<RackDetailViewProps> = ({
   selectedRack,
   azNameMap
 }) => {
+  const { activeDesign } = useDesignStore();
+  const powerPerRack = activeDesign?.requirements?.physicalConstraints?.powerPerRackWatts || 5000;
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
       {/* Rack visualization - takes 7 columns */}
@@ -54,6 +59,8 @@ export const RackDetailView: React.FC<RackDetailViewProps> = ({
         <div className="space-y-6">
           {/* Rack Utilization Card */}
           <RackUtilizationCard rackStats={rackStats} />
+          {/* Rack Power Card */}
+          <RackPowerCard rackProfileId={rackProfileId} powerCapacity={powerPerRack} />
           {/* Rack Properties */}
           <RackPropertiesCard rack={selectedRack} azNameMap={azNameMap} />
         </div>
