@@ -98,21 +98,49 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
               <div className="pl-3 text-muted-foreground">
                 Total Raw Capacity: {totalRawCapacityTB.toFixed(2)} TB
               </div>
-              {costBreakdown && costBreakdown.nodes.length > 0 && (
-                <div className="pl-3 mt-1 space-y-1">
-                  <div className="text-[10px] font-medium text-muted-foreground">Breakdown by node:</div>
-                  {costBreakdown.nodes.map((node, idx) => (
-                    <div key={idx} className="pl-3 text-[10px] text-muted-foreground">
-                      • {node.name} x{node.quantity}:
-                      {node.diskDetails.map((disk, diskIdx) => (
-                        <div key={diskIdx} className="pl-3">
-                          - {disk.quantity}x {disk.name} = {(disk.capacityTB * disk.quantity).toFixed(2)} TB
+              {costBreakdown && costBreakdown.nodes.length > 0 && (() => {
+                // Group nodes by name and aggregate quantities
+                const nodeGroups = costBreakdown.nodes.reduce((acc, node) => {
+                  const key = node.name;
+                  if (!acc[key]) {
+                    acc[key] = {
+                      name: node.name,
+                      quantity: 0,
+                      serverCost: node.serverCost,
+                      diskCost: node.diskCost,
+                      diskCount: node.diskCount,
+                      diskDetails: node.diskDetails
+                    };
+                  }
+                  acc[key].quantity += node.quantity;
+                  return acc;
+                }, {} as Record<string, typeof costBreakdown.nodes[0]>);
+
+                return (
+                  <div className="pl-3 mt-1 space-y-1">
+                    <div className="text-[10px] font-medium text-muted-foreground">Node specifications:</div>
+                    {Object.values(nodeGroups).map((nodeGroup, idx) => (
+                      <div key={idx} className="pl-3 text-[10px] text-muted-foreground space-y-0.5">
+                        <div className="font-medium">• {nodeGroup.name} × {nodeGroup.quantity}</div>
+                        <div className="pl-3 space-y-0.5">
+                          <div>Server: ${nodeGroup.serverCost.toLocaleString()} each</div>
+                          {nodeGroup.diskDetails.map((disk, diskIdx) => (
+                            <div key={diskIdx}>
+                              {disk.quantity}× {disk.name} ({disk.capacityTB} TB) @ ${disk.cost.toLocaleString()} each
+                            </div>
+                          ))}
+                          <div className="font-medium mt-0.5">
+                            Total per node: ${(nodeGroup.serverCost + nodeGroup.diskCost).toLocaleString()}
+                          </div>
                         </div>
-                      ))}
+                      </div>
+                    ))}
+                    <div className="pl-3 text-[10px] font-medium text-muted-foreground mt-1">
+                      Total capacity from all nodes: {totalRawCapacityTB.toFixed(2)} TB
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                );
+              })()}
             </div>
 
             <Separator className="my-2" />
@@ -156,39 +184,55 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
               
               {isHyperConverged && totalStorageCost !== undefined && storageAttributedServerCost !== undefined && (
                 <>
-                  <div className="pl-3 mt-2 pt-2 border-t text-muted-foreground">
-                    <div className="font-medium mb-1">Hyper-converged Storage Attribution:</div>
-                  </div>
-                  {totalCpuCores !== undefined && storageCpuCores !== undefined && cpuCoresPerDisk !== undefined && (
-                    <>
-                      <div className="pl-6 text-[10px] text-muted-foreground">
-                        Total CPU Cores: {totalCpuCores} cores
+                  <div className="pl-3 mt-2 pt-2 border-t">
+                    <div className="font-medium mb-1 text-muted-foreground">Hyper-converged Storage Attribution:</div>
+                    {totalCpuCores !== undefined && totalCpuCores > 0 && storageCpuCores !== undefined && cpuCoresPerDisk !== undefined ? (
+                      <>
+                        <div className="pl-3 space-y-1">
+                          <div className="text-[11px] text-muted-foreground space-y-0.5">
+                            <div className="grid grid-cols-2 gap-1">
+                              <div>• Total CPU cores in cluster:</div>
+                              <div className="font-medium">{totalCpuCores} cores</div>
+                              
+                              <div>• Storage CPU per disk:</div>
+                              <div className="font-medium">{cpuCoresPerDisk} cores</div>
+                              
+                              <div>• Total disks:</div>
+                              <div className="font-medium">{totalDisks} disks</div>
+                              
+                              <div>• Storage CPU cores:</div>
+                              <div className="font-medium">{storageCpuCores} cores</div>
+                              
+                              <div>• Storage CPU percentage:</div>
+                              <div className="font-medium">{((storageCpuCores / totalCpuCores) * 100).toFixed(1)}%</div>
+                            </div>
+                          </div>
+                          
+                          <div className="text-[11px] bg-slate-100 rounded p-2 mt-2 space-y-0.5">
+                            <div className="font-medium">Cost Attribution:</div>
+                            <div className="text-muted-foreground">
+                              Server cost (excl. disks): ${serverCostWithoutDisks.toLocaleString()}
+                            </div>
+                            <div className="text-muted-foreground">
+                              × {((storageCpuCores / totalCpuCores) * 100).toFixed(1)}% storage CPU
+                            </div>
+                            <div className="text-muted-foreground">
+                              = ${storageAttributedServerCost.toLocaleString()} storage server cost
+                            </div>
+                            <div className="text-muted-foreground">
+                              + ${totalDiskCost?.toLocaleString()} disk cost
+                            </div>
+                            <div className="font-medium text-black pt-1 border-t">
+                              = ${totalStorageCost.toLocaleString()} total storage cost
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="pl-3 text-[11px] text-red-600">
+                        Error: Unable to calculate CPU cores. Please check server configuration.
                       </div>
-                      <div className="pl-6 text-[10px] text-muted-foreground">
-                        Storage CPU Allocation: {cpuCoresPerDisk} cores per disk
-                      </div>
-                      <div className="pl-6 text-[10px] text-muted-foreground">
-                        Total Disks: {totalDisks} disks
-                      </div>
-                      <div className="pl-6 text-[10px] text-muted-foreground">
-                        Storage CPU Cores: {totalDisks} disks × {cpuCoresPerDisk} cores/disk = {storageCpuCores} cores
-                      </div>
-                      <div className="pl-6 text-[10px] text-muted-foreground">
-                        Storage CPU Ratio: {storageCpuCores} ÷ {totalCpuCores} = {((storageCpuCores / totalCpuCores) * 100).toFixed(1)}%
-                      </div>
-                    </>
-                  )}
-                  <div className="pl-6 text-[10px] text-muted-foreground mt-1">
-                    Server Cost (excl. disks): ${serverCostWithoutDisks.toLocaleString()}
-                  </div>
-                  <div className="pl-6 text-[10px] text-muted-foreground">
-                    Storage-Attributed Server Cost: ${serverCostWithoutDisks.toLocaleString()} × {((storageCpuCores || 0) / (totalCpuCores || 1) * 100).toFixed(1)}% = ${storageAttributedServerCost.toLocaleString()}
-                  </div>
-                  <div className="pl-6 text-[10px] text-muted-foreground">
-                    Disk Cost: ${totalDiskCost?.toLocaleString()}
-                  </div>
-                  <div className="pl-6 text-[10px] text-muted-foreground font-medium">
-                    Total Storage-Attributed Cost: ${totalStorageCost.toLocaleString()}
+                    )}
                   </div>
                 </>
               )}
