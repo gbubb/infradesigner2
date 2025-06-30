@@ -465,21 +465,29 @@ export class RackExportService {
         powerByType[componentType].count += quantity;
       });
       
+      // Helper function to format power
+      const formatPower = (watts: number): string => {
+        if (watts >= 1000) {
+          return `${(watts / 1000).toFixed(1)}kW`;
+        }
+        return `${Math.round(watts)}W`;
+      };
+      
       // Power capacity and utilization
       pdf.setFontSize(9);
       const peakUtilization = (totalPeakPower / powerPerRack) * 100;
       
       pdf.setFont(undefined, 'bold');
-      pdf.text(`Power Capacity: ${powerPerRack}W`, x + 5, currentY);
+      pdf.text(`Power Capacity: ${formatPower(powerPerRack)}`, x + 5, currentY);
       pdf.setFont(undefined, 'normal');
       currentY += 5;
       
       // Power states
-      pdf.text(`Idle Power: ${Math.round(totalIdlePower)}W`, x + 5, currentY);
+      pdf.text(`Idle Power: ${formatPower(totalIdlePower)}`, x + 5, currentY);
       currentY += 5;
-      pdf.text(`Typical Power: ${Math.round(totalTypicalPower)}W`, x + 5, currentY);
+      pdf.text(`Typical Power: ${formatPower(totalTypicalPower)}`, x + 5, currentY);
       currentY += 5;
-      pdf.text(`Peak Power: ${Math.round(totalPeakPower)}W (${peakUtilization.toFixed(1)}% utilization)`, x + 5, currentY);
+      pdf.text(`Peak Power: ${formatPower(totalPeakPower)} (${peakUtilization.toFixed(1)}% utilization)`, x + 5, currentY);
       currentY += 10;
       
       // Power by component type
@@ -490,7 +498,7 @@ export class RackExportService {
         Object.entries(powerByType).forEach(([type, data]) => {
           if (data.peak > 0) {
             const percentage = (data.peak / totalPeakPower) * 100;
-            pdf.text(`• ${type}: ${Math.round(data.peak)}W (${percentage.toFixed(1)}%)`, x + 10, currentY);
+            pdf.text(`• ${type}: ${formatPower(data.peak)} (${percentage.toFixed(1)}%)`, x + 10, currentY);
             currentY += 5;
           }
         });

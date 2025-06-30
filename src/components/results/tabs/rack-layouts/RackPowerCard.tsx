@@ -24,6 +24,15 @@ interface RackPowerStats {
   typicalPower: number;
   peakPower: number;
   powerByType: Record<ComponentType, { idle: number; typical: number; peak: number; count: number }>;
+  powerByComponent: Array<{ 
+    name: string; 
+    type: ComponentType; 
+    manufacturer: string;
+    model: string;
+    idle: number; 
+    typical: number; 
+    peak: number; 
+  }>;
   componentsWithoutPower: Array<{ name: string; type: ComponentType }>;
   totalDevices: number;
 }
@@ -52,40 +61,38 @@ const COLORS = {
   [ComponentType.Transceiver]: '#00b894'
 };
 
+// Helper function to format power values
+const formatPower = (watts: number): string => {
+  if (watts >= 1000) {
+    return `${(watts / 1000).toFixed(1)}kW`;
+  }
+  return `${Math.round(watts)}W`;
+};
+
 export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, powerCapacity }) => {
   const [selectedPowerState, setSelectedPowerState] = useState<PowerState>('peak');
   const [popoverPowerState, setPopoverPowerState] = useState<PowerState>('peak');
   
   const { activeDesign } = useDesignStore();
   
-  // Debug: Log the entire activeDesign structure
-  console.log('🔍 RackPowerCard mounted/updated', {
-    rackProfileId,
-    powerCapacity,
-    hasActiveDesign: !!activeDesign,
-    componentCount: activeDesign?.components?.length || 0,
-    rackCount: activeDesign?.rackprofiles?.length || 0
-  });
+  // Create a dependency key that changes when rack devices change
+  const rackDevicesKey = useMemo(() => {
+    const rack = activeDesign?.rackprofiles?.find(r => r.id === rackProfileId);
+    return `${rack?.devices?.length || 0}-${rack?.devices?.map(d => d.deviceId).join(',') || ''}`;
+  }, [activeDesign?.rackprofiles, rackProfileId]);
   
   // Calculate power statistics for the rack
   const rackPowerStats = useMemo<RackPowerStats | null>(() => {
-    console.log('🔍 RackPowerCard - Starting power calculation for rack:', rackProfileId);
-    console.log('activeDesign?.rackprofiles:', activeDesign?.rackprofiles);
-    console.log('activeDesign?.components:', activeDesign?.components);
-    
     if (!activeDesign?.rackprofiles || !rackProfileId || !activeDesign?.components) return null;
     
     const rack = activeDesign.rackprofiles.find(r => r.id === rackProfileId);
-    console.log('Found rack:', rack);
-    console.log('Rack devices:', rack?.devices);
-    
     if (!rack || !rack.devices || rack.devices.length === 0) {
-      console.log('⚠️ No rack or devices found, returning empty stats');
       return {
         idlePower: 0,
         typicalPower: 0,
         peakPower: 0,
         powerByType: {},
+        powerByComponent: [],
         componentsWithoutPower: [],
         totalDevices: 0
       };
@@ -95,28 +102,24 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
     let typicalPower = 0;
     let peakPower = 0;
     const powerByType: Partial<Record<ComponentType, { idle: number; typical: number; peak: number; count: number }>> = {};
+    const powerByComponent: Array<{ 
+      name: string; 
+      type: ComponentType; 
+      manufacturer: string;
+      model: string;
+      idle: number; 
+      typical: number; 
+      peak: number; 
+    }> = [];
     const componentsWithoutPower: Array<{ name: string; type: ComponentType }> = [];
     let totalDevices = 0;
     
-    console.log(`📋 Processing ${rack.devices.length} devices in rack`);
-    
     rack.devices.forEach(device => {
-      console.log('Processing device:', device);
-      console.log('Looking for component with deviceId:', device.deviceId);
-      
       // Find the component by its deviceId
       const component = activeDesign.components.find(c => c.id === device.deviceId);
-      console.log('Found component:', component);
       
       if (component) {
         totalDevices++;
-        console.log('Component power data:', {
-          name: component.name,
-          powerIdle: component.powerIdle,
-          powerTypical: component.powerTypical,
-          powerPeak: component.powerPeak,
-          powerRequired: component.powerRequired
-        });
         
         // Check if component has all power fields
         const hasCompletePowerData = 
@@ -124,8 +127,6 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
           component.powerTypical !== undefined && 
           component.powerPeak !== undefined &&
           (component.powerIdle > 0 || component.powerTypical > 0 || component.powerPeak > 0);
-        
-        console.log('Has complete power data:', hasCompletePowerData);
         
         if (!hasCompletePowerData && component.powerRequired === undefined) {
           componentsWithoutPower.push({
@@ -143,25 +144,32 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
           deviceIdlePower = component.powerIdle || 0;
           deviceTypicalPower = component.powerTypical || 0;
           devicePeakPower = component.powerPeak || 0;
-          console.log('✅ Using complete power data:', { deviceIdlePower, deviceTypicalPower, devicePeakPower });
         } else if (component.powerRequired) {
           // Fallback to powerRequired
           devicePeakPower = component.powerRequired;
           deviceIdlePower = devicePeakPower / 3;
           deviceTypicalPower = devicePeakPower * 0.6;
-          console.log('⚡ Using powerRequired fallback:', { deviceIdlePower, deviceTypicalPower, devicePeakPower });
-        } else {
-          console.log('❌ No power data available for component');
         }
         
-        const quantity = component.quantity || 1;
-        console.log('Component quantity:', quantity);
+        // Each placed device represents one unit in the rack
+        const quantity = 1;
         
         idlePower += deviceIdlePower * quantity;
         typicalPower += deviceTypicalPower * quantity;
         peakPower += devicePeakPower * quantity;
         
-        console.log('Running totals:', { idlePower, typicalPower, peakPower });
+        // Add to component breakdown
+        if (devicePeakPower > 0) {
+          powerByComponent.push({
+            name: component.name || 'Unknown',
+            type: component.type as ComponentType,
+            manufacturer: component.manufacturer || '',
+            model: component.model || '',
+            idle: deviceIdlePower,
+            typical: deviceTypicalPower,
+            peak: devicePeakPower
+          });
+        }
         
         // Aggregate by type
         const componentType = component.type as ComponentType;
@@ -172,19 +180,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
         powerByType[componentType].typical += deviceTypicalPower * quantity;
         powerByType[componentType].peak += devicePeakPower * quantity;
         powerByType[componentType].count += quantity;
-      } else {
-        console.log('❗ Component not found for deviceId:', device.deviceId);
-        console.log('Available component IDs:', activeDesign.components.map(c => c.id));
       }
-    });
-    
-    console.log('📊 Final power calculation results:', {
-      idlePower,
-      typicalPower,
-      peakPower,
-      powerByType,
-      componentsWithoutPower,
-      totalDevices
     });
     
     return {
@@ -192,10 +188,11 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
       typicalPower,
       peakPower,
       powerByType,
+      powerByComponent,
       componentsWithoutPower,
       totalDevices
     };
-  }, [activeDesign?.rackprofiles, activeDesign?.components, rackProfileId]);
+  }, [activeDesign?.rackprofiles, activeDesign?.components, rackProfileId, rackDevicesKey]);
   
   // Get current power based on selected state
   const getCurrentPower = (stats: RackPowerStats | null, state: PowerState) => {
@@ -217,17 +214,18 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
     return 'bg-red-500';
   };
   
-  // Prepare data for pie chart
+  // Prepare data for pie chart (by component instead of by type)
   const pieChartData = useMemo(() => {
     if (!rackPowerStats) return [];
     
-    return Object.entries(rackPowerStats.powerByType)
-      .filter(([_, data]) => data[popoverPowerState] > 0)
-      .map(([type, data]) => ({
-        name: type,
-        value: Math.round(data[popoverPowerState]),
-        count: data.count
-      }));
+    return rackPowerStats.powerByComponent
+      .filter(comp => comp[popoverPowerState] > 0)
+      .map(comp => ({
+        name: `${comp.name} (${comp.manufacturer} ${comp.model})`.trim(),
+        value: Math.round(comp[popoverPowerState]),
+        type: comp.type
+      }))
+      .sort((a, b) => b.value - a.value);
   }, [rackPowerStats, popoverPowerState]);
   
   // Calculate average device power and additional devices possible
@@ -310,7 +308,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
             {/* Numerical display */}
             <div className="text-center">
               <div className="text-2xl font-bold">
-                {currentPower.toFixed(0)}W / {powerCapacity}W
+                {formatPower(currentPower)} / {formatPower(powerCapacity)}
               </div>
               <div className="text-sm text-muted-foreground">
                 {utilizationPercentage.toFixed(1)}% Utilization
@@ -325,9 +323,9 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
                   <ChevronDown className="h-4 w-4" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-96">
+              <PopoverContent className="w-[500px]">
                 <div className="space-y-4">
-                  <h4 className="font-medium text-lg">Power Breakdown</h4>
+                  <h4 className="font-medium text-lg">Power Breakdown by Component</h4>
                   
                   {/* Power state selector in popover */}
                   <Select value={popoverPowerState} onValueChange={(value) => setPopoverPowerState(value as PowerState)}>
@@ -341,29 +339,49 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
                     </SelectContent>
                   </Select>
                   
-                  {/* Pie chart */}
+                  {/* Component list instead of pie chart for better readability */}
                   {pieChartData.length > 0 ? (
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={pieChartData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={(entry) => `${entry.name}: ${entry.value}W`}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {pieChartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[entry.name as ComponentType] || '#666'} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
+                    <div className="max-h-64 overflow-y-auto">
+                      <table className="w-full text-sm">
+                        <thead className="sticky top-0 bg-white border-b">
+                          <tr>
+                            <th className="text-left py-2">Component</th>
+                            <th className="text-right py-2">Power</th>
+                            <th className="text-right py-2">%</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pieChartData.map((item, index) => {
+                            const percentage = (item.value / getCurrentPower(rackPowerStats, popoverPowerState)) * 100;
+                            return (
+                              <tr key={index} className="border-b">
+                                <td className="py-2 pr-2">
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-3 h-3 rounded" 
+                                      style={{ backgroundColor: COLORS[item.type] || '#666' }}
+                                    />
+                                    <span className="truncate max-w-[300px]" title={item.name}>
+                                      {item.name}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="text-right py-2">{formatPower(item.value)}</td>
+                                <td className="text-right py-2">{percentage.toFixed(1)}%</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot className="border-t-2">
+                          <tr>
+                            <td className="py-2 font-medium">Total</td>
+                            <td className="text-right py-2 font-medium">
+                              {formatPower(getCurrentPower(rackPowerStats, popoverPowerState))}
+                            </td>
+                            <td className="text-right py-2 font-medium">100%</td>
+                          </tr>
+                        </tfoot>
+                      </table>
                     </div>
                   ) : (
                     <div className="text-center text-muted-foreground py-8">
@@ -372,10 +390,10 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
                   )}
                   
                   {/* Metrics */}
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-2 text-sm border-t pt-4">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Average Device Power:</span>
-                      <span className="font-medium">{averageDevicePower.toFixed(0)}W</span>
+                      <span className="font-medium">{formatPower(averageDevicePower)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Additional Average Devices Possible:</span>
@@ -385,7 +403,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
                   
                   {/* Components without power data */}
                   {rackPowerStats.componentsWithoutPower.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 border-t pt-4">
                       <h5 className="font-medium text-sm text-orange-600">Components with Incomplete Power Data:</h5>
                       <ul className="text-xs space-y-1 max-h-32 overflow-y-auto">
                         {rackPowerStats.componentsWithoutPower.map((comp, index) => (
