@@ -214,18 +214,47 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
     return 'bg-red-500';
   };
   
-  // Prepare data for pie chart (by component instead of by type)
-  const pieChartData = useMemo(() => {
+  // Prepare data for component breakdown - group identical components
+  const componentBreakdownData = useMemo(() => {
     if (!rackPowerStats) return [];
     
-    return rackPowerStats.powerByComponent
-      .filter(comp => comp[popoverPowerState] > 0)
-      .map(comp => ({
-        name: `${comp.name} (${comp.manufacturer} ${comp.model})`.trim(),
-        value: Math.round(comp[popoverPowerState]),
-        type: comp.type
-      }))
-      .sort((a, b) => b.value - a.value);
+    // Group identical components
+    const groupedComponents = new Map<string, {
+      name: string;
+      type: ComponentType;
+      manufacturer: string;
+      model: string;
+      count: number;
+      powerPerUnit: number;
+      totalPower: number;
+    }>();
+    
+    rackPowerStats.powerByComponent.forEach(comp => {
+      const key = `${comp.name}-${comp.manufacturer}-${comp.model}`;
+      const powerValue = comp[popoverPowerState];
+      
+      if (powerValue > 0) {
+        if (groupedComponents.has(key)) {
+          const existing = groupedComponents.get(key)!;
+          existing.count += 1;
+          existing.totalPower += powerValue;
+        } else {
+          groupedComponents.set(key, {
+            name: comp.name,
+            type: comp.type,
+            manufacturer: comp.manufacturer,
+            model: comp.model,
+            count: 1,
+            powerPerUnit: powerValue,
+            totalPower: powerValue
+          });
+        }
+      }
+    });
+    
+    // Convert to array and sort by total power
+    return Array.from(groupedComponents.values())
+      .sort((a, b) => b.totalPower - a.totalPower);
   }, [rackPowerStats, popoverPowerState]);
   
   // Calculate average device power and additional devices possible
@@ -339,20 +368,23 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
                     </SelectContent>
                   </Select>
                   
-                  {/* Component list instead of pie chart for better readability */}
-                  {pieChartData.length > 0 ? (
+                  {/* Component list with grouping */}
+                  {componentBreakdownData.length > 0 ? (
                     <div className="max-h-64 overflow-y-auto">
                       <table className="w-full text-sm">
                         <thead className="sticky top-0 bg-white border-b">
                           <tr>
                             <th className="text-left py-2">Component</th>
-                            <th className="text-right py-2">Power</th>
+                            <th className="text-center py-2">Qty</th>
+                            <th className="text-right py-2">Per Unit</th>
+                            <th className="text-right py-2">Total</th>
                             <th className="text-right py-2">%</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {pieChartData.map((item, index) => {
-                            const percentage = (item.value / getCurrentPower(rackPowerStats, popoverPowerState)) * 100;
+                          {componentBreakdownData.map((item, index) => {
+                            const percentage = (item.totalPower / getCurrentPower(rackPowerStats, popoverPowerState)) * 100;
+                            const displayName = `${item.name} (${item.manufacturer} ${item.model})`.trim();
                             return (
                               <tr key={index} className="border-b">
                                 <td className="py-2 pr-2">
@@ -361,12 +393,14 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
                                       className="w-3 h-3 rounded" 
                                       style={{ backgroundColor: COLORS[item.type] || '#666' }}
                                     />
-                                    <span className="truncate max-w-[300px]" title={item.name}>
-                                      {item.name}
+                                    <span className="truncate max-w-[250px]" title={displayName}>
+                                      {displayName}
                                     </span>
                                   </div>
                                 </td>
-                                <td className="text-right py-2">{formatPower(item.value)}</td>
+                                <td className="text-center py-2">{item.count}</td>
+                                <td className="text-right py-2">{formatPower(item.powerPerUnit)}</td>
+                                <td className="text-right py-2 font-medium">{formatPower(item.totalPower)}</td>
                                 <td className="text-right py-2">{percentage.toFixed(1)}%</td>
                               </tr>
                             );
@@ -375,6 +409,8 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
                         <tfoot className="border-t-2">
                           <tr>
                             <td className="py-2 font-medium">Total</td>
+                            <td className="text-center py-2 font-medium">{rackPowerStats.totalDevices}</td>
+                            <td className="text-right py-2">-</td>
                             <td className="text-right py-2 font-medium">
                               {formatPower(getCurrentPower(rackPowerStats, popoverPowerState))}
                             </td>
