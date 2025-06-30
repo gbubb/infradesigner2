@@ -99,39 +99,51 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
                 Total Raw Capacity: {totalRawCapacityTB.toFixed(2)} TB
               </div>
               {costBreakdown && costBreakdown.nodes.length > 0 && (() => {
-                // Group nodes by name and aggregate quantities
+                // Group nodes by their base template name (remove numeric suffixes)
                 const nodeGroups = costBreakdown.nodes.reduce((acc, node) => {
-                  const key = node.name;
+                  // Extract base name by removing trailing numbers and hyphens
+                  const baseName = node.name.replace(/-\d+$/, '');
+                  const key = `${baseName}_${node.serverCost}_${JSON.stringify(node.diskDetails)}`;
+                  
                   if (!acc[key]) {
                     acc[key] = {
-                      name: node.name,
+                      name: baseName,
                       quantity: 0,
-                      serverCost: node.serverCost,
-                      diskCost: node.diskCost,
+                      serverCost: node.serverCost / node.quantity, // Get unit cost
+                      diskCost: node.diskCost / node.quantity, // Get unit cost
                       diskCount: node.diskCount,
-                      diskDetails: node.diskDetails
+                      diskDetails: node.diskDetails,
+                      totalQuantity: 0
                     };
                   }
-                  acc[key].quantity += node.quantity;
+                  acc[key].totalQuantity += node.quantity;
                   return acc;
-                }, {} as Record<string, typeof costBreakdown.nodes[0]>);
+                }, {} as Record<string, {
+                  name: string;
+                  serverCost: number;
+                  diskCost: number;
+                  diskCount: number;
+                  diskDetails: Array<{ name: string; capacityTB: number; quantity: number; cost: number }>;
+                  totalQuantity: number;
+                }>);
+
+                // If all nodes are identical, show as a single group
+                const groupedNodes = Object.values(nodeGroups);
+                const showSingleGroup = groupedNodes.length === 1;
 
                 return (
                   <div className="pl-3 mt-1 space-y-1">
-                    <div className="text-[10px] font-medium text-muted-foreground">Node specifications:</div>
-                    {Object.values(nodeGroups).map((nodeGroup, idx) => (
+                    <div className="text-[10px] font-medium text-muted-foreground">Node specification{showSingleGroup ? '' : 's'}:</div>
+                    {groupedNodes.map((nodeGroup, idx) => (
                       <div key={idx} className="pl-3 text-[10px] text-muted-foreground space-y-0.5">
-                        <div className="font-medium">• {nodeGroup.name} × {nodeGroup.quantity}</div>
+                        <div className="font-medium">• {nodeGroup.name} × {nodeGroup.totalQuantity}</div>
                         <div className="pl-3 space-y-0.5">
                           <div>Server: ${nodeGroup.serverCost.toLocaleString()} each</div>
                           {nodeGroup.diskDetails.map((disk, diskIdx) => (
                             <div key={diskIdx}>
-                              {disk.quantity}× {disk.name} ({disk.capacityTB} TB) @ ${disk.cost.toLocaleString()} each
+                              {disk.quantity}× {disk.name} ({disk.capacityTB} TB) @ ${disk.cost.toLocaleString()} each (${(disk.cost * disk.quantity).toLocaleString()} per node)
                             </div>
                           ))}
-                          <div className="font-medium mt-0.5">
-                            Total per node: ${(nodeGroup.serverCost + nodeGroup.diskCost).toLocaleString()}
-                          </div>
                         </div>
                       </div>
                     ))}
@@ -171,13 +183,13 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
               {totalServerCost !== undefined && totalDiskCost !== undefined && (
                 <>
                   <div className="pl-3 text-muted-foreground">
-                    Server Cost: ${serverCostWithoutDisks.toLocaleString()}
+                    Total Server Cost: ${totalServerCost.toLocaleString()}
                   </div>
                   <div className="pl-3 text-muted-foreground">
-                    Disk Cost: ${totalDiskCost.toLocaleString()}
+                    Total Disk Cost: ${totalDiskCost.toLocaleString()}
                   </div>
                   <div className="pl-3 text-muted-foreground font-medium">
-                    Total Node Cost: ${totalNodeCost.toLocaleString()}
+                    Total Infrastructure Cost: ${totalNodeCost.toLocaleString()}
                   </div>
                 </>
               )}
@@ -209,21 +221,27 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
                           </div>
                           
                           <div className="text-[11px] bg-slate-100 rounded p-2 mt-2 space-y-0.5">
-                            <div className="font-medium">Cost Attribution:</div>
+                            <div className="font-medium">Storage Cost Attribution:</div>
                             <div className="text-muted-foreground">
-                              Server cost (excl. disks): ${serverCostWithoutDisks.toLocaleString()}
+                              Total server cost: ${totalServerCost?.toLocaleString()}
                             </div>
                             <div className="text-muted-foreground">
-                              × {((storageCpuCores / totalCpuCores) * 100).toFixed(1)}% storage CPU
+                              − Total disk cost: ${totalDiskCost?.toLocaleString()}
+                            </div>
+                            <div className="text-muted-foreground border-b pb-0.5">
+                              = Server cost (excl. disks): ${serverCostWithoutDisks.toLocaleString()}
+                            </div>
+                            <div className="text-muted-foreground mt-1">
+                              Storage CPU ratio: {storageCpuCores} ÷ {totalCpuCores} = {((storageCpuCores / totalCpuCores) * 100).toFixed(1)}%
                             </div>
                             <div className="text-muted-foreground">
-                              = ${storageAttributedServerCost.toLocaleString()} storage server cost
+                              Storage server cost: ${serverCostWithoutDisks.toLocaleString()} × {((storageCpuCores / totalCpuCores) * 100).toFixed(1)}% = ${storageAttributedServerCost.toLocaleString()}
                             </div>
                             <div className="text-muted-foreground">
-                              + ${totalDiskCost?.toLocaleString()} disk cost
+                              + Disk cost: ${totalDiskCost?.toLocaleString()}
                             </div>
                             <div className="font-medium text-black pt-1 border-t">
-                              = ${totalStorageCost.toLocaleString()} total storage cost
+                              = Total storage cost: ${totalStorageCost.toLocaleString()}
                             </div>
                           </div>
                         </div>

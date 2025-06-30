@@ -111,6 +111,16 @@ export const useStorageClustersWrapper = () => {
           if (cluster.hyperConverged && cluster.computeClusterId && node.componentId) {
             // Find the server template to get CPU core count
             const serverTemplate = componentTemplates.find(t => t.id === node.componentId);
+            
+            // Debug logging
+            console.log('[StorageCluster] Looking for server template:', {
+              nodeComponentId: node.componentId,
+              templateFound: !!serverTemplate,
+              templateType: serverTemplate?.type,
+              expectedType: ComponentType.Server,
+              typeMatch: serverTemplate?.type === ComponentType.Server
+            });
+            
             if (serverTemplate && serverTemplate.type === ComponentType.Server) {
               const server = serverTemplate as Server;
               const cores = (server.cpuSockets || 0) * (server.cpuCoresPerSocket || 0);
