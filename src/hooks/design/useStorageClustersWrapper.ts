@@ -2,9 +2,10 @@
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
-import { InfrastructureComponent } from '@/types/infrastructure';
+import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { ClusterInfo } from '@/types/infrastructure/roles-types';
 import { DiskAttachment } from '@/types/infrastructure/storage-types';
+import { Server } from '@/types/infrastructure/server-types';
 
 export const useStorageClustersWrapper = () => {
   const { activeDesign, requirements, componentTemplates } = useDesignStore();
@@ -110,10 +111,22 @@ export const useStorageClustersWrapper = () => {
           if (cluster.hyperConverged && cluster.computeClusterId && node.componentId) {
             // Find the server template to get CPU core count
             const serverTemplate = componentTemplates.find(t => t.id === node.componentId);
-            if (serverTemplate && serverTemplate.type === 'server') {
-              const server = serverTemplate as { cpuSockets?: number; cpuCoresPerSocket?: number; name?: string };
+            if (serverTemplate && serverTemplate.type === ComponentType.Server) {
+              const server = serverTemplate as Server;
               const cores = (server.cpuSockets || 0) * (server.cpuCoresPerSocket || 0);
               totalCpuCores += cores * quantity;
+              
+              // Debug logging
+              console.log('[StorageCluster] CPU calculation for node:', {
+                nodeName: node.name,
+                componentId: node.componentId,
+                serverName: server.name,
+                cpuSockets: server.cpuSockets,
+                cpuCoresPerSocket: server.cpuCoresPerSocket,
+                totalCores: cores,
+                quantity: quantity,
+                totalCpuCores: cores * quantity
+              });
               
               if (cores > 0) {
                 // Assign 4 CPU cores per disk for storage operations
@@ -145,13 +158,22 @@ export const useStorageClustersWrapper = () => {
         const serverTemplate = componentTemplates.find(t => t.id === node.componentId);
         const serverName = serverTemplate?.name || node.name || 'Server';
         
-        costBreakdown.nodes.push({
+        const nodeBreakdown = {
           name: serverName,
           quantity: quantity,
           serverCost: nodeCost,
           diskCost: nodeDiskCost,
           diskCount: nodeDiskCount,
           diskDetails: nodeDisks
+        };
+        
+        costBreakdown.nodes.push(nodeBreakdown);
+        
+        // Debug logging
+        console.log('[StorageCluster] Node breakdown added:', {
+          clusterName: cluster.name,
+          nodeBreakdown,
+          totalNodesInBreakdown: costBreakdown.nodes.length
         });
       });
       
@@ -167,7 +189,7 @@ export const useStorageClustersWrapper = () => {
       const costBasis = cluster.hyperConverged ? totalStorageCost : totalNodeCost;
       const costPerTiB = usableCapacityTiB > 0 ? costBasis / usableCapacityTiB : 0;
       
-      return {
+      const result = {
         id: cluster.id,
         name: cluster.name,
         poolType: cluster.poolType,
@@ -191,6 +213,18 @@ export const useStorageClustersWrapper = () => {
         cpuCoresPerDisk: cluster.hyperConverged ? cpuCoresPerDisk : undefined,
         costBreakdown
       };
+      
+      console.log('[StorageCluster] Final cluster metrics:', {
+        clusterName: cluster.name,
+        isHyperConverged: cluster.hyperConverged,
+        nodesFound: clusterNodes.length,
+        costBreakdownNodes: costBreakdown.nodes.length,
+        totalCpuCores,
+        storageCpuCores,
+        result
+      });
+      
+      return result;
     });
   }, [activeDesign, requirements, componentTemplates]);
 
