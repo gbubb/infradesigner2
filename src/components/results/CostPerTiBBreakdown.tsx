@@ -71,9 +71,6 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
   const poolEfficiencyFactor = getPoolEfficiencyFactor(poolType);
   const poolEfficiencyPercentage = (poolEfficiencyFactor * 100).toFixed(1);
   const costBasis = isHyperConverged && totalStorageCost ? totalStorageCost : totalNodeCost;
-  
-  // Calculate the pure server cost (excluding disks)
-  const serverCostWithoutDisks = (totalServerCost || 0) - (totalDiskCost || 0);
 
   return (
     <Popover>
@@ -223,19 +220,19 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
                           <div className="text-[11px] bg-slate-100 rounded p-2 mt-2 space-y-0.5">
                             <div className="font-medium">Storage Cost Attribution:</div>
                             <div className="text-muted-foreground">
+                              Storage CPU ratio: {storageCpuCores} cores ÷ {totalCpuCores} cores = {((storageCpuCores / totalCpuCores) * 100).toFixed(1)}%
+                            </div>
+                            <div className="text-muted-foreground mt-1">
                               Total server cost: ${totalServerCost?.toLocaleString()}
                             </div>
                             <div className="text-muted-foreground">
-                              − Total disk cost: ${totalDiskCost?.toLocaleString()}
+                              × {((storageCpuCores / totalCpuCores) * 100).toFixed(1)}% storage CPU ratio
                             </div>
                             <div className="text-muted-foreground border-b pb-0.5">
-                              = Server cost (excl. disks): ${serverCostWithoutDisks.toLocaleString()}
+                              = ${storageAttributedServerCost.toLocaleString()} storage-attributed server cost
                             </div>
                             <div className="text-muted-foreground mt-1">
-                              Storage CPU ratio: {storageCpuCores} ÷ {totalCpuCores} = {((storageCpuCores / totalCpuCores) * 100).toFixed(1)}%
-                            </div>
-                            <div className="text-muted-foreground">
-                              Storage server cost: ${serverCostWithoutDisks.toLocaleString()} × {((storageCpuCores / totalCpuCores) * 100).toFixed(1)}% = ${storageAttributedServerCost.toLocaleString()}
+                              Storage-attributed server cost: ${storageAttributedServerCost.toLocaleString()}
                             </div>
                             <div className="text-muted-foreground">
                               + Disk cost: ${totalDiskCost?.toLocaleString()}

@@ -160,12 +160,11 @@ export const useStorageClustersWrapper = () => {
               storageCpuCores += storageCoresForNode * quantity;
               const storageRatio = Math.min(storageCoresForNode / cores, 1); // Cap at 100%
               
-              // Storage cost = disk cost + proportional server cost
-              // Example: 2 disks = 8 cores, on 64-core server = 12.5% of server cost
-              const serverCostWithoutDisks = serverUnitCost - (diskCostForNode / quantity);
-              const serverStorageCost = serverCostWithoutDisks * storageRatio * quantity;
+              // Storage cost = proportional server cost + disk cost
+              // Example: 8 disks = 32 cores, on 96-core server = 33.3% of server cost
+              const serverStorageCost = serverUnitCost * storageRatio * quantity;
               storageAttributedServerCost += serverStorageCost;
-              totalStorageCost += diskCostForNode + serverStorageCost;
+              totalStorageCost += serverStorageCost + diskCostForNode;
             } else {
               // Fallback if no CPU info available
               console.log('[StorageCluster] No CPU info available for node:', node.name);
