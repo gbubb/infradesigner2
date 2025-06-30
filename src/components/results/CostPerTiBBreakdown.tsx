@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
+import { TB_TO_TIB_FACTOR, StoragePoolEfficiencyFactors } from '@/store/slices/requirements/constants';
 
 interface CostPerTiBBreakdownProps {
   clusterName: string;
@@ -56,19 +56,8 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
   cpuCoresPerDisk,
   costBreakdown
 }) => {
-  // Get pool efficiency factor based on pool type
-  const getPoolEfficiencyFactor = (poolType: string): number => {
-    switch (poolType) {
-      case '2 Replica': return 1/2;
-      case '3 Replica': return 1/3;
-      case '4+2 EC': return 4/6;
-      case '8+2 EC': return 8/10;
-      case '14+4 EC': return 14/18;
-      default: return 1/3;
-    }
-  };
-
-  const poolEfficiencyFactor = getPoolEfficiencyFactor(poolType);
+  // Get pool efficiency factor from constants
+  const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || 1/3;
   const poolEfficiencyPercentage = (poolEfficiencyFactor * 100).toFixed(1);
   const costBasis = isHyperConverged && totalStorageCost ? totalStorageCost : totalNodeCost;
 
