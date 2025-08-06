@@ -61,6 +61,7 @@ export const DesignStatisticsTab: React.FC = () => {
           totalMemoryTB={actualHardwareTotals.totalComputeMemoryTB}
           monthlyCost={operationalCosts.totalMonthly}
           quantityOfAverageVMs={quantityOfAverageVMs}
+          storageAmortizedCost={amortizedCostsByType?.storage || 0}
         />
       </div>
       

@@ -104,10 +104,19 @@ export const useDesignCalculations = () => {
   const vmsByMemory = Math.floor(totalMemoryGB / averageVMMemoryGB);
   const quantityOfAverageVMs = Math.min(vmsByCPU, vmsByMemory);
 
-  // Calculate monthly cost per average VM
-  const monthlyCostPerAverageVM = quantityOfAverageVMs > 0
-    ? costAnalysisResult?.operationalCosts?.totalMonthly / quantityOfAverageVMs
-    : 0;
+  // Calculate monthly cost per average VM (excluding storage capital costs)
+  const monthlyCostPerAverageVM = useMemo(() => {
+    if (quantityOfAverageVMs <= 0 || !costAnalysisResult?.operationalCosts) return 0;
+    
+    // Calculate monthly operational costs excluding storage amortization
+    const operationalCosts = costAnalysisResult.operationalCosts;
+    const amortizedCosts = costAnalysisResult.amortizedCostsByType;
+    
+    // Total operational cost minus storage amortization = compute-focused operational cost
+    const computeOperationalCost = operationalCosts.totalMonthly - (amortizedCosts?.storage || 0);
+    
+    return computeOperationalCost / quantityOfAverageVMs;
+  }, [quantityOfAverageVMs, costAnalysisResult?.operationalCosts, costAnalysisResult?.amortizedCostsByType]);
 
   // Directly calculate values that don't need to be in state
   const components = useMemo(() => 

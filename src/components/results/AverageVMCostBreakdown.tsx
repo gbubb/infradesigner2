@@ -12,6 +12,7 @@ interface AverageVMCostBreakdownProps {
   monthlyCost: number;
   quantityOfAverageVMs: number;
   monthlyCostPerAverageVM: number;
+  storageAmortizedCost?: number;
 }
 
 export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
@@ -21,7 +22,8 @@ export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
   averageVMMemoryGB,
   monthlyCost,
   quantityOfAverageVMs,
-  monthlyCostPerAverageVM
+  monthlyCostPerAverageVM,
+  storageAmortizedCost = 0
 }) => {
   const [open, setOpen] = React.useState(false);
 
@@ -30,6 +32,8 @@ export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
   const vmsByMemory = Math.floor(totalMemoryGB / averageVMMemoryGB);
   const limitingFactor = vmsByCPU < vmsByMemory ? 'CPU' : 'Memory';
 
+  const computeOnlyCost = monthlyCost - storageAmortizedCost;
+  
   const calculationSteps = [
     `Total Available Resources:`,
     `- Total vCPUs: ${totalVCPUs.toLocaleString()} vCPUs`,
@@ -46,9 +50,11 @@ export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
     `Limiting Factor: ${limitingFactor}`,
     `Maximum VMs Possible: ${quantityOfAverageVMs.toLocaleString()} VMs`,
     ``,
-    `Monthly Cost Calculation:`,
+    `Monthly Cost Calculation (Compute-Focused):`,
     `- Total Monthly Cost: $${monthlyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-    `- Cost per VM: $${monthlyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} ÷ ${quantityOfAverageVMs.toLocaleString()} VMs`,
+    `- Storage Amortized Cost: $${storageAmortizedCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    `- Compute-Only Monthly Cost: $${computeOnlyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    `- Cost per VM: $${computeOnlyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} ÷ ${quantityOfAverageVMs.toLocaleString()} VMs`,
     `- Final Cost per VM: $${monthlyCostPerAverageVM.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
   ];
 

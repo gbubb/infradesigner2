@@ -23,6 +23,7 @@ interface KeyMetricsProps {
   totalMemoryTB: number;
   monthlyCost: number;
   quantityOfAverageVMs: number;
+  storageAmortizedCost?: number;
 }
 
 export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
@@ -93,7 +94,8 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
   totalVCPUs,
   totalMemoryTB,
   monthlyCost,
-  quantityOfAverageVMs
+  quantityOfAverageVMs,
+  storageAmortizedCost = 0
 }) => {
   return (
     <Card>
@@ -121,6 +123,7 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
                 monthlyCost={monthlyCost}
                 quantityOfAverageVMs={quantityOfAverageVMs}
                 monthlyCostPerAverageVM={monthlyCostPerAverageVM}
+                storageAmortizedCost={storageAmortizedCost}
               />
             </div>
           </div>
