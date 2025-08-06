@@ -24,6 +24,9 @@ import { ResultsPanel } from "@/components/results/ResultsPanel";
 import { ProcurePanel } from "@/components/procure/ProcurePanel";
 import { ComparePanel } from "@/components/compare/ComparePanel";
 import { ModelPanel } from "@/components/model/ModelPanel";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { useDesignStore } from "@/store/designStore";
 
 const queryClient = new QueryClient();
 
@@ -43,10 +46,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
+  const isInitializing = useDesignStore(state => state.isInitializing);
+  
   // Initialize store data when the app starts
   useEffect(() => {
     initializeStore();
   }, []);
+  
+  // Show loading spinner while initializing
+  if (isInitializing) {
+    return <LoadingSpinner fullScreen text="Initializing application..." size="lg" />;
+  }
   
   return (
     <Routes>
@@ -55,13 +65,13 @@ const AppRoutes = () => {
       <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route index element={<RequirementsPanel />} />
         <Route path="components" element={<ComponentLibrary />} />
-        <Route path="design" element={<DesignPanel />} />
+        <Route path="design" element={<ErrorBoundary componentName="Design Panel"><DesignPanel /></ErrorBoundary>} />
         <Route path="configure/*" element={<ConfigurePanel />} />
         <Route path="datacenter" element={<DatacenterPanel />} />
-        <Route path="results" element={<ResultsPanel />} />
+        <Route path="results" element={<ErrorBoundary componentName="Results Panel"><ResultsPanel /></ErrorBoundary>} />
         <Route path="procure" element={<ProcurePanel />} />
         <Route path="compare" element={<ComparePanel />} />
-        <Route path="model" element={<ModelPanel />} />
+        <Route path="model" element={<ErrorBoundary componentName="Model Panel"><ModelPanel /></ErrorBoundary>} />
       </Route>
       <Route path="/designs/:sharingId" element={<Index />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
@@ -72,21 +82,23 @@ const AppRoutes = () => {
 
 function App() {
   return (
-    <DndProvider>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <BrowserRouter>
-              <AuthProvider>
-                <Toaster />
-                <Sonner />
-                <AppRoutes />
-              </AuthProvider>
-            </BrowserRouter>
-          </TooltipProvider>
-        </QueryClientProvider>
-      </ThemeProvider>
-    </DndProvider>
+    <ErrorBoundary componentName="Application Root">
+      <DndProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <BrowserRouter>
+                <AuthProvider>
+                  <Toaster />
+                  <Sonner />
+                  <AppRoutes />
+                </AuthProvider>
+              </BrowserRouter>
+            </TooltipProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
+      </DndProvider>
+    </ErrorBoundary>
   );
 }
 

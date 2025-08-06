@@ -13,6 +13,7 @@ import { addGPUToComputeNode, removeGPUFromComputeNode } from './diskAndGPUOpera
 import { assignComponentToRole, getRoleById, updateRoleRequiredCount } from './roleOperations';
 import { addCassetteToPanel, removeCassetteFromPanel } from './cassetteOperations';
 import { IntelligentDesignUpdater } from '../../calculations/intelligentDesignUpdater';
+import { debounce, DEBOUNCE_DELAYS } from '@/utils/debounce';
 import { StoreSet, StoreGet } from '@/types/store-operations';
 
 /**
@@ -22,6 +23,17 @@ export const createRequirementsSliceOperations = (
   set: StoreSet<StoreState>, 
   get: StoreGet<StoreState>
 ): RequirementsSlice => {
+  // Create debounced version of the design updater
+  const debouncedUpdateDesign = debounce(
+    (previousRequirements: any, updatedRequirements: any) => {
+      IntelligentDesignUpdater.updateDesignFromRequirements(
+        previousRequirements,
+        updatedRequirements
+      );
+    },
+    DEBOUNCE_DELAYS.RECALCULATE
+  );
+  
   return {
     requirements: defaultRequirements,
     componentRoles: [],
@@ -93,11 +105,8 @@ export const createRequirementsSliceOperations = (
       const updatedState = get();
       const updatedRequirements = updatedState.requirements;
       
-      // Use intelligent updater instead of full recalculation
-      IntelligentDesignUpdater.updateDesignFromRequirements(
-        previousRequirements,
-        updatedRequirements
-      );
+      // Use debounced intelligent updater to avoid excessive recalculation
+      debouncedUpdateDesign(previousRequirements, updatedRequirements);
     },
     
     calculateComponentRoles: () => {

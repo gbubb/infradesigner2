@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { ComponentWithPlacement } from '@/types/service-types';
+import { errorLogger } from '@/utils/errorLogger';
 
 let isRecalculating = false;
 
@@ -363,8 +364,11 @@ export const recalculateDesign = () => {
       toast.info("Please create a new design or load an existing one.");
     }
   } catch (error) {
-    console.error("Error during design recalculation:", error);
-    toast.error("Error during design recalculation. Please try again.");
+    errorLogger.error(
+      "Error during design recalculation",
+      error instanceof Error ? error : new Error(String(error)),
+      { component: 'designCalculator', action: 'recalculateDesign' }
+    );
   } finally {
     isRecalculating = false;
     // console.log("Design recalculation completed");

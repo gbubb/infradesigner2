@@ -21,6 +21,18 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { ClusterAZAssignment } from '@/types/infrastructure';
+import { debounce, DEBOUNCE_DELAYS } from '@/utils/debounce';
+
+// Create debounced save function outside the slice to persist between renders
+const debouncedSaveToDatabase = debounce(
+  async (updatedDesign: any, userId?: string) => {
+    const success = await saveDesignToDB(updatedDesign, userId);
+    if (success) {
+      toast.success(`Saved design: ${updatedDesign.name}`);
+    }
+  },
+  DEBOUNCE_DELAYS.SAVE
+);
 
 export const createDesignSlice: StateCreator<
   StoreState,
@@ -252,16 +264,12 @@ export const createDesignSlice: StateCreator<
       };
     });
     
-    // Get the current user's ID
+    // Get the current user's ID and use debounced save
     supabase.auth.getUser().then(({ data }) => {
       const userId = data?.user?.id;
       
-      // Save with user ID if available
-      saveDesignToDB(updatedDesign, userId).then(success => {
-        if (success) {
-          toast.success(`Saved design: ${updatedDesign.name}`);
-        }
-      });
+      // Use debounced save to avoid excessive database writes
+      debouncedSaveToDatabase(updatedDesign, userId);
     });
   },
   

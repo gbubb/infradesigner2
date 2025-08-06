@@ -13,6 +13,8 @@ export interface WorkspaceSlice {
   editingComponentId: string | null;
   // Currently selected component ID
   selectedComponentId: string | null;
+  // Loading state for app initialization
+  isInitializing: boolean;
   
   // Add a component to the workspace
   addComponent: (component: InfrastructureComponent, position: Position) => void;
@@ -46,6 +48,9 @@ export interface WorkspaceSlice {
   
   // Remove a component
   removeComponent: (id: string) => void;
+  
+  // Set initialization state
+  setInitializing: (isInitializing: boolean) => void;
 }
 
 export const createWorkspaceSlice: StateCreator<
@@ -58,6 +63,7 @@ export const createWorkspaceSlice: StateCreator<
   workspaceComponents: [],
   editingComponentId: null,
   selectedComponentId: null,
+  isInitializing: false,
   
   addComponent: (component, position) => {
     set((state) => {
@@ -262,5 +268,9 @@ export const createWorkspaceSlice: StateCreator<
         selectedComponentId
       };
     });
+  },
+  
+  setInitializing: (isInitializing) => {
+    set({ isInitializing });
   }
 });

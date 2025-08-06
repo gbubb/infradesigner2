@@ -11,6 +11,9 @@ export const initializeStore = async () => {
   const state = useDesignStore.getState();
   
   try {
+    // Set loading state
+    state.setInitializing(true);
+    
     await state.loadComponentsFromDB();
     
     if (state.componentRoles.length === 0) {
@@ -43,6 +46,9 @@ export const initializeStore = async () => {
     }
     
     storeInitialized = true;
+  } finally {
+    // Clear loading state
+    state.setInitializing(false);
   }
 };
 
