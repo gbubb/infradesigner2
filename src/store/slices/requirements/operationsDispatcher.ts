@@ -5,6 +5,7 @@ import {
   RequirementsSlice, 
   defaultRequirements 
 } from './types';
+import { DesignRequirements } from '@/types/infrastructure';
 import { calculateComponentRoles } from './roleCalculator';
 import { calculateStorageNodeCapacity } from './calculationUtils';
 import { calculateRequiredQuantity } from './calculationManager';
@@ -25,7 +26,7 @@ export const createRequirementsSliceOperations = (
 ): RequirementsSlice => {
   // Create debounced version of the design updater
   const debouncedUpdateDesign = debounce(
-    (previousRequirements: any, updatedRequirements: any) => {
+    (previousRequirements: DesignRequirements, updatedRequirements: DesignRequirements) => {
       IntelligentDesignUpdater.updateDesignFromRequirements(
         previousRequirements,
         updatedRequirements

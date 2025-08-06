@@ -6,7 +6,7 @@ interface LogContext {
   component?: string;
   action?: string;
   userId?: string;
-  data?: any;
+  data?: unknown;
 }
 
 class ErrorLogger {
@@ -111,7 +111,7 @@ class ErrorLogger {
   /**
    * Create a wrapped version of a function with automatic error handling
    */
-  wrapFunction<T extends (...args: any[]) => any>(
+  wrapFunction<T extends (...args: unknown[]) => unknown>(
     fn: T,
     errorMessage: string,
     context?: LogContext

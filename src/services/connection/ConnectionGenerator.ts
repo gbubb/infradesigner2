@@ -26,6 +26,28 @@ import { generateBreakoutConnections, getBreakoutTargetSpeed, areDevicesWithinBr
 // Constants
 const MAX_CONNECTION_ATTEMPTS = 10000;
 
+/**
+ * Generates network connections based on defined rules and available components
+ * 
+ * @param design - The infrastructure design containing placed devices and rack profiles
+ * @param rules - Connection rules defining how devices should be interconnected
+ * @param allCableTemplates - Available cable templates for creating connections
+ * @param allTransceiverTemplates - Available transceiver templates for optical connections
+ * 
+ * @returns Array of connection attempts with success/failure status and details
+ * 
+ * @remarks
+ * This function implements a sophisticated connection generation algorithm that:
+ * - Matches devices based on rule criteria (type, role, location)
+ * - Selects appropriate ports based on speed, media type, and availability
+ * - Handles breakout connections for high-density scenarios
+ * - Automatically selects cables and transceivers based on distance and compatibility
+ * - Respects port roles (uplink, downlink, management, etc.)
+ * - Prevents connection loops and duplicate connections
+ * 
+ * The function processes rules in priority order and attempts to fulfill
+ * connection requirements while respecting physical constraints.
+ */
 export function generateConnections(
   design: InfrastructureDesign,
   rules: ConnectionRule[],

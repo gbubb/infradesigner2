@@ -8,7 +8,7 @@ interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   componentName?: string;
-  resetOnPropsChange?: any[];
+  resetOnPropsChange?: unknown[];
 }
 
 interface State {

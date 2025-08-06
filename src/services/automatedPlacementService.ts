@@ -31,6 +31,28 @@ export interface PlacementReport {
 }
 
 export class AutomatedPlacementService {
+  /**
+   * Automatically places all devices in a design across available racks
+   * 
+   * @param designId - Optional design ID to place (uses active design if not provided)
+   * @param clusterAZAssignments - Optional availability zone assignments for clusters
+   * 
+   * @returns PlacementReport containing placement status for all devices
+   * 
+   * @remarks
+   * This function orchestrates the placement of all design components using:
+   * - Storage clusters: Placed together with rack affinity
+   * - Compute clusters: Distributed across availability zones
+   * - Core networking: Placed in dedicated core racks
+   * - Patch panels: Distributed based on requirements
+   * - Default devices: Placed using best-fit algorithm
+   * 
+   * The placement respects rack constraints including:
+   * - Rack unit capacity
+   * - Power limits
+   * - Weight limits
+   * - Availability zone assignments
+   */
   static placeAllDesignDevices(designId?: string, clusterAZAssignments?: ClusterAZAssignment[]): PlacementReport {
     const state = useDesignStore.getState();
     const activeDesign = state.activeDesign;

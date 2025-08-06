@@ -2,7 +2,7 @@
  * Creates a debounced version of a function that delays invoking the function
  * until after the specified delay has elapsed since the last time it was invoked.
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
 ): (...args: Parameters<T>) => void {
@@ -23,7 +23,7 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * Creates a debounced version of an async function
  */
-export function debounceAsync<T extends (...args: any[]) => Promise<any>>(
+export function debounceAsync<T extends (...args: unknown[]) => Promise<unknown>>(
   func: T,
   delay: number
 ): (...args: Parameters<T>) => Promise<ReturnType<T> | void> {
@@ -58,7 +58,7 @@ export function debounceAsync<T extends (...args: any[]) => Promise<any>>(
  * Creates a throttled version of a function that only invokes the function
  * at most once per specified interval
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   interval: number
 ): (...args: Parameters<T>) => void {

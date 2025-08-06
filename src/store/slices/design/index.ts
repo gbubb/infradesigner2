@@ -20,12 +20,12 @@ import {
 } from './designOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
-import { ClusterAZAssignment } from '@/types/infrastructure';
+import { ClusterAZAssignment, InfrastructureDesign } from '@/types/infrastructure';
 import { debounce, DEBOUNCE_DELAYS } from '@/utils/debounce';
 
 // Create debounced save function outside the slice to persist between renders
 const debouncedSaveToDatabase = debounce(
-  async (updatedDesign: any, userId?: string) => {
+  async (updatedDesign: InfrastructureDesign, userId?: string) => {
     const success = await saveDesignToDB(updatedDesign, userId);
     if (success) {
       toast.success(`Saved design: ${updatedDesign.name}`);

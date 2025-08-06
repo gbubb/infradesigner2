@@ -7,6 +7,22 @@ import { errorLogger } from '@/utils/errorLogger';
 
 let isRecalculating = false;
 
+/**
+ * Recalculates the entire design based on current requirements
+ * 
+ * This function performs the following operations:
+ * 1. Calculates component roles based on requirements
+ * 2. Preserves existing component assignments across recalculations
+ * 3. Maintains disk, GPU, and cassette selections
+ * 4. Triggers component generation and placement
+ * 5. Updates the active design with new components
+ * 
+ * @remarks
+ * Uses a lock mechanism to prevent concurrent recalculations
+ * Preserves user selections during requirement changes
+ * 
+ * @throws Will log errors but not throw to prevent UI crashes
+ */
 export const recalculateDesign = () => {
   if (isRecalculating) return;
   
