@@ -82,14 +82,14 @@ export const usePowerPredictionState = (servers: Server[], preselectedComponentI
       // Clear any previous calculation results
       setCalculationResult(null);
     }
-  }, [selectedServerId]); // Trigger when selectedServerId changes
+  }, [selectedServerId, selectedServer]); // Trigger when selectedServerId changes
   
   // Update selectedServerId when preselectedComponentId changes
   useEffect(() => {
     if (preselectedComponentId && preselectedComponentId !== selectedServerId) {
       setSelectedServerId(preselectedComponentId);
     }
-  }, [preselectedComponentId]);
+  }, [preselectedComponentId, selectedServerId]);
   
   const updateCustomInputs = (updates: Partial<PowerCalculationInputs>) => {
     setCustomInputs(current => ({ ...current, ...updates }));

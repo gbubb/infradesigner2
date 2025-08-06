@@ -31,8 +31,8 @@ export const ModelPanel: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
 
   // Get pricing data from requirements
-  const computePricing = requirements.pricingRequirements?.computePricing || [];
-  const storagePricing = requirements.pricingRequirements?.storagePricing || [];
+  const computePricing = useMemo(() => requirements.pricingRequirements?.computePricing || [], [requirements.pricingRequirements?.computePricing]);
+  const storagePricing = useMemo(() => requirements.pricingRequirements?.storagePricing || [], [requirements.pricingRequirements?.storagePricing]);
 
   // Handle navigation state
   const [selectedTab, setSelectedTab] = useState('revenue');

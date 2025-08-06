@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { ComponentWithPosition } from '@/types/workspace';
 import { 
@@ -68,7 +68,7 @@ export const PlacedComponent: React.FC<PlacedComponentProps> = ({
   };
 
   // Handle mouse move for dragging
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!dragging) return;
     
     const parentRect = componentRef.current?.parentElement?.getBoundingClientRect();
@@ -78,15 +78,15 @@ export const PlacedComponent: React.FC<PlacedComponentProps> = ({
     const newY = e.clientY - parentRect.top - offset.y;
     
     setPosition({ x: newX, y: newY });
-  };
+  }, [dragging, offset.x, offset.y]);
 
   // End dragging and update position
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     if (dragging) {
       setDragging(false);
       onPositionChange(position);
     }
-  };
+  }, [dragging, position, onPositionChange]);
 
   // Add and remove event listeners
   useEffect(() => {
@@ -102,7 +102,7 @@ export const PlacedComponent: React.FC<PlacedComponentProps> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragging, position]);
+  }, [dragging, position, handleMouseMove, handleMouseUp]);
 
   // Get role information
   const getRoleInfo = (component: InfrastructureComponent) => {

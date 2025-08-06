@@ -192,7 +192,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
       componentsWithoutPower,
       totalDevices
     };
-  }, [activeDesign?.rackprofiles, activeDesign?.components, rackProfileId, rackDevicesKey]);
+  }, [activeDesign?.rackprofiles, activeDesign?.components, rackProfileId]);
   
   // Get current power based on selected state
   const getCurrentPower = (stats: RackPowerStats | null, state: PowerState) => {

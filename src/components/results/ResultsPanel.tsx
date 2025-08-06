@@ -59,7 +59,7 @@ export const ResultsPanel: React.FC = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [activeDesign?.id, hasCalculated, hasValidDesign, componentRoles, saveDesign]);
+  }, [activeDesign, activeDesign?.id, hasCalculated, hasValidDesign, componentRoles, saveDesign]);
   
   // Handle manual recalculation
   const handleRecalculate = useCallback(() => {

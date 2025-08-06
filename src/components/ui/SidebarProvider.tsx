@@ -11,8 +11,7 @@ import {
   type SidebarContext as SidebarContextType,
   type SidebarProviderProps,
 } from "./SidebarTypes"
-
-export const SidebarContext = React.createContext<SidebarContextType | null>(null)
+import { SidebarContext } from "./SidebarContext"
 
 export const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
   (

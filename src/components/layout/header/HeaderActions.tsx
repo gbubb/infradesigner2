@@ -18,7 +18,7 @@ import { ShareDesignDialog } from './dialogs/ShareDesignDialog';
 import { useDesignStore } from '@/store/designStore';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { toast } from 'sonner';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuthHook';
 import {
   DropdownMenu,
   DropdownMenuContent,

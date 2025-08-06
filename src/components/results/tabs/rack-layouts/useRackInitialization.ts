@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
 import { DeviceRoleType } from '@/types/infrastructure/requirements-types';
@@ -147,14 +147,156 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
       const uniqueAZs = [...new Set(existingRackProfiles.map(rack => rack.azName))];
       setAvailabilityZones(uniqueAZs);
     }
-  }, [activeDesign, resetTrigger]);
+  }, [activeDesign, resetTrigger, distributeComponentsAcrossRacks]);
 
   // Distribute components across racks based on role and AZ
-  const distributeComponentsAcrossRacks = (racks: RackProfileInitializationData[]) => {
+  const distributeComponentsAcrossRacks = useCallback((racks: RackProfileInitializationData[]) => {
     if (!activeDesign || !activeDesign.components || !activeDesign.componentRoles) return;
     
     const azNames = [...new Set(racks.map(rack => rack.azName))].filter(az => az !== 'Core');
     const coreRacks = racks.filter(rack => rack.azName === 'Core');
+    
+    // Define helper functions inside the callback
+    const distributeComponentsEvenly = (
+      components: InfrastructureComponent[], 
+      racksByAZ: Record<string, { id: string; name: string }[]>, 
+      azNames: string[]
+    ) => {
+      if (!components.length || !azNames.length) return;
+      
+      const componentsPerAZ = Math.ceil(components.length / azNames.length);
+      
+      components.forEach((component, index) => {
+        const targetAzIndex = Math.floor(index / componentsPerAZ) % azNames.length;
+        const targetAZ = azNames[targetAzIndex];
+        const targetRacks = racksByAZ[targetAZ];
+        
+        if (targetRacks && targetRacks.length) {
+          const rackIndex = index % targetRacks.length;
+          const result = RackService.placeDevice(targetRacks[rackIndex].id, component.id, undefined, true); // Skip individual updates
+          if (!result.success) {
+            console.warn(`Failed to place ${component.name}: ${result.error}`);
+          }
+        }
+      });
+    };
+    
+    const distributeStorageNodes = (
+      components: InfrastructureComponent[], 
+      racksByAZ: Record<string, { id: string; name: string }[]>, 
+      azNames: string[]
+    ) => {
+      if (!components.length || !azNames.length) return;
+      
+      // Group storage nodes by cluster
+      const nodesByCluster: Record<string, InfrastructureComponent[]> = {};
+      
+      components.forEach(component => {
+        if (component.clusterInfo && component.clusterInfo.clusterId) {
+          if (!nodesByCluster[component.clusterInfo.clusterId]) {
+            nodesByCluster[component.clusterInfo.clusterId] = [];
+          }
+          nodesByCluster[component.clusterInfo.clusterId].push(component);
+        }
+      });
+      
+      // For each cluster, distribute its nodes
+      Object.entries(nodesByCluster).forEach(([clusterId, nodes]) => {
+        const clusterInfo = nodes[0]?.clusterInfo;
+        const storageCluster = activeDesign?.requirements.storageRequirements.storageClusters
+          .find(sc => sc.id === clusterId);
+        
+        const targetAZCount = storageCluster?.availabilityZoneQuantity || azNames.length;
+        const effectiveAZCount = Math.min(targetAZCount, azNames.length);
+        
+        // Place nodes in the first N AZs
+        nodes.forEach((node, index) => {
+          const azIndex = index % effectiveAZCount;
+          const targetAZ = azNames[azIndex];
+          const targetRacks = racksByAZ[targetAZ];
+          
+          if (targetRacks && targetRacks.length) {
+            const rackIndex = index % targetRacks.length;
+            const result = RackService.placeDevice(targetRacks[rackIndex].id, node.id, undefined, true); // Skip individual updates
+            if (!result.success) {
+              console.warn(`Failed to place storage node ${node.name}: ${result.error}`);
+            }
+          }
+        });
+      });
+    };
+    
+    const placeNetworkDevicesInAZs = (
+      components: InfrastructureComponent[],
+      racksByAZ: Record<string, { id: string; name: string }[]>,
+      azNames: string[]
+    ) => {
+      if (!components.length || !azNames.length) return;
+      
+      const deviceType = components[0]?.type;
+      let ruStartPosition: number;
+      
+      // Determine starting position based on device type
+      switch (deviceType) {
+        case ComponentType.Switch:
+          ruStartPosition = 42; // Top of rack
+          break;
+        default:
+          ruStartPosition = 40;
+          break;
+      }
+      
+      // Group components by AZ
+      const componentsPerAZ = Math.ceil(components.length / azNames.length);
+      
+      components.forEach((component, index) => {
+        const targetAzIndex = Math.floor(index / componentsPerAZ) % azNames.length;
+        const targetAZ = azNames[targetAzIndex];
+        const targetRacks = racksByAZ[targetAZ];
+        
+        if (targetRacks && targetRacks.length) {
+          const rackIndex = index % targetRacks.length;
+          const result = RackService.placeDevice(
+            targetRacks[rackIndex].id, 
+            component.id,
+            ruStartPosition - (index % 10) * (component.ruHeight || 1),
+            true // Skip individual updates
+          );
+          
+          if (!result.success) {
+            // Try auto-placement if specific placement fails
+            const fallbackResult = RackService.placeDevice(targetRacks[rackIndex].id, component.id, undefined, true); // Skip individual updates
+            if (!fallbackResult.success) {
+              console.warn(`Failed to place network device ${component.name}: ${fallbackResult.error}`);
+            }
+          }
+        }
+      });
+    };
+    
+    const placeNetworkDevicesInCoreRacks = (components: InfrastructureComponent[], coreRacks: Array<{ id: string; name: string }>) => {
+      if (!components.length || !coreRacks.length) return;
+      
+      const ruStartPosition = 42; // Start from top of rack
+      
+      components.forEach((component, index) => {
+        const rackIndex = index % coreRacks.length;
+        const result = RackService.placeDevice(
+          coreRacks[rackIndex].id, 
+          component.id,
+          ruStartPosition - (index % 10) * (component.ruHeight || 1),
+          true // Skip individual updates
+        );
+        
+        if (!result.success) {
+          // Try auto-placement if specific placement fails
+          const fallbackResult = RackService.placeDevice(coreRacks[rackIndex].id, component.id, undefined, true); // Skip individual updates
+          if (!fallbackResult.success) {
+            console.warn(`Failed to place core network device ${component.name}: ${fallbackResult.error}`);
+          }
+        }
+      });
+    };
     
     // Group components by role
     const componentsByRole: Record<string, InfrastructureComponent[]> = {};
@@ -219,7 +361,7 @@ export const useRackInitialization = (resetTrigger: number = 0) => {
     
     // Commented out to reduce noise - distribution happens automatically
     // toast.success('Components distributed across racks');
-  };
+  }, [activeDesign]);
   
   const distributeComponentsEvenly = (
     components: InfrastructureComponent[], 

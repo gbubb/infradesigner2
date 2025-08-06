@@ -8,7 +8,8 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { initializeStore } from "./store/designStore";
-import { AuthProvider, useAuth } from "./hooks/useAuth";
+import { AuthProvider } from "./hooks/useAuth";
+import { useAuth } from "./hooks/useAuthHook";
 // Import the purge script (makes it available in the console)
 import "@/utils/purgeDesigns";
 import { ThemeProvider } from "./components/theme/theme-provider";

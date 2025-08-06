@@ -1,6 +1,5 @@
 // Re-export all components from the modularized files
 export { SidebarProvider } from "./SidebarProvider"
-export { useSidebar } from "./SidebarHooks"
 export {
   Sidebar,
   SidebarContent,

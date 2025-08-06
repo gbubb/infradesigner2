@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useComponents } from '@/context/ComponentContext';
+import { useComponents } from '@/context/ComponentHooks';
 import { useComponentForm } from '@/hooks/components/useComponentForm';
 import { ComponentFormDialog } from './dialogs/ComponentFormDialog';
 import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';

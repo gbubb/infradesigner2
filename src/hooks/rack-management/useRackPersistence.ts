@@ -123,7 +123,7 @@ export function useRackPersistence() {
     };
 
     loadSavedLayout();
-  }, [activeDesign?.id, updateDesign]);
+  }, [activeDesign, activeDesign?.id, updateDesign]);
 
   // Effect: Clear and regenerate racks when requirements change
   useEffect(() => {
@@ -140,7 +140,7 @@ export function useRackPersistence() {
     
     // Update the previous hash
     previousRequirementsHashRef.current = requirementsHash;
-  }, [activeDesign?.id, requirementsHash]);
+  }, [activeDesign, activeDesign?.id, requirementsHash]);
 
   // Manual save handler
   const handleSaveLayout = useCallback(async () => {

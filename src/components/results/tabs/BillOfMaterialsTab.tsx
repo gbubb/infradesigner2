@@ -56,8 +56,8 @@ export const BillOfMaterialsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const componentTemplates = useDesignStore(state => state.componentTemplates);
   const componentRoles = useDesignStore(state => state.componentRoles);
-  const components = activeDesign?.components || [];
-  const networkConnections = activeDesign?.networkConnections || [];
+  const components = useMemo(() => activeDesign?.components || [], [activeDesign?.components]);
+  const networkConnections = useMemo(() => activeDesign?.networkConnections || [], [activeDesign?.networkConnections]);
   
   // Build lookup dictionaries for cost and details from component library templates:
   const cableTemplates = useMemo(() => (componentTemplates || []).filter(c => c.type === ComponentType.Cable), [componentTemplates]);
@@ -67,14 +67,55 @@ export const BillOfMaterialsTab: React.FC = () => {
   );
 
   // Build a lookup for Disk costs associated with specific clusters/configurations:
-  const diskLineItems: Record<string, {
-    disk: InfrastructureComponent;
-    summarizedQuantity: number;
-    clusterName: string;
-    clusterId: string;
-    configKey: string;
-    totalDiskCost: number;
-  }> = {};
+  const diskLineItems = useMemo(() => {
+    const items: Record<string, {
+      disk: InfrastructureComponent;
+      summarizedQuantity: number;
+      clusterName: string;
+      clusterId: string;
+      configKey: string;
+      totalDiskCost: number;
+    }> = {};
+    
+    components.forEach(instance => {
+      const key =
+        (instance.role === 'storageNode' || instance.role === 'hyperConvergedNode')
+          ? getStorageNodeGroupKey(instance)
+          : getBomGroupKey(instance);
+      
+      // If this is a storage node or hyper-converged node, also add disk line items with correct cluster assignment
+      if ((instance.role === 'storageNode' || instance.role === 'hyperConvergedNode') && instance.attachedDisks) {
+        const clusterInfo = (instance.clusterInfo as ClusterInfo) || {} as ClusterInfo;
+        const attachedDisks = instance.attachedDisks || [];
+        attachedDisks.forEach((disk) => {
+          if (!disk) return;
+          // Keyed by disk id+model+size+cluster
+          const diskKey =
+            'disk-' +
+            (disk.templateId || disk.id || disk.model) +
+            '-' +
+            (disk.capacityTB || '') +
+            '-' +
+            (clusterInfo.clusterId || '');
+          if (!items[diskKey]) {
+            items[diskKey] = {
+              disk,
+              summarizedQuantity: 0,
+              clusterName: clusterInfo.clusterName || clusterInfo.clusterId || '-',
+              clusterId: clusterInfo.clusterId || '-',
+              configKey: key,
+              totalDiskCost: 0,
+            };
+          }
+          // Each storage node instance can have a disk attached; quantity = disk.quantity * node.quantity
+          items[diskKey].summarizedQuantity += (disk.quantity || 1) * (instance.quantity || 1);
+          items[diskKey].totalDiskCost += (disk.cost || 0) * (disk.quantity || 1) * (instance.quantity || 1);
+        });
+      }
+    });
+    
+    return items;
+  }, [components]);
 
   // --- NEW: Use utility helpers for BOM cable/transceiver line items --- //
   const cableLineItems = summarizeCablesFromConnections(networkConnections, componentTemplates || []);
@@ -99,36 +140,6 @@ export const BillOfMaterialsTab: React.FC = () => {
         };
       }
       groupedByTemplate[key].summarizedQuantity += instance.quantity || 1;
-
-      // If this is a storage node or hyper-converged node, also add disk line items with correct cluster assignment
-      if ((instance.role === 'storageNode' || instance.role === 'hyperConvergedNode') && instance.attachedDisks) {
-        const clusterInfo = (instance.clusterInfo as ClusterInfo) || {} as ClusterInfo;
-        const attachedDisks = instance.attachedDisks || [];
-        attachedDisks.forEach((disk) => {
-          if (!disk) return;
-          // Keyed by disk id+model+size+cluster
-          const diskKey =
-            'disk-' +
-            (disk.templateId || disk.id || disk.model) +
-            '-' +
-            (disk.capacityTB || '') +
-            '-' +
-            (clusterInfo.clusterId || '');
-          if (!diskLineItems[diskKey]) {
-            diskLineItems[diskKey] = {
-              disk,
-              summarizedQuantity: 0,
-              clusterName: clusterInfo.clusterName || clusterInfo.clusterId || '-',
-              clusterId: clusterInfo.clusterId || '-',
-              configKey: key,
-              totalDiskCost: 0,
-            };
-          }
-          // Each storage node instance can have a disk attached; quantity = disk.quantity * node.quantity
-          diskLineItems[diskKey].summarizedQuantity += (disk.quantity || 1) * (instance.quantity || 1);
-          diskLineItems[diskKey].totalDiskCost += (disk.cost || 0) * (disk.quantity || 1) * (instance.quantity || 1);
-        });
-      }
     });
 
     // Assign to category ('Compute', 'Storage', etc.)

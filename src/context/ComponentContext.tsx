@@ -13,7 +13,7 @@ interface ComponentContextType {
   setDefaultComponent: (type: ComponentType, role: string, id: string) => void;
 }
 
-const ComponentContext = createContext<ComponentContextType | undefined>(undefined);
+export const ComponentContext = createContext<ComponentContextType | undefined>(undefined);
 
 export const ComponentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const store = useDesignStore();
@@ -32,10 +32,3 @@ export const ComponentProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
 };
 
-export const useComponents = () => {
-  const context = useContext(ComponentContext);
-  if (!context) {
-    throw new Error('useComponents must be used within a ComponentProvider');
-  }
-  return context;
-};

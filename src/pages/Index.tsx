@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout';
 import { initializeStore } from '../store/designStore';
 import { SharedDesignLoader } from '../components/layout/SharedDesignLoader';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuthHook';
 
 const Index = () => {
   const { sharingId } = useParams<{ sharingId: string }>();
