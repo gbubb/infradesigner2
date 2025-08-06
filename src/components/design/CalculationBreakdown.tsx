@@ -93,19 +93,21 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
             
             let coresPerServer = 0;
             if ('cpuSockets' in component && 'cpuCoresPerSocket' in component) {
-              coresPerServer = component.cpuSockets * component.cpuCoresPerSocket;
-              steps.push(`Server Model: ${component.manufacturer} ${component.model} with ${component.cpuSockets} sockets × ${component.cpuCoresPerSocket} cores = ${coresPerServer} cores per server`);
+              const sockets = Number(component.cpuSockets) || 0;
+              const coresPerSocket = Number(component.cpuCoresPerSocket) || 0;
+              coresPerServer = sockets * coresPerSocket;
+              steps.push(`Server Model: ${component.manufacturer} ${component.model} with ${sockets} sockets × ${coresPerSocket} cores = ${coresPerServer} cores per server`);
             } else if ('coreCount' in component) {
-              coresPerServer = component.coreCount;
+              coresPerServer = Number(component.coreCount) || 0;
               steps.push(`Server Model: ${component.manufacturer} ${component.model} with ${coresPerServer} cores per server`);
             }
             
             let memoryGBPerServer = 0;
             if ('memoryCapacity' in component) {
-              memoryGBPerServer = component.memoryCapacity;
+              memoryGBPerServer = Number(component.memoryCapacity) || 0;
               steps.push(`Server Memory: ${memoryGBPerServer.toLocaleString()} GB per server`);
             } else if ('memoryGB' in component) {
-              memoryGBPerServer = component.memoryGB;
+              memoryGBPerServer = Number(component.memoryGB) || 0;
               steps.push(`Server Memory: ${memoryGBPerServer.toLocaleString()} GB per server`);
             }
             

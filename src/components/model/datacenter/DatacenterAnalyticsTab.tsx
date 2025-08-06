@@ -15,7 +15,7 @@ import { CapacityManagementService } from '@/services/datacenter/CapacityManagem
 
 export const DatacenterAnalyticsTab: React.FC = () => {
   const { requirements, activeDesign } = useDesignStore();
-  const selectedFacilityId = requirements.physicalConstraints?.facilityId;
+  const selectedFacilityId = requirements.physicalConstraints?.selectedFacilityId;
 
   // Mock facility data until we integrate with the backend
   const mockFacility = useMemo(() => {
@@ -51,51 +51,62 @@ export const DatacenterAnalyticsTab: React.FC = () => {
   const analytics = useMemo(() => {
     if (!mockFacility || !activeDesign) return null;
 
-    const costCalculator = new DatacenterCostCalculator();
-    const powerCalculator = new PowerEfficiencyCalculator();
-    const capacityService = new CapacityManagementService();
-
-    // Calculate current usage
-    const currentRacks = activeDesign.racks?.length || 0;
-    const currentPowerKW = activeDesign.racks?.reduce((sum, rack) => {
-      const components = activeDesign.components.filter(c => c.rackId === rack.id);
-      return sum + components.reduce((rackSum, component) => {
-        return rackSum + ((component.powerConsumption || 0) * (component.quantity || 1)) / 1000;
-      }, 0);
+    // Calculate current usage from rack profiles
+    const currentRacks = activeDesign.rackprofiles?.length || 0;
+    const currentPowerKW = activeDesign.components?.reduce((sum, component) => {
+      const power = ('power' in component ? component.power : 0) || 
+                    ('powerrequired' in component ? component.powerrequired : 0) || 0;
+      const quantity = component.quantity || 1;
+      return sum + (power * quantity) / 1000; // Convert W to kW
     }, 0) || 0;
 
+    // Create mock racks for the services (since we don't have the Rack type)
+    const mockRacks = activeDesign.rackprofiles?.map(profile => ({
+      id: profile.id,
+      name: profile.name,
+      placedComponents: activeDesign.components.filter(c => {
+        // Check if component is placed in this rack
+        if (!profile.devices) return false;
+        return profile.devices.some(d => d.deviceId === c.id);
+      }).map(c => ({
+        ...c,
+        power: ('power' in c ? c.power : 0) || 
+               ('powerrequired' in c ? c.powerrequired : 0) || 0
+      }))
+    })) || [];
+
+    // Create mock datacenter racks for cost calculator
+    const mockDatacenterRacks = activeDesign.rackprofiles?.map(profile => ({
+      id: profile.id,
+      name: profile.name,
+      facilityId: mockFacility.id,
+      hierarchyLevelId: profile.hierarchyLevelId || '',
+      positionInLevel: profile.positionInLevel || 0,
+      powerAllocationKw: profile.powerAllocationKw || 0,
+      actualPowerUsageKw: profile.actualPowerUsageKw || 0,
+      mappedRack: profile,
+      assignmentDate: new Date().toISOString(),
+      physicalLocation: profile.physicalLocation || {}
+    })) || [];
+
+    // Initialize services with proper parameters
+    const costCalculator = new DatacenterCostCalculator(mockFacility, mockDatacenterRacks);
+    const powerCalculator = new PowerEfficiencyCalculator(mockFacility, mockRacks);
+    const capacityService = new CapacityManagementService(mockFacility, mockRacks);
+
     // Calculate costs
-    const costBreakdown = costCalculator.calculateCostAllocation(
-      mockFacility.costLayers,
-      currentRacks,
-      mockFacility.constraints.totalRacks,
-      currentPowerKW,
-      mockFacility.constraints.totalPowerKW
-    );
+    const costBreakdown = costCalculator.calculateFacilityCosts();
 
     // Calculate power efficiency
-    const powerEfficiency = powerCalculator.calculateCascadedEfficiency(
-      mockFacility.powerInfrastructure
-    );
-
-    const pue = powerCalculator.calculatePUE(
-      currentPowerKW,
-      currentPowerKW * 0.3, // Mock cooling load (30% of IT load)
-      currentPowerKW * 0.1  // Mock other loads (10% of IT load)
-    );
+    const powerEfficiency = powerCalculator.calculateEfficiencyMetrics();
 
     // Calculate capacity utilization
-    const utilization = capacityService.calculateUtilization(
-      currentRacks,
-      mockFacility.constraints.totalRacks,
-      currentPowerKW,
-      mockFacility.constraints.totalPowerKW
-    );
+    const utilization = capacityService.calculateCapacityMetrics();
 
     return {
       costBreakdown,
       powerEfficiency,
-      pue,
+      pue: powerEfficiency.pue,
       utilization,
       currentUsage: {
         racks: currentRacks,

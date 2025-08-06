@@ -18,7 +18,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
   storageClustersMetrics
 }) => {
   const { requirements } = useDesignStore();
-  const { actualHardwareTotals } = useDesignCalculations();
+  const { actualHardwareTotals, totalCost } = useDesignCalculations();
   const activeDesign = useDesignStore(state => state.activeDesign);
 
   // Growth parameters
@@ -316,7 +316,7 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
       <ScenarioSummary
         cumulativeData={cumulativeData}
         scenarioMonths={scenarioMonths}
-        totalCapitalCost={actualHardwareTotals?.totalCost || 0}
+        totalCapitalCost={totalCost || 0}
         clusterAnalysis={clusterAnalysis}
         clusterParameters={clusterParameters}
         computePricing={computePricing}

@@ -82,17 +82,26 @@ export function RackMappingPanel() {
       if (!activeDesign?.id) return;
       
       try {
-        // Import racks from the current design if not already imported
-        const importedRacks = await RackFacilityIntegrationService.importRacksFromDesign(activeDesign.id);
+        // Get design with rack profiles
+        const { data: design } = await supabase
+          .from('designs')
+          .select('rackprofiles')
+          .eq('id', activeDesign.id)
+          .single();
         
-        // Get all design racks
-        const { data: racks } = await supabase
-          .from('rack_profiles')
-          .select('*')
-          .eq('design_id', activeDesign.id)
-          .order('name');
-        
-        setDesignRacks(racks || []);
+        if (design?.rackprofiles) {
+          const rackData = typeof design.rackprofiles === 'string' 
+            ? JSON.parse(design.rackprofiles) 
+            : design.rackprofiles;
+          
+          if (Array.isArray(rackData)) {
+            setDesignRacks(rackData);
+          } else {
+            setDesignRacks([]);
+          }
+        } else {
+          setDesignRacks([]);
+        }
       } catch (error) {
         console.error('Error loading design racks:', error);
       }
