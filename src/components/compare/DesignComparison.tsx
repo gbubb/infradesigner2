@@ -25,7 +25,7 @@ import { ComparePowerMetrics } from './sections/ComparePowerMetrics';
 import { CostBreakdownChart } from './charts/CostBreakdownChart';
 import { CostDistributionPieCharts } from './charts/CostDistributionPieCharts';
 import { TCOProjectionChart } from './charts/TCOProjectionChart';
-import { ResourceUtilizationRadar } from './charts/ResourceUtilizationRadar';
+import { ResourceUtilisationRadar } from './charts/ResourceUtilisationRadar';
 import { ComponentLevelComparison } from './tables/ComponentLevelComparison';
 
 // Helper function to calculate all relevant metrics from a design
@@ -44,10 +44,10 @@ function calculateDesignMetrics(design: InfrastructureDesign): DesignMetrics {
     maximumPower: 0,
     energyCostMonthly: 0,
     rackCostMonthly: 0,
-    amortizedCostMonthly: 0,
+    amortisedCostMonthly: 0,
     monthlyCost: 0,
-    networkUtilization: 0,
-    storageUtilization: 0,
+    networkUtilisation: 0,
+    storageUtilisation: 0,
     monthlyCostPerAverageVM: 0 // <-- new metric
   };
   
@@ -119,10 +119,10 @@ function calculateDesignMetrics(design: InfrastructureDesign): DesignMetrics {
   
   // Calculate amortized cost (simplified)
   const averageLifespan = 3; // years, simplified
-  metrics.amortizedCostMonthly = metrics.totalCost / (averageLifespan * 12);
+  metrics.amortisedCostMonthly = metrics.totalCost / (averageLifespan * 12);
   
   // Calculate total monthly cost
-  metrics.monthlyCost = metrics.energyCostMonthly + metrics.rackCostMonthly + metrics.amortizedCostMonthly;
+  metrics.monthlyCost = metrics.energyCostMonthly + metrics.rackCostMonthly + metrics.amortisedCostMonthly;
   
   // Calculate cost per VCPU (only counting compute servers)
   const computeServersCost = computeServers.reduce((sum, server) => {
@@ -319,7 +319,7 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">
-            Interactive comparison showing cost breakdowns, resource utilization, and component-level differences.
+            Interactive comparison showing cost breakdowns, resource utilisation, and component-level differences.
           </p>
         </CardContent>
       </Card>
@@ -392,7 +392,7 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
         </TabsContent>
 
         <TabsContent value="resources" className="space-y-6">
-          <ResourceUtilizationRadar
+          <ResourceUtilisationRadar
             designAName={designA.name}
             designBName={designB.name}
             designAMetrics={{

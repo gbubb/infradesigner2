@@ -30,34 +30,34 @@ const categoryMapping: Record<string, CostCategory> = {
   staffing: 'operations'
 };
 
-// Predefined cost categories with typical amortization periods
+// Predefined cost categories with typical amortisation periods
 const costCategories = {
   realEstate: {
     name: 'Real Estate',
     icon: Building,
     type: 'capital' as const,
-    typicalAmortization: { min: 30, max: 50, default: 40 },
+    typicalAmortisation: { min: 30, max: 50, default: 40 },
     description: 'Land, building construction, site development'
   },
   facilityInfrastructure: {
     name: 'Facility Infrastructure',
     icon: Home,
     type: 'capital' as const,
-    typicalAmortization: { min: 15, max: 25, default: 20 },
+    typicalAmortisation: { min: 15, max: 25, default: 20 },
     description: 'Power distribution, cooling systems, fire suppression'
   },
   mechanicalElectrical: {
     name: 'Mechanical & Electrical',
     icon: Wrench,
     type: 'capital' as const,
-    typicalAmortization: { min: 10, max: 15, default: 12 },
+    typicalAmortisation: { min: 10, max: 15, default: 12 },
     description: 'UPS systems, generators, CRAC units'
   },
   itInfrastructure: {
     name: 'IT Infrastructure',
     icon: Server,
     type: 'capital' as const,
-    typicalAmortization: { min: 3, max: 5, default: 4 },
+    typicalAmortisation: { min: 3, max: 5, default: 4 },
     description: 'Racks, structured cabling, network infrastructure'
   },
   power: {
@@ -92,7 +92,7 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
     type: 'capital',
     amount: 0,
     currency: 'USD',
-    amortizationMonths: 480, // 40 years default
+    amortisationMonths: 480, // 40 years default
     allocationMethod: 'hybrid'
   });
 
@@ -106,7 +106,7 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
   // Calculate monthly costs
   const monthlyCosts = useMemo(() => {
     const capitalMonthly = groupedLayers.capital.reduce((sum, layer) => {
-      return sum + (layer.amortizationMonths ? layer.amount / layer.amortizationMonths : 0);
+      return sum + (layer.amortisationMonths ? layer.amount / layer.amortisationMonths : 0);
     }, 0);
 
     const operationalMonthly = groupedLayers.operational.reduce((sum, layer) => {
@@ -132,7 +132,7 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
       type: newLayer.type || 'capital',
       amount: newLayer.amount || 0,
       currency: newLayer.currency || 'USD',
-      amortizationMonths: newLayer.type === 'capital' ? newLayer.amortizationMonths : undefined,
+      amortisationMonths: newLayer.type === 'capital' ? newLayer.amortisationMonths : undefined,
       frequency: newLayer.type === 'operational' ? newLayer.frequency : undefined,
       allocationMethod: newLayer.allocationMethod || 'hybrid'
     };
@@ -148,7 +148,7 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
       type: 'capital',
       amount: 0,
       currency: 'USD',
-      amortizationMonths: 480,
+      amortisationMonths: 480,
       allocationMethod: 'hybrid'
     });
     setIsAddingLayer(false);
@@ -182,8 +182,8 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
       type: category.type,
       amount: 0,
       currency: 'USD',
-      amortizationMonths: category.type === 'capital' 
-        ? (category.typicalAmortization?.default || 12) * 12 
+      amortisationMonths: category.type === 'capital' 
+        ? (category.typicalAmortisation?.default || 12) * 12
         : undefined,
       frequency: category.type === 'operational' ? category.frequency : undefined,
       allocationMethod: 'hybrid'
@@ -271,12 +271,12 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
                                 <h5 className="font-medium">{layer.name}</h5>
                                 <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
                                   <span>Total: ${layer.amount.toLocaleString()}</span>
-                                  {layer.amortizationMonths && (
+                                  {layer.amortisationMonths && (
                                     <>
                                       <span>•</span>
-                                      <span>{(layer.amortizationMonths / 12).toFixed(1)} years</span>
+                                      <span>{(layer.amortisationMonths / 12).toFixed(1)} years</span>
                                       <span>•</span>
-                                      <span>${(layer.amount / layer.amortizationMonths).toFixed(0)}/month</span>
+                                      <span>${(layer.amount / layer.amortisationMonths).toFixed(0)}/month</span>
                                     </>
                                   )}
                                 </div>
@@ -370,7 +370,7 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
               <Alert className="mb-4">
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  Select a predefined category to quickly add typical datacenter costs with recommended amortization periods.
+                  Select a predefined category to quickly add typical datacenter costs with recommended amortisation periods.
                 </AlertDescription>
               </Alert>
               
@@ -391,9 +391,9 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
                             <p className="text-sm text-muted-foreground mt-1">
                               {category.description}
                             </p>
-                            {category.type === 'capital' && category.typicalAmortization && (
+                            {category.type === 'capital' && category.typicalAmortisation && (
                               <Badge variant="outline" className="mt-2 text-xs">
-                                {category.typicalAmortization.min}-{category.typicalAmortization.max} years
+                                {category.typicalAmortisation.min}-{category.typicalAmortisation.max} years
                               </Badge>
                             )}
                             {category.type === 'operational' && (
@@ -492,7 +492,7 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="capital" id="capital" />
-                  <Label htmlFor="capital">Capital (one-time, amortized)</Label>
+                  <Label htmlFor="capital">Capital (one-time, amortised)</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="operational" id="operational" />
@@ -546,18 +546,18 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
             {/* Capital-specific fields */}
             {(editingLayer?.type || newLayer.type) === 'capital' && (
               <div>
-                <Label htmlFor="amortization">Amortization Period (years)</Label>
+                <Label htmlFor="amortization">Amortisation Period (years)</Label>
                 <Input
                   id="amortization"
                   type="number"
-                  value={((editingLayer?.amortizationMonths || newLayer.amortizationMonths || 12) / 12).toFixed(1)}
+                  value={((editingLayer?.amortisationMonths || newLayer.amortisationMonths || 12) / 12).toFixed(1)}
                   onChange={(e) => {
                     const years = parseFloat(e.target.value) || 1;
                     const months = Math.round(years * 12);
                     if (editingLayer) {
-                      setEditingLayer({ ...editingLayer, amortizationMonths: months });
+                      setEditingLayer({ ...editingLayer, amortisationMonths: months });
                     } else {
-                      setNewLayer({ ...newLayer, amortizationMonths: months });
+                      setNewLayer({ ...newLayer, amortisationMonths: months });
                     }
                   }}
                   step="0.5"

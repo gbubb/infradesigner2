@@ -63,7 +63,7 @@ export interface CostLayer {
   type: 'capital' | 'operational';
   amount: number;
   currency: string;
-  amortizationMonths?: number; // For capital costs
+  amortisationMonths?: number; // For capital costs
   frequency?: 'monthly' | 'quarterly' | 'annual' | 'one-time'; // For operational costs
   allocationMethod: AllocationMethod;
   startDate?: string;
@@ -116,7 +116,7 @@ export interface FacilityCostBreakdown {
   facilityId: string;
   totalCapitalCost: number;
   totalOperationalCost: number;
-  monthlyAmortizedCapital: number;
+  monthlyAmortisedCapital: number;
   monthlyOperational: number;
   totalMonthlyCost: number;
   costPerRack: number;

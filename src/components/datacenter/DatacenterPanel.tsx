@@ -105,8 +105,8 @@ export const DatacenterPanel: React.FC = () => {
         return sum + layer.amount;
       } else if (layer.type === 'operational' && layer.frequency === 'annual') {
         return sum + (layer.amount / 12);
-      } else if (layer.type === 'capital' && layer.amortizationMonths) {
-        return sum + (layer.amount / layer.amortizationMonths);
+      } else if (layer.type === 'capital' && layer.amortisationMonths) {
+        return sum + (layer.amount / layer.amortisationMonths);
       }
       return sum;
     }, 0);

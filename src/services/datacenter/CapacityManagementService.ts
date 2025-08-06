@@ -367,7 +367,7 @@ export class CapacityManagementService {
         currentUtilization: metrics.spaceCapacity.utilization,
         thresholdPercent: 85,
         availableCapacity: metrics.spaceCapacity.availableRacks,
-        recommendedAction: 'Plan for facility expansion or optimize rack density',
+        recommendedAction: 'Plan for facility expansion or optimise rack density',
         impactedHierarchy: ['facility']
       });
     }
@@ -446,9 +446,9 @@ export class CapacityManagementService {
     const currentMetrics = this.calculateCapacityMetrics();
     const scenarios: ExpansionScenario[] = [];
 
-    // Scenario 1: Optimize existing infrastructure
+    // Scenario 1: Optimise existing infrastructure
     scenarios.push({
-      name: 'Optimization Only',
+      name: 'Optimisation Only',
       description: 'Improve efficiency without infrastructure changes',
       capitalCost: 0,
       timelineMonths: 3,

@@ -3,20 +3,20 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResourceMetrics, ChartTooltipPayload, TooltipPayloadEntry } from '@/types/compare';
 
-interface ResourceUtilizationRadarProps {
+interface ResourceUtilisationRadarProps {
   designAName: string;
   designBName: string;
   designAMetrics: ResourceMetrics;
   designBMetrics: ResourceMetrics;
 }
 
-export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> = ({
+export const ResourceUtilisationRadar: React.FC<ResourceUtilisationRadarProps> = ({
   designAName,
   designBName,
   designAMetrics,
   designBMetrics,
 }) => {
-  // Normalize data to 0-100 scale for better visualization
+  // Normalise data to 0-100 scale for better visualisation
   const normalizeData = () => {
     const maxValues = {
       vCPUs: Math.max(designAMetrics.vCPUs || 0, designBMetrics.vCPUs || 0),
@@ -123,7 +123,7 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Resource Utilization Comparison</CardTitle>
+        <CardTitle>Resource Utilisation Comparison</CardTitle>
         <p className="text-sm text-muted-foreground">Comparing vCPUs, Memory, Usable Storage, Power, and Rack Space requirements</p>
       </CardHeader>
       <CardContent>

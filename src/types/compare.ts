@@ -27,11 +27,11 @@ export interface DesignMetrics {
   // Operational costs
   energyCostMonthly: number;
   rackCostMonthly: number;
-  amortizedCostMonthly: number;
+  amortisedCostMonthly: number;
   
-  // Utilization metrics
-  networkUtilization: number;
-  storageUtilization: number;
+  // Utilisation metrics
+  networkUtilisation: number;
+  storageUtilisation: number;
 }
 
 /**
@@ -69,7 +69,7 @@ export interface AdditionalDesignMetrics {
 }
 
 /**
- * Resource metrics for radar chart visualization
+ * Resource metrics for radar chart visualisation
  */
 export interface ResourceMetrics {
   vCPUs: number;
@@ -80,7 +80,7 @@ export interface ResourceMetrics {
 }
 
 /**
- * Efficiency metrics calculated from resource utilization
+ * Efficiency metrics calculated from resource utilisation
  */
 export interface EfficiencyMetrics {
   cpuPerRU: number;

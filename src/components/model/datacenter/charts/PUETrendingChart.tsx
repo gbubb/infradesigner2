@@ -158,7 +158,7 @@ export const PUETrendingChart: React.FC<PUETrendingChartProps> = ({
             <li>• Implement hot/cold aisle containment</li>
           )}
           {currentPUE > 1.3 && (
-            <li>• Optimize server utilization and consolidate workloads</li>
+            <li>• Optimise server utilisation and consolidate workloads</li>
           )}
           <li>• Monitor and adjust based on seasonal variations</li>
         </ul>
