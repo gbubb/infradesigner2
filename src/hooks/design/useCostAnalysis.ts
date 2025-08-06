@@ -3,6 +3,7 @@ import { useDesignStore } from '@/store/designStore';
 import { useHardwareTotals } from './useHardwareTotals';
 import { usePowerCalculations } from './usePowerCalculations';
 import { useRackLayout } from './useRackLayout';
+import { useStorageClustersWrapper } from './useStorageClustersWrapper';
 import { ComponentType } from '@/types/infrastructure';
 import { DatacenterCostCalculator } from '@/services/datacenter/DatacenterCostCalculator';
 
@@ -12,6 +13,7 @@ export const useCostAnalysis = () => {
   const { actualHardwareTotals } = useHardwareTotals();
   const { energyCosts } = usePowerCalculations();
   const { racks } = useRackLayout();
+  const { storageClustersMetrics } = useStorageClustersWrapper();
   
   // Get facility data
   const getFacilityById = useDesignStore(state => state.getFacilityById);
@@ -139,16 +141,48 @@ export const useCostAnalysis = () => {
     let storageTotal = 0;
     let networkTotal = 0;
 
-    activeDesign.components.forEach(component => {
-      const componentCost = component.cost;
-      if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
-        storageTotal += componentCost;
-      } else if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
-        computeTotal += componentCost;
-      } else if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
-        networkTotal += componentCost;
+    // For hyper-converged scenarios, use the storage cluster metrics that include 
+    // proportional server costs attributed to storage
+    const totalStorageCost = storageClustersMetrics.reduce((total, cluster) => {
+      if (cluster.isHyperConverged && cluster.totalStorageCost) {
+        return total + cluster.totalStorageCost;
+      } else {
+        return total + cluster.totalNodeCost;
       }
-    });
+    }, 0);
+
+    // If we have storage clusters with calculated costs, use those
+    if (totalStorageCost > 0) {
+      storageTotal = totalStorageCost;
+      
+      // For compute total, exclude components that are part of storage clusters
+      activeDesign.components.forEach(component => {
+        const componentCost = component.cost;
+        const isStorageComponent = component.role === 'storageNode' || 
+                                  component.role === 'hyperConvergedNode' || 
+                                  component.type === ComponentType.Disk;
+        
+        if (!isStorageComponent) {
+          if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
+            computeTotal += componentCost;
+          } else if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
+            networkTotal += componentCost;
+          }
+        }
+      });
+    } else {
+      // Fallback to component-level calculation
+      activeDesign.components.forEach(component => {
+        const componentCost = component.cost;
+        if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
+          storageTotal += componentCost;
+        } else if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
+          computeTotal += componentCost;
+        } else if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
+          networkTotal += componentCost;
+        }
+      });
+    }
 
     const monthsInYear = 12;
     const computeAmortized = computeTotal / (computeLifespan * monthsInYear);
@@ -156,7 +190,7 @@ export const useCostAnalysis = () => {
     const networkAmortized = networkTotal / (networkLifespan * monthsInYear);
     const totalAmortized = computeAmortized + storageAmortized + networkAmortized;
     return { compute: computeAmortized, storage: storageAmortized, network: networkAmortized, total: totalAmortized };
-  }, [activeDesign?.components, activeDesign?.requirements]);
+  }, [activeDesign?.components, activeDesign?.requirements, storageClustersMetrics]);
   
   // Compute operational costs (including licensing)
   const operationalCosts = useMemo(() => {
