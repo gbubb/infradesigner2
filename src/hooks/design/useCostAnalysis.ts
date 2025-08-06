@@ -258,6 +258,7 @@ export const useCostAnalysis = () => {
     amortizedCostsByType,
     licensingCosts,
     facilityCosts,
-    facilityType
+    facilityType,
+    amortisationPeriodMonths
   };
 };

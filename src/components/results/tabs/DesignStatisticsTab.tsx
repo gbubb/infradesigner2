@@ -30,12 +30,47 @@ export const DesignStatisticsTab: React.FC = () => {
   const averageVMMemoryGB = activeDesign?.requirements?.computeRequirements?.averageVMMemoryGB || 8;
 
   // Use the cost analysis hook for proper licensing calculations
-  const { capitalCost, operationalCosts, licensingCosts, totalCostOfOwnership, facilityCosts, facilityType } = useCostAnalysis();
+  const { capitalCost, operationalCosts, licensingCosts, totalCostOfOwnership, facilityCosts, facilityType, amortisationPeriodMonths } = useCostAnalysis();
 
   // Calculate power per rack
   const powerPerRack = resourceMetrics?.totalRackQuantity 
     ? (totalPower / resourceMetrics.totalRackQuantity)
     : 0;
+
+  // Calculate storage cluster costs per TiB per month
+  const storageClusterCosts = storageClustersMetrics.map(cluster => {
+    const storageCostBasis = cluster.isHyperConverged && cluster.totalStorageCost 
+      ? cluster.totalStorageCost 
+      : cluster.totalNodeCost;
+    
+    console.log('[DesignStatisticsTab] Storage cluster calculation:', {
+      clusterName: cluster.name,
+      isHyperConverged: cluster.isHyperConverged,
+      totalStorageCost: cluster.totalStorageCost,
+      totalNodeCost: cluster.totalNodeCost,
+      storageCostBasis,
+      amortisationPeriodMonths,
+      usableCapacityTiB: cluster.usableCapacityTiB
+    });
+    
+    const monthlyStorageCost = storageCostBasis / (amortisationPeriodMonths || 36);
+    const monthlyStorageCostPerTiB = cluster.usableCapacityTiB > 0 
+      ? monthlyStorageCost / cluster.usableCapacityTiB 
+      : 0;
+
+    return {
+      id: cluster.id,
+      name: cluster.name,
+      usableCapacityTiB: cluster.usableCapacityTiB,
+      monthlyStorageCostPerTiB
+    };
+  });
+
+  console.log('[DesignStatisticsTab] Final storage cluster costs:', {
+    storageClustersLength: storageClustersMetrics.length,
+    storageClusterCosts,
+    amortisationPeriodMonths
+  });
 
   return (
     <div className="space-y-8">
@@ -62,6 +97,7 @@ export const DesignStatisticsTab: React.FC = () => {
           monthlyCost={operationalCosts.totalMonthly}
           quantityOfAverageVMs={quantityOfAverageVMs}
           storageAmortizedCost={amortizedCostsByType?.storage || 0}
+          storageClusterCosts={storageClusterCosts}
         />
       </div>
       
