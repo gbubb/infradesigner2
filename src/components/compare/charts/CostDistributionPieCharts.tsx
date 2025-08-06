@@ -1,7 +1,7 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartTooltipPayload, ComponentCostsByType } from '@/types/compare';
+import { ChartTooltipPayload, ComponentCostsByType, TooltipPayloadEntry } from '@/types/compare';
 
 interface CostData {
   name: string;
@@ -47,8 +47,10 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
 
   const CustomTooltip = ({ active, payload }: ChartTooltipPayload) => {
     if (active && payload && payload.length) {
-      const data = payload[0];
-      const percentage = data.payload.total > 0 ? ((data.value / data.payload.total) * 100).toFixed(1) : '0';
+      const typedPayload = payload as TooltipPayloadEntry[];
+      const data = typedPayload[0];
+      const total = (data.payload?.total as number) || 0;
+      const percentage = total > 0 ? ((data.value / total) * 100).toFixed(1) : '0';
       return (
         <div className="bg-background border rounded-lg p-3 shadow-lg">
           <p className="font-semibold">{data.name}</p>

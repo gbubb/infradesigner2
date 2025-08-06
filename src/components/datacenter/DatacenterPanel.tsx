@@ -166,8 +166,7 @@ export const DatacenterPanel: React.FC = () => {
           constraints: {
             maxPowerKW: 0,
             maxCoolingKW: 0,
-            maxRacks: 0,
-            maxFloorLoadingKgPerM2: 0
+            maxRacks: 0
           }
         });
         selectFacility(newFacility.id);

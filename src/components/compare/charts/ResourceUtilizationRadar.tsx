@@ -1,7 +1,7 @@
 import React from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ResourceMetrics, ChartTooltipPayload } from '@/types/compare';
+import { ResourceMetrics, ChartTooltipPayload, TooltipPayloadEntry } from '@/types/compare';
 
 interface ResourceUtilizationRadarProps {
   designAName: string;
@@ -71,7 +71,8 @@ export const ResourceUtilizationRadar: React.FC<ResourceUtilizationRadarProps> =
 
   const CustomTooltip = ({ active, payload }: ChartTooltipPayload) => {
     if (active && payload && payload.length) {
-      const metricName = payload[0].payload.metric;
+      const typedPayload = payload as TooltipPayloadEntry[];
+      const metricName = typedPayload[0].payload?.metric as string;
       const actualValues = {
         vCPUs: { A: designAMetrics.vCPUs, B: designBMetrics.vCPUs, unit: '' },
         Memory: { A: designAMetrics.memoryTB, B: designBMetrics.memoryTB, unit: ' TB' },

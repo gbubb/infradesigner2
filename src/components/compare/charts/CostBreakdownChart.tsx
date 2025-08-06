@@ -68,17 +68,18 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({
 
   const CustomTooltip = ({ active, payload }: ChartTooltipPayload) => {
     if (active && payload && payload.length) {
+      const typedPayload = payload as TooltipPayloadEntry[];
       return (
         <div className="bg-background border rounded-lg p-3 shadow-lg">
-          <p className="font-semibold mb-2">{payload[0].payload.category}</p>
-          {payload.map((entry: TooltipPayloadEntry) => (
+          <p className="font-semibold mb-2">{typedPayload[0].payload?.category}</p>
+          {typedPayload.map((entry) => (
             <p key={entry.dataKey} className="text-sm" style={{ color: entry.color }}>
               {entry.dataKey === 'designA' ? designAName : designBName}: ${entry.value.toLocaleString()}
             </p>
           ))}
           <p className="text-sm text-muted-foreground mt-2">
-            Difference: ${Math.abs(payload[0].value - payload[1].value).toLocaleString()} 
-            {payload[0].value > 0 ? `(${((Math.abs(payload[0].value - payload[1].value) / payload[0].value) * 100).toFixed(1)}%)` : ''}
+            Difference: ${Math.abs(typedPayload[0].value - typedPayload[1].value).toLocaleString()} 
+            {typedPayload[0].value > 0 ? `(${((Math.abs(typedPayload[0].value - typedPayload[1].value) / typedPayload[0].value) * 100).toFixed(1)}%)` : ''}
           </p>
         </div>
       );

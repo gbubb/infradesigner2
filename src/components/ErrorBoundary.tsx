@@ -43,7 +43,9 @@ export class ErrorBoundary extends Component<Props, State> {
       error,
       {
         component: componentName,
-        componentStack: errorInfo.componentStack,
+        data: {
+          componentStack: errorInfo.componentStack,
+        },
       },
       false // Don't show toast, we'll show custom UI
     );
