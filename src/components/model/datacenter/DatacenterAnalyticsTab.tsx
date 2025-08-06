@@ -26,23 +26,31 @@ export const DatacenterAnalyticsTab: React.FC = () => {
       id: selectedFacilityId,
       name: 'Primary Datacenter',
       location: 'Northern Virginia',
+      hierarchyConfig: [
+        { id: 'building-1', name: 'Building 1', level: 0, capacity: { racks: 500, powerKW: 7400 } },
+        { id: 'floor-1', name: 'Floor 1', parentId: 'building-1', level: 1, capacity: { racks: 250, powerKW: 3700 } },
+        { id: 'floor-2', name: 'Floor 2', parentId: 'building-1', level: 1, capacity: { racks: 250, powerKW: 3700 } },
+        { id: 'hall-1', name: 'Hall A', parentId: 'floor-1', level: 2, capacity: { racks: 125, powerKW: 1850 } },
+        { id: 'hall-2', name: 'Hall B', parentId: 'floor-1', level: 2, capacity: { racks: 125, powerKW: 1850 } }
+      ],
       powerInfrastructure: [
-        { id: 'grid', name: 'Grid Input', capacityKW: 10000, efficiency: 1.0 },
-        { id: 'ups', name: 'UPS System', capacityKW: 8000, efficiency: 0.95, parentLayerId: 'grid' },
-        { id: 'pdu', name: 'PDU', capacityKW: 7600, efficiency: 0.98, parentLayerId: 'ups' },
-        { id: 'rack', name: 'Rack PDU', capacityKW: 7400, efficiency: 0.99, parentLayerId: 'pdu' }
+        { id: 'grid', name: 'Grid Input', type: 'grid' as const, capacityKW: 10000, efficiency: 1.0 },
+        { id: 'ups', name: 'UPS System', type: 'ups' as const, capacityKW: 8000, efficiency: 0.95, parentLayerId: 'grid' },
+        { id: 'pdu', name: 'PDU', type: 'pdu' as const, capacityKW: 7600, efficiency: 0.98, parentLayerId: 'ups' },
+        { id: 'rack', name: 'Rack PDU', type: 'rack' as const, capacityKW: 7400, efficiency: 0.99, parentLayerId: 'pdu' }
       ],
       costLayers: [
-        { id: 'real-estate', name: 'Real Estate', type: 'capital' as const, amount: 50000000, currency: 'USD', amortizationMonths: 360, allocationMethod: 'per-rack' as const },
-        { id: 'building', name: 'Building Infrastructure', type: 'capital' as const, amount: 30000000, currency: 'USD', amortizationMonths: 240, allocationMethod: 'per-rack' as const },
-        { id: 'power-infra', name: 'Power Infrastructure', type: 'capital' as const, amount: 20000000, currency: 'USD', amortizationMonths: 180, allocationMethod: 'per-kw' as const },
-        { id: 'cooling', name: 'Cooling Systems', type: 'capital' as const, amount: 15000000, currency: 'USD', amortizationMonths: 120, allocationMethod: 'per-kw' as const },
-        { id: 'operations', name: 'Operations', type: 'operational' as const, amount: 500000, currency: 'USD', frequency: 'monthly' as const, allocationMethod: 'hybrid' as const }
+        { id: 'real-estate', name: 'Real Estate', category: 'real-estate' as const, type: 'capital' as const, amount: 50000000, currency: 'USD', amortisationMonths: 360, allocationMethod: 'per-rack' as const },
+        { id: 'building', name: 'Building Infrastructure', category: 'building-facility' as const, type: 'capital' as const, amount: 30000000, currency: 'USD', amortisationMonths: 240, allocationMethod: 'per-rack' as const },
+        { id: 'power-infra', name: 'Power Infrastructure', category: 'power-infrastructure' as const, type: 'capital' as const, amount: 20000000, currency: 'USD', amortisationMonths: 180, allocationMethod: 'per-kw' as const },
+        { id: 'cooling', name: 'Cooling Systems', category: 'cooling-infrastructure' as const, type: 'capital' as const, amount: 15000000, currency: 'USD', amortisationMonths: 120, allocationMethod: 'per-kw' as const },
+        { id: 'operations', name: 'Operations', category: 'operations' as const, type: 'operational' as const, amount: 500000, currency: 'USD', frequency: 'monthly' as const, allocationMethod: 'hybrid' as const }
       ],
       constraints: {
-        totalRacks: 500,
-        totalPowerKW: 7400,
-        totalSpaceSqFt: 50000
+        maxRacks: 500,
+        maxPowerKW: 7400,
+        maxCoolingKW: 7400,
+        availabilityTier: 'III' as const
       }
     };
   }, [selectedFacilityId]);
@@ -57,7 +65,7 @@ export const DatacenterAnalyticsTab: React.FC = () => {
       const power = ('power' in component ? component.power : 0) || 
                     ('powerrequired' in component ? component.powerrequired : 0) || 0;
       const quantity = component.quantity || 1;
-      return sum + (power * quantity) / 1000; // Convert W to kW
+      return sum + (Number(power) * Number(quantity)) / 1000; // Convert W to kW
     }, 0) || 0;
 
     // Create mock racks for the services (since we don't have the Rack type)
@@ -95,7 +103,20 @@ export const DatacenterAnalyticsTab: React.FC = () => {
     const capacityService = new CapacityManagementService(mockFacility, mockRacks);
 
     // Calculate costs
-    const costBreakdown = costCalculator.calculateFacilityCosts();
+    const facilityCostBreakdown = costCalculator.calculateFacilityCosts();
+    
+    // Transform cost breakdown to CostAllocation array
+    const costAllocationArray = mockFacility.costLayers.map(layer => ({
+      layerId: layer.id,
+      layerName: layer.name,
+      type: layer.type,
+      monthlyAmount: layer.type === 'capital' && layer.amortisationMonths
+        ? layer.amount / layer.amortisationMonths
+        : layer.amount,
+      allocationMethod: layer.allocationMethod,
+      allocatedByRack: 0,
+      allocatedByPower: 0
+    }));
 
     // Calculate power efficiency
     const powerEfficiency = powerCalculator.calculateEfficiencyMetrics();
@@ -104,7 +125,8 @@ export const DatacenterAnalyticsTab: React.FC = () => {
     const utilization = capacityService.calculateCapacityMetrics();
 
     return {
-      costBreakdown,
+      costBreakdown: costAllocationArray,
+      facilityCostBreakdown,
       powerEfficiency,
       pue: powerEfficiency.pue,
       utilization,
@@ -112,7 +134,10 @@ export const DatacenterAnalyticsTab: React.FC = () => {
         racks: currentRacks,
         powerKW: currentPowerKW
       },
-      capacity: mockFacility.constraints
+      capacity: {
+        totalRacks: mockFacility.constraints.maxRacks,
+        totalPowerKW: mockFacility.constraints.maxPowerKW
+      }
     };
   }, [mockFacility, activeDesign]);
 
@@ -210,9 +235,8 @@ export const DatacenterAnalyticsTab: React.FC = () => {
           </CardHeader>
           <CardContent>
             <PUETrendingChart 
-              currentPUE={analytics.pue.total}
+              currentPUE={analytics.pue}
               targetPUE={1.5}
-              breakdown={analytics.pue.breakdown}
             />
           </CardContent>
         </Card>

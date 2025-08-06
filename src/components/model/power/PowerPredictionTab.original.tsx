@@ -131,7 +131,7 @@ export const PowerPredictionTab: React.FC = () => {
       networkPorts: networkPortsArray,
       
       // PSU
-      psuRating: customInputs.psuRating || (selectedServer.power ? selectedServer.power * 1.5 : 750),
+      psuRating: customInputs.psuRating || (selectedServer.powerRequired ? selectedServer.powerRequired * 1.5 : 750),
       psuEfficiencyRating: customInputs.psuEfficiencyRating || '80PlusGold',
       redundantPsu: customInputs.redundantPsu !== undefined ? customInputs.redundantPsu : true,
       
@@ -214,7 +214,7 @@ export const PowerPredictionTab: React.FC = () => {
                 <SelectContent>
                   {servers.map(server => (
                     <SelectItem key={server.id} value={server.id}>
-                      {server.manufacturer} {server.productLine} {server.model}
+                      {server.manufacturer} {server.model}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -225,7 +225,7 @@ export const PowerPredictionTab: React.FC = () => {
               <Alert>
                 <AlertDescription>
                   <div className="text-sm space-y-1">
-                    <div><strong>Selected:</strong> {selectedServer.manufacturer} {selectedServer.productLine} {selectedServer.model}</div>
+                    <div><strong>Selected:</strong> {selectedServer.manufacturer} {selectedServer.model}</div>
                     <div><strong>CPU:</strong> {selectedServer.cpuSockets}x {selectedServer.cpuModel} ({selectedServer.cpuCoresPerSocket || selectedServer.coreCount} cores each)</div>
                     <div><strong>Memory:</strong> {selectedServer.memoryCapacity}GB</div>
                     <div><strong>Form Factor:</strong> {selectedServer.ruSize}U</div>
@@ -517,7 +517,7 @@ export const PowerPredictionTab: React.FC = () => {
                   <Input
                     id="psu-rating"
                     type="number"
-                    value={customInputs.psuRating || (selectedServer.power ? selectedServer.power * 1.5 : 750)}
+                    value={customInputs.psuRating || (selectedServer.powerRequired ? selectedServer.powerRequired * 1.5 : 750)}
                     onChange={(e) => setCustomInputs({...customInputs, psuRating: parseInt(e.target.value)})}
                   />
                 </div>
@@ -663,34 +663,7 @@ export const PowerPredictionTab: React.FC = () => {
             selectedState={selectedPowerState}
           />
           
-          {/* Warnings and Missing Metrics */}
-          {calculationResult.warnings.length > 0 && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="font-medium mb-2">Warnings:</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {calculationResult.warnings.map((warning, i) => (
-                    <li key={i} className="text-sm">{warning}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {calculationResult.missingMetrics.length > 0 && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="font-medium mb-2">Missing metrics that would improve accuracy:</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {calculationResult.missingMetrics.map((metric, i) => (
-                    <li key={i} className="text-sm">{metric}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          )}
+          {/* Power calculation results displayed above */}
           
           {/* Real vs Predicted Comparison */}
           {calibrationProfile && (
@@ -731,7 +704,7 @@ export const PowerPredictionTab: React.FC = () => {
           open={showValidation}
           onOpenChange={setShowValidation}
           calculationResult={calculationResult}
-          serverModel={`${selectedServer.manufacturer} ${selectedServer.productLine} ${selectedServer.model}`}
+          serverModel={`${selectedServer.manufacturer} ${selectedServer.model}`}
           onValidationSave={(observedValues) => {
             if (calibrationProfile) {
               // Add validation data to the calibration profile
@@ -740,7 +713,7 @@ export const PowerPredictionTab: React.FC = () => {
                 validationData: [
                   ...(calibrationProfile.validationData || []),
                   {
-                    serverModel: `${selectedServer.manufacturer} ${selectedServer.productLine} ${selectedServer.model}`,
+                    serverModel: `${selectedServer.manufacturer} ${selectedServer.model}`,
                     observedPower: observedValues,
                     predictedPower: {
                       idle: calculationResult.idlePowerW,

@@ -55,7 +55,7 @@ export const MemoryConfiguration: React.FC<MemoryConfigurationProps> = ({
           <Label htmlFor="mem-type" className="flex items-center gap-1">
             Memory Type
             {isMissingMemType && (
-              <AlertCircle className="h-3 w-3 text-amber-500" title="Value not defined in component" />
+              <AlertCircle className="h-3 w-3 text-amber-500" />
             )}
           </Label>
           <Select 
@@ -79,7 +79,7 @@ export const MemoryConfiguration: React.FC<MemoryConfigurationProps> = ({
           <Label htmlFor="mem-speed" className="flex items-center gap-1">
             Memory Speed (MHz)
             {isMissingMemSpeed && (
-              <AlertCircle className="h-3 w-3 text-amber-500" title="Value not defined in component" />
+              <AlertCircle className="h-3 w-3 text-amber-500" />
             )}
           </Label>
           <Input
@@ -97,7 +97,7 @@ export const MemoryConfiguration: React.FC<MemoryConfigurationProps> = ({
           <Label htmlFor="dimm-count" className="flex items-center gap-1">
             Number of DIMMs
             {isMissingDimmCount && (
-              <AlertCircle className="h-3 w-3 text-amber-500" title="Value not defined in component" />
+              <AlertCircle className="h-3 w-3 text-amber-500" />
             )}
           </Label>
           <Input
@@ -118,7 +118,7 @@ export const MemoryConfiguration: React.FC<MemoryConfigurationProps> = ({
           <Label htmlFor="dimm-cap" className="flex items-center gap-1">
             DIMM Capacity (GB)
             {isMissingDimmSize && (
-              <AlertCircle className="h-3 w-3 text-amber-500" title="Value not defined in component" />
+              <AlertCircle className="h-3 w-3 text-amber-500" />
             )}
           </Label>
           <Input

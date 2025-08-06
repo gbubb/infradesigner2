@@ -77,13 +77,18 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
   // Custom tooltip for pie charts
   const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload;
+      const data = payload[0].payload as {
+        type: string;
+        cost?: number;
+        power?: number;
+        rackUnits?: number;
+      };
       return (
         <div className="bg-white p-2 border shadow-md rounded-md">
           <p className="font-medium">{data.type}</p>
           {data.cost && <p className="text-sm">${data.cost.toLocaleString()}</p>}
           {data.power && <p className="text-sm">{data.power.toLocaleString()} W</p>}
-          {data.rackUnits > 0 && <p className="text-sm">{data.rackUnits} RU</p>}
+          {data.rackUnits && data.rackUnits > 0 && <p className="text-sm">{data.rackUnits} RU</p>}
           <p className="text-xs text-gray-500">
             {payload[0].percent ? (payload[0].percent * 100).toFixed(1) : '0'}% of total
           </p>

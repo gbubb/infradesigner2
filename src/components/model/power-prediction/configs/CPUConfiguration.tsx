@@ -43,7 +43,7 @@ export const CPUConfiguration: React.FC<CPUConfigurationProps> = ({ customInputs
           <Label htmlFor="base-freq" className="flex items-center gap-1">
             Base Frequency (GHz)
             {isMissingBaseFreq && (
-              <AlertCircle className="h-3 w-3 text-amber-500" title="Value not defined in component" />
+              <AlertCircle className="h-3 w-3 text-amber-500" />
             )}
           </Label>
           <Input
@@ -62,7 +62,7 @@ export const CPUConfiguration: React.FC<CPUConfigurationProps> = ({ customInputs
           <Label htmlFor="tdp" className="flex items-center gap-1">
             TDP per CPU (W)
             {isMissingTdp && (
-              <AlertCircle className="h-3 w-3 text-amber-500" title="Value not defined in component" />
+              <AlertCircle className="h-3 w-3 text-amber-500" />
             )}
           </Label>
           <Input
@@ -96,7 +96,7 @@ export const CPUConfiguration: React.FC<CPUConfigurationProps> = ({ customInputs
           <Label htmlFor="turbo" className="flex items-center gap-1">
             Turbo Boost Enabled
             {isMissingTurboInfo && (
-              <AlertCircle className="h-3 w-3 text-amber-500" title="Turbo frequency not defined in component" />
+              <AlertCircle className="h-3 w-3 text-amber-500" />
             )}
           </Label>
         </div>
