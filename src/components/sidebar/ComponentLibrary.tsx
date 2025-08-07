@@ -184,18 +184,6 @@ export const ComponentLibrary: React.FC = () => {
     });
   })();
   
-  // Debug logging
-  useEffect(() => {
-    console.log('ComponentLibrary - state check:', {
-      componentTemplatesCount: componentTemplates.length,
-      filteredCount: filteredComponents.length,
-      searchTerm: searchTerm || '(empty)',
-      selectedCategory,
-      isShowingAll: selectedCategory === 'all' && !searchTerm,
-      firstComponent: componentTemplates[0],
-      firstFiltered: filteredComponents[0]
-    });
-  }, [componentTemplates.length, filteredComponents.length, searchTerm, selectedCategory]);
 
   const handleToggleDefault = (componentId: string, isDefault: boolean) => {
     if (isDefault) {

@@ -13,10 +13,8 @@ export const initializeStore = async () => {
   try {
     // Set loading state
     state.setInitializing(true);
-    console.log('Store initialization starting...');
     
     await state.loadComponentsFromDB();
-    console.log('Components loaded from DB:', state.componentTemplates.length);
     
     if (state.componentRoles.length === 0) {
       state.calculateComponentRoles();
@@ -38,7 +36,6 @@ export const initializeStore = async () => {
     await state.loadDesignsFromDB();
     
     storeInitialized = true;
-    console.log("Store initialized");
   } catch (error) {
     console.error("Error during store initialization:", error);
     toast.error("Error initializing application data");

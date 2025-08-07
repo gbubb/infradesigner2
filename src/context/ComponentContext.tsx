@@ -23,11 +23,6 @@ export const ComponentProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const deleteComponentTemplate = useDesignStore(state => state.deleteComponentTemplate);
   const setDefaultComponent = useDesignStore(state => state.setDefaultComponent);
 
-  // Debug logging
-  React.useEffect(() => {
-    console.log('ComponentProvider - templates updated:', componentTemplates.length);
-  }, [componentTemplates]);
-
   return (
     <ComponentContext.Provider value={{
       componentTemplates,
