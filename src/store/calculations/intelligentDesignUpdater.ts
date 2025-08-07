@@ -88,6 +88,23 @@ export class IntelligentDesignUpdater {
       return;
     }
     
+    // Create a map of existing disk/GPU configurations by role type and cluster ID
+    const existingDiskConfigs = new Map<string, Array<{ diskId: string, quantity: number }>>();
+    const existingGPUConfigs = new Map<string, Array<{ gpuId: string, quantity: number }>>();
+    
+    const existingRoles = state.componentRoles || [];
+    existingRoles.forEach(role => {
+      const roleKey = role.clusterInfo?.clusterId 
+        ? `${role.role}-${role.clusterInfo.clusterId}`
+        : role.role;
+      
+      if (state.selectedDisksByRole[role.id]) {
+        existingDiskConfigs.set(roleKey, state.selectedDisksByRole[role.id]);
+      }
+      if (state.selectedGPUsByRole[role.id]) {
+        existingGPUConfigs.set(roleKey, state.selectedGPUsByRole[role.id]);
+      }
+    });
     
     // Calculate new roles based on updated requirements
     const newRoles = calculateComponentRoles(
@@ -96,11 +113,26 @@ export class IntelligentDesignUpdater {
     );
     
     // Preserve existing assignments where possible
-    const existingRoles = state.componentRoles || [];
     const preservedRoles = this.preserveRoleAssignments(existingRoles, newRoles, context);
+    
+    // Rebuild disk and GPU configurations with new role IDs
+    const newDisksByRole: Record<string, Array<{ diskId: string, quantity: number }>> = {};
+    const newGPUsByRole: Record<string, Array<{ gpuId: string, quantity: number }>> = {};
     
     // Recalculate required quantities for all preserved roles
     const rolesWithUpdatedQuantities = preservedRoles.map(role => {
+      // Restore disk/GPU configurations
+      const roleKey = role.clusterInfo?.clusterId 
+        ? `${role.role}-${role.clusterInfo.clusterId}`
+        : role.role;
+      
+      if (existingDiskConfigs.has(roleKey)) {
+        newDisksByRole[role.id] = existingDiskConfigs.get(roleKey)!;
+      }
+      if (existingGPUConfigs.has(roleKey)) {
+        newGPUsByRole[role.id] = existingGPUConfigs.get(roleKey)!;
+      }
+      
       if (role.assignedComponentId) {
         const requiredQuantity = state.calculateRequiredQuantity(role.id, role.assignedComponentId);
         return {
@@ -111,8 +143,12 @@ export class IntelligentDesignUpdater {
       return role;
     });
     
-    // Update the store with new roles using setState
-    useDesignStore.setState({ componentRoles: rolesWithUpdatedQuantities });
+    // Update the store with new roles and preserved disk/GPU configurations
+    useDesignStore.setState({ 
+      componentRoles: rolesWithUpdatedQuantities,
+      selectedDisksByRole: newDisksByRole,
+      selectedGPUsByRole: newGPUsByRole
+    });
   }
   
   /**
@@ -171,13 +207,15 @@ export class IntelligentDesignUpdater {
     );
     
     // Update the design with new components
-    // IMPORTANT: Preserve disk and GPU configurations when updating
+    // IMPORTANT: Use the latest disk and GPU configurations from state
+    // (these were already updated in updateComponentRoles)
     if (state.activeDesign) {
+      const currentState = useDesignStore.getState();
       state.updateDesign(state.activeDesign.id, {
         components: updatedComponents,
-        // Preserve existing disk and GPU configurations
-        selectedDisksByRole: state.selectedDisksByRole,
-        selectedGPUsByRole: state.selectedGPUsByRole
+        // Use the current disk and GPU configurations from state
+        selectedDisksByRole: currentState.selectedDisksByRole,
+        selectedGPUsByRole: currentState.selectedGPUsByRole
       });
     }
   }
