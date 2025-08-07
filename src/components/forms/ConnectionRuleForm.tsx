@@ -138,7 +138,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
             id="name"
             value={formData.name}
             placeholder="e.g., Connect Servers to Switch"
-            onChange={e =>
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setFormData(prev => ({ ...prev, name: e.target.value }))
             }
             required
@@ -150,7 +150,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
             id="description"
             value={formData.description || ''}
             placeholder="Describe the purpose of this connection rule"
-            onChange={e =>
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
               setFormData(prev => ({ ...prev, description: e.target.value }))
             }
           />
@@ -182,9 +182,9 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
             id="azScope"
             className="mt-1 block w-full border rounded px-3 py-2 bg-background"
             value={formData.azScope}
-            onChange={e => setFormData(prev => ({ ...prev, azScope: e.target.value as AZScope }))}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(prev => ({ ...prev, azScope: e.target.value as AZScope }))}
           >
-            {Object.values(AZScope).map(scope => (
+            {Object.values(AZScope).map((scope: AZScope) => (
               <option key={scope} value={scope}>{scope}</option>
             ))}
           </select>
@@ -196,7 +196,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
               id="targetAZId"
               value={formData.targetAZId || ''}
               placeholder="Enter target AZ ID"
-              onChange={e =>
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFormData(prev => ({ ...prev, targetAZId: e.target.value }))
               }
             />
@@ -211,14 +211,14 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
             id="connectionPattern"
             className="mt-1 block w-full border rounded px-3 py-2 bg-background"
             value={formData.connectionPattern}
-            onChange={e =>
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
               setFormData(prev => ({
                 ...prev,
                 connectionPattern: e.target.value as ConnectionPattern,
               }))
             }
           >
-            {Object.values(ConnectionPattern).map(pattern => (
+            {Object.values(ConnectionPattern).map((pattern: ConnectionPattern) => (
               <option key={pattern} value={pattern}>
                 {pattern}
               </option>
@@ -233,7 +233,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
               type="number"
               min={1}
               value={formData.numberOfTargets || 1}
-              onChange={e =>
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFormData(prev => ({
                   ...prev,
                   numberOfTargets: Number(e.target.value) || 1,
@@ -250,7 +250,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
               type="number"
               min={1}
               value={formData.connectionsPerPair || 1}
-              onChange={e =>
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFormData(prev => ({
                   ...prev,
                   connectionsPerPair: Number(e.target.value) || 1,
@@ -265,7 +265,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
             id="connectionStrategy"
             className="mt-1 block w-full border rounded px-3 py-2 bg-background"
             value={formData.connectionStrategy || 'all'}
-            onChange={e =>
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
               setFormData(prev => ({
                 ...prev,
                 connectionStrategy: e.target.value as 'all' | 'first' | 'random',
@@ -284,7 +284,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
             type="number"
             min={0}
             value={formData.maxConnections ?? ''}
-            onChange={e =>
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setFormData(prev => ({
                 ...prev,
                 maxConnections: e.target.value !== '' ? Number(e.target.value) : undefined,
@@ -297,7 +297,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
           <Switch
             id="useBreakout"
             checked={formData.useBreakout || false}
-            onCheckedChange={checked =>
+            onCheckedChange={(checked: boolean) =>
               setFormData(prev => ({
                 ...prev,
                 useBreakout: checked,
@@ -316,8 +316,8 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
           <Input
             value={newTag}
             placeholder="Add a tag"
-            onChange={e => setNewTag(e.target.value)}
-            onKeyDown={e => {
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTag(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
                 handleTagAdd();
@@ -329,7 +329,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
           </Button>
         </div>
         <div className="flex flex-wrap gap-2 mt-2">
-          {formData.tags?.map(tag => (
+          {formData.tags?.map((tag: string) => (
             <Badge
               key={tag}
               className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full flex items-center gap-1"
@@ -352,7 +352,7 @@ export const ConnectionRuleForm: React.FC<ConnectionRuleFormProps> = ({
       <div className="flex items-center gap-2">
         <Switch
           checked={formData.enabled}
-          onCheckedChange={checked =>
+          onCheckedChange={(checked: boolean) =>
             setFormData(prev => ({
               ...prev,
               enabled: checked,

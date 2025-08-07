@@ -29,7 +29,7 @@ export const DeviceCriteriaFields: React.FC<DeviceCriteriaFieldsProps> = ({
           className="mt-1 block w-full border rounded px-3 py-2 bg-background"
           id={`${prefix}-componentType`}
           value={criteria.componentType || ''}
-          onChange={(e) => {
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
             const value = e.target.value ? (e.target.value as ComponentType) : undefined;
             setFormData(prev => ({
               ...prev,
@@ -41,7 +41,7 @@ export const DeviceCriteriaFields: React.FC<DeviceCriteriaFieldsProps> = ({
           }}
         >
           <option value="">Any</option>
-          {Object.values(ComponentType).map(type => (
+          {Object.values(ComponentType).map((type: ComponentType) => (
             <option key={type} value={type}>{type}</option>
           ))}
         </select>
@@ -52,7 +52,7 @@ export const DeviceCriteriaFields: React.FC<DeviceCriteriaFieldsProps> = ({
           className="mt-1 block w-full border rounded px-3 py-2 bg-background"
           id={`${prefix}-role`}
           value={criteria.role || ''}
-          onChange={e =>
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             setFormData(prev => ({
               ...prev,
               [`${prefix}DeviceCriteria`]: {
@@ -63,7 +63,7 @@ export const DeviceCriteriaFields: React.FC<DeviceCriteriaFieldsProps> = ({
           }
         >
           <option value="">Any</option>
-          {availableRoles.map(role => (
+          {availableRoles.map((role: string) => (
             <option key={role} value={role}>{role}</option>
           ))}
         </select>
@@ -74,7 +74,7 @@ export const DeviceCriteriaFields: React.FC<DeviceCriteriaFieldsProps> = ({
           id={`${prefix}-deviceNamePattern`}
           value={criteria.deviceNamePattern || ''}
           placeholder="Regex pattern for device names"
-          onChange={e =>
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setFormData(prev => ({
               ...prev,
               [`${prefix}DeviceCriteria`]: {

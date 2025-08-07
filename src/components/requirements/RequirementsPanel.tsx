@@ -10,6 +10,7 @@ import { PricingRequirementsForm } from './PricingRequirementsForm';
 import { useDesignStore } from '@/store/designStore';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import type { DesignRequirements, LicensingRequirements, PricingRequirements } from '@/types/infrastructure/requirements-types';
 
 export const RequirementsPanel: React.FC = () => {
   const { requirements, updateRequirements, calculateComponentRoles } = useDesignStore();
@@ -37,27 +38,27 @@ export const RequirementsPanel: React.FC = () => {
     setActiveTab(value);
   }, []);
 
-  const handleUpdateComputeRequirements = useCallback((computeRequirements) => {
+  const handleUpdateComputeRequirements = useCallback((computeRequirements: DesignRequirements['computeRequirements']) => {
     updateRequirements({ computeRequirements });
   }, [updateRequirements]);
 
-  const handleUpdateStorageRequirements = useCallback((storageRequirements) => {
+  const handleUpdateStorageRequirements = useCallback((storageRequirements: DesignRequirements['storageRequirements']) => {
     updateRequirements({ storageRequirements });
   }, [updateRequirements]);
 
-  const handleUpdateNetworkRequirements = useCallback((networkRequirements) => {
+  const handleUpdateNetworkRequirements = useCallback((networkRequirements: DesignRequirements['networkRequirements']) => {
     updateRequirements({ networkRequirements });
   }, [updateRequirements]);
 
-  const handleUpdatePhysicalConstraints = useCallback((physicalConstraints) => {
+  const handleUpdatePhysicalConstraints = useCallback((physicalConstraints: DesignRequirements['physicalConstraints']) => {
     updateRequirements({ physicalConstraints });
   }, [updateRequirements]);
 
-  const handleUpdateLicensingRequirements = useCallback((licensingRequirements) => {
+  const handleUpdateLicensingRequirements = useCallback((licensingRequirements: LicensingRequirements) => {
     updateRequirements({ licensingRequirements });
   }, [updateRequirements]);
 
-  const handleUpdatePricingRequirements = useCallback((pricingRequirements) => {
+  const handleUpdatePricingRequirements = useCallback((pricingRequirements: PricingRequirements) => {
     updateRequirements({ pricingRequirements });
   }, [updateRequirements]);
 

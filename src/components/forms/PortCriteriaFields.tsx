@@ -27,7 +27,7 @@ export const PortCriteriaFields: React.FC<PortCriteriaFieldsProps> = ({
           className="mt-1 block w-full border rounded px-3 py-2 bg-background"
           id={`${prefix}-portRole`}
           value={criteria.portRole?.[0] || ''}
-          onChange={e => {
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
             const value = e.target.value ? [e.target.value as PortRole] : [];
             setFormData(prev => ({
               ...prev,
@@ -39,7 +39,7 @@ export const PortCriteriaFields: React.FC<PortCriteriaFieldsProps> = ({
           }}
         >
           <option value="">Any</option>
-          {Object.values(PortRole).map(role => (
+          {Object.values(PortRole).map((role: PortRole) => (
             <option key={role} value={role}>{role}</option>
           ))}
         </select>
@@ -50,7 +50,7 @@ export const PortCriteriaFields: React.FC<PortCriteriaFieldsProps> = ({
           className="mt-1 block w-full border rounded px-3 py-2 bg-background"
           id={`${prefix}-speed`}
           value={criteria.speed || ''}
-          onChange={e => {
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
             const value = e.target.value ? (e.target.value as PortSpeed) : undefined;
             setFormData(prev => ({
               ...prev,
@@ -62,7 +62,7 @@ export const PortCriteriaFields: React.FC<PortCriteriaFieldsProps> = ({
           }}
         >
           <option value="">Any</option>
-          {Object.values(PortSpeed).map(speed => (
+          {Object.values(PortSpeed).map((speed: PortSpeed) => (
             <option key={speed} value={speed}>{speed}</option>
           ))}
         </select>
@@ -73,7 +73,7 @@ export const PortCriteriaFields: React.FC<PortCriteriaFieldsProps> = ({
           className="mt-1 block w-full border rounded px-3 py-2 bg-background"
           id={`${prefix}-side`}
           value={criteria.side || ''}
-          onChange={e => {
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
             const value = e.target.value ? (e.target.value as PortSide) : undefined;
             setFormData(prev => ({
               ...prev,
@@ -96,7 +96,7 @@ export const PortCriteriaFields: React.FC<PortCriteriaFieldsProps> = ({
           id={`${prefix}-portNamePattern`}
           value={criteria.portNamePattern || ''}
           placeholder="Regex pattern for port names"
-          onChange={e =>
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setFormData(prev => ({
               ...prev,
               [`${prefix}PortCriteria`]: {

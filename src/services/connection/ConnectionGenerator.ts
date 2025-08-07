@@ -71,7 +71,7 @@ export function generateConnections(
 
   // Pre-build cable lookup map for efficiency
   const cableLookup = new Map<string, Cable>();
-  allCablesToProcess.forEach(cable => {
+  allCablesToProcess.forEach((cable: Cable) => {
     if (!('connectorA_Type' in cable) || !('connectorB_Type' in cable)) {
       return;
     }
@@ -99,7 +99,7 @@ export function generateConnections(
 
   console.log('[ConnectionService] Cable lookup map constructed with', cableLookup.size, 'entries');
 
-  const allDevices = components.filter((c) =>
+  const allDevices = components.filter((c: InfrastructureComponent) =>
     [ComponentType.Server, ComponentType.Switch, ComponentType.Router, ComponentType.Firewall].includes(c.type)
   );
 
@@ -118,7 +118,7 @@ export function generateConnections(
     }
   }
 
-  const enabledRules = rules.filter((r) => r.enabled);
+  const enabledRules = rules.filter((r: ConnectionRule) => r.enabled);
   if (enabledRules.length === 0) {
     connectionAttempts.push({
       status: "Info",
@@ -129,7 +129,7 @@ export function generateConnections(
 
   let totalAttempts = 0;
 
-  enabledRules.forEach((rule, ruleIndex) => {
+  enabledRules.forEach((rule: ConnectionRule, ruleIndex: number) => {
     if (totalAttempts >= MAX_CONNECTION_ATTEMPTS) {
       connectionAttempts.push({
         ruleId: rule.id,
@@ -193,7 +193,7 @@ export function generateConnections(
     }
 
     // Regular connection generation logic
-    sources.forEach((srcDevice) => {
+    sources.forEach((srcDevice: InfrastructureComponent) => {
       const availableSrcPorts = filterPorts(srcDevice, rule.sourcePortCriteria, false, false)
         .filter(p => !usedSrcPorts.has(`${srcDevice.id}:${p.id}`) && !p.connectedToDeviceId);
 
@@ -247,8 +247,8 @@ export function generateConnections(
 
           const srcPlace = rackPlacement[srcDevice.id] || {};
           const dstPlace = rackPlacement[targetDevice.id] || {};
-          const srcRack = (rackprofiles || []).find((r) => r.id === srcPlace.rackId) as RackProfile | undefined;
-          const dstRack = (rackprofiles || []).find((r) => r.id === dstPlace.rackId) as RackProfile | undefined;
+          const srcRack = (rackprofiles || []).find((r: RackProfile) => r.id === srcPlace.rackId) as RackProfile | undefined;
+          const dstRack = (rackprofiles || []).find((r: RackProfile) => r.id === dstPlace.rackId) as RackProfile | undefined;
 
           // AZ Scope Check
           if (rule.azScope === 'SameAZ') {
