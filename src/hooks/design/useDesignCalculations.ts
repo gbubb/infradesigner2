@@ -84,6 +84,10 @@ export const useDesignCalculations = () => {
     total: 0
   }, [costAnalysisResult?.amortizedCostsByType]);
   
+  const amortisationPeriodMonths = useMemo(() => 
+    typeof costAnalysisResult?.amortisationPeriodMonths === 'number' ? costAnalysisResult.amortisationPeriodMonths : 36
+  , [costAnalysisResult?.amortisationPeriodMonths]);
+  
   // Get design validation with proper typing
   const designValidationResult = useDesignValidation();
   const designErrors = useMemo(() => Array.isArray(designValidationResult?.designErrors) 
@@ -154,6 +158,7 @@ export const useDesignCalculations = () => {
     resourceUtilization,
     designErrors,
     amortizedCostsByType,
+    amortisationPeriodMonths,
     monthlyCostPerAverageVM,
     quantityOfAverageVMs
   };
