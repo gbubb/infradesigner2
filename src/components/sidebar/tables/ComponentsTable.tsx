@@ -67,7 +67,7 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({
                 <TableCell>{component.manufacturer}</TableCell>
                 <TableCell>{component.model}</TableCell>
                 <TableCell className="text-right">${component.cost}</TableCell>
-                <TableCell className="text-right">{component.powerRequired}W</TableCell>
+                <TableCell className="text-right">{component.powerTypical || 0}W</TableCell>
                 <TableCell className="text-center">
                   <Switch
                     checked={isDefaultForTypeAndRole(component.id)}
