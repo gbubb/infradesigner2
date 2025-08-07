@@ -19,4 +19,132 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Increase chunk size warning limit to 1000kb (reasonable for modern web apps)
+    chunkSizeWarningLimit: 1000,
+    
+    // Enable source maps for production debugging (hidden from users)
+    sourcemap: mode === 'production' ? 'hidden' : true,
+    
+    // Minification settings
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: mode === 'production',
+        drop_debugger: true,
+      },
+    },
+    
+    // Rollup options for advanced chunking
+    rollupOptions: {
+      output: {
+        // Manual chunk splitting for better caching
+        manualChunks(id) {
+          // Core React dependencies
+          if (id.includes('node_modules/react/') || 
+              id.includes('node_modules/react-dom/') || 
+              id.includes('node_modules/react-router-dom/')) {
+            return 'react-vendor';
+          }
+          
+          // Radix UI components (all UI primitives)
+          if (id.includes('@radix-ui/')) {
+            return 'radix-ui';
+          }
+          
+          // Supabase client
+          if (id.includes('@supabase/')) {
+            return 'supabase';
+          }
+          
+          // Data fetching and state management
+          if (id.includes('@tanstack/react-query') || 
+              id.includes('zustand')) {
+            return 'state-management';
+          }
+          
+          // Charting library
+          if (id.includes('recharts')) {
+            return 'charts';
+          }
+          
+          // PDF and Canvas libraries (heavy, rarely used)
+          if (id.includes('jspdf') || id.includes('html2canvas')) {
+            return 'pdf-export';
+          }
+          
+          // Drag and drop functionality
+          if (id.includes('react-dnd')) {
+            return 'dnd';
+          }
+          
+          // Form handling
+          if (id.includes('react-hook-form') || 
+              id.includes('@hookform/') || 
+              id.includes('zod')) {
+            return 'forms';
+          }
+          
+          // Date utilities
+          if (id.includes('date-fns')) {
+            return 'date-utils';
+          }
+          
+          // All other vendor dependencies
+          if (id.includes('node_modules/')) {
+            return 'vendor';
+          }
+        },
+        
+        // Better chunk naming for production
+        chunkFileNames: (chunkInfo) => {
+          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
+          return `assets/js/[name]-[hash].js`;
+        },
+        
+        // Better entry file naming
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        
+        // Asset file naming
+        assetFileNames: (assetInfo) => {
+          const extType = assetInfo.name?.split('.').pop() || 'asset';
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
+            return `assets/images/[name]-[hash][extname]`;
+          }
+          if (/woff|woff2|eot|ttf|otf/i.test(extType)) {
+            return `assets/fonts/[name]-[hash][extname]`;
+          }
+          if (extType === 'css') {
+            return `assets/css/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
+        },
+      },
+    },
+    
+    // CSS code splitting
+    cssCodeSplit: true,
+    
+    // Enable module preload polyfill
+    modulePreload: {
+      polyfill: true,
+    },
+    
+    // Report compressed size
+    reportCompressedSize: false, // Disable to speed up builds
+  },
+  
+  // Optimize dependencies
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@tanstack/react-query',
+      'zustand',
+    ],
+    exclude: [
+      '@supabase/supabase-js', // Large, let it load separately
+    ],
+  },
 }));
