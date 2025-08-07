@@ -5,9 +5,12 @@ import { useComponentForm } from '@/hooks/components/useComponentForm';
 import { ComponentFormDialog } from './dialogs/ComponentFormDialog';
 import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
 import { ComponentsTable } from './tables/ComponentsTable';
+import { VirtualComponentsTable } from './tables/VirtualComponentsTable';
 import { CategoryFilter } from './filters/CategoryFilter';
 import { SearchBar } from './components/SearchBar';
 import { ComponentLibraryHeader } from './components/ComponentLibraryHeader';
+import { TableSkeleton } from '@/components/ui/loading-skeletons';
+import { WithSkeleton } from '@/hooks/common/useLoadingSkeleton';
 import { ComponentCategory, ComponentType, InfrastructureComponent, componentTypeToCategory } from '@/types/infrastructure';
 import { useComponentsByType } from '@/hooks/design/useComponentsByType';
 import { v4 as uuidv4 } from 'uuid';
@@ -110,6 +113,7 @@ export const ComponentLibrary: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<ComponentCategory | 'all'>('all');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteComponentId, setDeleteComponentId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const {
     isAddDialogOpen,
@@ -272,14 +276,30 @@ export const ComponentLibrary: React.FC = () => {
         />
       </div>
       
-      <ComponentsTable 
-        components={filteredComponents}
-        isDefaultForTypeAndRole={isDefaultForTypeAndRole}
-        onToggleDefault={handleToggleDefault}
-        onEdit={openEditDialog}
-        onClone={cloneComponentTemplate}
-        onDelete={openDeleteConfirmation}
-      />
+      <WithSkeleton
+        isLoading={isLoading}
+        skeleton={<TableSkeleton rows={8} columns={8} />}
+      >
+        {filteredComponents.length > 50 ? (
+          <VirtualComponentsTable 
+            components={filteredComponents}
+            isDefaultForTypeAndRole={isDefaultForTypeAndRole}
+            onToggleDefault={handleToggleDefault}
+            onEdit={openEditDialog}
+            onClone={cloneComponentTemplate}
+            onDelete={openDeleteConfirmation}
+          />
+        ) : (
+          <ComponentsTable 
+            components={filteredComponents}
+            isDefaultForTypeAndRole={isDefaultForTypeAndRole}
+            onToggleDefault={handleToggleDefault}
+            onEdit={openEditDialog}
+            onClone={cloneComponentTemplate}
+            onDelete={openDeleteConfirmation}
+          />
+        )}
+      </WithSkeleton>
 
       <ComponentFormDialog 
         isOpen={isAddDialogOpen}

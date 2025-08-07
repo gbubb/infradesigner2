@@ -1,11 +1,12 @@
 import { useEffect, lazy, Suspense } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { DndProvider } from './components/providers/DndProvider';
+import { queryClient } from "@/utils/queryCache";
 
 // Lazy load heavy panel components
 const ComparePanel = lazy(() => import("@/components/compare/ComparePanel").then(m => ({ default: m.ComparePanel })));
@@ -30,8 +31,6 @@ import NotFound from "./pages/NotFound";
 
 // Import the purge script (makes it available in the console)
 import "@/utils/purgeDesigns";
-
-const queryClient = new QueryClient();
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
