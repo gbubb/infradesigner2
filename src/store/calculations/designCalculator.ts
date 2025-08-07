@@ -1,9 +1,11 @@
-import { useDesignStore } from '../designStore';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
+
+import { errorLogger } from '@/utils/errorLogger';
+import { useDesignStore } from '../designStore';
+
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { ComponentWithPlacement } from '@/types/service-types';
-import { errorLogger } from '@/utils/errorLogger';
 
 let isRecalculating = false;
 

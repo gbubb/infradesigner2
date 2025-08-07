@@ -2,6 +2,7 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartTooltipPayload, TooltipPayloadEntry } from '@/types/compare';
+import { formatCompactCurrency } from '@/lib/formatters';
 
 interface TCOProjectionChartProps {
   designAName: string;
@@ -29,13 +30,6 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
     designB: (designBCapitalCost || 0) + ((designBOperationalCost || 0) * 12 * year),
   }));
 
-  const formatCurrency = (value: number) => {
-    if (!value || isNaN(value) || !isFinite(value)) return '$0';
-    if (value >= 1000000) {
-      return `$${(value / 1000000).toFixed(1)}M`;
-    }
-    return `$${(value / 1000).toFixed(0)}K`;
-  };
 
   const CustomTooltip = ({ active, payload, label }: ChartTooltipPayload) => {
     if (active && payload && payload.length) {
@@ -47,12 +41,12 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
           <p className="font-semibold mb-2">{label}</p>
           {payload.map((entry: TooltipPayloadEntry) => (
             <p key={entry.dataKey} className="text-sm" style={{ color: entry.color }}>
-              {entry.name}: {formatCurrency(entry.value)}
+              {entry.name}: {formatCompactCurrency(entry.value)}
             </p>
           ))}
           {savings > 0 && (
             <p className="text-sm text-green-600 mt-2">
-              {designBName} saves: {formatCurrency(savings)}
+              {designBName} saves: {formatCompactCurrency(savings)}
             </p>
           )}
         </div>
@@ -92,7 +86,7 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis dataKey="year" className="text-sm" />
-            <YAxis tickFormatter={formatCurrency} className="text-sm" />
+            <YAxis tickFormatter={formatCompactCurrency} className="text-sm" />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
             <Line 
@@ -121,7 +115,7 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
           <div className="p-4 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">Initial Investment Difference</p>
             <p className="text-lg font-semibold">
-              {formatCurrency(Math.abs(designBCapitalCost - designACapitalCost))}
+              {formatCompactCurrency(Math.abs(designBCapitalCost - designACapitalCost))}
             </p>
             <p className="text-sm text-muted-foreground">
               {designBCapitalCost > designACapitalCost ? `${designBName} costs more upfront` : `${designAName} costs more upfront`}
@@ -131,7 +125,7 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
           <div className="p-4 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">Monthly Operational Difference</p>
             <p className="text-lg font-semibold">
-              {formatCurrency(Math.abs(designBOperationalCost - designAOperationalCost))}
+              {formatCompactCurrency(Math.abs(designBOperationalCost - designAOperationalCost))}
             </p>
             <p className="text-sm text-muted-foreground">
               {designBOperationalCost > designAOperationalCost ? `${designBName} costs more monthly` : `${designAName} costs more monthly`}
@@ -141,7 +135,7 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
           <div className="p-4 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">{years}-Year TCO Difference</p>
             <p className="text-lg font-semibold">
-              {formatCurrency(Math.abs(data[years].designB - data[years].designA))}
+              {formatCompactCurrency(Math.abs(data[years].designB - data[years].designA))}
             </p>
             <p className="text-sm text-muted-foreground">
               {data[years].designB > data[years].designA ? `${designBName} costs more overall` : `${designAName} costs more overall`}

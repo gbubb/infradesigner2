@@ -5,6 +5,7 @@ import { PowerUsage } from '@/types/infrastructure';
 import { useResourceUtilization } from '@/hooks/design/useResourceUtilization';
 import { PowerConsumptionTable } from './PowerConsumptionTable';
 import { ComponentWithPlacement } from '@/types/service-types';
+import { formatPower } from '@/lib/formatters';
 
 interface PowerEnergySectionProps {
   powerUsage: PowerUsage;
@@ -45,14 +46,6 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
   const availablePower = totalAvailablePower || 
                         (resourceUtilization?.powerUtilization?.total) || 
                         (maximumPower || 0);
-  
-  // Helper function to format power values
-  const formatPower = (watts: number) => {
-    if (watts >= 10000) {
-      return `${(watts / 1000).toFixed(1)} kW`;
-    }
-    return `${Math.round(watts)} W`;
-  };
   
   // Calculate unused power
   const unusedPower = availablePower - (maximumPower || 0);

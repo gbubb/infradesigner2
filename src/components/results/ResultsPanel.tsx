@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useDesignStore, manualRecalculateDesign } from '@/store/designStore';
 import { IntelligentDesignUpdater } from '@/store/calculations/intelligentDesignUpdater';
 import { toast } from 'sonner';
-import { LoadingSpinner } from './LoadingSpinner';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ResultsHeader } from './ResultsHeader';
 import { ResultsTabs } from './tabs/ResultsTabs';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';

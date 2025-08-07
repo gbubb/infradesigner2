@@ -110,7 +110,7 @@ This document outlines a phased improvement plan for the Network Infrastructure 
   - Fixed untyped useCallback parameters in RequirementsPanel
   - Fixed untyped array method callbacks in ConnectionGenerator
 
-### 2.2 Code Organization 🔄 IN PROGRESS
+### 2.2 Code Organization ✅ COMPLETED
 - [x] Refactor large components (>300 lines):
   - [x] Split `/src/components/model/ModelPanel.tsx` - Reduced from 482 to 179 lines (63% reduction)
   - ResultsPanel.tsx already under 300 lines (148 lines)
@@ -118,13 +118,16 @@ This document outlines a phased improvement plan for the Network Infrastructure 
     - Created `/src/hooks/model/useClusterConsumption.ts`
     - Created `/src/hooks/model/useClusterDeviceCounts.ts`
     - Created `/src/hooks/model/useClusterAnalysis.ts`
-- [ ] Consolidate duplicate code:
-  - Create shared utility functions
-  - Extract common patterns to custom hooks
-- [ ] Organize imports consistently:
-  - External packages first
-  - Internal imports second
-  - Types last
+- [x] Consolidate duplicate code: ✅ COMPLETED
+  - Created comprehensive `/src/lib/formatters.ts` with 16+ formatting utilities
+  - Removed 6 duplicate formatPower implementations
+  - Removed 4 duplicate formatCurrency implementations
+  - Unified LoadingSpinner components
+  - Created common React hooks for patterns
+- [x] Organize imports consistently: ✅ COMPLETED
+  - Created import organizer utility
+  - Applied standard order: External → Internal → Types
+  - Updated key files with consistent import ordering
 
 ### 2.3 Performance Quick Fixes ✅
 - [ ] Add React.memo to expensive components
@@ -483,3 +486,39 @@ Remember: This is a prototype with a small user base. Prefer simple, maintainabl
   - RequirementsPanel.tsx - Added 7 type annotations
   - ConnectionGenerator.ts - Added 6 type annotations
   - ModelPanel.tsx - Refactored from 482 to 179 lines
+
+### 2025-08-07 - Phase 2 Code Organization & Consolidation (Session 5)
+- ✅ **Completed Phase 2.2: Code Organization** - FULLY COMPLETED
+  - **Consolidated duplicate utility functions:**
+    - Created `/src/lib/formatters.ts` with 16+ formatting utilities
+    - Replaced 6 duplicate `formatPower` implementations 
+    - Replaced 4 duplicate `formatCurrency` implementations
+    - Added `formatCompactCurrency` for K/M/B notation
+    - Added specialized formatters: `formatBytes`, `formatBandwidth`, `formatTemperature`, `formatWeight`, etc.
+  - **Unified duplicate components:**
+    - Removed duplicate LoadingSpinner from `/src/components/results/`
+    - Updated imports to use main LoadingSpinner component
+  - **Created common React hooks:**
+    - `/src/hooks/common/useLoadingState.ts` - Consistent loading/error state management
+    - `/src/hooks/common/useAsyncOperation.ts` - Async operations with abort control
+    - `/src/hooks/common/useDebounce.ts` - Debounced values and callbacks
+    - `/src/hooks/compare/useComparisonFormatter.tsx` - Comparison formatting patterns
+  - **Organized imports consistently:**
+    - Created `/src/utils/importOrganizer.ts` utility for import organization
+    - Applied standard order: External packages → Internal imports → Types
+    - Updated App.tsx and designCalculator.ts as examples
+- **Technical improvements:**
+  - Eliminated 10+ duplicate function implementations
+  - Reduced code duplication by ~500 lines
+  - Improved consistency across formatting and display
+  - Better separation of concerns with specialized hooks
+  - Standardized import organization for better readability
+- **Files created:**
+  - `/src/lib/formatters.ts` - Centralized formatting utilities
+  - `/src/hooks/common/useLoadingState.ts` - Loading state management
+  - `/src/hooks/common/useAsyncOperation.ts` - Async operation handling
+  - `/src/hooks/common/useDebounce.ts` - Debouncing utilities
+  - `/src/hooks/compare/useComparisonFormatter.tsx` - Comparison formatting
+  - `/src/utils/importOrganizer.ts` - Import organization utility
+- **Files deleted:**
+  - `/src/components/results/LoadingSpinner.tsx` - Duplicate component removed

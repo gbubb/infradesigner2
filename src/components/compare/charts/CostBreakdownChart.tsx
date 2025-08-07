@@ -2,6 +2,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ComponentCostsByType, ChartTooltipPayload, TooltipPayloadEntry } from '@/types/compare';
+import { formatCompactCurrency } from '@/lib/formatters';
 
 interface CostBreakdownData {
   category: string;
@@ -62,9 +63,6 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({
     },
   ];
 
-  const formatCurrency = (value: number) => {
-    return `$${(value / 1000).toFixed(0)}K`;
-  };
 
   const CustomTooltip = ({ active, payload }: ChartTooltipPayload) => {
     if (active && payload && payload.length) {
@@ -100,7 +98,7 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis dataKey="category" className="text-sm" />
-            <YAxis tickFormatter={formatCurrency} className="text-sm" />
+            <YAxis tickFormatter={formatCompactCurrency} className="text-sm" />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
             <Bar 

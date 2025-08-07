@@ -8,6 +8,7 @@ import { ScenarioParameters } from './scenario/ScenarioParameters';
 import { BreakEvenIndicators } from './scenario/BreakEvenIndicators';
 import { ScenarioCharts } from './scenario/ScenarioCharts';
 import { ScenarioSummary } from './scenario/ScenarioSummary';
+import { formatCurrency, formatPercentage } from '@/lib/formatters';
 
 
 export const ScenarioTab: React.FC<ScenarioTabProps> = ({
@@ -244,15 +245,6 @@ export const ScenarioTab: React.FC<ScenarioTabProps> = ({
     return { cumulativeData: data, marginBreakEvenMonth, profitBreakEvenMonth };
   }, [scenarioData, scenarioMonths]);
 
-  // Format currency
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   // Check if we have any pricing data
   if ((!computePricing || computePricing.length === 0) && (!storagePricing || storagePricing.length === 0)) {

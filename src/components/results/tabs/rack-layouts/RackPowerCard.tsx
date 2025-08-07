@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Zap, AlertTriangle, AlertCircle, ChevronDown } from 'lucide-react';
+import { formatPower } from '@/lib/formatters';
 import {
   Popover,
   PopoverContent,
@@ -61,13 +62,6 @@ const COLORS = {
   [ComponentType.Transceiver]: '#00b894'
 };
 
-// Helper function to format power values
-const formatPower = (watts: number): string => {
-  if (watts >= 1000) {
-    return `${(watts / 1000).toFixed(1)}kW`;
-  }
-  return `${Math.round(watts)}W`;
-};
 
 export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, powerCapacity }) => {
   const [selectedPowerState, setSelectedPowerState] = useState<PowerState>('peak');

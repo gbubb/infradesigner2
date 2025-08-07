@@ -3,6 +3,7 @@ import html2canvas from 'html2canvas';
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import { Component, ComponentType } from '@/types/infrastructure/component-types';
 import { PlacedDevice } from '@/types/infrastructure/rack-types';
+import { formatPower } from '@/lib/formatters';
 
 interface ExportOptions {
   includeRowView: boolean;
@@ -465,13 +466,6 @@ export class RackExportService {
         powerByType[componentType].count += quantity;
       });
       
-      // Helper function to format power
-      const formatPower = (watts: number): string => {
-        if (watts >= 1000) {
-          return `${(watts / 1000).toFixed(1)}kW`;
-        }
-        return `${Math.round(watts)}W`;
-      };
       
       // Power capacity and utilization
       pdf.setFontSize(9);

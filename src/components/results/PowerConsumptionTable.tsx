@@ -2,6 +2,7 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ComponentWithPlacement } from '@/types/service-types';
 import { ComponentType, componentTypeToCategory } from '@/types/infrastructure/component-types';
+import { formatPower } from '@/lib/formatters';
 
 interface PowerConsumptionTableProps {
   components: ComponentWithPlacement[];
@@ -175,13 +176,6 @@ export const PowerConsumptionTable: React.FC<PowerConsumptionTableProps> = ({
     });
   }, [components, operationalLoadPercentage]);
 
-  // Helper function to format power values
-  const formatPower = (watts: number) => {
-    if (watts >= 10000) {
-      return `${(watts / 1000).toFixed(1)} kW`;
-    }
-    return `${Math.round(watts)} W`;
-  };
 
   // Calculate totals
   const totals = React.useMemo(() => {
