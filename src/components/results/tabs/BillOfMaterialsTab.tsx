@@ -478,8 +478,8 @@ export const BillOfMaterialsTab: React.FC = () => {
                       <TableCell>{row.deviceName}</TableCell>
                       <TableCell>{row.portName}</TableCell>
                       <TableCell>{row.portType}</TableCell>
-                      <TableCell>{row.speed}</TableCell>
-                      <TableCell>{row.mediaType}</TableCell>
+                      <TableCell>{row.portSpeed}</TableCell>
+                      <TableCell>{row.portMedia}</TableCell>
                       <TableCell>
                         {row.status === "Used" ? (
                           <span className="text-green-700 font-medium">Used</span>

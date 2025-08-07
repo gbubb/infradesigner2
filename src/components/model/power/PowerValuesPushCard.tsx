@@ -26,7 +26,7 @@ export const PowerValuesPushCard: React.FC<PowerValuesPushCardProps> = ({
   // Get current power values from the selected server
   const currentValues = {
     idle: selectedServer.powerIdle || 0,
-    typical: selectedServer.powerTypical || selectedServer.powerRequired || 0,
+    typical: selectedServer.powerTypical || 0,
     peak: selectedServer.powerPeak || 0
   };
 

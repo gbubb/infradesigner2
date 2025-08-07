@@ -124,8 +124,8 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
     // Common technical details
     if ('powerConsumptionW' in component && (component as any).powerConsumptionW) {
       details.push({ label: "Power", value: `${(component as any).powerConsumptionW}W` });
-    } else if (component.powerRequired) {
-      details.push({ label: "Power", value: `${component.powerRequired}W` });
+    } else if (component.powerTypical) {
+      details.push({ label: "Power", value: `${component.powerTypical}W` });
     }
     if ('heightRU' in component && (component as any).heightRU) {
       details.push({ label: "Height", value: `${(component as any).heightRU}U` });

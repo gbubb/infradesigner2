@@ -94,7 +94,7 @@ function calculateDesignMetrics(design: InfrastructureDesign): DesignMetrics {
   // Calculate power metrics
   design.components.forEach(component => {
     const quantity = component.quantity || 1;
-    metrics.maximumPower += component.powerRequired * quantity;
+    metrics.maximumPower += (component.powerTypical || 0) * quantity;
   });
   
   // Calculate minimum power (1/3 of maximum)

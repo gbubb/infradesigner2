@@ -47,8 +47,8 @@ export const RackLayoutsTab: React.FC = () => {
   };
   
   // Get AZ mappings from service
-  const azNameMap = useMemo(() => RackOperationsService.getAzNameMap(rackProfiles), [rackProfiles]);
-  const friendlyAzNames = useMemo(() => RackOperationsService.getFriendlyAzNames(rackProfiles), [rackProfiles]);
+  const azNameMap = useMemo(() => RackOperationsService.getAzNameMap(rackProfiles as RackProfile[]), [rackProfiles]);
+  const friendlyAzNames = useMemo(() => RackOperationsService.getFriendlyAzNames(rackProfiles as RackProfile[]), [rackProfiles]);
   
   // Initialize management hooks
   const {

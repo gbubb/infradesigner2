@@ -51,10 +51,10 @@ export const CapacityAnalysisTab: React.FC = () => {
     let totalMemoryGb = 0;
     
     computeNodes.forEach(node => {
-      totalPower += node.powerRequired || 0;
+      totalPower += node.powerTypical || 0;
       totalRU += node.ruSize || 1;
-      totalCores += node.totalCores || node.cores || 0;
-      totalMemoryGb += node.memoryCapacity || node.memoryGB || 0;
+      totalCores += (node as any).totalCores || (node as any).cores || 0;
+      totalMemoryGb += (node as any).memoryCapacity || (node as any).memoryGB || 0;
     });
     
     const avgComputeNodePower = totalPower / computeNodes.length;

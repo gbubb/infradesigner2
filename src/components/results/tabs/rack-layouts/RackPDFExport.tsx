@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Download } from 'lucide-react';
 import { RackExportService } from '@/services/RackExportService';
 import { RackProfile, PlacedDevice } from '@/types/infrastructure/rack-types';
-import { Component } from '@/types/infrastructure/component-types';
+import { InfrastructureComponent } from '@/types/infrastructure/component-types';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
 import { useToast } from '@/hooks/use-toast';
@@ -136,7 +136,7 @@ export const RackPDFExport: React.FC<RackPDFExportProps> = ({
                 <Checkbox
                   id="rowView"
                   checked={includeRowView}
-                  onCheckedChange={setIncludeRowView}
+                  onCheckedChange={(checked) => setIncludeRowView(checked === true)}
                 />
                 <Label htmlFor="rowView" className="text-sm font-normal cursor-pointer">
                   Include row-level thumbnail view
@@ -147,7 +147,7 @@ export const RackPDFExport: React.FC<RackPDFExportProps> = ({
                 <Checkbox
                   id="detailedView"
                   checked={includeDetailedView}
-                  onCheckedChange={setIncludeDetailedView}
+                  onCheckedChange={(checked) => setIncludeDetailedView(checked === true)}
                 />
                 <Label htmlFor="detailedView" className="text-sm font-normal cursor-pointer">
                   Include detailed rack views with device information
@@ -158,7 +158,7 @@ export const RackPDFExport: React.FC<RackPDFExportProps> = ({
                 <Checkbox
                   id="groupByAZ"
                   checked={groupByAZ}
-                  onCheckedChange={setGroupByAZ}
+                  onCheckedChange={(checked) => setGroupByAZ(checked === true)}
                 />
                 <Label htmlFor="groupByAZ" className="text-sm font-normal cursor-pointer">
                   Group racks by availability zone
@@ -170,7 +170,7 @@ export const RackPDFExport: React.FC<RackPDFExportProps> = ({
                   <Checkbox
                     id="selectedOnly"
                     checked={exportOnlySelected}
-                    onCheckedChange={setExportOnlySelected}
+                    onCheckedChange={(checked) => setExportOnlySelected(checked === true)}
                   />
                   <Label htmlFor="selectedOnly" className="text-sm font-normal cursor-pointer">
                     Export only the selected rack

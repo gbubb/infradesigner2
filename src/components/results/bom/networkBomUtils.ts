@@ -3,6 +3,7 @@ import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { NetworkConnection } from '@/types/infrastructure/connection-types';
 import { Transceiver } from '@/types/infrastructure/transceiver-types';
 import { Cable } from '@/types/infrastructure/component-types';
+import { MediaType } from '@/types/infrastructure/port-types';
 
 // Type for cable line items in BOM
 export interface CableLineItem {
@@ -31,7 +32,7 @@ export interface TransceiverLineItem {
   manufacturer: string;
   speed: string;
   connectorType: string;
-  mediaTypeSupported: string[];
+  mediaTypeSupported: MediaType[];
   maxDistance: string;
 }
 

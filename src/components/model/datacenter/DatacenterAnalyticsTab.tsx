@@ -114,8 +114,11 @@ export const DatacenterAnalyticsTab: React.FC = () => {
         powerAllocationKw: allocatedPowerKw,
         actualPowerUsageKw: actualPowerKw,
         mappedRack: {
-          ...profile,
-          devices: mappedDevices as any // Map PlacedDevice[] to InfrastructureComponent[]
+          id: profile.id,
+          name: profile.name,
+          devices: mappedDevices as any, // Map PlacedDevice[] to InfrastructureComponent[]
+          actualPowerUsageKw: actualPowerKw,
+          powerAllocationKw: allocatedPowerKw
         },
         assignmentDate: new Date().toISOString(),
         physicalLocation: profile.physicalLocation || {},

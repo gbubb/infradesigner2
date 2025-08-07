@@ -141,7 +141,7 @@ export function GPUConfiguration({ roleId }: GPUConfigurationProps) {
                 <span>
                   {roleGPUs.reduce((sum, gpuConfig) => {
                     const gpu = findGPUById(gpuConfig.gpuId);
-                    return sum + (gpu ? gpu.powerRequired * gpuConfig.quantity : 0);
+                    return sum + (gpu ? (gpu.powerTypical || 0) * gpuConfig.quantity : 0);
                   }, 0).toLocaleString()} W
                 </span>
               </div>

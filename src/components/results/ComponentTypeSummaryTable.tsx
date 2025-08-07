@@ -29,7 +29,7 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
     return Object.entries(componentsByType).map(([type, components]) => {
       const totalTypeQuantity = components.reduce((sum, comp) => sum + (comp.quantity || 1), 0);
       const totalTypeCost = components.reduce((sum, comp) => sum + ((comp.cost || 0) * (comp.quantity || 1)), 0);
-      const totalTypePower = components.reduce((sum, comp) => sum + ((comp.powerRequired || 0) * (comp.quantity || 1)), 0);
+      const totalTypePower = components.reduce((sum, comp) => sum + ((comp.powerTypical || 0) * (comp.quantity || 1)), 0);
       
       const totalTypeRU = components.reduce((sum, comp) => {
         if ('ruSize' in comp && comp.ruSize) {

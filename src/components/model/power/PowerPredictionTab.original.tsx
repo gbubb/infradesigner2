@@ -131,7 +131,7 @@ export const PowerPredictionTab: React.FC = () => {
       networkPorts: networkPortsArray,
       
       // PSU
-      psuRating: customInputs.psuRating || (selectedServer.powerRequired ? selectedServer.powerRequired * 1.5 : 750),
+      psuRating: customInputs.psuRating || (selectedServer.powerTypical ? selectedServer.powerTypical * 1.5 : 750),
       psuEfficiencyRating: customInputs.psuEfficiencyRating || '80PlusGold',
       redundantPsu: customInputs.redundantPsu !== undefined ? customInputs.redundantPsu : true,
       
@@ -517,7 +517,7 @@ export const PowerPredictionTab: React.FC = () => {
                   <Input
                     id="psu-rating"
                     type="number"
-                    value={customInputs.psuRating || (selectedServer.powerRequired ? selectedServer.powerRequired * 1.5 : 750)}
+                    value={customInputs.psuRating || (selectedServer.powerTypical ? selectedServer.powerTypical * 1.5 : 750)}
                     onChange={(e) => setCustomInputs({...customInputs, psuRating: parseInt(e.target.value)})}
                   />
                 </div>
