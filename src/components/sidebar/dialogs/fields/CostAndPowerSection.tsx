@@ -24,52 +24,28 @@ export const CostAndPowerSection: React.FC<Props> = ({
   }
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          control={control}
-          name="cost"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Cost ($)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  placeholder="Cost"
-                  {...field}
-                  value={field.value ?? ""}
-                  onChange={e => {
-                    field.onChange(Number(e.target.value));
-                    onInputChange(e);
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name="powerRequired"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Power Required (Watts)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  placeholder="Power Required"
-                  {...field}
-                  value={field.value ?? ""}
-                  onChange={e => {
-                    field.onChange(Number(e.target.value));
-                    onInputChange(e);
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
+      <FormField
+        control={control}
+        name="cost"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Cost ($)</FormLabel>
+            <FormControl>
+              <Input
+                type="number"
+                placeholder="Cost"
+                {...field}
+                value={field.value ?? ""}
+                onChange={e => {
+                  field.onChange(Number(e.target.value));
+                  onInputChange(e);
+                }}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
       
       {/* Enhanced Power Consumption Fields */}
       <div className="space-y-2">

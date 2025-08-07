@@ -65,9 +65,8 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
           model: component.model || '',
           description: component.description || '',
           cost: Number(component.cost) || 0,
-          powerRequired: Number(component.powerrequired) || 0,
           powerIdle: Number(component.power_idle) || 0,
-          powerTypical: Number(component.power_typical) || 0,
+          powerTypical: Number(component.power_typical) || Number(component.powerrequired) || 0, // Fallback to legacy field
           powerPeak: Number(component.power_peak) || 0,
           isDefault: component.isdefault || false,
         };
@@ -298,7 +297,7 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
       model: componentWithValidID.model || '',
       description: componentWithValidID.description || '',
       cost: componentWithValidID.cost || 0,
-      powerrequired: componentWithValidID.powerRequired || 0,
+      powerrequired: componentWithValidID.powerTypical || 0, // Save powerTypical to legacy field for backward compatibility
       power_idle: componentWithValidID.powerIdle || 0,
       power_typical: componentWithValidID.powerTypical || 0,
       power_peak: componentWithValidID.powerPeak || 0,

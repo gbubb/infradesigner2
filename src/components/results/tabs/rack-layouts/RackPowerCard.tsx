@@ -122,7 +122,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
           component.powerPeak !== undefined &&
           (component.powerIdle > 0 || component.powerTypical > 0 || component.powerPeak > 0);
         
-        if (!hasCompletePowerData && component.powerRequired === undefined) {
+        if (!hasCompletePowerData && component.powerTypical === undefined) {
           componentsWithoutPower.push({
             name: component.name || 'Unknown',
             type: component.type as ComponentType
@@ -138,11 +138,12 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
           deviceIdlePower = component.powerIdle || 0;
           deviceTypicalPower = component.powerTypical || 0;
           devicePeakPower = component.powerPeak || 0;
-        } else if (component.powerRequired) {
-          // Fallback to powerRequired
-          devicePeakPower = component.powerRequired;
-          deviceIdlePower = devicePeakPower / 3;
-          deviceTypicalPower = devicePeakPower * 0.6;
+        } else if (component.powerTypical) {
+          // Use powerTypical if only that field is available
+          const basePower = component.powerTypical || 0;
+          deviceTypicalPower = basePower;
+          deviceIdlePower = basePower * 0.5; // Assume idle is 50% of typical
+          devicePeakPower = basePower * 1.67; // Assume peak is 167% of typical
         }
         
         // Each placed device represents one unit in the rack
@@ -152,18 +153,17 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
         typicalPower += deviceTypicalPower * quantity;
         peakPower += devicePeakPower * quantity;
         
-        // Add to component breakdown
-        if (devicePeakPower > 0) {
-          powerByComponent.push({
-            name: component.name || 'Unknown',
-            type: component.type as ComponentType,
-            manufacturer: component.manufacturer || '',
-            model: component.model || '',
-            idle: deviceIdlePower,
-            typical: deviceTypicalPower,
-            peak: devicePeakPower
-          });
-        }
+        // Add to component breakdown - include all components regardless of power
+        // This ensures switches and other components appear even with 0W power
+        powerByComponent.push({
+          name: component.name || 'Unknown',
+          type: component.type as ComponentType,
+          manufacturer: component.manufacturer || '',
+          model: component.model || '',
+          idle: deviceIdlePower,
+          typical: deviceTypicalPower,
+          peak: devicePeakPower
+        });
         
         // Aggregate by type
         const componentType = component.type as ComponentType;
@@ -229,22 +229,21 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
       const key = `${baseName}-${comp.manufacturer}-${comp.model}`;
       const powerValue = comp[popoverPowerState];
       
-      if (powerValue > 0) {
-        if (groupedComponents.has(key)) {
-          const existing = groupedComponents.get(key)!;
-          existing.count += 1;
-          existing.totalPower += powerValue;
-        } else {
-          groupedComponents.set(key, {
-            name: baseName,
-            type: comp.type,
-            manufacturer: comp.manufacturer,
-            model: comp.model,
-            count: 1,
-            powerPerUnit: powerValue,
-            totalPower: powerValue
-          });
-        }
+      // Include all components, even those with 0W power
+      if (groupedComponents.has(key)) {
+        const existing = groupedComponents.get(key)!;
+        existing.count += 1;
+        existing.totalPower += powerValue;
+      } else {
+        groupedComponents.set(key, {
+          name: baseName,
+          type: comp.type,
+          manufacturer: comp.manufacturer,
+          model: comp.model,
+          count: 1,
+          powerPerUnit: powerValue,
+          totalPower: powerValue
+        });
       }
     });
     
@@ -379,7 +378,8 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
                         </thead>
                         <tbody>
                           {componentBreakdownData.map((item, index) => {
-                            const percentage = (item.totalPower / getCurrentPower(rackPowerStats, popoverPowerState)) * 100;
+                            const currentTotalPower = getCurrentPower(rackPowerStats, popoverPowerState);
+                            const percentage = currentTotalPower > 0 ? (item.totalPower / currentTotalPower) * 100 : 0;
                             const displayName = `${item.name} (${item.manufacturer} ${item.model})`.trim();
                             return (
                               <tr key={index} className="border-b">
@@ -397,7 +397,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
                                 <td className="text-center py-2">{item.count}</td>
                                 <td className="text-right py-2">{formatPower(item.powerPerUnit)}</td>
                                 <td className="text-right py-2 font-medium">{formatPower(item.totalPower)}</td>
-                                <td className="text-right py-2">{percentage.toFixed(1)}%</td>
+                                <td className="text-right py-2">{percentage > 0 ? `${percentage.toFixed(1)}%` : '-'}</td>
                               </tr>
                             );
                           })}

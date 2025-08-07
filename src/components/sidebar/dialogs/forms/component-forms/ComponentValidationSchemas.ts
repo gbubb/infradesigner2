@@ -38,11 +38,6 @@ const baseComponentSchema = z.object({
     const num = Number(val);
     return isNaN(num) ? 0 : num;
   }, z.number()),
-  powerRequired: z.preprocess((val) => {
-    if (val === "" || val === undefined || val === null) return 0;
-    const num = Number(val);
-    return isNaN(num) ? 0 : num;
-  }, z.number()),
   // Enhanced power consumption fields
   powerIdle: z.preprocess((val) => {
     if (val === "" || val === undefined || val === null) return 0;
@@ -226,7 +221,18 @@ export const legacyFormSchema = z.object({
     const num = Number(val);
     return isNaN(num) ? 0 : num;
   }, z.number()),
-  powerRequired: z.preprocess((val) => {
+  // Power fields
+  powerIdle: z.preprocess((val) => {
+    if (val === "" || val === undefined || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number()),
+  powerTypical: z.preprocess((val) => {
+    if (val === "" || val === undefined || val === null) return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  }, z.number()),
+  powerPeak: z.preprocess((val) => {
     if (val === "" || val === undefined || val === null) return 0;
     const num = Number(val);
     return isNaN(num) ? 0 : num;

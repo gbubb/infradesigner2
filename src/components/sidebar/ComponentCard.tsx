@@ -70,7 +70,7 @@ export const ComponentCard: React.FC<ComponentCardProps> = ({ component }) => {
       <p className="text-xs text-gray-500 mt-1">{getComponentSummary(component)}</p>
       <div className="mt-2 text-xs text-gray-500 flex justify-between w-full">
         <span>${component.cost}</span>
-        <span>{component.powerRequired}W</span>
+        <span>{component.powerTypical || 0}W</span>
       </div>
     </div>
   );

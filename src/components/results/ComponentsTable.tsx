@@ -40,7 +40,8 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
             const roleId = findRoleId(component);
             const quantity = component.quantity || 1;
             const totalCost = component.cost * quantity;
-            const totalPower = component.powerRequired * quantity;
+            const powerValue = component.powerTypical || 0;
+            const totalPower = powerValue * quantity;
             
             return (
               <TableRow key={`${component.id}-${component.role}`}>
@@ -55,7 +56,7 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                 <TableCell className="text-right">{quantity}</TableCell>
                 <TableCell className="text-right">€{component.cost?.toLocaleString()}</TableCell>
                 <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
-                <TableCell className="text-right">{component.powerRequired}</TableCell>
+                <TableCell className="text-right">{powerValue}</TableCell>
                 <TableCell className="text-right">{totalPower}</TableCell>
               </TableRow>
             );

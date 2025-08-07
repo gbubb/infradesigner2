@@ -13,7 +13,9 @@ export interface ComponentFormValues {
   manufacturer: string;
   model: string;
   cost: number;
-  powerRequired: number;
+  powerIdle?: number;
+  powerTypical?: number;
+  powerPeak?: number;
   isDefault: boolean;
   // Add special fields for switch components
   switchRole?: string;
@@ -110,7 +112,9 @@ export const useComponentForm = () => {
     manufacturer: '',
     model: '',
     cost: 0,
-    powerRequired: 0,
+    powerIdle: 0,
+    powerTypical: 0,
+    powerPeak: 0,
     isDefault: false,
     namingPrefix: '',
     validRUStart: 1,

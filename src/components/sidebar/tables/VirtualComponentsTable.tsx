@@ -68,7 +68,7 @@ export const VirtualComponentsTable: React.FC<VirtualComponentsTableProps> = ({
     },
     {
       header: 'Power (W)',
-      accessor: (item) => formatPower(item.powerRequired),
+      accessor: (item) => formatPower(item.powerTypical || 0),
       className: 'text-right',
       headerClassName: 'text-right',
     },

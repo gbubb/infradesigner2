@@ -111,7 +111,7 @@ const PowerConsumptionTableComponent: React.FC<PowerConsumptionTableProps> = ({
       // Calculate power values
       let idlePower = 0;
       let typicalPower = 0;
-      let peakPower = component.powerRequired || 0;
+      let peakPower = 0;
       let operationalPower = 0;
 
       if (component.powerIdle !== undefined && component.powerTypical !== undefined && component.powerPeak !== undefined 
@@ -133,10 +133,13 @@ const PowerConsumptionTableComponent: React.FC<PowerConsumptionTableProps> = ({
         } else {
           operationalPower = peakPower;
         }
-      } else {
-        // Fallback to legacy calculation
-        idlePower = peakPower / 3;
-        typicalPower = peakPower * 0.5; // Assume typical is 50% of peak
+      } else if (component.powerTypical) {
+        // Use only powerTypical if available
+        typicalPower = component.powerTypical;
+        idlePower = typicalPower * 0.5; // Assume idle is 50% of typical
+        peakPower = typicalPower * 1.67; // Assume peak is 167% of typical
+        
+        // Calculate operational power based on load percentage
         const remainingPower = peakPower - idlePower;
         const loadFactor = operationalLoadPercentage / 100;
         operationalPower = idlePower + (remainingPower * loadFactor);

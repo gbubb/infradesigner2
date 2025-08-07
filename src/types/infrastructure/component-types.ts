@@ -66,7 +66,6 @@ export interface InfrastructureComponent {
   manufacturer: string;
   model: string;
   cost: number;
-  powerRequired: number;
   // Enhanced power consumption fields for rack-mounted devices
   powerIdle?: number;
   powerTypical?: number;
