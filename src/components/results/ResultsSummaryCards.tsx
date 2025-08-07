@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AverageVMCostBreakdown } from './AverageVMCostBreakdown';
+import { StorageCostBreakdown } from './StorageCostBreakdown';
 
 interface ResourceSummaryProps {
   totalVCPUs: number;
@@ -29,7 +30,14 @@ interface KeyMetricsProps {
     name: string;
     usableCapacityTiB: number;
     monthlyStorageCostPerTiB: number;
+    isHyperConverged?: boolean;
+    totalNodeCost?: number;
+    totalStorageCost?: number;
+    poolType?: string;
+    nodeCount?: number;
+    totalRawCapacityTB?: number;
   }>;
+  amortisationPeriodMonths?: number;
 }
 
 export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
@@ -102,7 +110,8 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
   monthlyCost,
   quantityOfAverageVMs,
   storageAmortizedCost = 0,
-  storageClusterCosts = []
+  storageClusterCosts = [],
+  amortisationPeriodMonths = 36
 }) => {
   return (
     <Card>
@@ -151,12 +160,26 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
                           {cluster.usableCapacityTiB.toFixed(1)} TiB usable capacity
                         </p>
                       </div>
-                      <span className="text-sm font-bold">
-                        ${cluster.monthlyStorageCostPerTiB.toLocaleString(undefined, { 
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2 
-                        })}/TiB
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold">
+                          ${cluster.monthlyStorageCostPerTiB.toLocaleString(undefined, { 
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2 
+                          })}/TiB
+                        </span>
+                        <StorageCostBreakdown
+                          clusterName={cluster.name}
+                          isHyperConverged={cluster.isHyperConverged || false}
+                          totalNodeCost={cluster.totalNodeCost || 0}
+                          totalStorageCost={cluster.totalStorageCost || 0}
+                          usableCapacityTiB={cluster.usableCapacityTiB}
+                          monthlyStorageCostPerTiB={cluster.monthlyStorageCostPerTiB}
+                          amortisationPeriodMonths={amortisationPeriodMonths}
+                          poolType={cluster.poolType}
+                          nodeCount={cluster.nodeCount}
+                          totalRawCapacityTB={cluster.totalRawCapacityTB}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>

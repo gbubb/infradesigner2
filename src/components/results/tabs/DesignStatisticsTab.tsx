@@ -62,7 +62,13 @@ export const DesignStatisticsTab: React.FC = () => {
       id: cluster.id,
       name: cluster.name,
       usableCapacityTiB: cluster.usableCapacityTiB,
-      monthlyStorageCostPerTiB
+      monthlyStorageCostPerTiB,
+      isHyperConverged: cluster.isHyperConverged,
+      totalNodeCost: cluster.totalNodeCost,
+      totalStorageCost: cluster.totalStorageCost,
+      poolType: cluster.poolType,
+      nodeCount: cluster.nodeCount,
+      totalRawCapacityTB: cluster.totalRawCapacityTB
     };
   });
 
@@ -98,6 +104,7 @@ export const DesignStatisticsTab: React.FC = () => {
           quantityOfAverageVMs={quantityOfAverageVMs}
           storageAmortizedCost={amortizedCostsByType?.storage || 0}
           storageClusterCosts={storageClusterCosts}
+          amortisationPeriodMonths={amortisationPeriodMonths}
         />
       </div>
       
