@@ -15,7 +15,7 @@ import NetworkTable from '../bom/NetworkTable';
 import CablingTable from '../bom/CablingTable';
 
 const getBomGroupKey = (component: InfrastructureComponent): string => {
-  return component.templateId || `${component.manufacturer}-${component.model}-${component.type}-${component.role || ''}`;
+  return (component as any).templateId || `${component.manufacturer}-${component.model}-${component.type}-${component.role || ''}`;
 };
 
 // Helper: For a summarized component, attempt to find its roleId in componentRoles
@@ -24,7 +24,7 @@ const getComponentRoleId = (component: InfrastructureComponent & { summarizedQua
   
   // For storage nodes and hyper-converged nodes, match by both role and clusterId to find the specific cluster
   if (component.role === 'storageNode' || component.role === 'hyperConvergedNode') {
-    const clusterInfo = component.clusterInfo as ClusterInfo | undefined;
+    const clusterInfo = (component as any).clusterInfo as ClusterInfo | undefined;
     const clusterId = clusterInfo?.clusterId;
     const foundRole = componentRoles.find(r => 
       r.role === component.role && r.clusterInfo?.clusterId === clusterId
@@ -40,13 +40,13 @@ const getComponentRoleId = (component: InfrastructureComponent & { summarizedQua
 // Helper: generate a unique key that includes template, cluster assignment, and attachedDisks config
 const getStorageNodeGroupKey = (component: InfrastructureComponent): string => {
   if (component.role === 'storageNode' || component.role === 'hyperConvergedNode') {
-    const clusterInfo = component.clusterInfo as ClusterInfo | undefined;
+    const clusterInfo = (component as any).clusterInfo as ClusterInfo | undefined;
     const clusterId = clusterInfo?.clusterId || 'no-cluster';
-    const attachedDisks = (component.attachedDisks || [])
-      .map((disk) => `${disk.templateId || disk.id || disk.model}-${disk.quantity}`)
+    const attachedDisks = ((component as any).attachedDisks || [])
+      .map((disk: any) => `${disk.templateId || disk.id || disk.model}-${disk.quantity}`)
       .sort()
       .join('|');
-    return `${component.role}:${component.templateId}-${clusterId}-[${attachedDisks}]`;
+    return `${component.role}:${(component as any).templateId}-${clusterId}-[${attachedDisks}]`;
   }
   // Fallback to normal grouping for non-storage nodes
   return getBomGroupKey(component);
@@ -69,7 +69,7 @@ export const BillOfMaterialsTab: React.FC = () => {
   // Build a lookup for Disk costs associated with specific clusters/configurations:
   const diskLineItems = useMemo(() => {
     const items: Record<string, {
-      disk: InfrastructureComponent;
+      disk: any;
       summarizedQuantity: number;
       clusterName: string;
       clusterId: string;
@@ -84,10 +84,10 @@ export const BillOfMaterialsTab: React.FC = () => {
           : getBomGroupKey(instance);
       
       // If this is a storage node or hyper-converged node, also add disk line items with correct cluster assignment
-      if ((instance.role === 'storageNode' || instance.role === 'hyperConvergedNode') && instance.attachedDisks) {
-        const clusterInfo = (instance.clusterInfo as ClusterInfo) || {} as ClusterInfo;
-        const attachedDisks = instance.attachedDisks || [];
-        attachedDisks.forEach((disk) => {
+      if ((instance.role === 'storageNode' || instance.role === 'hyperConvergedNode') && (instance as any).attachedDisks) {
+        const clusterInfo = ((instance as any).clusterInfo as ClusterInfo) || {} as ClusterInfo;
+        const attachedDisks = (instance as any).attachedDisks || [];
+        attachedDisks.forEach((disk: any) => {
           if (!disk) return;
           // Keyed by disk id+model+size+cluster
           const diskKey =
@@ -173,7 +173,7 @@ export const BillOfMaterialsTab: React.FC = () => {
   // --- ENHANCED CSV Export logic including cables and transceivers --- //
   const generateCSVData = (category?: string) => {
     let csvContent = "data:text/csv;charset=utf-8,Category,Type,Role/Model,Manufacturer,Model,Details,Quantity,Unit Cost,Total Cost,Cable Type,Length,Connector Types,Speed,Media Support,Max Distance\r\n";
-    const dataToExport: Array<InfrastructureComponent & { summarizedQuantity: number }> = [];
+    const dataToExport: Array<any> = [];
     // --- Standard hardware/export
     if (!category || ["Compute", "Storage", "Acceleration", "Network", "Cabling", "Cables"].includes(category)) {
       Object.values(summarizedComponentsByCategory).forEach(componentsArr => dataToExport.push(...componentsArr));
@@ -184,13 +184,13 @@ export const BillOfMaterialsTab: React.FC = () => {
     if (!category || category === "Cabling") {
       dataToExport.push(...Object.values(cableLineItems).map(item => ({
         ...item,
-        type: "Cable",
+        type: ComponentType.Cable,
       })));
     }
     if (!category || category === "Network") {
       dataToExport.push(...Object.values(transceiverLineItems).map(item => ({
         ...item,
-        type: "Transceiver",
+        type: ComponentType.Transceiver,
       })));
     }
     dataToExport.forEach(component => {
@@ -198,24 +198,24 @@ export const BillOfMaterialsTab: React.FC = () => {
       const categoryName = component.type
         ? componentTypeToCategory[component.type as ComponentType] || component.type
         : "Other";
-      const quantity = component.summarizedQuantity ?? component.quantity ?? component.count ?? 1;
-      const totalCost = component.totalDiskCost ?? component.total ?? component.cost * quantity;
-      let details = component.details ?? '-';
-      if (component.type === ComponentType.Cable || component.type === "Cable") details = `${component.connectorTypes}, ${component.lengthMeters}m`;
-      else if (component.type === "Transceiver") details = `${component.speed} ${component.connectorType}, ${component.mediaTypeSupported?.join(', ')} (${component.maxDistance})`;
-      else if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${component.cassetteCapacity} cassettes`;
+      const quantity = component.summarizedQuantity ?? component.quantity ?? (component as any).count ?? 1;
+      const totalCost = (component as any).totalDiskCost ?? (component as any).total ?? component.cost * quantity;
+      let details = (component as any).details ?? '-';
+      if (component.type === ComponentType.Cable) details = `${(component as any).connectorTypes}, ${(component as any).lengthMeters}m`;
+      else if (component.type === ComponentType.Transceiver) details = `${(component as any).speed} ${(component as any).connectorType}, ${(component as any).mediaTypeSupported?.join(', ')} (${(component as any).maxDistance})`;
+      else if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${(component as any).cassetteCapacity} cassettes`;
       else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${component.portQuantity} ports`;
-      else if (component.type === ComponentType.Cassette) details = `${component.portType}, ${component.portQuantity} ports`;
+      else if (component.type === ComponentType.Cassette) details = `${(component as any).portType}, ${component.portQuantity} ports`;
       
       // Enhanced CSV with additional columns for cables and transceivers
-      const cableType = component.cableType || component.mediaType || '-';
-      const length = component.lengthMeters ? `${component.lengthMeters}m` : '-';
-      const connectorTypes = component.connectorTypes || '-';
-      const speed = component.speed || '-';
-      const mediaSupport = component.mediaTypeSupported ? component.mediaTypeSupported.join(', ') : '-';
-      const maxDistance = component.maxDistance || '-';
+      const cableType = (component as any).cableType || (component as any).mediaType || '-';
+      const length = (component as any).lengthMeters ? `${(component as any).lengthMeters}m` : '-';
+      const connectorTypes = (component as any).connectorTypes || '-';
+      const speed = (component as any).speed || '-';
+      const mediaSupport = (component as any).mediaTypeSupported ? (component as any).mediaTypeSupported.join(', ') : '-';
+      const maxDistance = (component as any).maxDistance || '-';
       
-      csvContent += `${categoryName},${component.type},${component.role || component.name || "-"},${component.manufacturer || "-"},${component.model || "-"},"${details}",${quantity},${component.costPer ?? component.cost},${totalCost},"${cableType}","${length}","${connectorTypes}","${speed}","${mediaSupport}","${maxDistance}"\r\n`;
+      csvContent += `${categoryName},${component.type},${component.role || component.name || "-"},${component.manufacturer || "-"},${component.model || "-"},"${details}",${quantity},${(component as any).costPer ?? component.cost},${totalCost},"${cableType}","${length}","${connectorTypes}","${speed}","${mediaSupport}","${maxDistance}"\r\n`;
     });
     return encodeURI(csvContent);
   };

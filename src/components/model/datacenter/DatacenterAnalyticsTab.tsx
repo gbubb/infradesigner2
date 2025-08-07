@@ -99,6 +99,12 @@ export const DatacenterAnalyticsTab: React.FC = () => {
       }, 0) || 0;
       const totalSpaceU = profile.uHeight || 42; // Default 42U rack height
       
+      // Map PlacedDevice[] to actual InfrastructureComponent[]
+      const mappedDevices = profile.devices?.map(device => {
+        const component = activeDesign.components.find(c => c.id === device.deviceId);
+        return component;
+      }).filter(c => c !== undefined) || [];
+      
       return {
         id: profile.id,
         name: profile.name,
@@ -107,7 +113,10 @@ export const DatacenterAnalyticsTab: React.FC = () => {
         positionInLevel: profile.positionInLevel || 0,
         powerAllocationKw: allocatedPowerKw,
         actualPowerUsageKw: actualPowerKw,
-        mappedRack: profile,
+        mappedRack: {
+          ...profile,
+          devices: mappedDevices as any // Map PlacedDevice[] to InfrastructureComponent[]
+        },
         assignmentDate: new Date().toISOString(),
         physicalLocation: profile.physicalLocation || {},
         // Add required calculated usage properties
