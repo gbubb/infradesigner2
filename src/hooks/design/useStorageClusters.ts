@@ -113,6 +113,8 @@ export const useStorageClusters = () => {
         usableCapacityTiB,
         effectiveCapacityTiB,
         totalNodeCost,
+        totalStorageCost,
+        isHyperConverged: cluster.hyperConverged || false,
         costPerTiB,
         nodeCount: clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0)
       };

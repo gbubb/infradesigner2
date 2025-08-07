@@ -24,6 +24,12 @@ interface KeyMetricsProps {
   monthlyCost: number;
   quantityOfAverageVMs: number;
   storageAmortizedCost?: number;
+  storageClusterCosts?: Array<{
+    id: string;
+    name: string;
+    usableCapacityTiB: number;
+    monthlyStorageCostPerTiB: number;
+  }>;
 }
 
 export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
@@ -95,7 +101,8 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
   totalMemoryTB,
   monthlyCost,
   quantityOfAverageVMs,
-  storageAmortizedCost = 0
+  storageAmortizedCost = 0,
+  storageClusterCosts = []
 }) => {
   return (
     <Card>
@@ -127,6 +134,35 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
               />
             </div>
           </div>
+          
+          {/* Storage cluster cost metrics */}
+          {storageClusterCosts && storageClusterCosts.length > 0 && (
+            <>
+              <div className="border-t pt-4">
+                <p className="text-sm font-medium mb-3">Monthly cost per usable TiB of storage</p>
+                <div className="space-y-2">
+                  {storageClusterCosts.map(cluster => (
+                    <div key={cluster.id} className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {cluster.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {cluster.usableCapacityTiB.toFixed(1)} TiB usable capacity
+                        </p>
+                      </div>
+                      <span className="text-sm font-bold">
+                        ${cluster.monthlyStorageCostPerTiB.toLocaleString(undefined, { 
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2 
+                        })}/TiB
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
