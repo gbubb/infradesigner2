@@ -114,22 +114,6 @@ export const ComponentLibrary: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteComponentId, setDeleteComponentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Debug logging
-  useEffect(() => {
-    console.log('ComponentLibrary - componentTemplates updated:', {
-      count: componentTemplates.length,
-      templates: componentTemplates.slice(0, 3) // Log first 3 for debugging
-    });
-  }, [componentTemplates]);
-  
-  useEffect(() => {
-    console.log('ComponentLibrary - filtered components:', {
-      filtered: filteredComponents.length,
-      searchTerm,
-      selectedCategory
-    });
-  }, [filteredComponents, searchTerm, selectedCategory]);
 
   const {
     isAddDialogOpen,
@@ -189,6 +173,22 @@ export const ComponentLibrary: React.FC = () => {
     
     return matchesSearch && matchesCategory;
   });
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('ComponentLibrary - componentTemplates updated:', {
+      count: componentTemplates.length,
+      templates: componentTemplates.slice(0, 3) // Log first 3 for debugging
+    });
+  }, [componentTemplates]);
+  
+  useEffect(() => {
+    console.log('ComponentLibrary - filtered components:', {
+      filtered: filteredComponents.length,
+      searchTerm,
+      selectedCategory
+    });
+  }, [filteredComponents.length, searchTerm, selectedCategory]);
 
   const handleToggleDefault = (componentId: string, isDefault: boolean) => {
     if (isDefault) {
