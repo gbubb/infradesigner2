@@ -42,13 +42,13 @@ export function summarizeCablesFromConnections(
   networkConnections: NetworkConnection[],
   components: InfrastructureComponent[]
 ): Record<string, CableLineItem> {
-  const cableTemplates = components.filter(c => c.type === ComponentType.Cable);
+  const cableTemplates = components.filter(c => c.type === ComponentType.Cable) as Cable[];
   const cableLineItems: Record<string, CableLineItem> = {};
   const processedBreakoutCables = new Set<string>(); // Track breakout cables by base connectionId
 
   networkConnections.forEach(conn => {
     if (conn.cableTemplateId) {
-      const cableTemplate = cableTemplates.find(c => c.id === conn.cableTemplateId);
+      const cableTemplate = cableTemplates.find(c => c.id === conn.cableTemplateId) as Cable | undefined;
       const cableKey =
         (conn.cableTemplateId || 'unknown') + '-' + String(conn.lengthMeters || 0) + 'm';
 
@@ -121,7 +121,7 @@ export function summarizeTransceiversFromConnections(
           costPer: trans?.cost ?? 0,
           total: 0,
           manufacturer: trans?.manufacturer || '-',
-          speed: trans?.speed || '-',
+          speed: (trans && 'speed' in trans ? String(trans.speed) : '-'),
           connectorType: trans?.connectorType || '-',
           mediaTypeSupported: trans?.mediaTypeSupported || [],
           maxDistance: trans?.maxDistanceMeters ? `${trans.maxDistanceMeters}m` : '-'
@@ -143,7 +143,7 @@ export function summarizeTransceiversFromConnections(
           costPer: trans?.cost ?? 0,
           total: 0,
           manufacturer: trans?.manufacturer || '-',
-          speed: trans?.speed || '-',
+          speed: (trans && 'speed' in trans ? String(trans.speed) : '-'),
           connectorType: trans?.connectorType || '-',
           mediaTypeSupported: trans?.mediaTypeSupported || [],
           maxDistance: trans?.maxDistanceMeters ? `${trans.maxDistanceMeters}m` : '-'
@@ -208,8 +208,9 @@ export function createPortUtilizationRows(
         deviceName: device.model,
         portName: port.name || port.id,
         portType: port.role,
-        speed: port.speed,
-        mediaType: port.mediaType,
+        portSpeed: String(port.speed || '-'),
+        portMedia: String(port.mediaType || '-'),
+        portConnector: String(port.connectorType || '-'),
         status,
         transceiver: transceiverName,
         connectedTo: portStatusMap[pk]?.connectedTo || "-",

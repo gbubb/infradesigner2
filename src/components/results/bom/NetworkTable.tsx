@@ -89,11 +89,11 @@ export const NetworkTable: React.FC<NetworkTableProps> = ({
             <BomItemHoverCard key={`network-${getBomGroupKey(component)}`} component={component}>
               <TableRow className="cursor-pointer">
                 <TableCell>{component.type}</TableCell>
-                <TableCell>{component.role || ('switchRole' in component ? component.switchRole : null) || 'Unassigned'}</TableCell>
+                <TableCell>{component.role || ('switchRole' in component && component.switchRole ? String(component.switchRole) : null) || 'Unassigned'}</TableCell>
                 <TableCell>{component.manufacturer}</TableCell>
                 <TableCell>{component.model}</TableCell>
-                <TableCell>{'portCount' in component ? component.portCount : ('portsProvidedQuantity' in component ? component.portsProvidedQuantity : '-')}</TableCell>
-                <TableCell>{'portSpeed' in component ? component.portSpeed : ('portSpeedType' in component ? component.portSpeedType : '-')}</TableCell>
+                <TableCell>{'portCount' in component && component.portCount ? String(component.portCount) : ('portsProvidedQuantity' in component && component.portsProvidedQuantity ? String(component.portsProvidedQuantity) : '-')}</TableCell>
+                <TableCell>{'portSpeed' in component && component.portSpeed ? String(component.portSpeed) : ('portSpeedType' in component && component.portSpeedType ? String(component.portSpeedType) : '-')}</TableCell>
                 <TableCell className="text-right flex items-center gap-1 justify-end">
                   {quantity}
                   {roleId && (

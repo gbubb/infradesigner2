@@ -2,7 +2,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { InfrastructureComponent, ComponentType } from "@/types/infrastructure";
+import { InfrastructureComponent, ComponentType, Cable } from "@/types/infrastructure";
 import { useNavigate } from "react-router-dom";
 import { ExternalLink, Cpu, HardDrive, Network, Cable, Router, Shield } from "lucide-react";
 
@@ -56,16 +56,16 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
         if (component.memoryGB) {
           details.push({ label: "Memory", value: `${component.memoryGB} GB` });
         }
-        if (component.diskBays) {
+        if ('diskBays' in component && component.diskBays) {
           details.push({ label: "Disk Bays", value: component.diskBays });
         }
         break;
 
       case ComponentType.Disk:
-        if (component.diskBays) {
+        if ('diskBays' in component && component.diskBays) {
           details.push({ label: "Disk Bays", value: component.diskBays });
         }
-        if (component.controllerCount) {
+        if ('controllerCount' in component && component.controllerCount) {
           details.push({ label: "Controllers", value: component.controllerCount });
         }
         break;
@@ -73,33 +73,38 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
       case ComponentType.Switch:
       case ComponentType.Router:
       case ComponentType.Firewall: {
-        const totalPorts = (component.port100GCount || 0) + 
-                          (component.port400GCount || 0) + 
-                          (component.port10GCount || 0) + 
-                          (component.port25GCount || 0);
+        const port100GCount = 'port100GCount' in component ? component.port100GCount : 0;
+        const port400GCount = 'port400GCount' in component ? component.port400GCount : 0;
+        const port10GCount = 'port10GCount' in component ? component.port10GCount : 0;
+        const port25GCount = 'port25GCount' in component ? component.port25GCount : 0;
+        const totalPorts = (port100GCount || 0) + 
+                          (port400GCount || 0) + 
+                          (port10GCount || 0) + 
+                          (port25GCount || 0);
         if (totalPorts > 0) {
           details.push({ label: "Total Ports", value: totalPorts });
         }
-        if (component.port100GCount) {
-          details.push({ label: "100G Ports", value: component.port100GCount });
+        if (port100GCount) {
+          details.push({ label: "100G Ports", value: port100GCount });
         }
-        if (component.port400GCount) {
-          details.push({ label: "400G Ports", value: component.port400GCount });
+        if (port400GCount) {
+          details.push({ label: "400G Ports", value: port400GCount });
         }
         break;
       }
 
       case ComponentType.Cable:
-        if (component.mediaType) {
-          details.push({ label: "Media Type", value: component.mediaType });
+        const cableComponent = component as Cable;
+        if (cableComponent.mediaType) {
+          details.push({ label: "Media Type", value: cableComponent.mediaType });
         }
-        if (component.connectorA_Type && component.connectorB_Type) {
+        if (cableComponent.connectorA_Type && cableComponent.connectorB_Type) {
           details.push({ 
             label: "Connectors", 
-            value: `${component.connectorA_Type} to ${component.connectorB_Type}` 
+            value: `${cableComponent.connectorA_Type} to ${cableComponent.connectorB_Type}` 
           });
         }
-        if (component.isBreakout) {
+        if (cableComponent.isBreakout) {
           details.push({ label: "Type", value: "Breakout Cable" });
         }
         break;
@@ -110,18 +115,22 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
         if (component.portCount) {
           details.push({ label: "Port Count", value: component.portCount });
         }
-        if (component.mediaType) {
+        if ('mediaType' in component && component.mediaType) {
           details.push({ label: "Media Type", value: component.mediaType });
         }
         break;
     }
 
     // Common technical details
-    if (component.powerConsumptionW) {
+    if ('powerConsumptionW' in component && component.powerConsumptionW) {
       details.push({ label: "Power", value: `${component.powerConsumptionW}W` });
+    } else if (component.powerRequired) {
+      details.push({ label: "Power", value: `${component.powerRequired}W` });
     }
-    if (component.heightRU) {
+    if ('heightRU' in component && component.heightRU) {
       details.push({ label: "Height", value: `${component.heightRU}U` });
+    } else if (component.ruSize) {
+      details.push({ label: "Height", value: `${component.ruSize}U` });
     }
     if (component.cost) {
       details.push({ label: "Unit Cost", value: `$${component.cost.toLocaleString()}` });

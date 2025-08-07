@@ -72,8 +72,8 @@ export const DatacenterAnalyticsTab: React.FC = () => {
       return sum + (Number(power) * Number(quantity)) / 1000; // Convert W to kW
     }, 0) || 0;
 
-    // Create mock racks for the services (since we don't have the Rack type)
-    const mockRacks = activeDesign.rackprofiles?.map(profile => ({
+    // Create mock racks for the services - explicitly type as any since Rack type is not defined
+    const mockRacks: any[] = activeDesign.rackprofiles?.map(profile => ({
       id: profile.id,
       name: profile.name,
       placedComponents: activeDesign.components.filter(c => {
@@ -83,7 +83,8 @@ export const DatacenterAnalyticsTab: React.FC = () => {
       }).map(c => ({
         ...c,
         power: ('power' in c ? c.power : 0) || 
-               ('powerrequired' in c ? c.powerrequired : 0) || 0
+               ('powerrequired' in c ? c.powerrequired : 0) || 0,
+        quantity: c.quantity || 1
       }))
     })) || [];
 
@@ -91,7 +92,11 @@ export const DatacenterAnalyticsTab: React.FC = () => {
     const mockDatacenterRacks = activeDesign.rackprofiles?.map(profile => {
       const actualPowerKw = profile.actualPowerUsageKw || 0;
       const allocatedPowerKw = profile.powerAllocationKw || 30; // Default 30kW allocation
-      const usedSpaceU = profile.devices?.reduce((sum, device) => sum + (device.heightRU || 0), 0) || 0;
+      const usedSpaceU = profile.devices?.reduce((sum, device) => {
+        // Find the actual component to get its ruSize
+        const component = activeDesign.components.find(c => c.id === device.deviceId);
+        return sum + (component?.ruSize || 0);
+      }, 0) || 0;
       const totalSpaceU = profile.uHeight || 42; // Default 42U rack height
       
       return {

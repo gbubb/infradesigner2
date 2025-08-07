@@ -27,7 +27,15 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ costLaye
   const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
     if (!active || !payload?.length) return null;
 
-    const data = payload[0].payload as ChartDataItem;
+    const rawData = payload[0].payload;
+    // Safely extract values from the payload
+    const data: ChartDataItem = {
+      name: String(rawData.name || ''),
+      'Capital Cost': Number(rawData['Capital Cost'] || 0),
+      'Operational Cost': Number(rawData['Operational Cost'] || 0),
+      total: Number(rawData.total || 0)
+    };
+    
     return (
       <div className="bg-background border rounded-lg p-3 shadow-lg">
         <p className="font-semibold mb-1">{data.name}</p>
