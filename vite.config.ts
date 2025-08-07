@@ -142,9 +142,12 @@ export default defineConfig(({ mode }) => ({
       'react-router-dom',
       '@tanstack/react-query',
       'zustand',
-    ],
-    exclude: [
-      '@supabase/supabase-js', // Large, let it load separately
+      '@supabase/supabase-js',
+      '@supabase/postgrest-js',
+      '@supabase/auth-js',
+      '@supabase/realtime-js',
+      '@supabase/storage-js',
+      '@supabase/functions-js',
     ],
   },
 }));
