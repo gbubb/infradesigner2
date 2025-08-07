@@ -16,16 +16,26 @@ interface ComponentContextType {
 export const ComponentContext = createContext<ComponentContextType | undefined>(undefined);
 
 export const ComponentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const store = useDesignStore();
+  const componentTemplates = useDesignStore(state => state.componentTemplates);
+  const addComponentTemplate = useDesignStore(state => state.addComponentTemplate);
+  const updateComponentTemplate = useDesignStore(state => state.updateComponentTemplate);
+  const cloneComponentTemplate = useDesignStore(state => state.cloneComponentTemplate);
+  const deleteComponentTemplate = useDesignStore(state => state.deleteComponentTemplate);
+  const setDefaultComponent = useDesignStore(state => state.setDefaultComponent);
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('ComponentProvider - templates updated:', componentTemplates.length);
+  }, [componentTemplates]);
 
   return (
     <ComponentContext.Provider value={{
-      componentTemplates: store.componentTemplates,
-      addComponentTemplate: store.addComponentTemplate,
-      updateComponentTemplate: store.updateComponentTemplate,
-      cloneComponentTemplate: store.cloneComponentTemplate,
-      deleteComponentTemplate: store.deleteComponentTemplate,
-      setDefaultComponent: store.setDefaultComponent,
+      componentTemplates,
+      addComponentTemplate,
+      updateComponentTemplate,
+      cloneComponentTemplate,
+      deleteComponentTemplate,
+      setDefaultComponent,
     }}>
       {children}
     </ComponentContext.Provider>
