@@ -135,7 +135,7 @@ export const RackView: React.FC<RackViewProps> = ({
                   height={deviceHeight}
                   onDeviceClick={onDeviceClick}
                   manufacturer={component.manufacturer}
-                  powerRequired={component.powerRequired}
+                  powerRequired={component.powerTypical}
                   portsCount={component.ports?.length}
                   serverRole={'serverRole' in component ? component.serverRole as string : undefined}
                 />

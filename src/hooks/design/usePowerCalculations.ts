@@ -44,9 +44,9 @@ export const usePowerCalculations = () => {
       const quantity = component.quantity || 1;
       
       // Calculate minimum (idle), operational, and maximum (peak) power
-      let minPower = component.powerRequired || 0;
-      let operationalPower = component.powerRequired || 0;
-      let maxPower = component.powerRequired || 0;
+      let minPower = component.powerTypical || 0;
+      let operationalPower = component.powerTypical || 0;
+      let maxPower = component.powerTypical || 0;
       
       if (component.powerIdle !== undefined && component.powerTypical !== undefined && component.powerPeak !== undefined 
           && (component.powerIdle > 0 || component.powerTypical > 0 || component.powerPeak > 0)) {

@@ -43,7 +43,7 @@ export const usePhysicalResourceMetrics = () => {
       const quantity = component.quantity || 1;
       
       // Add to total power
-      totalPower += component.powerRequired * quantity;
+      totalPower += (component.powerTypical || 0) * quantity;
       
       // Add to total rack units if applicable
       if ('rackUnitsConsumed' in component) {
@@ -64,7 +64,7 @@ export const usePhysicalResourceMetrics = () => {
       if (component.type === ComponentType.Switch || 
           component.type === ComponentType.Router ||
           component.type === ComponentType.Firewall) {
-        networkPower += component.powerRequired * quantity;
+        networkPower += (component.powerTypical || 0) * quantity;
         if ('rackUnitsConsumed' in component) {
           const rackUnits = (component as { rackUnitsConsumed?: number }).rackUnitsConsumed;
           if (rackUnits) {

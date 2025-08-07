@@ -135,7 +135,7 @@ export const PlacedComponent: React.FC<PlacedComponentProps> = ({
       <p className="text-xs text-blue-500 mt-0.5">{getRoleInfo(component.component)}</p>
       <div className="mt-2 text-xs text-gray-500 flex justify-between w-full">
         <span>${component.component.cost}</span>
-        <span>{component.component.powerRequired}W</span>
+        <span>{component.component.powerTypical || 0}W</span>
       </div>
     </div>
   );
