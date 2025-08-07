@@ -99,8 +99,20 @@ export class IntelligentDesignUpdater {
     const existingRoles = state.componentRoles || [];
     const preservedRoles = this.preserveRoleAssignments(existingRoles, newRoles, context);
     
+    // Recalculate required quantities for all preserved roles
+    const rolesWithUpdatedQuantities = preservedRoles.map(role => {
+      if (role.assignedComponentId) {
+        const requiredQuantity = state.calculateRequiredQuantity(role.id, role.assignedComponentId);
+        return {
+          ...role,
+          adjustedRequiredCount: requiredQuantity
+        };
+      }
+      return role;
+    });
+    
     // Update the store with new roles using setState
-    useDesignStore.setState({ componentRoles: preservedRoles });
+    useDesignStore.setState({ componentRoles: rolesWithUpdatedQuantities });
   }
   
   /**
@@ -159,9 +171,13 @@ export class IntelligentDesignUpdater {
     );
     
     // Update the design with new components
+    // IMPORTANT: Preserve disk and GPU configurations when updating
     if (state.activeDesign) {
       state.updateDesign(state.activeDesign.id, {
-        components: updatedComponents
+        components: updatedComponents,
+        // Preserve existing disk and GPU configurations
+        selectedDisksByRole: state.selectedDisksByRole,
+        selectedGPUsByRole: state.selectedGPUsByRole
       });
     }
   }
@@ -189,14 +205,20 @@ export class IntelligentDesignUpdater {
     });
     
     roles.forEach(role => {
-      if (!role.assignedComponentId || !role.adjustedRequiredCount || role.adjustedRequiredCount <= 0) {
+      if (!role.assignedComponentId) {
         return;
       }
       
       const componentTemplate = state.componentTemplates.find(c => c.id === role.assignedComponentId);
       if (!componentTemplate) return;
       
-      const requiredQuantity = role.adjustedRequiredCount;
+      // Use adjustedRequiredCount if available, otherwise calculate it
+      const requiredQuantity = role.adjustedRequiredCount || 
+        state.calculateRequiredQuantity(role.id, role.assignedComponentId);
+      
+      if (requiredQuantity <= 0) {
+        return;
+      }
       const roleKey = `${role.role}-${role.assignedComponentId}`;
       const existingForRole = existingByRole.get(roleKey) || [];
       
@@ -311,14 +333,20 @@ export class IntelligentDesignUpdater {
     const templateInstanceCounts: { [key: string]: number } = {};
     
     roles.forEach(role => {
-      if (!role.assignedComponentId || !role.adjustedRequiredCount || role.adjustedRequiredCount <= 0) {
+      if (!role.assignedComponentId) {
         return;
       }
       
       const componentTemplate = state.componentTemplates.find(c => c.id === role.assignedComponentId);
       if (!componentTemplate) return;
       
-      const requiredQuantity = role.adjustedRequiredCount;
+      // Use adjustedRequiredCount if available, otherwise calculate it
+      const requiredQuantity = role.adjustedRequiredCount || 
+        state.calculateRequiredQuantity(role.id, role.assignedComponentId);
+      
+      if (requiredQuantity <= 0) {
+        return;
+      }
       
       for (let i = 0; i < requiredQuantity; i++) {
         const templateIdForCount = componentTemplate.id;

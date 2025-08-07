@@ -24,7 +24,7 @@ export interface ChangeImpact {
 // Map change types to their impacts
 const CHANGE_IMPACT_MAP: Record<ChangeType, ChangeImpact> = {
   [ChangeType.COMPUTE_CAPACITY]: {
-    affectedRoles: ['controllerNode', 'computeNode', 'infrastructureNode', 'gpuNode'],
+    affectedRoles: ['controllerNode', 'computeNode', 'infrastructureNode', 'gpuNode', 'hyperConvergedNode'],
     requiresNewRacks: false, // Usually just quantity changes
     requiresRackRebalancing: true,
     affectedComponents: ['servers'],
