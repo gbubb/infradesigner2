@@ -129,7 +129,16 @@ export const useCostAnalysis = () => {
     return computeCapitalCost / actualHardwareTotals.totalVCPUs;
   }, [actualHardwareTotals.totalVCPUs, activeDesign?.components]);
   
-  // Calculate amortized monthly costs by component type
+  // Calculate amortisation period (average of all component lifespans)
+  const amortisationPeriodMonths = useMemo(() => {
+    const computeLifespan = activeDesign?.requirements?.computeRequirements?.deviceLifespanYears || 3;
+    const storageLifespan = activeDesign?.requirements?.storageRequirements?.deviceLifespanYears || 3;
+    const networkLifespan = activeDesign?.requirements?.networkRequirements?.deviceLifespanYears || 3;
+    const averageLifespanYears = (computeLifespan + storageLifespan + networkLifespan) / 3;
+    return averageLifespanYears * 12;
+  }, [activeDesign?.requirements]);
+
+  // Calculate amortised monthly costs by component type
   const amortizedCostsByType = useMemo(() => {
     if (!activeDesign?.components || activeDesign.components.length === 0) {
       return { compute: 0, storage: 0, network: 0, total: 0 };
