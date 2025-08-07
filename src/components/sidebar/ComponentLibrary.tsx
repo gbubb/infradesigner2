@@ -161,47 +161,41 @@ export const ComponentLibrary: React.FC = () => {
     }
   }, [location.state, componentTemplates]);
 
-  const filteredComponents = componentTemplates.filter(component => {
-    // Search filter - if searchTerm is empty, include everything
-    let matchesSearch = true;
-    if (searchTerm && searchTerm.trim() !== '') {
-      const search = searchTerm.toLowerCase();
-      matchesSearch = 
-        component.name.toLowerCase().includes(search) ||
-        component.manufacturer.toLowerCase().includes(search) ||
-        component.model.toLowerCase().includes(search);
+  // Simplest approach - if 'all' is selected and no search, show everything
+  const filteredComponents = (() => {
+    // No filters at all - show everything
+    if (selectedCategory === 'all' && !searchTerm) {
+      return componentTemplates;
     }
     
-    // Category filter - if 'all' is selected, include everything
-    let matchesCategory = true;
-    if (selectedCategory !== 'all') {
-      matchesCategory = componentTypeToCategory[component.type] === selectedCategory;
-    }
-    
-    return matchesSearch && matchesCategory;
-  });
+    // Apply filters
+    return componentTemplates.filter(component => {
+      // Search filter
+      const matchesSearch = !searchTerm || 
+        component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        component.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        component.model.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Category filter
+      const matchesCategory = selectedCategory === 'all' || 
+        componentTypeToCategory[component.type] === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  })();
   
   // Debug logging
   useEffect(() => {
-    console.log('ComponentLibrary - componentTemplates updated:', {
-      count: componentTemplates.length,
-      templates: componentTemplates.slice(0, 3) // Log first 3 for debugging
-    });
-  }, [componentTemplates]);
-  
-  useEffect(() => {
-    console.log('ComponentLibrary - filter state:', {
+    console.log('ComponentLibrary - state check:', {
+      componentTemplatesCount: componentTemplates.length,
       filteredCount: filteredComponents.length,
-      totalCount: componentTemplates.length,
       searchTerm: searchTerm || '(empty)',
       selectedCategory,
-      firstFewFiltered: filteredComponents.slice(0, 3).map(c => ({
-        name: c.name,
-        type: c.type,
-        mappedCategory: componentTypeToCategory[c.type]
-      }))
+      isShowingAll: selectedCategory === 'all' && !searchTerm,
+      firstComponent: componentTemplates[0],
+      firstFiltered: filteredComponents[0]
     });
-  }, [filteredComponents.length, componentTemplates.length, searchTerm, selectedCategory]);
+  }, [componentTemplates.length, filteredComponents.length, searchTerm, selectedCategory]);
 
   const handleToggleDefault = (componentId: string, isDefault: boolean) => {
     if (isDefault) {
@@ -309,25 +303,15 @@ export const ComponentLibrary: React.FC = () => {
         isLoading={isLoading}
         skeleton={<TableSkeleton rows={8} columns={8} />}
       >
-        {filteredComponents.length > 50 ? (
-          <VirtualComponentsTable 
-            components={filteredComponents}
-            isDefaultForTypeAndRole={isDefaultForTypeAndRole}
-            onToggleDefault={handleToggleDefault}
-            onEdit={openEditDialog}
-            onClone={cloneComponentTemplate}
-            onDelete={openDeleteConfirmation}
-          />
-        ) : (
-          <ComponentsTable 
-            components={filteredComponents}
-            isDefaultForTypeAndRole={isDefaultForTypeAndRole}
-            onToggleDefault={handleToggleDefault}
-            onEdit={openEditDialog}
-            onClone={cloneComponentTemplate}
-            onDelete={openDeleteConfirmation}
-          />
-        )}
+        {/* Always use regular table for now to debug the issue */}
+        <ComponentsTable 
+          components={filteredComponents}
+          isDefaultForTypeAndRole={isDefaultForTypeAndRole}
+          onToggleDefault={handleToggleDefault}
+          onEdit={openEditDialog}
+          onClone={cloneComponentTemplate}
+          onDelete={openDeleteConfirmation}
+        />
       </WithSkeleton>
 
       <ComponentFormDialog 
