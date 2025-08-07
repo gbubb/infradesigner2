@@ -69,8 +69,7 @@ export interface DesignRequirements {
 }
 
 // Re-export imported types for convenience
-export { LicensingRequirements } from './licensing-types';
-export { PricingRequirements } from './pricing-types';
+export type { LicensingRequirements, PricingRequirements };
 
 export enum DeviceRoleType {
   Controller = 'controllerNode',
