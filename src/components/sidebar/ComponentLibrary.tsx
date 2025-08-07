@@ -162,14 +162,21 @@ export const ComponentLibrary: React.FC = () => {
   }, [location.state, componentTemplates]);
 
   const filteredComponents = componentTemplates.filter(component => {
-    const matchesSearch = 
-      component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      component.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      component.model.toLowerCase().includes(searchTerm.toLowerCase());
+    // Search filter - if searchTerm is empty, include everything
+    let matchesSearch = true;
+    if (searchTerm && searchTerm.trim() !== '') {
+      const search = searchTerm.toLowerCase();
+      matchesSearch = 
+        component.name.toLowerCase().includes(search) ||
+        component.manufacturer.toLowerCase().includes(search) ||
+        component.model.toLowerCase().includes(search);
+    }
     
-    const matchesCategory = 
-      selectedCategory === 'all' || 
-      componentTypeToCategory[component.type] === selectedCategory;
+    // Category filter - if 'all' is selected, include everything
+    let matchesCategory = true;
+    if (selectedCategory !== 'all') {
+      matchesCategory = componentTypeToCategory[component.type] === selectedCategory;
+    }
     
     return matchesSearch && matchesCategory;
   });
@@ -183,12 +190,18 @@ export const ComponentLibrary: React.FC = () => {
   }, [componentTemplates]);
   
   useEffect(() => {
-    console.log('ComponentLibrary - filtered components:', {
-      filtered: filteredComponents.length,
-      searchTerm,
-      selectedCategory
+    console.log('ComponentLibrary - filter state:', {
+      filteredCount: filteredComponents.length,
+      totalCount: componentTemplates.length,
+      searchTerm: searchTerm || '(empty)',
+      selectedCategory,
+      firstFewFiltered: filteredComponents.slice(0, 3).map(c => ({
+        name: c.name,
+        type: c.type,
+        mappedCategory: componentTypeToCategory[c.type]
+      }))
     });
-  }, [filteredComponents.length, searchTerm, selectedCategory]);
+  }, [filteredComponents.length, componentTemplates.length, searchTerm, selectedCategory]);
 
   const handleToggleDefault = (componentId: string, isDefault: boolean) => {
     if (isDefault) {
