@@ -67,7 +67,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
   const [selectedPowerState, setSelectedPowerState] = useState<PowerState>('peak');
   const [popoverPowerState, setPopoverPowerState] = useState<PowerState>('peak');
   
-  const { activeDesign } = useDesignStore();
+  const { activeDesign, componentTemplates } = useDesignStore();
   
   // Create a dependency key that changes when rack devices change
   const rackDevicesKey = useMemo(() => {
@@ -109,8 +109,13 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
     let totalDevices = 0;
     
     rack.devices.forEach(device => {
-      // Find the component by its deviceId
-      const component = activeDesign.components.find(c => c.id === device.deviceId);
+      // Find the component by its deviceId - first in components, then in templates
+      let component = activeDesign.components.find(c => c.id === device.deviceId);
+      
+      // If not found in components, check componentTemplates
+      if (!component) {
+        component = componentTemplates?.find(c => c.id === device.deviceId);
+      }
       
       if (component) {
         totalDevices++;
@@ -186,7 +191,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
       componentsWithoutPower,
       totalDevices
     };
-  }, [activeDesign?.rackprofiles, activeDesign?.components, rackProfileId]);
+  }, [activeDesign?.rackprofiles, activeDesign?.components, componentTemplates, rackProfileId]);
   
   // Get current power based on selected state
   const getCurrentPower = (stats: RackPowerStats | null, state: PowerState) => {
@@ -266,7 +271,10 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
     const rack = activeDesign?.rackprofiles?.find(r => r.id === rackProfileId);
     const totalRU = rack?.uHeight || 42;
     const usedRU = rack?.devices?.reduce((sum, device) => {
-      const component = activeDesign?.components?.find(c => c.id === device.deviceId);
+      let component = activeDesign?.components?.find(c => c.id === device.deviceId);
+      if (!component) {
+        component = componentTemplates?.find(c => c.id === device.deviceId);
+      }
       const deviceRU = component?.ruSize || 1;
       return sum + deviceRU;
     }, 0) || 0;
@@ -279,7 +287,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
       averageDevicePower: avgPower,
       additionalDevicesPossible: Math.min(additionalByPower, additionalBySpace)
     };
-  }, [rackPowerStats, popoverPowerState, powerCapacity, activeDesign?.rackprofiles, activeDesign?.components, rackProfileId]);
+  }, [rackPowerStats, popoverPowerState, powerCapacity, activeDesign?.rackprofiles, activeDesign?.components, componentTemplates, rackProfileId]);
   
   return (
     <Card>
