@@ -36,7 +36,7 @@ interface DetailedCostAnalysisCardProps {
   };
 }
 
-export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> = ({
+const DetailedCostAnalysisCardComponent: React.FC<DetailedCostAnalysisCardProps> = ({
   capitalCost,
   operationalCosts,
   amortizedCostsByType,
@@ -177,3 +177,5 @@ export const DetailedCostAnalysisCard: React.FC<DetailedCostAnalysisCardProps> =
     </Card>
   );
 };
+
+export const DetailedCostAnalysisCard = React.memo(DetailedCostAnalysisCardComponent);

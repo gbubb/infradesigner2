@@ -26,7 +26,7 @@ interface ComputeStorageTableProps {
   onExport: (category: string) => void;
 }
 
-export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
+const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
   summarizedComponentsByCategory,
   diskLineItems,
   getBomGroupKey,
@@ -210,4 +210,5 @@ export const ComputeStorageTable: React.FC<ComputeStorageTableProps> = ({
   );
 };
 
+export const ComputeStorageTable = React.memo(ComputeStorageTableComponent);
 export default ComputeStorageTable;

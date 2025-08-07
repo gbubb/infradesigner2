@@ -18,9 +18,10 @@ export function GPUConfiguration({ roleId }: GPUConfigurationProps) {
   const [quantity, setQuantity] = useState<number>(1);
 
   // Filter GPU components
-  const gpuOptions = componentTemplates.filter(
-    (component): component is GPU => component.type === ComponentType.GPU
-  );
+  const gpuOptions = React.useMemo(() => 
+    componentTemplates.filter(
+      (component): component is GPU => component.type === ComponentType.GPU
+    ), [componentTemplates]);
 
   // Get GPUs assigned to this role
   const roleGPUs = selectedGPUsByRole[roleId] || [];

@@ -23,7 +23,7 @@ interface DevicePowerBreakdown {
   totalOperationalPower: number;
 }
 
-export const PowerConsumptionTable: React.FC<PowerConsumptionTableProps> = ({
+const PowerConsumptionTableComponent: React.FC<PowerConsumptionTableProps> = ({
   components,
   operationalLoadPercentage
 }) => {
@@ -248,3 +248,5 @@ export const PowerConsumptionTable: React.FC<PowerConsumptionTableProps> = ({
     </div>
   );
 };
+
+export const PowerConsumptionTable = React.memo(PowerConsumptionTableComponent);

@@ -15,7 +15,7 @@ interface CablingTableProps {
   componentTemplates?: InfrastructureComponent[];
 }
 
-export const CablingTable: React.FC<CablingTableProps> = ({
+const CablingTableComponent: React.FC<CablingTableProps> = ({
   summarizedComponentsByCategory,
   cableLineItems,
   getBomGroupKey,
@@ -107,4 +107,5 @@ export const CablingTable: React.FC<CablingTableProps> = ({
   );
 };
 
+export const CablingTable = React.memo(CablingTableComponent);
 export default CablingTable;

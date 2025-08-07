@@ -175,7 +175,7 @@ export const DesignPanel: React.FC = () => {
     }
   }, [componentRoles, componentTemplates, findDefaultComponent, assignComponentToRole, activeDesign, getComponentsForRole]);
 
-  const handleSaveDesign = () => {
+  const handleSaveDesign = React.useCallback(() => {
     if (!activeDesign) {
       toast.error("No active design to save. Create a new design first.");
       return;
@@ -189,17 +189,17 @@ export const DesignPanel: React.FC = () => {
     
     saveDesign();
     toast.success("Design saved!");
-  };
+  }, [activeDesign, componentRoles, saveDesign]);
   
-  const handleCreateDesign = () => {
+  const handleCreateDesign = React.useCallback(() => {
     createNewDesign(designName || "New Design", designDescription);
     toast.success("New design created");
-  };
+  }, [designName, designDescription, createNewDesign]);
   
-  const handleRecalculateDesign = () => {
+  const handleRecalculateDesign = React.useCallback(() => {
     manualRecalculateDesign();
     toast.success("Design recalculated");
-  };
+  }, []);
 
   return (
     <div className="space-y-6 p-6 max-w-6xl mx-auto">

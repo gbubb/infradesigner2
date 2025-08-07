@@ -25,27 +25,29 @@ const COLORS = {
 
 export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps> = ({ componentsByType }) => {
   // Calculate totals and prepare data for charts
-  const typeData = Object.entries(componentsByType).map(([type, components]) => {
-    const totalTypeQuantity = components.reduce((sum, comp) => sum + (comp.quantity || 1), 0);
-    const totalTypeCost = components.reduce((sum, comp) => sum + ((comp.cost || 0) * (comp.quantity || 1)), 0);
-    const totalTypePower = components.reduce((sum, comp) => sum + ((comp.powerRequired || 0) * (comp.quantity || 1)), 0);
-    
-    const totalTypeRU = components.reduce((sum, comp) => {
-      if ('ruSize' in comp && comp.ruSize) {
-        return sum + (comp.ruSize * (comp.quantity || 1));
-      }
-      return sum;
-    }, 0);
-    
-    return {
-      type: type.charAt(0).toUpperCase() + type.slice(1),
-      quantity: totalTypeQuantity,
-      cost: isFinite(totalTypeCost) ? totalTypeCost : 0,
-      power: isFinite(totalTypePower) ? totalTypePower : 0,
-      rackUnits: isFinite(totalTypeRU) ? totalTypeRU : 0,
-      originalType: type // keep original type for color assignment
-    };
-  }).filter(item => item.quantity > 0); // Filter out types with no components
+  const typeData = React.useMemo(() => {
+    return Object.entries(componentsByType).map(([type, components]) => {
+      const totalTypeQuantity = components.reduce((sum, comp) => sum + (comp.quantity || 1), 0);
+      const totalTypeCost = components.reduce((sum, comp) => sum + ((comp.cost || 0) * (comp.quantity || 1)), 0);
+      const totalTypePower = components.reduce((sum, comp) => sum + ((comp.powerRequired || 0) * (comp.quantity || 1)), 0);
+      
+      const totalTypeRU = components.reduce((sum, comp) => {
+        if ('ruSize' in comp && comp.ruSize) {
+          return sum + (comp.ruSize * (comp.quantity || 1));
+        }
+        return sum;
+      }, 0);
+      
+      return {
+        type: type.charAt(0).toUpperCase() + type.slice(1),
+        quantity: totalTypeQuantity,
+        cost: isFinite(totalTypeCost) ? totalTypeCost : 0,
+        power: isFinite(totalTypePower) ? totalTypePower : 0,
+        rackUnits: isFinite(totalTypeRU) ? totalTypeRU : 0,
+        originalType: type // keep original type for color assignment
+      };
+    }).filter(item => item.quantity > 0); // Filter out types with no components
+  }, [componentsByType]);
   
   // Get a color for a component type
   const getTypeColor = (type: string) => {

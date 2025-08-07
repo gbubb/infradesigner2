@@ -32,7 +32,7 @@ interface NetworkTableProps {
 
 type NetworkComponent = Switch | Router | Firewall;
 
-export const NetworkTable: React.FC<NetworkTableProps> = ({
+const NetworkTableComponent: React.FC<NetworkTableProps> = ({
   summarizedComponentsByCategory,
   transceiverLineItems,
   getBomGroupKey,
@@ -126,4 +126,5 @@ export const NetworkTable: React.FC<NetworkTableProps> = ({
   );
 };
 
+export const NetworkTable = React.memo(NetworkTableComponent);
 export default NetworkTable;

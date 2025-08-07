@@ -1,20 +1,22 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ComparePanel } from "@/components/compare/ComparePanel";
-import { ComponentLibrary } from "@/components/sidebar/ComponentLibrary";
-import { ConfigurePanel } from "@/components/configure/ConfigurePanel";
-import { DatacenterPanel } from "@/components/datacenter/DatacenterPanel";
-import { DesignPanel } from "@/components/design/DesignPanel";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { ModelPanel } from "@/components/model/ModelPanel";
-import { ProcurePanel } from "@/components/procure/ProcurePanel";
 import { DndProvider } from './components/providers/DndProvider';
-import { RequirementsPanel } from "@/components/requirements/RequirementsPanel";
-import { ResultsPanel } from "@/components/results/ResultsPanel";
+
+// Lazy load heavy panel components
+const ComparePanel = lazy(() => import("@/components/compare/ComparePanel").then(m => ({ default: m.ComparePanel })));
+const ComponentLibrary = lazy(() => import("@/components/sidebar/ComponentLibrary").then(m => ({ default: m.ComponentLibrary })));
+const ConfigurePanel = lazy(() => import("@/components/configure/ConfigurePanel").then(m => ({ default: m.ConfigurePanel })));
+const DatacenterPanel = lazy(() => import("@/components/datacenter/DatacenterPanel").then(m => ({ default: m.DatacenterPanel })));
+const DesignPanel = lazy(() => import("@/components/design/DesignPanel").then(m => ({ default: m.DesignPanel })));
+const ModelPanel = lazy(() => import("@/components/model/ModelPanel").then(m => ({ default: m.ModelPanel })));
+const ProcurePanel = lazy(() => import("@/components/procure/ProcurePanel").then(m => ({ default: m.ProcurePanel })));
+const RequirementsPanel = lazy(() => import("@/components/requirements/RequirementsPanel").then(m => ({ default: m.RequirementsPanel })));
+const ResultsPanel = lazy(() => import("@/components/results/ResultsPanel").then(m => ({ default: m.ResultsPanel })));
 import { ThemeProvider } from "./components/theme/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -64,15 +66,15 @@ const AppRoutes = () => {
       <Route path="/auth" element={<Auth />} />
       {/* Use AppLayout for main pages */}
       <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-        <Route index element={<RequirementsPanel />} />
-        <Route path="components" element={<ComponentLibrary />} />
-        <Route path="design" element={<ErrorBoundary componentName="Design Panel"><DesignPanel /></ErrorBoundary>} />
-        <Route path="configure/*" element={<ConfigurePanel />} />
-        <Route path="datacenter" element={<DatacenterPanel />} />
-        <Route path="results" element={<ErrorBoundary componentName="Results Panel"><ResultsPanel /></ErrorBoundary>} />
-        <Route path="procure" element={<ProcurePanel />} />
-        <Route path="compare" element={<ComparePanel />} />
-        <Route path="model" element={<ErrorBoundary componentName="Model Panel"><ModelPanel /></ErrorBoundary>} />
+        <Route index element={<Suspense fallback={<LoadingSpinner fullScreen text="Loading requirements..." />}><RequirementsPanel /></Suspense>} />
+        <Route path="components" element={<Suspense fallback={<LoadingSpinner fullScreen text="Loading components..." />}><ComponentLibrary /></Suspense>} />
+        <Route path="design" element={<ErrorBoundary componentName="Design Panel"><Suspense fallback={<LoadingSpinner fullScreen text="Loading design..." />}><DesignPanel /></Suspense></ErrorBoundary>} />
+        <Route path="configure/*" element={<Suspense fallback={<LoadingSpinner fullScreen text="Loading configuration..." />}><ConfigurePanel /></Suspense>} />
+        <Route path="datacenter" element={<Suspense fallback={<LoadingSpinner fullScreen text="Loading datacenter..." />}><DatacenterPanel /></Suspense>} />
+        <Route path="results" element={<ErrorBoundary componentName="Results Panel"><Suspense fallback={<LoadingSpinner fullScreen text="Loading results..." />}><ResultsPanel /></Suspense></ErrorBoundary>} />
+        <Route path="procure" element={<Suspense fallback={<LoadingSpinner fullScreen text="Loading procurement..." />}><ProcurePanel /></Suspense>} />
+        <Route path="compare" element={<Suspense fallback={<LoadingSpinner fullScreen text="Loading comparison..." />}><ComparePanel /></Suspense>} />
+        <Route path="model" element={<ErrorBoundary componentName="Model Panel"><Suspense fallback={<LoadingSpinner fullScreen text="Loading model..." />}><ModelPanel /></Suspense></ErrorBoundary>} />
       </Route>
       <Route path="/designs/:sharingId" element={<Index />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -15,7 +15,7 @@ interface ResourceUtilizationChartProps {
   networkRackSpace?: { percentage: number; used: number; total: number };
 }
 
-export const ResourceUtilizationChart: React.FC<ResourceUtilizationChartProps> = ({
+const ResourceUtilizationChartComponent: React.FC<ResourceUtilizationChartProps> = ({
   spaceUtilization,
   leafNetworkUtilization,
   mgmtNetworkUtilization,
@@ -170,3 +170,5 @@ export const ResourceUtilizationChart: React.FC<ResourceUtilizationChartProps> =
     </Card>
   );
 };
+
+export const ResourceUtilizationChart = React.memo(ResourceUtilizationChartComponent);

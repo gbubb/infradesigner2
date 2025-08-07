@@ -25,9 +25,10 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
   } = useDesignStore();
   
   // Get available disks
-  const availableDisks = componentTemplates.filter(
-    (c): c is DiskComponent => c.type === ComponentType.Disk
-  );
+  const availableDisks = React.useMemo(() =>
+    componentTemplates.filter(
+      (c): c is DiskComponent => c.type === ComponentType.Disk
+    ), [componentTemplates]);
   
   // Get currently selected disks for this role
   const selectedDisks: DiskConfig[] = selectedDisksByRole[roleId] || [];
