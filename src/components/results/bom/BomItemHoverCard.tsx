@@ -18,7 +18,7 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
     switch (component.type) {
       case ComponentType.Server:
         return <Cpu className="h-5 w-5" />;
-      case ComponentType.Storage:
+      case ComponentType.Disk:
         return <HardDrive className="h-5 w-5" />;
       case ComponentType.Switch:
         return <Network className="h-5 w-5" />;
@@ -27,7 +27,8 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
       case ComponentType.Firewall:
         return <Shield className="h-5 w-5" />;
       case ComponentType.Cable:
-      case ComponentType.PatchPanel:
+      case ComponentType.FiberPatchPanel:
+      case ComponentType.CopperPatchPanel:
       case ComponentType.Cassette:
         return <Cable className="h-5 w-5" />;
       default:
@@ -60,7 +61,7 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
         }
         break;
 
-      case ComponentType.Storage:
+      case ComponentType.Disk:
         if (component.diskBays) {
           details.push({ label: "Disk Bays", value: component.diskBays });
         }
@@ -103,7 +104,8 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
         }
         break;
 
-      case ComponentType.PatchPanel:
+      case ComponentType.FiberPatchPanel:
+      case ComponentType.CopperPatchPanel:
       case ComponentType.Cassette:
         if (component.portCount) {
           details.push({ label: "Port Count", value: component.portCount });
@@ -132,7 +134,7 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
     // Navigate to component library with the component selected
     navigate('/components', { 
       state: { 
-        selectedComponentId: component.templateId || component.id,
+        selectedComponentId: (component as any).templateId || component.id,
         scrollToComponent: true 
       } 
     });
@@ -170,10 +172,10 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
           </div>
 
           {/* Notes if available */}
-          {component.notes && (
+          {(component as any).notes && (
             <div className="text-xs">
               <span className="text-muted-foreground">Notes:</span>
-              <p className="mt-1 text-xs">{component.notes}</p>
+              <p className="mt-1 text-xs">{(component as any).notes}</p>
             </div>
           )}
 

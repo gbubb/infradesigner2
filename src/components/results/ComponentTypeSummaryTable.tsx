@@ -77,7 +77,9 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
   // Custom tooltip for pie charts
   const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload as {
+      // Cast to include percent property that Recharts adds for pie charts
+      const payloadItem = payload[0] as typeof payload[0] & { percent?: number };
+      const data = payloadItem.payload as {
         type: string;
         cost?: number;
         power?: number;
@@ -90,7 +92,7 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
           {data.power && <p className="text-sm">{data.power.toLocaleString()} W</p>}
           {data.rackUnits && data.rackUnits > 0 && <p className="text-sm">{data.rackUnits} RU</p>}
           <p className="text-xs text-gray-500">
-            {payload[0].percent ? (payload[0].percent * 100).toFixed(1) : '0'}% of total
+            {payloadItem.percent ? (payloadItem.percent * 100).toFixed(1) : '0'}% of total
           </p>
         </div>
       );

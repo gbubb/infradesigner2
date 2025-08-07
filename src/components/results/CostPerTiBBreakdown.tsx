@@ -94,7 +94,6 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
                   if (!acc[key]) {
                     acc[key] = {
                       name: baseName,
-                      quantity: 0,
                       serverCost: node.serverCost / node.quantity, // Get unit cost
                       diskCost: node.diskCost / node.quantity, // Get unit cost
                       diskCount: node.diskCount,

@@ -7,9 +7,16 @@ interface CostBreakdownChartProps {
   costLayers: CostAllocation[];
 }
 
+interface ChartDataItem {
+  name: string;
+  'Capital Cost': number;
+  'Operational Cost': number;
+  total: number;
+}
+
 export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ costLayers }) => {
   // Transform data for the chart
-  const chartData = costLayers.map(layer => ({
+  const chartData: ChartDataItem[] = costLayers.map(layer => ({
     name: layer.layerName,
     'Capital Cost': layer.type === 'capital' ? layer.monthlyAmount : 0,
     'Operational Cost': layer.type === 'operational' ? layer.monthlyAmount : 0,
@@ -20,7 +27,7 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ costLaye
   const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
     if (!active || !payload?.length) return null;
 
-    const data = payload[0].payload;
+    const data = payload[0].payload as ChartDataItem;
     return (
       <div className="bg-background border rounded-lg p-3 shadow-lg">
         <p className="font-semibold mb-1">{data.name}</p>

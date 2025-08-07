@@ -50,7 +50,11 @@ export const DatacenterAnalyticsTab: React.FC = () => {
         maxRacks: 500,
         maxPowerKW: 7400,
         maxCoolingKW: 7400,
-        availabilityTier: 'III' as const
+        availabilityTier: 'III' as const,
+        // Add properties required by UtilizationHeatmap
+        totalRacks: 500,
+        totalPowerKW: 7400,
+        totalSpaceSqFt: 20000
       }
     };
   }, [selectedFacilityId]);
@@ -84,18 +88,34 @@ export const DatacenterAnalyticsTab: React.FC = () => {
     })) || [];
 
     // Create mock datacenter racks for cost calculator
-    const mockDatacenterRacks = activeDesign.rackprofiles?.map(profile => ({
-      id: profile.id,
-      name: profile.name,
-      facilityId: mockFacility.id,
-      hierarchyLevelId: profile.hierarchyLevelId || '',
-      positionInLevel: profile.positionInLevel || 0,
-      powerAllocationKw: profile.powerAllocationKw || 0,
-      actualPowerUsageKw: profile.actualPowerUsageKw || 0,
-      mappedRack: profile,
-      assignmentDate: new Date().toISOString(),
-      physicalLocation: profile.physicalLocation || {}
-    })) || [];
+    const mockDatacenterRacks = activeDesign.rackprofiles?.map(profile => {
+      const actualPowerKw = profile.actualPowerUsageKw || 0;
+      const allocatedPowerKw = profile.powerAllocationKw || 30; // Default 30kW allocation
+      const usedSpaceU = profile.devices?.reduce((sum, device) => sum + (device.heightRU || 0), 0) || 0;
+      const totalSpaceU = profile.uHeight || 42; // Default 42U rack height
+      
+      return {
+        id: profile.id,
+        name: profile.name,
+        facilityId: mockFacility.id,
+        hierarchyLevelId: profile.hierarchyLevelId || '',
+        positionInLevel: profile.positionInLevel || 0,
+        powerAllocationKw: allocatedPowerKw,
+        actualPowerUsageKw: actualPowerKw,
+        mappedRack: profile,
+        assignmentDate: new Date().toISOString(),
+        physicalLocation: profile.physicalLocation || {},
+        // Add required calculated usage properties
+        powerUsageKw: actualPowerKw,
+        powerUtilization: allocatedPowerKw > 0 ? (actualPowerKw / allocatedPowerKw) * 100 : 0,
+        spaceUsageU: usedSpaceU,
+        spaceUtilization: totalSpaceU > 0 ? (usedSpaceU / totalSpaceU) * 100 : 0,
+        // Add base DatacenterRack properties
+        uHeight: totalSpaceU,
+        status: 'occupied' as const,
+        rackType: profile.rackType || 'standard' as const
+      };
+    }) || [];
 
     // Initialize services with proper parameters
     const costCalculator = new DatacenterCostCalculator(mockFacility, mockDatacenterRacks);

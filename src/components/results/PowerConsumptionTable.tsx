@@ -1,6 +1,6 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ComponentWithPlacement } from '@/types/design';
+import { ComponentWithPlacement } from '@/types/service-types';
 import { ComponentType, componentTypeToCategory } from '@/types/infrastructure/component-types';
 
 interface PowerConsumptionTableProps {

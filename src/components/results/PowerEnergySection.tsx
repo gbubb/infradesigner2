@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PowerUsage } from '@/types/infrastructure';
 import { useResourceUtilization } from '@/hooks/design/useResourceUtilization';
 import { PowerConsumptionTable } from './PowerConsumptionTable';
-import { ComponentWithPlacement } from '@/types/design';
+import { ComponentWithPlacement } from '@/types/service-types';
 
 interface PowerEnergySectionProps {
   powerUsage: PowerUsage;

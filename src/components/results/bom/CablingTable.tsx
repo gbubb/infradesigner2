@@ -54,10 +54,11 @@ export const CablingTable: React.FC<CablingTableProps> = ({
           const quantity = component.summarizedQuantity;
           const totalCost = component.cost * quantity;
           let details = '-';
-          if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${(component as FiberPatchPanel).cassetteCapacity} cassettes`;
-          else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${(component as CopperPatchPanel).portQuantity} ports`;
-          else if (component.type === ComponentType.Cassette) details = `${(component as Cassette).portType}, ${(component as Cassette).portQuantity} ports`;
-          else if (component.type === ComponentType.Cable) details = `${(component as Cable).length}m, ${(component as Cable).connectorA_Type} to ${(component as Cable).connectorB_Type}, ${(component as Cable).mediaType}`;
+          const comp = component as any; // Cast to any to access type-specific properties
+          if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${comp.cassetteCapacity} cassettes`;
+          else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${comp.portQuantity} ports`;
+          else if (component.type === ComponentType.Cassette) details = `${comp.portType}, ${comp.portQuantity} ports`;
+          else if (component.type === ComponentType.Cable) details = `${comp.length}m, ${comp.connectorA_Type} to ${comp.connectorB_Type}, ${comp.mediaType}`;
           return (
             <BomItemHoverCard key={`cabling-${getBomGroupKey(component)}`} component={component}>
               <TableRow className="cursor-pointer">
