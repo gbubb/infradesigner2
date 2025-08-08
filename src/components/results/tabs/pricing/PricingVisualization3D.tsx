@@ -121,11 +121,14 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
               y: plotData.y,
               z: plotData.z,
               colorscale: [
-                [0, '#10b981'],     // Green
-                [0.25, '#84cc16'],  // Lime
-                [0.5, '#eab308'],   // Yellow
-                [0.75, '#f97316'],  // Orange
-                [1, '#ef4444']      // Red
+                [0, '#10b981'],     // Green - Best value
+                [0.2, '#34d399'],   // Emerald
+                [0.35, '#84cc16'],  // Lime
+                [0.5, '#eab308'],   // Yellow - Moderate
+                [0.65, '#f59e0b'],  // Amber
+                [0.8, '#f97316'],   // Orange
+                [0.9, '#ef4444'],   // Red
+                [1, '#dc2626']      // Dark Red - Expensive
               ],
               contours: {
                 z: {
@@ -213,14 +216,13 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
       </div>
 
       {/* Insights */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
           <h4 className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
             Price Scaling Pattern
           </h4>
           <p className="text-sm text-muted-foreground">
-            Prices increase non-linearly with VM size due to the size premium. 
-            Larger VMs incur additional costs to account for scheduling and packing inefficiencies.
+            The "spine" along the natural ratio curves upward with size due to scheduling premiums.
           </p>
         </div>
         <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
@@ -228,8 +230,15 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
             Optimal VM Sizes
           </h4>
           <p className="text-sm text-muted-foreground">
-            Best value typically found in small to medium VMs (2-8 vCPUs). 
-            Consider workload consolidation vs. larger instance premiums.
+            Best value typically found below the size threshold. Premium accelerates above this point.
+          </p>
+        </div>
+        <div className="p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-900">
+          <h4 className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-2">
+            Curve Visualization
+          </h4>
+          <p className="text-sm text-muted-foreground">
+            Adjust curve parameters to see how pricing changes with VM scale along the natural ratio.
           </p>
         </div>
       </div>

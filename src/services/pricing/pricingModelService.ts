@@ -12,7 +12,10 @@ export interface PricingConfig {
   virtualizationOverheadType: 'percentage' | 'fixed'; // New field
   virtualizationOverheadMemory?: number; // Fixed memory overhead in GB (when type is 'fixed')
   sizePenaltyFactor: number; // Ratio premium multiplier for VMs that deviate from natural ratio
-  vmSizePenaltyFactor?: number; // Size premium multiplier for large VMs (scheduling challenges)
+  vmSizePenaltyFactor?: number; // Base size premium multiplier for large VMs
+  vmSizeCurveExponent?: number; // Exponent for size premium curve (1=linear, 2=quadratic, 3=cubic)
+  vmSizeThreshold?: number; // vCPU count where size premium starts to apply significantly
+  vmSizeAcceleration?: number; // Rate at which premium accelerates with size (0-1)
 }
 
 export interface VMPricing {
@@ -571,26 +574,45 @@ export class PricingModelService {
 
   private calculateVMSizePenalty(vCPUs: number, memoryGB: number): number {
     // Apply premium for large VMs due to scheduling challenges
-    // Premium increases with VM size
-    const vmSizeFactor = this.config.vmSizePenaltyFactor || 0.3; // Default 30% premium factor
+    // Premium increases with VM size using configurable curve
+    const vmSizeFactor = this.config.vmSizePenaltyFactor || 0.3; // Base premium factor
+    const curveExponent = this.config.vmSizeCurveExponent || 2; // Default quadratic curve
+    const sizeThreshold = this.config.vmSizeThreshold || 4; // Start applying at 4 vCPUs
+    const acceleration = this.config.vmSizeAcceleration || 0.5; // How quickly premium accelerates
     
-    // Normalize VM size (considering both CPU and memory)
-    // Small VMs: 1-4 vCPUs, Medium: 8-16, Large: 32+
-    const cpuSizeScore = Math.log2(vCPUs) / Math.log2(64); // Normalize to 0-1 for 64 vCPU max
-    const memSizeScore = Math.log2(memoryGB) / Math.log2(256); // Normalize to 0-1 for 256 GB max
-    const sizeScore = Math.max(cpuSizeScore, memSizeScore); // Use the larger dimension
+    // Use the larger dimension (CPU or memory) for size calculation
+    const effectiveSize = Math.max(vCPUs, memoryGB / 4); // Normalize memory to CPU scale (4GB = 1 vCPU)
     
-    // Apply exponential premium that increases with size
-    // No premium for very small VMs (< 2 vCPUs)
-    // Increasing premium as VMs get larger
-    if (vCPUs <= 2) {
-      return 1; // No premium for small VMs
+    // No premium below threshold
+    if (effectiveSize <= sizeThreshold) {
+      return 1;
     }
     
-    // Exponential premium based on size
-    const premium = Math.exp(sizeScore * vmSizeFactor) - 1;
+    // Calculate how far above threshold we are
+    const sizeAboveThreshold = effectiveSize - sizeThreshold;
+    const maxExpectedSize = 64 - sizeThreshold; // Assume 64 vCPU max
+    const normalizedSize = Math.min(sizeAboveThreshold / maxExpectedSize, 1);
     
-    return 1 + premium; // Return as multiplier (1 = no premium)
+    // Apply curve shaping with configurable exponent
+    // Higher exponent = more aggressive curve at larger sizes
+    const curvedSize = Math.pow(normalizedSize, curveExponent);
+    
+    // Calculate premium with acceleration factor
+    // Acceleration controls how the premium grows: 
+    // - 0 = linear growth
+    // - 0.5 = moderate exponential 
+    // - 1 = aggressive exponential
+    const basePremium = curvedSize * vmSizeFactor;
+    const acceleratedPremium = basePremium * (1 + acceleration * curvedSize);
+    
+    // For very large VMs, add an additional exponential component
+    let finalPremium = acceleratedPremium;
+    if (effectiveSize > 32) {
+      const extremeSizeRatio = (effectiveSize - 32) / 32;
+      finalPremium += Math.exp(extremeSizeRatio * acceleration) - 1;
+    }
+    
+    return 1 + finalPremium; // Return as multiplier (1 = no premium)
   }
 
   calculateVMPrice(vCPUs: number, memoryGB: number, storageGB: number = 0): VMPricing {

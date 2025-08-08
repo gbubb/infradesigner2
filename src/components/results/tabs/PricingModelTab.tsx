@@ -16,6 +16,7 @@ import { PricingVisualization3D } from './pricing/PricingVisualization3D';
 import { CapacityBreakdown } from './pricing/CapacityBreakdown';
 import { PricingSampleTable } from './pricing/PricingSampleTable';
 import { VMPriceCalculator } from './pricing/VMPriceCalculator';
+import { PricingCurveChart } from './pricing/PricingCurveChart';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
@@ -36,7 +37,10 @@ export const PricingModelTab: React.FC = () => {
     virtualizationOverheadType: 'percentage', // Default to percentage
     virtualizationOverheadMemory: 0.05, // Default memory overhead
     sizePenaltyFactor: 0.5, // Exponential premium factor for ratio deviation
-    vmSizePenaltyFactor: 0.3 // Exponential premium factor for large VMs
+    vmSizePenaltyFactor: 0.3, // Base premium factor for large VMs
+    vmSizeCurveExponent: 2, // Quadratic curve by default
+    vmSizeThreshold: 4, // Start applying premium at 4 vCPUs
+    vmSizeAcceleration: 0.5 // Moderate acceleration
   });
 
   const [pricingResult, setPricingResult] = useState<PricingModelResult | null>(null);
@@ -394,10 +398,8 @@ export const PricingModelTab: React.FC = () => {
             )}
           </div>
 
-          {/* Premium Configuration */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium">VM Pricing Premiums</h4>
-            <div className="grid grid-cols-2 gap-4">
+          {/* Common configuration */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <Label htmlFor="targetUtil">Target Utilization</Label>
@@ -425,8 +427,12 @@ export const PricingModelTab: React.FC = () => {
                 <span className="w-12 text-right">{(config.targetUtilization * 100).toFixed(0)}%</span>
               </div>
             </div>
+          </div>
 
-
+          {/* Premium Configuration */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-medium">VM Pricing Premiums</h4>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Label htmlFor="ratioPremium">Ratio Premium Factor</Label>
@@ -457,14 +463,14 @@ export const PricingModelTab: React.FC = () => {
 
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <Label htmlFor="vmSizePremium">VM Size Premium Factor</Label>
+                  <Label htmlFor="vmSizePremium">VM Size Premium Base</Label>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Premium for large VMs due to scheduling challenges and performance impact</p>
+                        <p>Base premium for large VMs due to scheduling challenges</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -474,7 +480,7 @@ export const PricingModelTab: React.FC = () => {
                     id="vmSizePremium"
                     min={0}
                     max={1}
-                    step={0.1}
+                    step={0.05}
                     value={[config.vmSizePenaltyFactor || 0.3]}
                     onValueChange={([value]) => handleConfigChange('vmSizePenaltyFactor', value)}
                     className="flex-1"
@@ -483,11 +489,85 @@ export const PricingModelTab: React.FC = () => {
                 </div>
               </div>
             </div>
+            
+            {/* Advanced Size Premium Tuning */}
+            <div className="mt-4 p-4 bg-muted/30 rounded-lg space-y-4">
+              <h5 className="text-sm font-medium flex items-center gap-2">
+                Advanced Size Premium Curve
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Fine-tune how the size premium increases with VM size</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </h5>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="curveExponent" className="text-xs">Curve Exponent</Label>
+                  <div className="flex items-center space-x-2">
+                    <Slider
+                      id="curveExponent"
+                      min={1}
+                      max={4}
+                      step={0.5}
+                      value={[config.vmSizeCurveExponent || 2]}
+                      onValueChange={([value]) => handleConfigChange('vmSizeCurveExponent', value)}
+                      className="flex-1"
+                    />
+                    <span className="w-8 text-right text-xs">{(config.vmSizeCurveExponent || 2).toFixed(1)}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {config.vmSizeCurveExponent === 1 ? 'Linear' : 
+                     config.vmSizeCurveExponent === 2 ? 'Quadratic' : 
+                     config.vmSizeCurveExponent === 3 ? 'Cubic' : 'Quartic'}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="sizeThreshold" className="text-xs">Size Threshold (vCPUs)</Label>
+                  <div className="flex items-center space-x-2">
+                    <Slider
+                      id="sizeThreshold"
+                      min={2}
+                      max={16}
+                      step={2}
+                      value={[config.vmSizeThreshold || 4]}
+                      onValueChange={([value]) => handleConfigChange('vmSizeThreshold', value)}
+                      className="flex-1"
+                    />
+                    <span className="w-8 text-right text-xs">{config.vmSizeThreshold || 4}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Premium starts above this size</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="acceleration" className="text-xs">Acceleration Factor</Label>
+                  <div className="flex items-center space-x-2">
+                    <Slider
+                      id="acceleration"
+                      min={0}
+                      max={1}
+                      step={0.1}
+                      value={[config.vmSizeAcceleration || 0.5]}
+                      onValueChange={([value]) => handleConfigChange('vmSizeAcceleration', value)}
+                      className="flex-1"
+                    />
+                    <span className="w-8 text-right text-xs">{((config.vmSizeAcceleration || 0.5) * 100).toFixed(0)}%</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {(config.vmSizeAcceleration || 0.5) < 0.3 ? 'Gentle' : 
+                     (config.vmSizeAcceleration || 0.5) < 0.7 ? 'Moderate' : 'Aggressive'}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Common configuration */}
-          <div className="grid grid-cols-2 gap-4">
-          </div>
         </CardContent>
       </Card>
 
@@ -569,6 +649,12 @@ export const PricingModelTab: React.FC = () => {
 
           {/* VM Price Calculator */}
           <VMPriceCalculator pricingService={pricingService} />
+          
+          {/* Size Premium Curve Visualization */}
+          <PricingCurveChart 
+            pricingService={pricingService} 
+            config={config}
+          />
 
           {/* Sample Pricing Table */}
           <PricingSampleTable prices={pricingResult.samplePrices} />
