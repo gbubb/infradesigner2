@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PricingModelService } from '@/services/pricing/pricingModelService';
 import { Loader2 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
@@ -16,12 +16,52 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
   const [maxMemory, setMaxMemory] = useState(256);
   const [step, setStep] = useState(2);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Check if dark mode is enabled
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkDarkMode();
+    // Watch for theme changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { 
+      attributes: true, 
+      attributeFilter: ['class'] 
+    });
+    
+    return () => observer.disconnect();
+  }, []);
 
   const plotData = useMemo(() => {
     setIsLoading(true);
-    const data = pricingService.generate3DPricingData(maxVCPU, maxMemory, step);
+    const rawData = pricingService.generate3DPricingData(maxVCPU, maxMemory, step);
+    
+    // Filter out infeasible ratios (more than 12:1 in either direction)
+    const filteredData = {
+      x: rawData.x,
+      y: rawData.y,
+      z: rawData.z.map((row, yIndex) => 
+        row.map((value, xIndex) => {
+          const vCPUs = rawData.x[xIndex];
+          const memoryGB = rawData.y[yIndex];
+          const ratio = vCPUs / memoryGB;
+          
+          // Cut off at 12:1 ratio in either direction
+          // CPU-heavy: ratio > 3 (e.g., 12 vCPUs with 4 GB)
+          // Memory-heavy: ratio < 1/12 (e.g., 1 vCPU with 12+ GB)
+          if (ratio > 3 || ratio < 1/12) {
+            return null; // Will appear as a gap in the surface
+          }
+          return value;
+        })
+      )
+    };
+    
     setIsLoading(false);
-    return data;
+    return filteredData;
   }, [pricingService, maxVCPU, maxMemory, step]);
 
   if (isLoading) {
@@ -118,25 +158,28 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
             scene: {
               xaxis: {
                 title: 'vCPUs',
-                titlefont: { size: 12 },
-                gridcolor: '#374151',
+                titlefont: { size: 12, color: isDarkMode ? '#f3f4f6' : '#1f2937' },
+                gridcolor: isDarkMode ? '#374151' : '#e5e7eb',
                 showbackground: true,
-                backgroundcolor: '#1f2937'
+                backgroundcolor: isDarkMode ? '#1f2937' : '#f9fafb',
+                tickfont: { color: isDarkMode ? '#f3f4f6' : '#1f2937' }
               },
               yaxis: {
                 title: 'Memory (GB)',
-                titlefont: { size: 12 },
-                gridcolor: '#374151',
+                titlefont: { size: 12, color: isDarkMode ? '#f3f4f6' : '#1f2937' },
+                gridcolor: isDarkMode ? '#374151' : '#e5e7eb',
                 showbackground: true,
-                backgroundcolor: '#1f2937'
+                backgroundcolor: isDarkMode ? '#1f2937' : '#f9fafb',
+                tickfont: { color: isDarkMode ? '#f3f4f6' : '#1f2937' }
               },
               zaxis: {
                 title: 'Monthly Price ($)',
-                titlefont: { size: 12 },
-                gridcolor: '#374151',
+                titlefont: { size: 12, color: isDarkMode ? '#f3f4f6' : '#1f2937' },
+                gridcolor: isDarkMode ? '#374151' : '#e5e7eb',
                 showbackground: true,
-                backgroundcolor: '#1f2937',
-                tickformat: '$,.0f'
+                backgroundcolor: isDarkMode ? '#1f2937' : '#f9fafb',
+                tickformat: '$,.0f',
+                tickfont: { color: isDarkMode ? '#f3f4f6' : '#1f2937' }
               },
               camera: {
                 eye: { x: 1.5, y: 1.5, z: 1.5 },
@@ -146,8 +189,8 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
               aspectmode: 'manual'
             },
             paper_bgcolor: 'transparent',
-            plot_bgcolor: '#1f2937',
-            font: { color: '#f3f4f6' },
+            plot_bgcolor: isDarkMode ? '#1f2937' : '#ffffff',
+            font: { color: isDarkMode ? '#f3f4f6' : '#1f2937' },
             margin: { l: 0, r: 0, t: 40, b: 0 },
             showlegend: false,
             hovermode: 'closest'
@@ -176,7 +219,7 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
             Price Scaling Pattern
           </h4>
           <p className="text-sm text-muted-foreground">
-            Prices increase non-linearly with VM size due to the size penalty factor. 
+            Prices increase non-linearly with VM size due to the size premium. 
             Larger VMs incur additional costs to account for scheduling and packing inefficiencies.
           </p>
         </div>
@@ -186,7 +229,7 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
           </h4>
           <p className="text-sm text-muted-foreground">
             Best value typically found in small to medium VMs (2-8 vCPUs). 
-            Consider workload consolidation vs. larger instance penalties.
+            Consider workload consolidation vs. larger instance premiums.
           </p>
         </div>
       </div>

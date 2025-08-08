@@ -35,22 +35,22 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ pricing 
   ].filter(item => item.value > 0); // Only show non-zero costs
 
   const totalBaseCost = data.reduce((sum, item) => sum + item.value, 0);
-  const ratioPenaltyCost = totalBaseCost * pricing.breakdown.ratioPenalty;
-  const sizePenaltyCost = totalBaseCost * pricing.breakdown.vmSizePenalty;
+  const ratioPremiumCost = totalBaseCost * pricing.breakdown.ratioPenalty;
+  const sizePremiumCost = totalBaseCost * pricing.breakdown.vmSizePenalty;
   
-  // Add penalties as separate items if they exist
-  if (ratioPenaltyCost > 0) {
+  // Add premiums as separate items if they exist
+  if (ratioPremiumCost > 0) {
     data.push({
-      name: 'Ratio Penalty',
-      value: ratioPenaltyCost,
+      name: 'Ratio Premium',
+      value: ratioPremiumCost,
       color: '#ef4444', // red
     });
   }
   
-  if (sizePenaltyCost > 0) {
+  if (sizePremiumCost > 0) {
     data.push({
-      name: 'Size Penalty',
-      value: sizePenaltyCost,
+      name: 'Size Premium',
+      value: sizePremiumCost,
       color: '#ec4899', // pink
     });
   }
@@ -146,7 +146,7 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ pricing 
               <p className="text-lg font-bold">{formatPreciseCurrency(totalBaseCost)}/hr</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">With Penalties</p>
+              <p className="text-sm text-muted-foreground">With Premiums</p>
               <p className="text-lg font-bold">{formatPreciseCurrency(pricing.baseHourlyPrice)}/hr</p>
             </div>
           </div>
@@ -184,11 +184,11 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ pricing 
                 <p className="font-bold">{pricing.breakdown.haOverheadMultiplier.toFixed(2)}x</p>
               </div>
               <div className="text-center">
-                <p className="text-muted-foreground">Ratio Penalty</p>
+                <p className="text-muted-foreground">Ratio Premium</p>
                 <p className="font-bold">+{(pricing.breakdown.ratioPenalty * 100).toFixed(0)}%</p>
               </div>
               <div className="text-center">
-                <p className="text-muted-foreground">Size Penalty</p>
+                <p className="text-muted-foreground">Size Premium</p>
                 <p className="font-bold">+{(pricing.breakdown.vmSizePenalty * 100).toFixed(0)}%</p>
               </div>
               <div className="text-center">

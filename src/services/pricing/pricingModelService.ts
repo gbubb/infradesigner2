@@ -11,8 +11,8 @@ export interface PricingConfig {
   virtualizationOverhead: number; // Overhead percentage (0-1) or fixed vCPUs
   virtualizationOverheadType: 'percentage' | 'fixed'; // New field
   virtualizationOverheadMemory?: number; // Fixed memory overhead in GB (when type is 'fixed')
-  sizePenaltyFactor: number; // Ratio penalty multiplier for VMs that deviate from natural ratio
-  vmSizePenaltyFactor?: number; // Size penalty multiplier for large VMs (scheduling challenges)
+  sizePenaltyFactor: number; // Ratio premium multiplier for VMs that deviate from natural ratio
+  vmSizePenaltyFactor?: number; // Size premium multiplier for large VMs (scheduling challenges)
 }
 
 export interface VMPricing {
@@ -27,9 +27,9 @@ export interface VMPricing {
     storageCost: number;
     licensingCost: number;
     haOverheadMultiplier: number;
-    sizePenalty: number; // Combined penalty from ratio and size
-    ratioPenalty: number; // Penalty for deviating from natural ratio
-    vmSizePenalty: number; // Penalty for large VM scheduling challenges
+    sizePenalty: number; // Combined premium from ratio and size
+    ratioPenalty: number; // Premium for deviating from natural ratio
+    vmSizePenalty: number; // Premium for large VM scheduling challenges
     ratioDeviation: number;
     effectiveMargin: number;
   };
@@ -547,7 +547,7 @@ export class PricingModelService {
     
     // Handle edge cases
     if (capacity.totalMemoryGB === 0 || capacity.totalvCPUs === 0) {
-      return 1; // No penalty if we can't calculate ratio
+      return 1; // No premium if we can't calculate ratio
     }
     
     const naturalRatio = capacity.totalvCPUs / capacity.totalMemoryGB; // e.g., 0.25 for 1:4 ratio
@@ -561,18 +561,18 @@ export class PricingModelService {
     const logVmRatio = Math.log2(vmRatio);
     const ratioDeviation = Math.abs(logVmRatio - logNaturalRatio);
     
-    // Exponential penalty based on deviation
-    // No penalty when ratio matches (deviation = 0)
-    // Exponentially increasing penalty as deviation increases
-    const penalty = Math.exp(ratioDeviation * this.config.sizePenaltyFactor) - 1;
+    // Exponential premium based on deviation
+    // No premium when ratio matches (deviation = 0)
+    // Exponentially increasing premium as deviation increases
+    const premium = Math.exp(ratioDeviation * this.config.sizePenaltyFactor) - 1;
     
-    return 1 + penalty; // Return as multiplier (1 = no penalty)
+    return 1 + premium; // Return as multiplier (1 = no premium)
   }
 
   private calculateVMSizePenalty(vCPUs: number, memoryGB: number): number {
-    // Apply penalty for large VMs due to scheduling challenges
-    // Penalty increases with VM size
-    const vmSizeFactor = this.config.vmSizePenaltyFactor || 0.3; // Default 30% penalty factor
+    // Apply premium for large VMs due to scheduling challenges
+    // Premium increases with VM size
+    const vmSizeFactor = this.config.vmSizePenaltyFactor || 0.3; // Default 30% premium factor
     
     // Normalize VM size (considering both CPU and memory)
     // Small VMs: 1-4 vCPUs, Medium: 8-16, Large: 32+
@@ -580,17 +580,17 @@ export class PricingModelService {
     const memSizeScore = Math.log2(memoryGB) / Math.log2(256); // Normalize to 0-1 for 256 GB max
     const sizeScore = Math.max(cpuSizeScore, memSizeScore); // Use the larger dimension
     
-    // Apply exponential penalty that increases with size
-    // No penalty for very small VMs (< 2 vCPUs)
-    // Increasing penalty as VMs get larger
+    // Apply exponential premium that increases with size
+    // No premium for very small VMs (< 2 vCPUs)
+    // Increasing premium as VMs get larger
     if (vCPUs <= 2) {
-      return 1; // No penalty for small VMs
+      return 1; // No premium for small VMs
     }
     
-    // Exponential penalty based on size
-    const penalty = Math.exp(sizeScore * vmSizeFactor) - 1;
+    // Exponential premium based on size
+    const premium = Math.exp(sizeScore * vmSizeFactor) - 1;
     
-    return 1 + penalty; // Return as multiplier (1 = no penalty)
+    return 1 + premium; // Return as multiplier (1 = no premium)
   }
 
   calculateVMPrice(vCPUs: number, memoryGB: number, storageGB: number = 0): VMPricing {
@@ -599,11 +599,11 @@ export class PricingModelService {
     const cpuMemoryRatio = this.calculateCpuMemoryWeightRatio(capacity);
     const baseCosts = this.calculateBaseCosts(infrastructureCosts, capacity, cpuMemoryRatio);
     
-    // Calculate both penalties
+    // Calculate both premiums
     const ratioPenalty = this.calculateRatioPenalty(vCPUs, memoryGB);
     const vmSizePenalty = this.calculateVMSizePenalty(vCPUs, memoryGB);
     
-    // Combine penalties multiplicatively
+    // Combine premiums multiplicatively
     const combinedPenalty = ratioPenalty * vmSizePenalty;
     
     const cpuCost = baseCosts.cpuCost * vCPUs;
@@ -613,10 +613,10 @@ export class PricingModelService {
     // Base cost should always increase with resources
     const baseResourceCost = cpuCost + memoryCost + storageCost;
     
-    // Apply combined penalty as additional cost
+    // Apply combined premium as additional cost
     // This ensures price never decreases when adding resources
-    const penaltyCost = baseResourceCost * (combinedPenalty - 1);
-    const baseHourlyPrice = baseResourceCost + penaltyCost;
+    const premiumCost = baseResourceCost * (combinedPenalty - 1);
+    const baseHourlyPrice = baseResourceCost + premiumCost;
     const monthlyPrice = baseHourlyPrice * 730;
 
     // Calculate breakdown
@@ -642,9 +642,9 @@ export class PricingModelService {
         storageCost: storageCost,
         licensingCost: 0,  // Can be added based on requirements
         haOverheadMultiplier: 1 / (1 - capacity.haReservation),
-        sizePenalty: combinedPenalty - 1,  // Combined penalty
-        ratioPenalty: ratioPenalty - 1,  // Ratio penalty component
-        vmSizePenalty: vmSizePenalty - 1,  // VM size penalty component
+        sizePenalty: combinedPenalty - 1,  // Combined premium
+        ratioPenalty: ratioPenalty - 1,  // Ratio premium component
+        vmSizePenalty: vmSizePenalty - 1,  // VM size premium component
         ratioDeviation: ratioDeviation,
         effectiveMargin: this.calculateEffectiveMargin(baseCosts, infrastructureCosts)
       }

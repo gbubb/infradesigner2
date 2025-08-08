@@ -35,8 +35,8 @@ export const PricingModelTab: React.FC = () => {
     virtualizationOverhead: 0.05, // 5% overhead default
     virtualizationOverheadType: 'percentage', // Default to percentage
     virtualizationOverheadMemory: 0.05, // Default memory overhead
-    sizePenaltyFactor: 0.5, // Exponential penalty factor for ratio deviation
-    vmSizePenaltyFactor: 0.3 // Exponential penalty factor for large VMs
+    sizePenaltyFactor: 0.5, // Exponential premium factor for ratio deviation
+    vmSizePenaltyFactor: 0.3 // Exponential premium factor for large VMs
   });
 
   const [pricingResult, setPricingResult] = useState<PricingModelResult | null>(null);
@@ -394,9 +394,9 @@ export const PricingModelTab: React.FC = () => {
             )}
           </div>
 
-          {/* Penalty Configuration */}
+          {/* Premium Configuration */}
           <div className="space-y-4">
-            <h4 className="text-sm font-medium">VM Pricing Penalties</h4>
+            <h4 className="text-sm font-medium">VM Pricing Premiums</h4>
             <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
@@ -429,21 +429,21 @@ export const PricingModelTab: React.FC = () => {
 
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <Label htmlFor="ratioPenalty">Ratio Penalty Factor</Label>
+                  <Label htmlFor="ratioPremium">Ratio Premium Factor</Label>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Penalty for VMs that deviate from natural CPU:Memory ratio</p>
+                        <p>Premium for VMs that deviate from natural CPU:Memory ratio</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Slider
-                    id="ratioPenalty"
+                    id="ratioPremium"
                     min={0}
                     max={1}
                     step={0.1}
@@ -457,21 +457,21 @@ export const PricingModelTab: React.FC = () => {
 
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <Label htmlFor="vmSizePenalty">VM Size Penalty Factor</Label>
+                  <Label htmlFor="vmSizePremium">VM Size Premium Factor</Label>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Penalty for large VMs due to scheduling challenges and performance impact</p>
+                        <p>Premium for large VMs due to scheduling challenges and performance impact</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Slider
-                    id="vmSizePenalty"
+                    id="vmSizePremium"
                     min={0}
                     max={1}
                     step={0.1}

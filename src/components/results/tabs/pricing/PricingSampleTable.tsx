@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { VMPricing } from '@/services/pricing/pricingModelService';
-import { formatCurrency, formatPreciseCurrency } from '@/lib/utils';
+import { formatCurrency, formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
@@ -61,14 +61,14 @@ export const PricingSampleTable: React.FC<PricingSampleTableProps> = ({ prices }
               <TableHead className="text-right">Monthly</TableHead>
               <TableHead className="text-center">
                 <div className="flex items-center justify-center gap-1">
-                  Penalties
+                  Premiums
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-3 w-3" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Combined penalties for ratio deviation and VM size</p>
+                        <p>Pricing adjustments for ratio deviation and VM size</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -90,7 +90,7 @@ export const PricingSampleTable: React.FC<PricingSampleTableProps> = ({ prices }
                   <TableCell className="text-center font-medium">{price.vCPU}</TableCell>
                   <TableCell className="text-center font-medium">{price.memoryGB}</TableCell>
                   <TableCell className="text-right">{formatPreciseCurrency(price.baseHourlyPrice)}</TableCell>
-                  <TableCell className="text-right font-bold">{formatCurrency(price.monthlyPrice)}</TableCell>
+                  <TableCell className="text-right font-bold">{formatMonthlyCurrency(price.monthlyPrice)}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex flex-col items-center gap-0.5">
                       <span className={`text-xs ${price.breakdown.ratioPenalty > 0.1 ? 'text-orange-600' : 'text-muted-foreground'}`}>
@@ -114,30 +114,30 @@ export const PricingSampleTable: React.FC<PricingSampleTableProps> = ({ prices }
                             <div className="font-medium mb-2">Cost Components</div>
                             <div className="flex justify-between">
                               <span>Compute:</span>
-                              <span>{formatCurrency(price.breakdown.computeCost)}/hr</span>
+                              <span>{formatPreciseCurrency(price.breakdown.computeCost)}/hr</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>Network:</span>
-                              <span>{formatCurrency(price.breakdown.networkCost)}/hr</span>
+                              <span>Memory:</span>
+                              <span>{formatPreciseCurrency(price.breakdown.networkCost)}/hr</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Licensing:</span>
-                              <span>{formatCurrency(price.breakdown.licensingCost)}/hr</span>
+                              <span>{formatPreciseCurrency(price.breakdown.licensingCost)}/hr</span>
                             </div>
                             <div className="flex justify-between border-t pt-2">
                               <span>HA Overhead:</span>
                               <span>{price.breakdown.haOverheadMultiplier.toFixed(2)}x</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>Ratio Penalty:</span>
+                              <span>Ratio Premium:</span>
                               <span>+{(price.breakdown.ratioPenalty * 100).toFixed(0)}%</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>Size Penalty:</span>
+                              <span>Size Premium:</span>
                               <span>+{(price.breakdown.vmSizePenalty * 100).toFixed(0)}%</span>
                             </div>
                             <div className="flex justify-between border-t pt-1">
-                              <span>Total Penalty:</span>
+                              <span>Total Premium:</span>
                               <span className="font-medium">+{(price.breakdown.sizePenalty * 100).toFixed(0)}%</span>
                             </div>
                             <div className="flex justify-between font-medium border-t pt-2">
@@ -159,8 +159,8 @@ export const PricingSampleTable: React.FC<PricingSampleTableProps> = ({ prices }
         
         <div className="mt-4 p-4 bg-muted/50 rounded-lg">
           <p className="text-sm text-muted-foreground">
-            <strong>Note:</strong> Prices include all infrastructure costs (compute, network, licensing) 
-            and account for high availability overhead. Larger VMs incur a size penalty to reflect 
+            <strong>Note:</strong> Prices include all infrastructure costs (compute, memory, licensing) 
+            and account for high availability overhead. Larger VMs incur a size premium to reflect 
             scheduling and packing inefficiencies.
           </p>
         </div>
