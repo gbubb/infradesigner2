@@ -314,31 +314,59 @@ export class PricingModelService {
       return 0;
     }
     
-    // Group components by availability zone
-    const azGroups = new Map<string, number>();
+    const totalHosts = computeComponents.reduce((sum, comp) => sum + (comp.quantity || 1), 0);
+    if (totalHosts === 0) return 0;
+
+    // Get the actual number of availability zones from requirements
+    const physicalAZs = this.design?.requirements?.physicalConstraints?.availabilityZones || [];
+    const numAZs = physicalAZs.length || this.design?.requirements?.physicalConstraints?.totalAvailabilityZones || 1;
     
-    computeComponents.forEach(comp => {
-      const az = comp.metadata?.availability_zone || 'default';
-      const count = azGroups.get(az) || 0;
-      azGroups.set(az, count + (comp.quantity || 1));
-    });
+    // Get the cluster-specific AZ redundancy setting if a cluster is selected
+    let azFailuresToTolerate = 0;
+    
+    if (this.selectedClusterId && this.selectedClusterId !== 'all') {
+      // Find the cluster configuration to get its AZ redundancy setting
+      const clusterConfig = this.design?.requirements?.computeRequirements?.computeClusters?.find(
+        cluster => cluster.id === this.selectedClusterId || cluster.name === this.selectedClusterId
+      );
+      
+      if (clusterConfig?.availabilityZoneRedundancy) {
+        // Parse redundancy setting: 'N+0', 'N+1', 'N+2' etc.
+        const redundancyMatch = clusterConfig.availabilityZoneRedundancy.match(/N\+(\d+)/);
+        if (redundancyMatch) {
+          azFailuresToTolerate = parseInt(redundancyMatch[1], 10);
+        }
+      }
+    } else {
+      // When analyzing all clusters, use the maximum redundancy requirement
+      const clusters = this.design?.requirements?.computeRequirements?.computeClusters || [];
+      clusters.forEach(cluster => {
+        if (cluster.availabilityZoneRedundancy) {
+          const redundancyMatch = cluster.availabilityZoneRedundancy.match(/N\+(\d+)/);
+          if (redundancyMatch) {
+            const failures = parseInt(redundancyMatch[1], 10);
+            azFailuresToTolerate = Math.max(azFailuresToTolerate, failures);
+          }
+        }
+      });
+    }
 
-    const totalHosts = Array.from(azGroups.values()).reduce((a, b) => a + b, 0);
-    const numAZs = azGroups.size;
-
-    // Calculate based on failure tolerance settings
-    const failureTolerance = this.design.requirements?.compute?.availability?.failureTolerance || {
-      hosts: 1,
-      zones: 0
-    };
-
-    // Reservation = (failed zones * hosts per zone + additional failed hosts) / total hosts
-    if (numAZs === 0 || totalHosts === 0) return 0;
-
+    // Calculate hosts per zone (assuming even distribution)
     const hostsPerZone = Math.ceil(totalHosts / numAZs);
-    const reservedHosts = (failureTolerance.zones * hostsPerZone) + failureTolerance.hosts;
     
-    return Math.min(0.5, reservedHosts / totalHosts); // Cap at 50% reservation
+    // Always add 1 additional node for host-level redundancy
+    const additionalNodes = 1;
+    
+    // Calculate total reserved capacity:
+    // - Nodes to tolerate AZ failures (azFailuresToTolerate * hostsPerZone)
+    // - Plus additional node(s) for host-level redundancy
+    const reservedHosts = (azFailuresToTolerate * hostsPerZone) + additionalNodes;
+    
+    // Calculate reservation percentage
+    const reservation = reservedHosts / totalHosts;
+    
+    // Cap at 50% reservation for safety
+    return Math.min(0.5, reservation);
   }
 
   private getClusterComponents(): PlacedComponent[] {
@@ -628,72 +656,84 @@ export class PricingModelService {
     // Calculate natural ratio for the infrastructure
     const naturalRatio = capacity.totalMemoryGB / capacity.totalvCPUs; // e.g., 4 for 1:4 ratio
     
-    // Method: Apply premiums proportionally to ensure monotonicity
-    // Each resource gets its base cost plus a share of premiums
+    // MONOTONIC PRICING MODEL
+    // Guarantees that P(c1, m1) <= P(c2, m2) when c1 <= c2 and m1 <= m2
+    // Key principle: Each resource has its own monotonic price curve, with optional synergy discount
     
-    // Calculate base costs
-    const baseCpuCost = baseCosts.cpuCost * vCPUs;
-    const baseMemoryCost = baseCosts.memoryCost * memoryGB;
+    // Step 1: Calculate base linear costs
+    const baseLinearCpuCost = baseCosts.cpuCost * vCPUs;
+    const baseLinearMemCost = baseCosts.memoryCost * memoryGB;
     const baseStorageCost = baseCosts.storageCost * storageGB;
     
-    // Calculate size premium based on the larger dimension
-    const effectiveSize = Math.max(vCPUs, memoryGB / naturalRatio);
-    const vmSizePenalty = this.calculateVMSizePenalty(vCPUs, memoryGB);
+    // Step 2: Apply monotonic premium curves to each resource independently
+    // These curves are strictly increasing in their respective dimensions
     
-    // Calculate ratio deviation
+    // CPU premium curve: f(cpu) - monotonically increasing
+    const cpuSizeThreshold = this.config.vmSizeThreshold || 4;
+    const cpuPremiumFactor = this.config.vmSizePenaltyFactor || 0.3;
+    const cpuCurveExponent = this.config.vmSizeCurveExponent || 2;
+    
+    let cpuPremium = 0;
+    if (vCPUs > cpuSizeThreshold) {
+      const cpuAboveThreshold = vCPUs - cpuSizeThreshold;
+      const cpuNormalized = cpuAboveThreshold / (64 - cpuSizeThreshold); // Normalize to [0,1]
+      cpuPremium = Math.pow(cpuNormalized, cpuCurveExponent) * cpuPremiumFactor;
+    }
+    
+    // Memory premium curve: g(mem) - monotonically increasing  
+    const memSizeThreshold = cpuSizeThreshold * naturalRatio; // Scale threshold by natural ratio
+    const memPremiumFactor = cpuPremiumFactor; // Same premium factor
+    
+    let memPremium = 0;
+    if (memoryGB > memSizeThreshold) {
+      const memAboveThreshold = memoryGB - memSizeThreshold;
+      const memNormalized = memAboveThreshold / (256 - memSizeThreshold); // Normalize to [0,1]
+      memPremium = Math.pow(memNormalized, cpuCurveExponent) * memPremiumFactor;
+    }
+    
+    // Step 3: Calculate costs with independent premiums (guarantees monotonicity)
+    const cpuCostWithPremium = baseLinearCpuCost * (1 + cpuPremium);
+    const memCostWithPremium = baseLinearMemCost * (1 + memPremium);
+    
+    // Step 4: Apply balance discount (NOT penalty) for well-balanced VMs
+    // This is a small discount, never a penalty, preserving monotonicity
     const vmRatio = memoryGB / vCPUs;
-    const ratioDeviation = Math.abs(Math.log2(vmRatio) - Math.log2(naturalRatio));
-    const ratioExponent = this.config.ratioPenaltyExponent || 2;
+    const ratioDeviation = Math.abs(Math.log2(vmRatio / naturalRatio));
     
-    // Calculate ratio premium but cap it to prevent negative monotonicity
-    // The premium should be proportional to the resource that's causing the imbalance
-    let ratioPremiumFactor = Math.pow(ratioDeviation, ratioExponent) * this.config.sizePenaltyFactor;
+    // Calculate balance score (1 = perfect balance, 0 = highly imbalanced)
+    const balanceScore = Math.exp(-ratioDeviation * 0.5); // Exponential decay from 1 to 0
     
-    // New approach: Each resource is priced independently with its own premium
-    // This guarantees monotonicity while still penalizing imbalanced configs
+    // Maximum discount for perfect balance (e.g., 5% discount)
+    const maxBalanceDiscount = 0.05;
+    const balanceDiscount = balanceScore * maxBalanceDiscount;
     
-    // Calculate per-resource premiums based on how far from balanced they are
-    let cpuPremiumMultiplier = vmSizePenalty;
-    let memoryPremiumMultiplier = vmSizePenalty;
+    // Apply balance discount to total (ensures price still increases with resources)
+    const totalBeforeDiscount = cpuCostWithPremium + memCostWithPremium + baseStorageCost;
+    const balanceAdjustment = totalBeforeDiscount * balanceDiscount;
     
-    // Add ratio penalty independently to each resource
-    // The further a resource is from its balanced amount, the more premium it gets
-    const idealCpuForMemory = memoryGB / naturalRatio;
-    const idealMemoryForCpu = vCPUs * naturalRatio;
+    // Step 5: Add ratio inefficiency charge (small, capped addition)
+    // This represents the operational complexity of imbalanced VMs
+    // Critically: This is ADDITIVE and CAPPED to preserve monotonicity
+    const maxRatioCharge = Math.min(
+      baseLinearCpuCost * 0.1,  // Cap at 10% of base CPU cost
+      baseLinearMemCost * 0.1   // or 10% of base memory cost
+    );
+    const ratioInefficiencyCharge = (1 - balanceScore) * maxRatioCharge * this.config.sizePenaltyFactor;
     
-    // CPU premium: increases when CPU exceeds what's needed for the memory
-    if (vCPUs > idealCpuForMemory) {
-      const cpuExcessRatio = (vCPUs - idealCpuForMemory) / vCPUs;
-      const cpuRatioPenalty = 1 + (cpuExcessRatio * ratioPremiumFactor);
-      cpuPremiumMultiplier *= cpuRatioPenalty;
-    }
-    
-    // Memory premium: increases when memory exceeds what's needed for the CPU
-    if (memoryGB > idealMemoryForCpu) {
-      const memoryExcessRatio = (memoryGB - idealMemoryForCpu) / memoryGB;
-      const memoryRatioPenalty = 1 + (memoryExcessRatio * ratioPremiumFactor);
-      memoryPremiumMultiplier *= memoryRatioPenalty;
-    }
-    
-    // Final costs with independent premiums
-    const cpuCost = baseCpuCost * cpuPremiumMultiplier;
-    const memoryCost = baseMemoryCost * memoryPremiumMultiplier;
-    const storageCost = baseStorageCost;
-    
-    const baseHourlyPrice = cpuCost + memoryCost + storageCost;
+    // Final price calculation
+    const baseHourlyPrice = totalBeforeDiscount - balanceAdjustment + ratioInefficiencyCharge;
     const monthlyPrice = baseHourlyPrice * 730;
 
     // Calculate effective premiums for display
-    const totalBaseCost = baseCpuCost + baseMemoryCost;
-    const totalPremium = baseHourlyPrice - totalBaseCost - baseStorageCost;
+    const totalBaseCost = baseLinearCpuCost + baseLinearMemCost;
+    const totalPremium = (cpuCostWithPremium - baseLinearCpuCost) + (memCostWithPremium - baseLinearMemCost);
     const effectiveTotalPremium = totalBaseCost > 0 ? totalPremium / totalBaseCost : 0;
     
-    // Separate size and ratio components for display
-    const sizeComponent = (vmSizePenalty - 1);
-    // Calculate average ratio premium across both resources
-    const cpuRatioComponent = cpuPremiumMultiplier / vmSizePenalty - 1;
-    const memRatioComponent = memoryPremiumMultiplier / vmSizePenalty - 1;
-    const ratioComponent = (cpuRatioComponent * baseCpuCost + memRatioComponent * baseMemoryCost) / (totalBaseCost > 0 ? totalBaseCost : 1);
+    // Calculate size penalty (average of CPU and memory premiums)
+    const avgSizePremium = (cpuPremium + memPremium) / 2;
+    
+    // Calculate ratio penalty (inefficiency charge as percentage of base)
+    const ratioInefficiencyPercent = totalBaseCost > 0 ? ratioInefficiencyCharge / totalBaseCost : 0;
     
     // Detailed cost breakdown
     return {
@@ -703,14 +743,14 @@ export class PricingModelService {
       baseHourlyPrice,
       monthlyPrice,
       breakdown: {
-        computeCost: cpuCost,  // Total CPU cost including premiums
-        networkCost: memoryCost,  // Total memory cost including premiums
-        storageCost: storageCost,
+        computeCost: cpuCostWithPremium,  // Total CPU cost including premiums
+        networkCost: memCostWithPremium,  // Total memory cost including premiums (labeled as network for legacy)
+        storageCost: baseStorageCost,
         licensingCost: 0,  // Can be added based on requirements
         haOverheadMultiplier: 1, // HA overhead is already accounted for in capacity reduction
         sizePenalty: effectiveTotalPremium,  // Total effective premium
-        ratioPenalty: Math.max(0, ratioComponent),  // Ratio premium component
-        vmSizePenalty: sizeComponent,  // VM size premium component
+        ratioPenalty: ratioInefficiencyPercent,  // Ratio inefficiency as percentage
+        vmSizePenalty: avgSizePremium,  // Average size premium
         ratioDeviation: ratioDeviation,
         effectiveMargin: this.calculateEffectiveMargin(baseCosts, infrastructureCosts)
       }
