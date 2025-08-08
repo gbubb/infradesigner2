@@ -7,7 +7,7 @@ import { Slider } from '@/components/ui/slider';
 import { useDesignStore } from '@/store';
 import { PricingModelService, PricingConfig, PricingModelResult } from '@/services/pricing/pricingModelService';
 import { ComputeCluster } from '@/types/placement';
-import { formatCurrency, formatPreciseCurrency } from '@/lib/utils';
+import { formatCurrency, formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
 import { Info, DollarSign, Cpu, MemoryStick, HardDrive, Download, FileText, Server } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,10 @@ export const PricingModelTab: React.FC = () => {
     fixedStoragePrice: 0.00005,
     targetUtilization: 0.8, // 80% target utilization
     virtualizationOverhead: 0.05, // 5% overhead default
-    sizePenaltyFactor: 0.5 // Exponential penalty factor for ratio deviation
+    virtualizationOverheadType: 'percentage', // Default to percentage
+    virtualizationOverheadMemory: 0.05, // Default memory overhead
+    sizePenaltyFactor: 0.5, // Exponential penalty factor for ratio deviation
+    vmSizePenaltyFactor: 0.3 // Exponential penalty factor for large VMs
   });
 
   const [pricingResult, setPricingResult] = useState<PricingModelResult | null>(null);
@@ -306,8 +309,95 @@ export const PricingModelTab: React.FC = () => {
             </div>
           )}
 
-          {/* Common configuration */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Virtualization Overhead Configuration */}
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <Label>Virtualization Overhead Type</Label>
+              <RadioGroup 
+                value={config.virtualizationOverheadType} 
+                onValueChange={(value) => handleConfigChange('virtualizationOverheadType', value)}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="percentage" id="percentage" />
+                  <Label htmlFor="percentage" className="font-normal cursor-pointer">
+                    Percentage - Apply overhead as percentage of resources
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="fixed" id="fixed" />
+                  <Label htmlFor="fixed" className="font-normal cursor-pointer">
+                    Fixed - Reserve fixed amount of resources
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {config.virtualizationOverheadType === 'percentage' ? (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="virtOverhead">Virtualization Overhead (%)</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Percentage of resources reserved for hypervisor</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Slider
+                    id="virtOverhead"
+                    min={0}
+                    max={0.2}
+                    step={0.01}
+                    value={[config.virtualizationOverhead]}
+                    onValueChange={([value]) => handleConfigChange('virtualizationOverhead', value)}
+                    className="flex-1"
+                  />
+                  <span className="w-12 text-right">{(config.virtualizationOverhead * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fixedCpuOverhead" className="flex items-center space-x-1">
+                    <Cpu className="h-4 w-4" />
+                    <span>Fixed CPU Overhead (vCPUs)</span>
+                  </Label>
+                  <Input
+                    id="fixedCpuOverhead"
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={config.virtualizationOverhead}
+                    onChange={(e) => handleConfigChange('virtualizationOverhead', parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fixedMemOverhead" className="flex items-center space-x-1">
+                    <MemoryStick className="h-4 w-4" />
+                    <span>Fixed Memory Overhead (GB)</span>
+                  </Label>
+                  <Input
+                    id="fixedMemOverhead"
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={config.virtualizationOverheadMemory || config.virtualizationOverhead}
+                    onChange={(e) => handleConfigChange('virtualizationOverheadMemory', parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Penalty Configuration */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-medium">VM Pricing Penalties</h4>
+            <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <Label htmlFor="targetUtil">Target Utilization</Label>
@@ -336,61 +426,67 @@ export const PricingModelTab: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="virtOverhead">Virtualization Overhead</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Overhead from hypervisor and management</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Slider
-                  id="virtOverhead"
-                  min={0}
-                  max={0.2}
-                  step={0.01}
-                  value={[config.virtualizationOverhead]}
-                  onValueChange={([value]) => handleConfigChange('virtualizationOverhead', value)}
-                  className="flex-1"
-                />
-                <span className="w-12 text-right">{(config.virtualizationOverhead * 100).toFixed(0)}%</span>
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="sizePenalty">Ratio Penalty Factor</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Exponential penalty for VMs that deviate from natural CPU:Memory ratio</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="ratioPenalty">Ratio Penalty Factor</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Penalty for VMs that deviate from natural CPU:Memory ratio</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Slider
+                    id="ratioPenalty"
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    value={[config.sizePenaltyFactor]}
+                    onValueChange={([value]) => handleConfigChange('sizePenaltyFactor', value)}
+                    className="flex-1"
+                  />
+                  <span className="w-12 text-right">{(config.sizePenaltyFactor * 100).toFixed(0)}%</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Slider
-                  id="sizePenalty"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={[config.sizePenaltyFactor]}
-                  onValueChange={([value]) => handleConfigChange('sizePenaltyFactor', value)}
-                  className="flex-1"
-                />
-                <span className="w-12 text-right">{(config.sizePenaltyFactor * 100).toFixed(0)}%</span>
+
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="vmSizePenalty">VM Size Penalty Factor</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Penalty for large VMs due to scheduling challenges and performance impact</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Slider
+                    id="vmSizePenalty"
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    value={[config.vmSizePenaltyFactor || 0.3]}
+                    onValueChange={([value]) => handleConfigChange('vmSizePenaltyFactor', value)}
+                    className="flex-1"
+                  />
+                  <span className="w-12 text-right">{((config.vmSizePenaltyFactor || 0.3) * 100).toFixed(0)}%</span>
+                </div>
               </div>
             </div>
+          </div>
+
+          {/* Common configuration */}
+          <div className="grid grid-cols-2 gap-4">
           </div>
         </CardContent>
       </Card>
@@ -405,7 +501,7 @@ export const PricingModelTab: React.FC = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Base Cost per vCPU</p>
                     <p className="text-2xl font-bold">
-                      {formatCurrency(pricingResult.baseCostPerVCPU * 730)}/mo
+                      {formatMonthlyCurrency(pricingResult.baseCostPerVCPU * 730)}/mo
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatPreciseCurrency(pricingResult.baseCostPerVCPU)}/hr
@@ -422,7 +518,7 @@ export const PricingModelTab: React.FC = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Base Cost per GB RAM</p>
                     <p className="text-2xl font-bold">
-                      {formatCurrency(pricingResult.baseCostPerGBMemory * 730)}/mo
+                      {formatMonthlyCurrency(pricingResult.baseCostPerGBMemory * 730)}/mo
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatPreciseCurrency(pricingResult.baseCostPerGBMemory)}/hr

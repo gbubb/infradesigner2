@@ -61,14 +61,14 @@ export const PricingSampleTable: React.FC<PricingSampleTableProps> = ({ prices }
               <TableHead className="text-right">Monthly</TableHead>
               <TableHead className="text-center">
                 <div className="flex items-center justify-center gap-1">
-                  Ratio Penalty
+                  Penalties
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-3 w-3" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Additional cost for VMs that deviate from natural CPU:Memory ratio</p>
+                        <p>Combined penalties for ratio deviation and VM size</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -92,9 +92,14 @@ export const PricingSampleTable: React.FC<PricingSampleTableProps> = ({ prices }
                   <TableCell className="text-right">{formatPreciseCurrency(price.baseHourlyPrice)}</TableCell>
                   <TableCell className="text-right font-bold">{formatCurrency(price.monthlyPrice)}</TableCell>
                   <TableCell className="text-center">
-                    <span className={`text-sm ${price.breakdown.sizePenalty > 0.2 ? 'text-orange-600' : 'text-muted-foreground'}`}>
-                      +{(price.breakdown.sizePenalty * 100).toFixed(0)}%
-                    </span>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className={`text-xs ${price.breakdown.ratioPenalty > 0.1 ? 'text-orange-600' : 'text-muted-foreground'}`}>
+                        R: +{(price.breakdown.ratioPenalty * 100).toFixed(0)}%
+                      </span>
+                      <span className={`text-xs ${price.breakdown.vmSizePenalty > 0.1 ? 'text-purple-600' : 'text-muted-foreground'}`}>
+                        S: +{(price.breakdown.vmSizePenalty * 100).toFixed(0)}%
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <TooltipProvider>
@@ -124,8 +129,16 @@ export const PricingSampleTable: React.FC<PricingSampleTableProps> = ({ prices }
                               <span>{price.breakdown.haOverheadMultiplier.toFixed(2)}x</span>
                             </div>
                             <div className="flex justify-between">
+                              <span>Ratio Penalty:</span>
+                              <span>+{(price.breakdown.ratioPenalty * 100).toFixed(0)}%</span>
+                            </div>
+                            <div className="flex justify-between">
                               <span>Size Penalty:</span>
-                              <span>+{(price.breakdown.sizePenalty * 100).toFixed(0)}%</span>
+                              <span>+{(price.breakdown.vmSizePenalty * 100).toFixed(0)}%</span>
+                            </div>
+                            <div className="flex justify-between border-t pt-1">
+                              <span>Total Penalty:</span>
+                              <span className="font-medium">+{(price.breakdown.sizePenalty * 100).toFixed(0)}%</span>
                             </div>
                             <div className="flex justify-between font-medium border-t pt-2">
                               <span>Effective Margin:</span>

@@ -81,64 +81,88 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">vCPU Allocation</span>
-                <span className="font-medium">{formatPercentage(cpuUtilization / 100)}</span>
+                <span className="font-medium">{formatNumber(capacity.sellingvCPUs)} / {formatNumber(capacity.totalvCPUs)}</span>
               </div>
-              <div className="relative">
-                <Progress value={cpuUtilization} className="h-8" />
-                <div className="absolute inset-0 flex items-center px-2 pointer-events-none">
-                  <div className="flex w-full text-xs text-white font-medium">
-                    <div 
-                      className="border-r border-white/20 flex items-center justify-center"
-                      style={{ width: `${cpuUtilization}%` }}
-                    >
-                      {formatNumber(capacity.sellingvCPUs)} sellable
-                    </div>
-                    <div 
-                      className="border-r border-white/20 flex items-center justify-center text-muted-foreground"
-                      style={{ width: `${(capacity.usablevCPUs / capacity.totalvCPUs * 100) - cpuUtilization}%` }}
-                    >
-                      Reserved
-                    </div>
-                    <div 
-                      className="flex items-center justify-center text-muted-foreground"
-                      style={{ width: `${100 - (capacity.usablevCPUs / capacity.totalvCPUs * 100)}%` }}
-                    >
-                      Overhead
-                    </div>
-                  </div>
+              <div className="relative h-10 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+                {/* Sellable capacity - green */}
+                <div 
+                  className="absolute inset-y-0 left-0 bg-green-500 flex items-center justify-center"
+                  style={{ width: `${cpuUtilization}%` }}
+                >
+                  <span className="text-xs text-white font-medium px-1">
+                    {cpuUtilization > 10 && `${formatNumber(capacity.sellingvCPUs)} sellable`}
+                  </span>
+                </div>
+                
+                {/* Reserved for target utilization - yellow */}
+                <div 
+                  className="absolute inset-y-0 bg-yellow-500 flex items-center justify-center"
+                  style={{ 
+                    left: `${cpuUtilization}%`,
+                    width: `${(capacity.usablevCPUs / capacity.totalvCPUs * 100) - cpuUtilization}%` 
+                  }}
+                >
+                  <span className="text-xs text-white font-medium px-1">
+                    {((capacity.usablevCPUs / capacity.totalvCPUs * 100) - cpuUtilization) > 10 && 'Target Reserve'}
+                  </span>
+                </div>
+                
+                {/* HA + Virtualization overhead - red */}
+                <div 
+                  className="absolute inset-y-0 bg-red-500 flex items-center justify-center"
+                  style={{ 
+                    left: `${capacity.usablevCPUs / capacity.totalvCPUs * 100}%`,
+                    width: `${100 - (capacity.usablevCPUs / capacity.totalvCPUs * 100)}%` 
+                  }}
+                >
+                  <span className="text-xs text-white font-medium px-1">
+                    {(100 - (capacity.usablevCPUs / capacity.totalvCPUs * 100)) > 10 && 'Overhead'}
+                  </span>
                 </div>
               </div>
             </div>
-
+            
             {/* Memory Waterfall */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Memory Allocation</span>
-                <span className="font-medium">{formatPercentage(memoryUtilization / 100)}</span>
+                <span className="font-medium">{formatNumber(capacity.sellingMemoryGB)} / {formatNumber(capacity.totalMemoryGB)} GB</span>
               </div>
-              <div className="relative">
-                <Progress value={memoryUtilization} className="h-8" />
-                <div className="absolute inset-0 flex items-center px-2 pointer-events-none">
-                  <div className="flex w-full text-xs text-white font-medium">
-                    <div 
-                      className="border-r border-white/20 flex items-center justify-center"
-                      style={{ width: `${memoryUtilization}%` }}
-                    >
-                      {formatNumber(capacity.sellingMemoryGB)} GB sellable
-                    </div>
-                    <div 
-                      className="border-r border-white/20 flex items-center justify-center text-muted-foreground"
-                      style={{ width: `${(capacity.usableMemoryGB / capacity.totalMemoryGB * 100) - memoryUtilization}%` }}
-                    >
-                      Reserved
-                    </div>
-                    <div 
-                      className="flex items-center justify-center text-muted-foreground"
-                      style={{ width: `${100 - (capacity.usableMemoryGB / capacity.totalMemoryGB * 100)}%` }}
-                    >
-                      Overhead
-                    </div>
-                  </div>
+              <div className="relative h-10 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+                {/* Sellable capacity - green */}
+                <div 
+                  className="absolute inset-y-0 left-0 bg-green-500 flex items-center justify-center"
+                  style={{ width: `${memoryUtilization}%` }}
+                >
+                  <span className="text-xs text-white font-medium px-1">
+                    {memoryUtilization > 10 && `${formatNumber(capacity.sellingMemoryGB)} GB sellable`}
+                  </span>
+                </div>
+                
+                {/* Reserved for target utilization - yellow */}
+                <div 
+                  className="absolute inset-y-0 bg-yellow-500 flex items-center justify-center"
+                  style={{ 
+                    left: `${memoryUtilization}%`,
+                    width: `${(capacity.usableMemoryGB / capacity.totalMemoryGB * 100) - memoryUtilization}%` 
+                  }}
+                >
+                  <span className="text-xs text-white font-medium px-1">
+                    {((capacity.usableMemoryGB / capacity.totalMemoryGB * 100) - memoryUtilization) > 10 && 'Target Reserve'}
+                  </span>
+                </div>
+                
+                {/* HA + Virtualization overhead - red */}
+                <div 
+                  className="absolute inset-y-0 bg-red-500 flex items-center justify-center"
+                  style={{ 
+                    left: `${capacity.usableMemoryGB / capacity.totalMemoryGB * 100}%`,
+                    width: `${100 - (capacity.usableMemoryGB / capacity.totalMemoryGB * 100)}%` 
+                  }}
+                >
+                  <span className="text-xs text-white font-medium px-1">
+                    {(100 - (capacity.usableMemoryGB / capacity.totalMemoryGB * 100)) > 10 && 'Overhead'}
+                  </span>
                 </div>
               </div>
             </div>

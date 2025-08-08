@@ -20,7 +20,7 @@ export const useComputeClusters = () => {
         hasComponents: !!activeDesign.components,
         componentsIsArray: Array.isArray(activeDesign.components),
         componentsLength: activeDesign.components?.length,
-        computeNodeCount: activeDesign.components?.filter((c: any) => 
+        computeNodeCount: activeDesign.components?.filter((c) => 
           c.name?.includes('Compute') || c.role === 'hyperConvergedNode'
         ).length,
         firstComponent: activeDesign.components?.[0]
@@ -33,7 +33,7 @@ export const useComputeClusters = () => {
 
     const clusters: ComputeClusterMetrics[] = [];
     const clusterMap = new Map<string, {
-      roles: any[],
+      roles: Array<typeof componentRoles[0]>,
       name: string,
       isHyperConverged: boolean,
       gpuEnabled: boolean
@@ -83,7 +83,7 @@ export const useComputeClusters = () => {
       const firstRole = roles[0];
       console.log('[useComputeClusters] Looking for component:', {
         assignedComponentId: firstRole.assignedComponentId,
-        availableTemplates: componentTemplates?.map((c: any) => ({
+        availableTemplates: componentTemplates?.map((c) => ({
           id: c.id,
           name: c.name,
           type: c.type
@@ -91,7 +91,7 @@ export const useComputeClusters = () => {
       });
       
       const component = componentTemplates?.find(
-        (c: any) => c.id === firstRole.assignedComponentId
+        (c) => c.id === firstRole.assignedComponentId
       );
       
       console.log('[useComputeClusters] Component found:', component);
@@ -175,7 +175,7 @@ export const useComputeClusters = () => {
       // Find the corresponding compute cluster configuration to get AZ redundancy
       const computeClusters = activeDesign.requirements?.computeRequirements?.computeClusters || 
                             activeDesign.requirements?.compute?.clusters || [];
-      const clusterConfig = computeClusters.find((c: any) => c.id === clusterId || c.name === name);
+      const clusterConfig = computeClusters.find((c) => c.id === clusterId || c.name === name);
       
       // Calculate actual AZ count for this cluster
       let availabilityZoneCount = totalAvailabilityZones;

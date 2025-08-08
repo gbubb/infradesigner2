@@ -55,3 +55,31 @@ export function formatPreciseCurrency(value: number, currency: string = 'USD'): 
     }).format(value);
   }
 }
+
+export function formatMonthlyCurrency(value: number, currency: string = 'USD'): string {
+  // For monthly values, show at least 2 decimal places
+  if (value === 0) {
+    return '$0.00';
+  } else if (value < 10) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 3,
+    }).format(value);
+  } else if (value < 100) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } else {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  }
+}

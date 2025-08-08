@@ -8,8 +8,11 @@ export interface PricingConfig {
   fixedMemoryPrice?: number; // $/GB/hour for fixed price model
   fixedStoragePrice?: number; // $/TB/hour for fixed price model
   targetUtilization: number; // Target cluster utilization (0-1)
-  virtualizationOverhead: number; // Overhead percentage (0-1)
-  sizePenaltyFactor: number; // Penalty multiplier for larger VMs
+  virtualizationOverhead: number; // Overhead percentage (0-1) or fixed vCPUs
+  virtualizationOverheadType: 'percentage' | 'fixed'; // New field
+  virtualizationOverheadMemory?: number; // Fixed memory overhead in GB (when type is 'fixed')
+  sizePenaltyFactor: number; // Ratio penalty multiplier for VMs that deviate from natural ratio
+  vmSizePenaltyFactor?: number; // Size penalty multiplier for large VMs (scheduling challenges)
 }
 
 export interface VMPricing {
@@ -24,7 +27,9 @@ export interface VMPricing {
     storageCost: number;
     licensingCost: number;
     haOverheadMultiplier: number;
-    sizePenalty: number;
+    sizePenalty: number; // Combined penalty from ratio and size
+    ratioPenalty: number; // Penalty for deviating from natural ratio
+    vmSizePenalty: number; // Penalty for large VM scheduling challenges
     ratioDeviation: number;
     effectiveMargin: number;
   };
@@ -118,7 +123,7 @@ export class PricingModelService {
       // Find the component details from componentTemplates
       const firstRole = roles[0];
       const component = this.componentTemplates.find(
-        (c: any) => c.id === firstRole.assignedComponentId
+        (c) => c.id === firstRole.assignedComponentId
       );
       
       if (!component) {
@@ -264,16 +269,26 @@ export class PricingModelService {
     // Calculate HA reservation based on failure tolerance
     const haReservation = this.calculateHAReservation(computeComponents);
 
-    // Apply overheads
-    const afterVirtualization = 1 - this.config.virtualizationOverhead;
-    const afterHA = 1 - haReservation;
-    const afterTarget = this.config.targetUtilization;
+    // Apply virtualization overhead
+    let usablevCPUs: number;
+    let usableMemoryGB: number;
+    
+    if (this.config.virtualizationOverheadType === 'fixed') {
+      // Fixed overhead - subtract fixed amounts
+      const cpuOverhead = this.config.virtualizationOverhead; // Fixed vCPUs
+      const memoryOverhead = this.config.virtualizationOverheadMemory || this.config.virtualizationOverhead; // Fixed GB
+      
+      usablevCPUs = Math.max(0, totalvCPUs - cpuOverhead) * (1 - haReservation);
+      usableMemoryGB = Math.max(0, totalMemoryGB - memoryOverhead) * (1 - haReservation);
+    } else {
+      // Percentage overhead
+      const afterVirtualization = 1 - this.config.virtualizationOverhead;
+      usablevCPUs = totalvCPUs * afterVirtualization * (1 - haReservation);
+      usableMemoryGB = totalMemoryGB * afterVirtualization * (1 - haReservation);
+    }
 
-    const usablevCPUs = totalvCPUs * afterVirtualization * afterHA;
-    const usableMemoryGB = totalMemoryGB * afterVirtualization * afterHA;
-
-    const sellingvCPUs = usablevCPUs * afterTarget;
-    const sellingMemoryGB = usableMemoryGB * afterTarget;
+    const sellingvCPUs = usablevCPUs * this.config.targetUtilization;
+    const sellingMemoryGB = usableMemoryGB * this.config.targetUtilization;
 
     return {
       totalPhysicalCores,
@@ -345,7 +360,7 @@ export class PricingModelService {
       }
       
       const component = this.componentTemplates.find(
-        (c: any) => c.id === role.assignedComponentId
+        (c) => c.id === role.assignedComponentId
       );
         
       if (component) {
@@ -526,7 +541,7 @@ export class PricingModelService {
     return (monthlyRevenue - monthlyCost) / monthlyCost;
   }
 
-  private calculateSizePenalty(vCPUs: number, memoryGB: number): number {
+  private calculateRatioPenalty(vCPUs: number, memoryGB: number): number {
     // Calculate the natural ratio of the cluster
     const capacity = this.calculateClusterCapacity();
     
@@ -554,19 +569,54 @@ export class PricingModelService {
     return 1 + penalty; // Return as multiplier (1 = no penalty)
   }
 
+  private calculateVMSizePenalty(vCPUs: number, memoryGB: number): number {
+    // Apply penalty for large VMs due to scheduling challenges
+    // Penalty increases with VM size
+    const vmSizeFactor = this.config.vmSizePenaltyFactor || 0.3; // Default 30% penalty factor
+    
+    // Normalize VM size (considering both CPU and memory)
+    // Small VMs: 1-4 vCPUs, Medium: 8-16, Large: 32+
+    const cpuSizeScore = Math.log2(vCPUs) / Math.log2(64); // Normalize to 0-1 for 64 vCPU max
+    const memSizeScore = Math.log2(memoryGB) / Math.log2(256); // Normalize to 0-1 for 256 GB max
+    const sizeScore = Math.max(cpuSizeScore, memSizeScore); // Use the larger dimension
+    
+    // Apply exponential penalty that increases with size
+    // No penalty for very small VMs (< 2 vCPUs)
+    // Increasing penalty as VMs get larger
+    if (vCPUs <= 2) {
+      return 1; // No penalty for small VMs
+    }
+    
+    // Exponential penalty based on size
+    const penalty = Math.exp(sizeScore * vmSizeFactor) - 1;
+    
+    return 1 + penalty; // Return as multiplier (1 = no penalty)
+  }
+
   calculateVMPrice(vCPUs: number, memoryGB: number, storageGB: number = 0): VMPricing {
     const capacity = this.calculateClusterCapacity();
     const infrastructureCosts = this.calculateInfrastructureCosts();
     const cpuMemoryRatio = this.calculateCpuMemoryWeightRatio(capacity);
     const baseCosts = this.calculateBaseCosts(infrastructureCosts, capacity, cpuMemoryRatio);
     
-    const sizePenalty = this.calculateSizePenalty(vCPUs, memoryGB);
+    // Calculate both penalties
+    const ratioPenalty = this.calculateRatioPenalty(vCPUs, memoryGB);
+    const vmSizePenalty = this.calculateVMSizePenalty(vCPUs, memoryGB);
+    
+    // Combine penalties multiplicatively
+    const combinedPenalty = ratioPenalty * vmSizePenalty;
     
     const cpuCost = baseCosts.cpuCost * vCPUs;
     const memoryCost = baseCosts.memoryCost * memoryGB;
     const storageCost = baseCosts.storageCost * storageGB;
     
-    const baseHourlyPrice = (cpuCost + memoryCost + storageCost) * sizePenalty;
+    // Base cost should always increase with resources
+    const baseResourceCost = cpuCost + memoryCost + storageCost;
+    
+    // Apply combined penalty as additional cost
+    // This ensures price never decreases when adding resources
+    const penaltyCost = baseResourceCost * (combinedPenalty - 1);
+    const baseHourlyPrice = baseResourceCost + penaltyCost;
     const monthlyPrice = baseHourlyPrice * 730;
 
     // Calculate breakdown
@@ -579,11 +629,7 @@ export class PricingModelService {
     const logVmRatio = Math.log2(vmRatio);
     const ratioDeviation = Math.abs(logVmRatio - logNaturalRatio);
     
-    // Cost component ratios
-    const computeRatio = 0.6; // 60% compute
-    const networkRatio = 0.25; // 25% network
-    const licensingRatio = 0.15; // 15% licensing
-
+    // Detailed cost breakdown
     return {
       vCPU: vCPUs,
       memoryGB,
@@ -591,12 +637,14 @@ export class PricingModelService {
       baseHourlyPrice,
       monthlyPrice,
       breakdown: {
-        computeCost: totalBaseCost * computeRatio,
-        networkCost: totalBaseCost * networkRatio,
+        computeCost: cpuCost,  // Actual CPU cost
+        networkCost: memoryCost,  // Using memory cost as proxy for network for now
         storageCost: storageCost,
-        licensingCost: totalBaseCost * licensingRatio,
+        licensingCost: 0,  // Can be added based on requirements
         haOverheadMultiplier: 1 / (1 - capacity.haReservation),
-        sizePenalty: sizePenalty - 1,
+        sizePenalty: combinedPenalty - 1,  // Combined penalty
+        ratioPenalty: ratioPenalty - 1,  // Ratio penalty component
+        vmSizePenalty: vmSizePenalty - 1,  // VM size penalty component
         ratioDeviation: ratioDeviation,
         effectiveMargin: this.calculateEffectiveMargin(baseCosts, infrastructureCosts)
       }
@@ -671,7 +719,7 @@ export class PricingModelService {
       this.design.componentRoles.forEach(role => {
         if (role.assignedComponentId) {
           const component = this.componentTemplates.find(
-            (c: any) => c.id === role.assignedComponentId
+            (c) => c.id === role.assignedComponentId
           );
           if (component) {
             components.push({

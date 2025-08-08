@@ -4,9 +4,10 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { PricingModelService } from '@/services/pricing/pricingModelService';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
 import { Calculator, Cpu, MemoryStick, HardDrive, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CostBreakdownChart } from './CostBreakdownChart';
 
 interface VMPriceCalculatorProps {
   pricingService: PricingModelService;
@@ -131,12 +132,12 @@ export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingSer
                   <div className="flex justify-between items-center font-medium">
                     <span>Monthly Price:</span>
                     <span className="text-2xl text-green-600">
-                      {formatCurrency(calculatedPrice.monthlyPrice)}
+                      {formatMonthlyCurrency(calculatedPrice.monthlyPrice)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Hourly Price:</span>
-                    <span>{formatCurrency(calculatedPrice.baseHourlyPrice)}/hr</span>
+                    <span>{formatPreciseCurrency(calculatedPrice.baseHourlyPrice)}/hr</span>
                   </div>
                 </div>
               </AlertDescription>
@@ -148,47 +149,64 @@ export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingSer
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between p-2 bg-muted/30 rounded">
                   <span className="text-muted-foreground">Compute Cost:</span>
-                  <span>{formatCurrency(calculatedPrice.breakdown.computeCost)}/hr</span>
+                  <span>{formatPreciseCurrency(calculatedPrice.breakdown.computeCost)}/hr</span>
                 </div>
                 <div className="flex justify-between p-2 bg-muted/30 rounded">
                   <span className="text-muted-foreground">Network Cost:</span>
-                  <span>{formatCurrency(calculatedPrice.breakdown.networkCost)}/hr</span>
+                  <span>{formatPreciseCurrency(calculatedPrice.breakdown.networkCost)}/hr</span>
                 </div>
                 <div className="flex justify-between p-2 bg-muted/30 rounded">
                   <span className="text-muted-foreground">Storage Cost:</span>
-                  <span>{formatCurrency(calculatedPrice.breakdown.storageCost)}/hr</span>
+                  <span>{formatPreciseCurrency(calculatedPrice.breakdown.storageCost)}/hr</span>
                 </div>
                 <div className="flex justify-between p-2 bg-muted/30 rounded">
                   <span className="text-muted-foreground">Licensing Cost:</span>
-                  <span>{formatCurrency(calculatedPrice.breakdown.licensingCost)}/hr</span>
+                  <span>{formatPreciseCurrency(calculatedPrice.breakdown.licensingCost)}/hr</span>
                 </div>
               </div>
             </div>
 
             {/* Multipliers */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium">Applied Multipliers</h4>
-              <div className="grid grid-cols-3 gap-3 text-sm">
+              <h4 className="text-sm font-medium">Applied Multipliers & Penalties</h4>
+              <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-900">
                   <div className="text-orange-600 dark:text-orange-400 text-xs">HA Overhead</div>
                   <div className="font-bold text-orange-700 dark:text-orange-300">
                     {calculatedPrice.breakdown.haOverheadMultiplier.toFixed(2)}x
                   </div>
                 </div>
-                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
-                  <div className="text-blue-600 dark:text-blue-400 text-xs">Ratio Penalty</div>
-                  <div className="font-bold text-blue-700 dark:text-blue-300">
+                <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
+                  <div className="text-green-600 dark:text-green-400 text-xs">Total Penalty</div>
+                  <div className="font-bold text-green-700 dark:text-green-300">
                     +{(calculatedPrice.breakdown.sizePenalty * 100).toFixed(0)}%
                   </div>
                 </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                  <div className="text-blue-600 dark:text-blue-400 text-xs">Ratio Penalty</div>
+                  <div className="font-bold text-blue-700 dark:text-blue-300">
+                    +{(calculatedPrice.breakdown.ratioPenalty * 100).toFixed(0)}%
+                  </div>
+                </div>
                 <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-900">
-                  <div className="text-purple-600 dark:text-purple-400 text-xs">Ratio Deviation</div>
+                  <div className="text-purple-600 dark:text-purple-400 text-xs">Size Penalty</div>
                   <div className="font-bold text-purple-700 dark:text-purple-300">
+                    +{(calculatedPrice.breakdown.vmSizePenalty * 100).toFixed(0)}%
+                  </div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-950/20 rounded-lg border border-gray-200 dark:border-gray-900">
+                  <div className="text-gray-600 dark:text-gray-400 text-xs">Ratio Deviation</div>
+                  <div className="font-bold text-gray-700 dark:text-gray-300">
                     {calculatedPrice.breakdown.ratioDeviation.toFixed(2)}
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Cost Breakdown Pie Chart */}
+            <CostBreakdownChart pricing={calculatedPrice} />
           </div>
         )}
       </CardContent>
