@@ -57,10 +57,17 @@ export class PricingModelService {
   private design: InfrastructureDesign | null;
   private config: PricingConfig;
   private selectedClusterId?: string;
+  private componentTemplates: InfrastructureComponent[];
 
-  constructor(design: InfrastructureDesign | null, config: PricingConfig, selectedClusterId?: string) {
+  constructor(
+    design: InfrastructureDesign | null, 
+    config: PricingConfig, 
+    componentTemplates: InfrastructureComponent[] = [],
+    selectedClusterId?: string
+  ) {
     this.design = design;
     this.config = config;
+    this.componentTemplates = componentTemplates;
     this.selectedClusterId = selectedClusterId;
   }
 
@@ -108,13 +115,11 @@ export class PricingModelService {
     clusterMap.forEach((clusterData, clusterId) => {
       const { roles, name } = clusterData;
       
-      // Find the component details
+      // Find the component details from componentTemplates
       const firstRole = roles[0];
-      const component = Array.isArray(this.design?.components)
-        ? this.design.components.find((c: any) => 
-            (typeof c === 'object' && c.id === firstRole.assignedComponentId)
-          )
-        : null;
+      const component = this.componentTemplates.find(
+        (c: any) => c.id === firstRole.assignedComponentId
+      );
       
       if (!component) {
         console.log('[PricingModelService] Could not find component for role:', firstRole);
@@ -301,11 +306,9 @@ export class PricingModelService {
         if (roleClusterId !== this.selectedClusterId) return;
       }
       
-      const component = Array.isArray(this.design?.components)
-        ? this.design.components.find((c: any) => 
-            (typeof c === 'object' && c.id === role.assignedComponentId)
-          )
-        : null;
+      const component = this.componentTemplates.find(
+        (c: any) => c.id === role.assignedComponentId
+      );
         
       if (component) {
         components.push({
@@ -595,11 +598,9 @@ export class PricingModelService {
     if (this.design.componentRoles) {
       this.design.componentRoles.forEach(role => {
         if (role.assignedComponentId) {
-          const component = Array.isArray(this.design?.components)
-            ? this.design.components.find((c: any) => 
-                (typeof c === 'object' && (c.id === role.assignedComponentId || c.componentId === role.assignedComponentId))
-              )
-            : null;
+          const component = this.componentTemplates.find(
+            (c: any) => c.id === role.assignedComponentId
+          );
           if (component) {
             components.push({
               id: role.id,

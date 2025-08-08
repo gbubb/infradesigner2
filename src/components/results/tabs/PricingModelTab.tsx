@@ -21,6 +21,7 @@ import { AlertCircle } from 'lucide-react';
 
 export const PricingModelTab: React.FC = () => {
   const activeDesign = useDesignStore((state) => state.activeDesign);
+  const componentTemplates = useDesignStore((state) => state.componentTemplates);
   const [selectedClusterId, setSelectedClusterId] = useState<string>('all');
   const [availableClusters, setAvailableClusters] = useState<ComputeCluster[]>([]);
   
@@ -39,8 +40,8 @@ export const PricingModelTab: React.FC = () => {
 
   const pricingService = useMemo(() => {
     const clusterId = selectedClusterId === 'all' ? undefined : selectedClusterId;
-    return new PricingModelService(activeDesign, config, clusterId);
-  }, [activeDesign, config, selectedClusterId]);
+    return new PricingModelService(activeDesign, config, componentTemplates, clusterId);
+  }, [activeDesign, config, componentTemplates, selectedClusterId]);
 
   useEffect(() => {
     // Get available clusters

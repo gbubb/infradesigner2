@@ -5,6 +5,7 @@ import { ComputeClusterMetrics } from '@/components/results/ComputeClustersTable
 export const useComputeClusters = () => {
   const activeDesign = useDesignStore((state) => state.activeDesign);
   const componentRoles = useDesignStore((state) => state.componentRoles);
+  const componentTemplates = useDesignStore((state) => state.componentTemplates);
   
   const computeClustersMetrics = useMemo(() => {
     console.log('[useComputeClusters] Starting calculation:', {
@@ -75,18 +76,18 @@ export const useComputeClusters = () => {
     clusterMap.forEach((clusterData, clusterId) => {
       const { roles, name, isHyperConverged, gpuEnabled } = clusterData;
       
-      // Find the component details
+      // Find the component details from componentTemplates
       const firstRole = roles[0];
       console.log('[useComputeClusters] Looking for component:', {
         assignedComponentId: firstRole.assignedComponentId,
-        availableComponents: activeDesign.components?.map((c: any) => ({
+        availableTemplates: componentTemplates?.map((c: any) => ({
           id: c.id,
           name: c.name,
           type: c.type
         }))
       });
       
-      const component = activeDesign.components?.find(
+      const component = componentTemplates?.find(
         (c: any) => c.id === firstRole.assignedComponentId
       );
       
@@ -160,7 +161,7 @@ export const useComputeClusters = () => {
 
     console.log('[useComputeClusters] Final clusters:', clusters);
     return clusters;
-  }, [activeDesign, componentRoles]);
+  }, [activeDesign, componentRoles, componentTemplates]);
 
   return { computeClustersMetrics };
 };
