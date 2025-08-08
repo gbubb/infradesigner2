@@ -20,6 +20,9 @@ export const useComputeClusters = () => {
         hasComponents: !!activeDesign.components,
         componentsIsArray: Array.isArray(activeDesign.components),
         componentsLength: activeDesign.components?.length,
+        computeNodeCount: activeDesign.components?.filter((c: any) => 
+          c.name?.includes('Compute') || c.role === 'hyperConvergedNode'
+        ).length,
         firstComponent: activeDesign.components?.[0]
       } : null
     });
@@ -98,10 +101,21 @@ export const useComputeClusters = () => {
         return;
       }
 
-      // Calculate total nodes
+      // Calculate total nodes - use adjustedRequiredCount (after component selection) not requiredCount (initial estimate)
+      console.log('[useComputeClusters] Calculating node count for cluster:', {
+        clusterId,
+        roles: roles.map(r => ({
+          role: r.role,
+          requiredCount: r.requiredCount,
+          adjustedRequiredCount: r.adjustedRequiredCount
+        }))
+      });
+      
       const nodeCount = roles.reduce((sum, role) => 
-        sum + (role.requiredCount || role.adjustedRequiredCount || 0), 0
+        sum + (role.adjustedRequiredCount || role.requiredCount || 0), 0
       );
+      
+      console.log('[useComputeClusters] Total node count:', nodeCount);
 
       // Get component specifications
       const cores = component.specifications?.cpu?.cores || 

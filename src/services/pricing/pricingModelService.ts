@@ -126,9 +126,9 @@ export class PricingModelService {
         return;
       }
 
-      // Calculate total nodes
+      // Calculate total nodes - use adjustedRequiredCount (after component selection) not requiredCount (initial estimate)
       const nodeCount = roles.reduce((sum, role) => 
-        sum + (role.requiredCount || role.adjustedRequiredCount || 0), 0
+        sum + (role.adjustedRequiredCount || role.requiredCount || 0), 0
       );
 
       // Get component specifications
@@ -314,7 +314,7 @@ export class PricingModelService {
         components.push({
           id: role.id,
           component,
-          quantity: role.requiredCount || role.adjustedRequiredCount || 1,
+          quantity: role.adjustedRequiredCount || role.requiredCount || 1,
           metadata: {
             cluster_id: role.clusterInfo?.clusterId || role.role,
             cluster_name: role.clusterInfo?.clusterName || role.role,
@@ -605,7 +605,7 @@ export class PricingModelService {
             components.push({
               id: role.id,
               component,
-              quantity: role.requiredCount || role.adjustedRequiredCount || 1,
+              quantity: role.adjustedRequiredCount || role.requiredCount || 1,
               metadata: {
                 cluster_id: role.clusterInfo?.clusterId,
                 cluster_name: role.clusterInfo?.clusterName,
