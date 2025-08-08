@@ -174,9 +174,9 @@ export const useCostAnalysis = () => {
           // The storage portion is already included in totalStorageCost above
           // We'll attribute the remaining cost to compute
           const storageCluster = storageClustersMetrics.find(cluster => 
-            cluster.nodes.some(node => node.id === component.id)
+            cluster.nodes && cluster.nodes.some(node => node.id === component.id)
           );
-          if (storageCluster && storageCluster.isHyperConverged && storageCluster.totalStorageCost) {
+          if (storageCluster && storageCluster.isHyperConverged && storageCluster.totalStorageCost && storageCluster.nodes && storageCluster.nodes.length > 0) {
             // The storage cost is already calculated, so add the compute portion
             const storagePortionPerNode = storageCluster.totalStorageCost / storageCluster.nodes.length;
             const computePortion = componentCost - storagePortionPerNode;
