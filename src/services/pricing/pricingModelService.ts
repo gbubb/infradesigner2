@@ -42,6 +42,7 @@ export interface VMPricing {
 export interface ClusterCapacity {
   totalPhysicalCores: number;
   totalPhysicalMemoryGB: number;
+  totalPhysicalNodes: number;  // Added to track actual node count
   totalvCPUs: number;
   totalMemoryGB: number;
   usablevCPUs: number;
@@ -214,6 +215,7 @@ export class PricingModelService {
       return {
         totalPhysicalCores: 0,
         totalPhysicalMemoryGB: 0,
+        totalPhysicalNodes: 0,
         totalvCPUs: 0,
         totalMemoryGB: 0,
         usablevCPUs: 0,
@@ -230,10 +232,12 @@ export class PricingModelService {
 
     let totalPhysicalCores = 0;
     let totalPhysicalMemoryGB = 0;
+    let totalPhysicalNodes = 0;
 
     computeComponents.forEach(comp => {
       const qty = comp.quantity || 1;
       const component = comp.component;
+      totalPhysicalNodes += qty;  // Count the actual nodes
       
       // Get cores - check for socket-based calculation first
       let cores = 0;
@@ -297,6 +301,7 @@ export class PricingModelService {
     return {
       totalPhysicalCores,
       totalPhysicalMemoryGB,
+      totalPhysicalNodes,
       totalvCPUs,
       totalMemoryGB,
       usablevCPUs,

@@ -363,7 +363,7 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total Physical Hosts:</span>
                     <span className="font-medium">
-                      {Math.ceil(capacity.totalPhysicalCores / (capacity.totalPhysicalCores > 0 ? Math.floor(capacity.totalPhysicalCores / Math.max(1, Math.floor(capacity.totalPhysicalMemoryGB / 512))) : 64))} nodes
+                      {capacity.totalPhysicalNodes} nodes
                     </span>
                   </div>
                   <div className="flex justify-between">
