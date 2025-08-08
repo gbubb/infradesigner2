@@ -7,6 +7,16 @@ export const useComputeClusters = () => {
   const componentRoles = useDesignStore((state) => state.componentRoles);
   
   const computeClustersMetrics = useMemo(() => {
+    console.log('[useComputeClusters] Starting calculation:', {
+      hasActiveDesign: !!activeDesign,
+      componentRolesCount: componentRoles?.length || 0,
+      componentRoles: componentRoles?.map(r => ({ 
+        role: r.role, 
+        assignedComponentId: r.assignedComponentId,
+        clusterInfo: r.clusterInfo 
+      }))
+    });
+
     if (!activeDesign || !componentRoles) {
       return [];
     }
@@ -21,13 +31,22 @@ export const useComputeClusters = () => {
 
     // Group component roles by cluster
     componentRoles.forEach(role => {
-      if (!role.assignedComponentId) return;
+      if (!role.assignedComponentId) {
+        console.log('[useComputeClusters] Skipping role without assignedComponentId:', role.role);
+        return;
+      }
       
       // Check if this is a compute-related role
       const isComputeRole = 
         role.role === 'computeNode' || 
         role.role === 'hyperConvergedNode' || 
         role.role === 'gpuNode';
+      
+      console.log('[useComputeClusters] Role check:', {
+        role: role.role,
+        isComputeRole,
+        assignedComponentId: role.assignedComponentId
+      });
       
       if (!isComputeRole) return;
 
@@ -119,6 +138,7 @@ export const useComputeClusters = () => {
       });
     });
 
+    console.log('[useComputeClusters] Final clusters:', clusters);
     return clusters;
   }, [activeDesign, componentRoles]);
 

@@ -28,6 +28,8 @@ export const DesignStatisticsTab: React.FC = () => {
   } = useDesignCalculations();
   
   const { computeClustersMetrics } = useComputeClusters();
+  
+  console.log('[DesignStatisticsTab] Compute clusters metrics:', computeClustersMetrics);
 
   // Get average VM size from requirements
   const averageVMVCPUs = activeDesign?.requirements?.computeRequirements?.averageVMVCPUs || 4;

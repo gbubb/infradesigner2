@@ -26,10 +26,8 @@ interface ComputeClustersTableProps {
 }
 
 export const ComputeClustersTable: React.FC<ComputeClustersTableProps> = ({ clusters }) => {
-  if (clusters.length === 0) {
-    return null;
-  }
-
+  console.log('[ComputeClustersTable] Received clusters:', clusters);
+  
   return (
     <Card>
       <CardHeader>
@@ -42,6 +40,11 @@ export const ComputeClustersTable: React.FC<ComputeClustersTableProps> = ({ clus
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {clusters.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No compute clusters found. Please configure compute nodes in your design.
+          </div>
+        ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -107,6 +110,7 @@ export const ComputeClustersTable: React.FC<ComputeClustersTableProps> = ({ clus
             ))}
           </TableBody>
         </Table>
+        )}
       </CardContent>
     </Card>
   );
