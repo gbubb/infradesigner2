@@ -6,17 +6,23 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { useDesignStore } from '@/store';
 import { PricingModelService, PricingConfig, PricingModelResult } from '@/services/pricing/pricingModelService';
+import { ComputeCluster } from '@/types/placement';
 import { formatCurrency } from '@/lib/utils';
-import { Info, DollarSign, Cpu, MemoryStick, HardDrive, Download, FileText } from 'lucide-react';
+import { Info, DollarSign, Cpu, MemoryStick, HardDrive, Download, FileText, Server } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PricingVisualization3D } from './pricing/PricingVisualization3D';
 import { CapacityBreakdown } from './pricing/CapacityBreakdown';
 import { PricingSampleTable } from './pricing/PricingSampleTable';
 import { VMPriceCalculator } from './pricing/VMPriceCalculator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export const PricingModelTab: React.FC = () => {
-  const design = useDesignStore((state) => state.design);
+  const activeDesign = useDesignStore((state) => state.activeDesign);
+  const [selectedClusterId, setSelectedClusterId] = useState<string>('all');
+  const [availableClusters, setAvailableClusters] = useState<ComputeCluster[]>([]);
   
   const [config, setConfig] = useState<PricingConfig>({
     operatingModel: 'costPlus',
@@ -32,10 +38,16 @@ export const PricingModelTab: React.FC = () => {
   const [pricingResult, setPricingResult] = useState<PricingModelResult | null>(null);
 
   const pricingService = useMemo(() => {
-    return new PricingModelService(design, config);
-  }, [design, config]);
+    const clusterId = selectedClusterId === 'all' ? undefined : selectedClusterId;
+    return new PricingModelService(activeDesign, config, clusterId);
+  }, [activeDesign, config, selectedClusterId]);
 
   useEffect(() => {
+    // Get available clusters
+    const clusters = pricingService.getAvailableClusters();
+    setAvailableClusters(clusters);
+    
+    // Calculate pricing
     const result = pricingService.calculatePricing();
     setPricingResult(result);
   }, [pricingService]);
@@ -95,8 +107,76 @@ export const PricingModelTab: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  // Show cluster details
+  const selectedCluster = availableClusters.find(c => c.id === selectedClusterId);
+
   return (
     <div className="space-y-6">
+      {/* Cluster Selector */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Server className="h-5 w-5" />
+            Cluster Selection
+          </CardTitle>
+          <CardDescription>
+            Select a compute cluster to calculate pricing for, or analyze all clusters
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Label htmlFor="cluster-select" className="min-w-[100px]">Cluster:</Label>
+            <Select value={selectedClusterId} onValueChange={setSelectedClusterId}>
+              <SelectTrigger id="cluster-select" className="flex-1">
+                <SelectValue placeholder="Select a cluster" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Clusters</SelectItem>
+                {availableClusters.map(cluster => (
+                  <SelectItem key={cluster.id} value={cluster.id}>
+                    {cluster.name} ({cluster.nodeCount} nodes)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Show selected cluster details */}
+          {selectedCluster && (
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+              <h4 className="text-sm font-medium mb-2">Cluster Details</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Node Type:</span>
+                  <p className="font-medium">{selectedCluster.nodeType.name}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Node Count:</span>
+                  <p className="font-medium">{selectedCluster.nodeCount}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Total Cores:</span>
+                  <p className="font-medium">{selectedCluster.specifications.totalCores}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Total Memory:</span>
+                  <p className="font-medium">{selectedCluster.specifications.totalMemoryGB} GB</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {availableClusters.length === 0 && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No compute clusters found in the design. Please add compute components to the design first.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Export Buttons */}
       <div className="flex justify-end gap-2">
         <Button

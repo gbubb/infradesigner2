@@ -447,4 +447,33 @@ export class PricingModelService {
 
     return { x, y, z };
   }
+
+  private getAllComponents(): PlacedComponent[] {
+    if (!this.design) return [];
+    
+    const components: PlacedComponent[] = [];
+    
+    // Convert design components to PlacedComponents
+    if (this.design.componentRoles) {
+      this.design.componentRoles.forEach(role => {
+        if (role.assignedComponentId) {
+          const component = this.design?.components.find(c => c.id === role.assignedComponentId);
+          if (component) {
+            components.push({
+              id: role.id,
+              component,
+              quantity: role.requiredCount || 1,
+              metadata: {
+                cluster_id: role.clusterInfo?.clusterId,
+                cluster_name: role.clusterInfo?.clusterName,
+                role: role.role
+              }
+            });
+          }
+        }
+      });
+    }
+    
+    return components;
+  }
 }
