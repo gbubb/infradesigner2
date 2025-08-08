@@ -661,84 +661,89 @@ export class PricingModelService {
     // Calculate natural ratio for the infrastructure
     const naturalRatio = capacity.totalMemoryGB / capacity.totalvCPUs; // e.g., 4 for 1:4 ratio
     
-    // MONOTONIC PRICING MODEL
+    // MONOTONIC PRICING MODEL WITH IMPROVED RATIO HANDLING
     // Guarantees that P(c1, m1) <= P(c2, m2) when c1 <= c2 and m1 <= m2
-    // Key principle: Each resource has its own monotonic price curve, with optional synergy discount
     
     // Step 1: Calculate base linear costs
     const baseLinearCpuCost = baseCosts.cpuCost * vCPUs;
     const baseLinearMemCost = baseCosts.memoryCost * memoryGB;
-    const baseStorageCost = baseCosts.storageCost * storageGB;
+    const baseStorageCost = baseCosts.storageCost * (storageGB / 1000); // Convert GB to TB since price is per TB
     
-    // Step 2: Apply monotonic premium curves to each resource independently
-    // These curves are strictly increasing in their respective dimensions
+    // Step 2: Calculate ratio deviation and impact
+    const vmRatio = memoryGB / vCPUs;
+    const logRatioDeviation = Math.log2(vmRatio / naturalRatio);
+    const absRatioDeviation = Math.abs(logRatioDeviation);
     
-    // CPU premium curve: f(cpu) - monotonically increasing
+    // Improved ratio impact calculation:
+    // - Uses configured exponent to control curve shape
+    // - Smoother near natural ratio (lower exponent = smoother)
+    // - Always increases at extremes (no dropoff)
+    const ratioExponent = this.config.ratioPenaltyExponent || 2;
+    const normalizedDeviation = Math.min(absRatioDeviation / 3, 1); // Normalize to [0,1] over 3 octaves
+    const ratioImpact = Math.pow(normalizedDeviation, ratioExponent);
+    
+    // Step 3: Apply size premium curves with ratio amplification
+    // Size premiums are amplified based on ratio imbalance
     const cpuSizeThreshold = this.config.vmSizeThreshold || 4;
-    const cpuPremiumFactor = this.config.vmSizePenaltyFactor || 0.3;
+    const baseSizePremiumFactor = this.config.vmSizePenaltyFactor || 0.3;
     const cpuCurveExponent = this.config.vmSizeCurveExponent || 2;
     
-    let cpuPremium = 0;
+    // CPU premium calculation
+    let cpuBasePremium = 0;
     if (vCPUs > cpuSizeThreshold) {
       const cpuAboveThreshold = vCPUs - cpuSizeThreshold;
-      const cpuNormalized = cpuAboveThreshold / (64 - cpuSizeThreshold); // Normalize to [0,1]
-      cpuPremium = Math.pow(cpuNormalized, cpuCurveExponent) * cpuPremiumFactor;
+      const cpuNormalized = Math.min(cpuAboveThreshold / (64 - cpuSizeThreshold), 1);
+      cpuBasePremium = Math.pow(cpuNormalized, cpuCurveExponent) * baseSizePremiumFactor;
     }
     
-    // Memory premium curve: g(mem) - monotonically increasing  
-    const memSizeThreshold = cpuSizeThreshold * naturalRatio; // Scale threshold by natural ratio
-    const memPremiumFactor = cpuPremiumFactor; // Same premium factor
-    
-    let memPremium = 0;
+    // Memory premium calculation  
+    const memSizeThreshold = cpuSizeThreshold * naturalRatio;
+    let memBasePremium = 0;
     if (memoryGB > memSizeThreshold) {
       const memAboveThreshold = memoryGB - memSizeThreshold;
-      const memNormalized = memAboveThreshold / (256 - memSizeThreshold); // Normalize to [0,1]
-      memPremium = Math.pow(memNormalized, cpuCurveExponent) * memPremiumFactor;
+      const memNormalized = Math.min(memAboveThreshold / (256 - memSizeThreshold), 1);
+      memBasePremium = Math.pow(memNormalized, cpuCurveExponent) * baseSizePremiumFactor;
     }
     
-    // Step 3: Calculate costs with independent premiums (guarantees monotonicity)
+    // Apply ratio amplification to size premiums
+    // The ratio impact factor controls how much imbalance amplifies premiums
+    const ratioAmplification = 1 + (ratioImpact * this.config.sizePenaltyFactor);
+    const cpuPremium = cpuBasePremium * ratioAmplification;
+    const memPremium = memBasePremium * ratioAmplification;
+    
+    // Step 4: Calculate costs with amplified premiums
     const cpuCostWithPremium = baseLinearCpuCost * (1 + cpuPremium);
     const memCostWithPremium = baseLinearMemCost * (1 + memPremium);
     
-    // Step 4: Apply balance discount (NOT penalty) for well-balanced VMs
-    // This is a small discount, never a penalty, preserving monotonicity
-    const vmRatio = memoryGB / vCPUs;
-    const ratioDeviation = Math.abs(Math.log2(vmRatio / naturalRatio));
+    // Step 5: Apply ratio inefficiency surcharge
+    // This is now a more meaningful percentage, configurable up to 30%
+    // The surcharge is based on the smaller of CPU or memory costs to preserve monotonicity
+    const smallerBaseCost = Math.min(baseLinearCpuCost, baseLinearMemCost);
+    const maxRatioSurcharge = smallerBaseCost * 0.3; // Max 30% of smaller cost
+    const ratioSurcharge = ratioImpact * maxRatioSurcharge * this.config.sizePenaltyFactor;
     
-    // Calculate balance score (1 = perfect balance, 0 = highly imbalanced)
-    const balanceScore = Math.exp(-ratioDeviation * 0.5); // Exponential decay from 1 to 0
-    
-    // Maximum discount for perfect balance (e.g., 5% discount)
-    const maxBalanceDiscount = 0.05;
-    const balanceDiscount = balanceScore * maxBalanceDiscount;
-    
-    // Apply balance discount to total (ensures price still increases with resources)
+    // Step 6: Apply balance discount for well-balanced VMs
+    // Small discount that rewards balanced configurations
+    const balanceScore = 1 - ratioImpact; // Inverse of ratio impact
+    const maxBalanceDiscount = 0.05 * this.config.sizePenaltyFactor; // Up to 5% discount
     const totalBeforeDiscount = cpuCostWithPremium + memCostWithPremium + baseStorageCost;
-    const balanceAdjustment = totalBeforeDiscount * balanceDiscount;
-    
-    // Step 5: Add ratio inefficiency charge (small, capped addition)
-    // This represents the operational complexity of imbalanced VMs
-    // Critically: This is ADDITIVE and CAPPED to preserve monotonicity
-    const maxRatioCharge = Math.min(
-      baseLinearCpuCost * 0.1,  // Cap at 10% of base CPU cost
-      baseLinearMemCost * 0.1   // or 10% of base memory cost
-    );
-    const ratioInefficiencyCharge = (1 - balanceScore) * maxRatioCharge * this.config.sizePenaltyFactor;
+    const balanceDiscount = totalBeforeDiscount * balanceScore * maxBalanceDiscount;
     
     // Final price calculation
-    const baseHourlyPrice = totalBeforeDiscount - balanceAdjustment + ratioInefficiencyCharge;
+    const baseHourlyPrice = totalBeforeDiscount + ratioSurcharge - balanceDiscount;
     const monthlyPrice = baseHourlyPrice * 730;
 
     // Calculate effective premiums for display
     const totalBaseCost = baseLinearCpuCost + baseLinearMemCost;
-    const totalPremium = (cpuCostWithPremium - baseLinearCpuCost) + (memCostWithPremium - baseLinearMemCost);
+    const totalPremium = (cpuCostWithPremium - baseLinearCpuCost) + (memCostWithPremium - baseLinearMemCost) + ratioSurcharge;
     const effectiveTotalPremium = totalBaseCost > 0 ? totalPremium / totalBaseCost : 0;
     
-    // Calculate size penalty (average of CPU and memory premiums)
-    const avgSizePremium = (cpuPremium + memPremium) / 2;
+    // Separate base size premium from ratio effects
+    const avgBaseSizePremium = (cpuBasePremium + memBasePremium) / 2;
     
-    // Calculate ratio penalty (inefficiency charge as percentage of base)
-    const ratioInefficiencyPercent = totalBaseCost > 0 ? ratioInefficiencyCharge / totalBaseCost : 0;
+    // Calculate ratio penalty as combination of amplification and surcharge
+    const ratioEffectPercent = totalBaseCost > 0 ? 
+      ((ratioAmplification - 1) * (cpuBasePremium * baseLinearCpuCost + memBasePremium * baseLinearMemCost) + ratioSurcharge) / totalBaseCost : 0;
     
     // Detailed cost breakdown
     return {
@@ -754,9 +759,9 @@ export class PricingModelService {
         licensingCost: 0,  // Can be added based on requirements
         haOverheadMultiplier: 1, // HA overhead is already accounted for in capacity reduction
         sizePenalty: effectiveTotalPremium,  // Total effective premium
-        ratioPenalty: ratioInefficiencyPercent,  // Ratio inefficiency as percentage
-        vmSizePenalty: avgSizePremium,  // Average size premium
-        ratioDeviation: ratioDeviation,
+        ratioPenalty: ratioEffectPercent,  // Ratio effects (amplification + surcharge)
+        vmSizePenalty: avgBaseSizePremium,  // Base size premium before ratio amplification
+        ratioDeviation: absRatioDeviation,
         effectiveMargin: this.calculateEffectiveMargin(baseCosts, infrastructureCosts)
       }
     };
