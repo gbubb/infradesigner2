@@ -2,9 +2,11 @@ import React from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 import { useCostAnalysis } from '@/hooks/design/useCostAnalysis';
+import { useComputeClusters } from '@/hooks/design/useComputeClusters';
 import { ResourceSummaryCard, KeyMetricsCard } from '../ResultsSummaryCards';
 import { DetailedCostAnalysisCard } from '../DetailedCostAnalysisCard';
 import { StorageClustersTable } from '../StorageClustersTable';
+import { ComputeClustersTable } from '../ComputeClustersTable';
 import { InfrastructureSummaryCard } from '../InfrastructureSummaryCard';
 import { ComponentTypeSummaryTable } from '../ComponentTypeSummaryTable';
 
@@ -24,6 +26,8 @@ export const DesignStatisticsTab: React.FC = () => {
     monthlyCostPerAverageVM,
     quantityOfAverageVMs
   } = useDesignCalculations();
+  
+  const { computeClustersMetrics } = useComputeClusters();
 
   // Get average VM size from requirements
   const averageVMVCPUs = activeDesign?.requirements?.computeRequirements?.averageVMVCPUs || 4;
@@ -122,6 +126,8 @@ export const DesignStatisticsTab: React.FC = () => {
         facilityType={facilityType}
         facilityCosts={facilityCosts || undefined}
       />
+      
+      <ComputeClustersTable clusters={computeClustersMetrics} />
       
       <StorageClustersTable clusters={storageClustersMetrics} />
       

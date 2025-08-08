@@ -70,72 +70,87 @@ export class PricingModelService {
     }
 
     const clusters: ComputeCluster[] = [];
-    const roleGroups = new Map<string, ComponentRole[]>();
+    const clusterMap = new Map<string, {
+      roles: ComponentRole[],
+      name: string,
+      isHyperConverged: boolean,
+      gpuEnabled: boolean
+    }>();
 
-    // Group components by cluster/role
+    // Group component roles by cluster - specifically looking for compute-related roles
     this.design.componentRoles.forEach(role => {
-      if (role.assignedComponentId) {
-        // Components can be either an array of component objects or array with placement info
-        const component = Array.isArray(this.design?.components) 
-          ? this.design.components.find((c: any) => 
-              (typeof c === 'object' && (c.id === role.assignedComponentId || c.componentId === role.assignedComponentId))
-            )
-          : null;
-          
-        // Check if this is a compute component
-        const isCompute = component && (
-          component.type === 'compute' || 
-          component.serverRole === 'compute' ||
-          component.role === 'computeNode' ||
-          component.role === 'hyperConvergedNode' ||
-          role.role === 'computeNode' ||
-          role.role === 'hyperConvergedNode'
-        );
-        
-        if (isCompute) {
-          const clusterKey = role.clusterInfo?.clusterId || role.role;
-          if (!roleGroups.has(clusterKey)) {
-            roleGroups.set(clusterKey, []);
-          }
-          roleGroups.get(clusterKey)?.push(role);
-        }
+      if (!role.assignedComponentId) return;
+      
+      // Check if this is a compute-related role based on the role name
+      const isComputeRole = 
+        role.role === 'computeNode' || 
+        role.role === 'hyperConvergedNode' || 
+        role.role === 'gpuNode';
+      
+      if (!isComputeRole) return;
+
+      const clusterId = role.clusterInfo?.clusterId || role.role;
+      const clusterName = role.clusterInfo?.clusterName || role.role;
+      
+      if (!clusterMap.has(clusterId)) {
+        clusterMap.set(clusterId, {
+          roles: [],
+          name: clusterName,
+          isHyperConverged: role.role === 'hyperConvergedNode',
+          gpuEnabled: role.role === 'gpuNode'
+        });
       }
+      
+      clusterMap.get(clusterId)?.roles.push(role);
     });
 
     // Create cluster objects
-    roleGroups.forEach((roles, clusterId) => {
+    clusterMap.forEach((clusterData, clusterId) => {
+      const { roles, name } = clusterData;
+      
+      // Find the component details
       const firstRole = roles[0];
       const component = Array.isArray(this.design?.components)
         ? this.design.components.find((c: any) => 
-            (typeof c === 'object' && (c.id === firstRole.assignedComponentId || c.componentId === firstRole.assignedComponentId))
+            (typeof c === 'object' && c.id === firstRole.assignedComponentId)
           )
         : null;
       
-      if (component || firstRole) {
-        const totalNodes = roles.reduce((sum, role) => sum + (role.requiredCount || role.adjustedRequiredCount || 0), 0);
-        // Handle different component structures
-        const cores = component?.specifications?.cpu?.cores || 
-                      component?.cpu?.cores || 
-                      component?.cpuCores || 0;
-        const memory = component?.specifications?.memory?.capacity || 
-                       component?.memory?.capacity || 
-                       component?.memoryGB || 0;
-        
-        clusters.push({
-          id: clusterId,
-          name: firstRole.clusterInfo?.clusterName || clusterId,
-          role: firstRole.role,
-          nodeType: component || { id: firstRole.assignedComponentId, name: firstRole.role, type: 'compute' },
-          nodeCount: totalNodes,
-          specifications: {
-            totalCores: cores * totalNodes,
-            totalMemoryGB: memory * totalNodes,
-            gpuCount: component?.specifications?.gpu?.quantity || component?.gpu?.quantity || 0
-          }
-        });
+      if (!component) {
+        console.log('[PricingModelService] Could not find component for role:', firstRole);
+        return;
       }
+
+      // Calculate total nodes
+      const nodeCount = roles.reduce((sum, role) => 
+        sum + (role.requiredCount || role.adjustedRequiredCount || 0), 0
+      );
+
+      // Get component specifications
+      const cores = component.specifications?.cpu?.cores || 
+                   component.cpu?.cores || 
+                   component.cpuCores || 0;
+      const memory = component.specifications?.memory?.capacity || 
+                    component.memory?.capacity || 
+                    component.memoryGB || 0;
+      const gpuCount = component.specifications?.gpu?.quantity || 
+                      component.gpu?.quantity || 0;
+
+      clusters.push({
+        id: clusterId,
+        name,
+        role: firstRole.role,
+        nodeType: component,
+        nodeCount,
+        specifications: {
+          totalCores: cores * nodeCount,
+          totalMemoryGB: memory * nodeCount,
+          gpuCount: gpuCount * nodeCount
+        }
+      });
     });
 
+    console.log('[PricingModelService] Available clusters:', clusters);
     return clusters;
   }
 
@@ -265,51 +280,48 @@ export class PricingModelService {
   }
 
   private getClusterComponents(): PlacedComponent[] {
-    if (!this.design) return [];
+    if (!this.design || !this.design.componentRoles) return [];
 
     const components: PlacedComponent[] = [];
     
-    // If a specific cluster is selected, filter to that cluster
-    if (this.selectedClusterId && this.design.componentRoles) {
-      this.design.componentRoles.forEach(role => {
-        if (role.assignedComponentId && 
-            (role.clusterInfo?.clusterId === this.selectedClusterId || role.role === this.selectedClusterId)) {
-          const component = this.design?.components.find(c => c.id === role.assignedComponentId);
-          if (component && component.type === 'compute') {
-            components.push({
-              id: role.id,
-              component,
-              quantity: role.requiredCount || role.adjustedRequiredCount || 1,
-              metadata: {
-                cluster_id: role.clusterInfo?.clusterId || role.role,
-                cluster_name: role.clusterInfo?.clusterName || role.role,
-                role: role.role
-              }
-            });
+    this.design.componentRoles.forEach(role => {
+      if (!role.assignedComponentId) return;
+      
+      // Check if this is a compute-related role
+      const isComputeRole = 
+        role.role === 'computeNode' || 
+        role.role === 'hyperConvergedNode' || 
+        role.role === 'gpuNode';
+      
+      if (!isComputeRole) return;
+      
+      // If a specific cluster is selected, filter to that cluster
+      if (this.selectedClusterId) {
+        const roleClusterId = role.clusterInfo?.clusterId || role.role;
+        if (roleClusterId !== this.selectedClusterId) return;
+      }
+      
+      const component = Array.isArray(this.design?.components)
+        ? this.design.components.find((c: any) => 
+            (typeof c === 'object' && c.id === role.assignedComponentId)
+          )
+        : null;
+        
+      if (component) {
+        components.push({
+          id: role.id,
+          component,
+          quantity: role.requiredCount || role.adjustedRequiredCount || 1,
+          metadata: {
+            cluster_id: role.clusterInfo?.clusterId || role.role,
+            cluster_name: role.clusterInfo?.clusterName || role.role,
+            role: role.role
           }
-        }
-      });
-    } else if (this.design.componentRoles) {
-      // Get all compute components
-      this.design.componentRoles.forEach(role => {
-        if (role.assignedComponentId) {
-          const component = this.design?.components.find(c => c.id === role.assignedComponentId);
-          if (component && component.type === 'compute') {
-            components.push({
-              id: role.id,
-              component,
-              quantity: role.requiredCount || role.adjustedRequiredCount || 1,
-              metadata: {
-                cluster_id: role.clusterInfo?.clusterId || role.role,
-                cluster_name: role.clusterInfo?.clusterName || role.role,
-                role: role.role
-              }
-            });
-          }
-        }
-      });
-    }
+        });
+      }
+    });
 
+    console.log('[PricingModelService] Cluster components:', components);
     return components;
   }
 
