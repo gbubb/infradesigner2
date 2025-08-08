@@ -14,7 +14,13 @@ export const useComputeClusters = () => {
         role: r.role, 
         assignedComponentId: r.assignedComponentId,
         clusterInfo: r.clusterInfo 
-      }))
+      })),
+      activeDesignStructure: activeDesign ? {
+        hasComponents: !!activeDesign.components,
+        componentsIsArray: Array.isArray(activeDesign.components),
+        componentsLength: activeDesign.components?.length,
+        firstComponent: activeDesign.components?.[0]
+      } : null
     });
 
     if (!activeDesign || !componentRoles) {
@@ -71,11 +77,25 @@ export const useComputeClusters = () => {
       
       // Find the component details
       const firstRole = roles[0];
+      console.log('[useComputeClusters] Looking for component:', {
+        assignedComponentId: firstRole.assignedComponentId,
+        availableComponents: activeDesign.components?.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          type: c.type
+        }))
+      });
+      
       const component = activeDesign.components?.find(
         (c: any) => c.id === firstRole.assignedComponentId
       );
       
-      if (!component) return;
+      console.log('[useComputeClusters] Component found:', component);
+      
+      if (!component) {
+        console.log('[useComputeClusters] Component not found for cluster:', clusterId);
+        return;
+      }
 
       // Calculate total nodes
       const nodeCount = roles.reduce((sum, role) => 
