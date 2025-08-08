@@ -625,35 +625,75 @@ export class PricingModelService {
     const cpuMemoryRatio = this.calculateCpuMemoryWeightRatio(capacity);
     const baseCosts = this.calculateBaseCosts(infrastructureCosts, capacity, cpuMemoryRatio);
     
-    // Calculate both premiums
-    const ratioPenalty = this.calculateRatioPenalty(vCPUs, memoryGB);
+    // Calculate natural ratio for the infrastructure
+    const naturalRatio = capacity.totalMemoryGB / capacity.totalvCPUs; // e.g., 4 for 1:4 ratio
+    
+    // Method: Apply premiums proportionally to ensure monotonicity
+    // Each resource gets its base cost plus a share of premiums
+    
+    // Calculate base costs
+    const baseCpuCost = baseCosts.cpuCost * vCPUs;
+    const baseMemoryCost = baseCosts.memoryCost * memoryGB;
+    const baseStorageCost = baseCosts.storageCost * storageGB;
+    
+    // Calculate size premium based on the larger dimension
+    const effectiveSize = Math.max(vCPUs, memoryGB / naturalRatio);
     const vmSizePenalty = this.calculateVMSizePenalty(vCPUs, memoryGB);
     
-    // Combine premiums multiplicatively
-    const combinedPenalty = ratioPenalty * vmSizePenalty;
+    // Calculate ratio deviation
+    const vmRatio = memoryGB / vCPUs;
+    const ratioDeviation = Math.abs(Math.log2(vmRatio) - Math.log2(naturalRatio));
+    const ratioExponent = this.config.ratioPenaltyExponent || 2;
     
-    const cpuCost = baseCosts.cpuCost * vCPUs;
-    const memoryCost = baseCosts.memoryCost * memoryGB;
-    const storageCost = baseCosts.storageCost * storageGB;
+    // Calculate ratio premium but cap it to prevent negative monotonicity
+    // The premium should be proportional to the resource that's causing the imbalance
+    let ratioPremiumFactor = Math.pow(ratioDeviation, ratioExponent) * this.config.sizePenaltyFactor;
     
-    // Base cost should always increase with resources
-    const baseResourceCost = cpuCost + memoryCost + storageCost;
+    // New approach: Each resource is priced independently with its own premium
+    // This guarantees monotonicity while still penalizing imbalanced configs
     
-    // Apply combined premium as additional cost
-    // This ensures price never decreases when adding resources
-    const premiumCost = baseResourceCost * (combinedPenalty - 1);
-    const baseHourlyPrice = baseResourceCost + premiumCost;
+    // Calculate per-resource premiums based on how far from balanced they are
+    let cpuPremiumMultiplier = vmSizePenalty;
+    let memoryPremiumMultiplier = vmSizePenalty;
+    
+    // Add ratio penalty independently to each resource
+    // The further a resource is from its balanced amount, the more premium it gets
+    const idealCpuForMemory = memoryGB / naturalRatio;
+    const idealMemoryForCpu = vCPUs * naturalRatio;
+    
+    // CPU premium: increases when CPU exceeds what's needed for the memory
+    if (vCPUs > idealCpuForMemory) {
+      const cpuExcessRatio = (vCPUs - idealCpuForMemory) / vCPUs;
+      const cpuRatioPenalty = 1 + (cpuExcessRatio * ratioPremiumFactor);
+      cpuPremiumMultiplier *= cpuRatioPenalty;
+    }
+    
+    // Memory premium: increases when memory exceeds what's needed for the CPU
+    if (memoryGB > idealMemoryForCpu) {
+      const memoryExcessRatio = (memoryGB - idealMemoryForCpu) / memoryGB;
+      const memoryRatioPenalty = 1 + (memoryExcessRatio * ratioPremiumFactor);
+      memoryPremiumMultiplier *= memoryRatioPenalty;
+    }
+    
+    // Final costs with independent premiums
+    const cpuCost = baseCpuCost * cpuPremiumMultiplier;
+    const memoryCost = baseMemoryCost * memoryPremiumMultiplier;
+    const storageCost = baseStorageCost;
+    
+    const baseHourlyPrice = cpuCost + memoryCost + storageCost;
     const monthlyPrice = baseHourlyPrice * 730;
 
-    // Calculate breakdown
-    const totalBaseCost = cpuCost + memoryCost;
+    // Calculate effective premiums for display
+    const totalBaseCost = baseCpuCost + baseMemoryCost;
+    const totalPremium = baseHourlyPrice - totalBaseCost - baseStorageCost;
+    const effectiveTotalPremium = totalBaseCost > 0 ? totalPremium / totalBaseCost : 0;
     
-    // Calculate ratio deviation for breakdown
-    const naturalRatio = capacity.totalvCPUs / capacity.totalMemoryGB;
-    const vmRatio = vCPUs / memoryGB;
-    const logNaturalRatio = Math.log2(naturalRatio);
-    const logVmRatio = Math.log2(vmRatio);
-    const ratioDeviation = Math.abs(logVmRatio - logNaturalRatio);
+    // Separate size and ratio components for display
+    const sizeComponent = (vmSizePenalty - 1);
+    // Calculate average ratio premium across both resources
+    const cpuRatioComponent = cpuPremiumMultiplier / vmSizePenalty - 1;
+    const memRatioComponent = memoryPremiumMultiplier / vmSizePenalty - 1;
+    const ratioComponent = (cpuRatioComponent * baseCpuCost + memRatioComponent * baseMemoryCost) / (totalBaseCost > 0 ? totalBaseCost : 1);
     
     // Detailed cost breakdown
     return {
@@ -663,14 +703,14 @@ export class PricingModelService {
       baseHourlyPrice,
       monthlyPrice,
       breakdown: {
-        computeCost: cpuCost,  // Actual CPU cost
-        networkCost: memoryCost,  // Using memory cost as proxy for network for now
+        computeCost: cpuCost,  // Total CPU cost including premiums
+        networkCost: memoryCost,  // Total memory cost including premiums
         storageCost: storageCost,
         licensingCost: 0,  // Can be added based on requirements
         haOverheadMultiplier: 1, // HA overhead is already accounted for in capacity reduction
-        sizePenalty: combinedPenalty - 1,  // Combined premium
-        ratioPenalty: ratioPenalty - 1,  // Ratio premium component
-        vmSizePenalty: vmSizePenalty - 1,  // VM size premium component
+        sizePenalty: effectiveTotalPremium,  // Total effective premium
+        ratioPenalty: Math.max(0, ratioComponent),  // Ratio premium component
+        vmSizePenalty: sizeComponent,  // VM size premium component
         ratioDeviation: ratioDeviation,
         effectiveMargin: this.calculateEffectiveMargin(baseCosts, infrastructureCosts)
       }
