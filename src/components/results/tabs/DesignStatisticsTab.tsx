@@ -37,6 +37,10 @@ export const DesignStatisticsTab: React.FC = () => {
     ? (totalPower / resourceMetrics.totalRackQuantity)
     : 0;
 
+  // Get storage device lifespan from requirements
+  const storageLifespanYears = activeDesign?.requirements?.storageRequirements?.deviceLifespanYears || 3;
+  const storageAmortisationMonths = storageLifespanYears * 12;
+
   // Calculate storage cluster costs per TiB per month
   const storageClusterCosts = storageClustersMetrics.map(cluster => {
     const storageCostBasis = cluster.isHyperConverged && cluster.totalStorageCost 
@@ -49,11 +53,12 @@ export const DesignStatisticsTab: React.FC = () => {
       totalStorageCost: cluster.totalStorageCost,
       totalNodeCost: cluster.totalNodeCost,
       storageCostBasis,
-      amortisationPeriodMonths,
+      storageLifespanYears,
+      storageAmortisationMonths,
       usableCapacityTiB: cluster.usableCapacityTiB
     });
     
-    const monthlyStorageCost = storageCostBasis / (amortisationPeriodMonths || 36);
+    const monthlyStorageCost = storageCostBasis / storageAmortisationMonths;
     const monthlyStorageCostPerTiB = cluster.usableCapacityTiB > 0 
       ? monthlyStorageCost / cluster.usableCapacityTiB 
       : 0;
@@ -104,7 +109,7 @@ export const DesignStatisticsTab: React.FC = () => {
           quantityOfAverageVMs={quantityOfAverageVMs}
           storageAmortizedCost={amortizedCostsByType?.storage || 0}
           storageClusterCosts={storageClusterCosts}
-          amortisationPeriodMonths={amortisationPeriodMonths}
+          amortisationPeriodMonths={storageAmortisationMonths}
         />
       </div>
       
