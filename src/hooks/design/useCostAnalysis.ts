@@ -164,26 +164,47 @@ export const useCostAnalysis = () => {
     if (totalStorageCost > 0) {
       storageTotal = totalStorageCost;
       
-      // For compute total, exclude components that are part of storage clusters
+      // For compute total, include all compute components
+      // For hyper-converged nodes, we need to split the cost between compute and storage
       activeDesign.components.forEach(component => {
         const componentCost = component.cost;
-        const isStorageComponent = component.role === 'storageNode' || 
-                                  component.role === 'hyperConvergedNode' || 
-                                  component.type === ComponentType.Disk;
         
-        if (!isStorageComponent) {
-          if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
+        if (component.role === 'hyperConvergedNode') {
+          // For hyper-converged nodes, attribute part of the cost to compute
+          // The storage portion is already included in totalStorageCost above
+          // We'll attribute the remaining cost to compute
+          const storageCluster = storageClustersMetrics.find(cluster => 
+            cluster.nodes.some(node => node.id === component.id)
+          );
+          if (storageCluster && storageCluster.isHyperConverged && storageCluster.totalStorageCost) {
+            // The storage cost is already calculated, so add the compute portion
+            const storagePortionPerNode = storageCluster.totalStorageCost / storageCluster.nodes.length;
+            const computePortion = componentCost - storagePortionPerNode;
+            if (computePortion > 0) {
+              computeTotal += computePortion;
+            }
+          } else {
+            // If no storage cluster info, treat it as compute
             computeTotal += componentCost;
-          } else if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
-            networkTotal += componentCost;
           }
+        } else if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
+          // Pure storage components are already handled in totalStorageCost
+          // Do nothing here
+        } else if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
+          computeTotal += componentCost;
+        } else if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
+          networkTotal += componentCost;
         }
       });
     } else {
       // Fallback to component-level calculation
       activeDesign.components.forEach(component => {
         const componentCost = component.cost;
-        if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
+        if (component.role === 'hyperConvergedNode') {
+          // For hyper-converged nodes without cluster metrics, treat as compute
+          // since they're primarily compute nodes with storage capability
+          computeTotal += componentCost;
+        } else if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
           storageTotal += componentCost;
         } else if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
           computeTotal += componentCost;
