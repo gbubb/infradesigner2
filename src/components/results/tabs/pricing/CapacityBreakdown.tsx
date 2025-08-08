@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ClusterCapacity } from '@/services/pricing/pricingModelService';
-import { Cpu, MemoryStick, Server, AlertCircle } from 'lucide-react';
+import { Cpu, MemoryStick, Server, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
 
 interface CapacityBreakdownProps {
   capacity: ClusterCapacity;
 }
 
 export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }) => {
+  const [haDetailsOpen, setHaDetailsOpen] = useState(false);
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(num);
   };
@@ -174,8 +177,17 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
           <h4 className="text-sm font-medium mb-3">Overhead Components</h4>
           <div className="grid grid-cols-3 gap-3 text-sm">
             <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-900">
-              <div className="text-orange-600 dark:text-orange-400 font-medium">
-                HA Reservation
+              <div className="flex items-center justify-between">
+                <div className="text-orange-600 dark:text-orange-400 font-medium">
+                  HA Reservation
+                </div>
+                <Collapsible open={haDetailsOpen} onOpenChange={setHaDetailsOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                      {haDetailsOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                </Collapsible>
               </div>
               <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
                 {formatPercentage(capacity.haReservation)}
@@ -207,6 +219,48 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
               </div>
             </div>
           </div>
+          
+          {/* HA Reservation Breakdown */}
+          <Collapsible open={haDetailsOpen} onOpenChange={setHaDetailsOpen}>
+            <CollapsibleContent>
+              <div className="mt-4 p-4 bg-muted/30 rounded-lg space-y-3">
+                <h5 className="text-sm font-medium flex items-center gap-2">
+                  <Info className="h-4 w-4" />
+                  HA Reservation Calculation
+                </h5>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Physical Hosts:</span>
+                    <span className="font-medium">
+                      {Math.ceil(capacity.totalPhysicalCores / 64)} nodes
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Availability Zones:</span>
+                    <span className="font-medium">3 zones (assumed)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Failure Tolerance:</span>
+                    <span className="font-medium">1 host + 0 zones</span>
+                  </div>
+                  <div className="border-t pt-2 mt-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Reserved Capacity:</span>
+                      <span className="font-medium">
+                        {(capacity.haReservation * 100).toFixed(1)}% of resources
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Formula: (Failed Zones × Hosts/Zone + Failed Hosts) ÷ Total Hosts
+                  </div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded">
+                    <strong>Note:</strong> HA reservation is applied once during capacity calculation, reducing sellable resources and thereby increasing per-unit costs.
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </CardContent>
     </Card>

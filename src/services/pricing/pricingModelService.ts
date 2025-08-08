@@ -12,6 +12,7 @@ export interface PricingConfig {
   virtualizationOverheadType: 'percentage' | 'fixed'; // New field
   virtualizationOverheadMemory?: number; // Fixed memory overhead in GB (when type is 'fixed')
   sizePenaltyFactor: number; // Ratio premium multiplier for VMs that deviate from natural ratio
+  ratioPenaltyExponent?: number; // Exponent for ratio penalty curve (1=linear, 2=quadratic, 3=cubic)
   vmSizePenaltyFactor?: number; // Base size premium multiplier for large VMs
   vmSizeCurveExponent?: number; // Exponent for size premium curve (1=linear, 2=quadratic, 3=cubic)
   vmSizeThreshold?: number; // vCPU count where size premium starts to apply significantly
@@ -564,10 +565,13 @@ export class PricingModelService {
     const logVmRatio = Math.log2(vmRatio);
     const ratioDeviation = Math.abs(logVmRatio - logNaturalRatio);
     
-    // Exponential premium based on deviation
+    // Apply configurable curve for ratio penalty
+    const exponent = this.config.ratioPenaltyExponent || 2; // Default to quadratic
+    
+    // Calculate premium based on deviation with configurable curve
     // No premium when ratio matches (deviation = 0)
-    // Exponentially increasing premium as deviation increases
-    const premium = Math.exp(ratioDeviation * this.config.sizePenaltyFactor) - 1;
+    // Premium increases based on configured exponent
+    const premium = Math.pow(ratioDeviation, exponent) * this.config.sizePenaltyFactor;
     
     return 1 + premium; // Return as multiplier (1 = no premium)
   }
@@ -663,7 +667,7 @@ export class PricingModelService {
         networkCost: memoryCost,  // Using memory cost as proxy for network for now
         storageCost: storageCost,
         licensingCost: 0,  // Can be added based on requirements
-        haOverheadMultiplier: 1 / (1 - capacity.haReservation),
+        haOverheadMultiplier: 1, // HA overhead is already accounted for in capacity reduction
         sizePenalty: combinedPenalty - 1,  // Combined premium
         ratioPenalty: ratioPenalty - 1,  // Ratio premium component
         vmSizePenalty: vmSizePenalty - 1,  // VM size premium component

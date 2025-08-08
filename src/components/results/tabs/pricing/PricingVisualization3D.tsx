@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { PricingModelService } from '@/services/pricing/pricingModelService';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import Plot from 'react-plotly.js';
 
 interface PricingVisualization3DProps {
@@ -15,8 +16,10 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
   const [maxVCPU, setMaxVCPU] = useState(64);
   const [maxMemory, setMaxMemory] = useState(256);
   const [step, setStep] = useState(2);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [plotData, setPlotData] = useState<{ x: number[]; y: number[]; z: (number | null)[][] } | null>(null);
+  const [shouldCalculate, setShouldCalculate] = useState(false);
 
   useEffect(() => {
     // Check if dark mode is enabled
@@ -35,39 +38,57 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  const plotData = useMemo(() => {
+  const calculateVisualization = () => {
     setIsLoading(true);
-    const rawData = pricingService.generate3DPricingData(maxVCPU, maxMemory, step);
+    setShouldCalculate(true);
     
-    // Filter out infeasible ratios (more than 12:1 in either direction)
-    const filteredData = {
-      x: rawData.x,
-      y: rawData.y,
-      z: rawData.z.map((row, yIndex) => 
-        row.map((value, xIndex) => {
-          const vCPUs = rawData.x[xIndex];
-          const memoryGB = rawData.y[yIndex];
-          const ratio = vCPUs / memoryGB;
-          
-          // Cut off at 12:1 ratio in either direction
-          // CPU-heavy: ratio > 3 (e.g., 12 vCPUs with 4 GB)
-          // Memory-heavy: ratio < 1/12 (e.g., 1 vCPU with 12+ GB)
-          if (ratio > 3 || ratio < 1/12) {
-            return null; // Will appear as a gap in the surface
-          }
-          return value;
-        })
-      )
-    };
-    
-    setIsLoading(false);
-    return filteredData;
-  }, [pricingService, maxVCPU, maxMemory, step]);
+    // Use setTimeout to allow UI to update before heavy calculation
+    setTimeout(() => {
+      const rawData = pricingService.generate3DPricingData(maxVCPU, maxMemory, step);
+      
+      // Filter out infeasible ratios (more than 12:1 in either direction)
+      const filteredData = {
+        x: rawData.x,
+        y: rawData.y,
+        z: rawData.z.map((row, yIndex) => 
+          row.map((value, xIndex) => {
+            const vCPUs = rawData.x[xIndex];
+            const memoryGB = rawData.y[yIndex];
+            const ratio = vCPUs / memoryGB;
+            
+            // Cut off at 12:1 ratio in either direction
+            // CPU-heavy: ratio > 3 (e.g., 12 vCPUs with 4 GB)
+            // Memory-heavy: ratio < 1/12 (e.g., 1 vCPU with 12+ GB)
+            if (ratio > 3 || ratio < 1/12) {
+              return null; // Will appear as a gap in the surface
+            }
+            return value;
+          })
+        )
+      };
+      
+      setPlotData(filteredData);
+      setIsLoading(false);
+    }, 100);
+  };
+
+  if (!plotData && !isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[500px] space-y-4">
+        <p className="text-muted-foreground">Click the button below to generate the 3D pricing visualization</p>
+        <Button onClick={calculateVisualization} size="lg">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Generate Visualization
+        </Button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[500px]">
         <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2 text-muted-foreground">Generating visualization...</span>
       </div>
     );
   }
@@ -75,7 +96,8 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="grid grid-cols-3 gap-6 p-4 bg-muted/50 rounded-lg">
+      <div className="space-y-4">
+        <div className="grid grid-cols-3 gap-6 p-4 bg-muted/50 rounded-lg">
         <div className="space-y-2">
           <Label htmlFor="maxVCPU">Max vCPUs: {maxVCPU}</Label>
           <Slider
@@ -110,6 +132,13 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
           />
         </div>
       </div>
+      <div className="flex justify-center">
+        <Button onClick={calculateVisualization} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Recalculate Visualization
+        </Button>
+      </div>
+    </div>
 
       {/* 3D Surface Plot */}
       <div className="w-full h-[600px] bg-card rounded-lg border">

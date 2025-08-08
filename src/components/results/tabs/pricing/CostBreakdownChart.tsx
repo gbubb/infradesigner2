@@ -178,11 +178,7 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ pricing 
           {/* Additional Factors */}
           <div className="border-t pt-4">
             <h4 className="text-sm font-medium mb-2">Pricing Factors</h4>
-            <div className="grid grid-cols-4 gap-3 text-sm">
-              <div className="text-center">
-                <p className="text-muted-foreground">HA Multiplier</p>
-                <p className="font-bold">{pricing.breakdown.haOverheadMultiplier.toFixed(2)}x</p>
-              </div>
+            <div className="grid grid-cols-3 gap-3 text-sm">
               <div className="text-center">
                 <p className="text-muted-foreground">Ratio Premium</p>
                 <p className="font-bold">+{(pricing.breakdown.ratioPenalty * 100).toFixed(0)}%</p>
@@ -197,6 +193,11 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ pricing 
                   {(pricing.breakdown.effectiveMargin * 100).toFixed(1)}%
                 </p>
               </div>
+            </div>
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                <strong>Note:</strong> HA overhead is already included in the base resource costs through capacity reduction.
+              </p>
             </div>
           </div>
         </div>

@@ -14,9 +14,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PricingVisualization3D } from './pricing/PricingVisualization3D';
 import { CapacityBreakdown } from './pricing/CapacityBreakdown';
-import { PricingSampleTable } from './pricing/PricingSampleTable';
+import { PricingSampleTableEnhanced } from './pricing/PricingSampleTableEnhanced';
 import { VMPriceCalculator } from './pricing/VMPriceCalculator';
 import { PricingCurveChart } from './pricing/PricingCurveChart';
+import { RatioPremiumChart } from './pricing/RatioPremiumChart';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
@@ -37,6 +38,7 @@ export const PricingModelTab: React.FC = () => {
     virtualizationOverheadType: 'percentage', // Default to percentage
     virtualizationOverheadMemory: 0.05, // Default memory overhead
     sizePenaltyFactor: 0.5, // Exponential premium factor for ratio deviation
+    ratioPenaltyExponent: 2, // Quadratic curve for ratio penalty by default
     vmSizePenaltyFactor: 0.3, // Base premium factor for large VMs
     vmSizeCurveExponent: 2, // Quadratic curve by default
     vmSizeThreshold: 4, // Start applying premium at 4 vCPUs
@@ -432,34 +434,65 @@ export const PricingModelTab: React.FC = () => {
           {/* Premium Configuration */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium">VM Pricing Premiums</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="ratioPremium">Ratio Premium Factor</Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-4 w-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Premium for VMs that deviate from natural CPU:Memory ratio</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+            
+            {/* Ratio Premium Configuration */}
+            <div className="p-4 bg-muted/30 rounded-lg space-y-4">
+              <h5 className="text-sm font-medium flex items-center gap-2">
+                Ratio Premium Configuration
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Controls pricing penalty when VM ratio deviates from natural infrastructure ratio</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </h5>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ratioPremium" className="text-xs">Ratio Premium Factor</Label>
+                  <div className="flex items-center space-x-2">
+                    <Slider
+                      id="ratioPremium"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={[config.sizePenaltyFactor]}
+                      onValueChange={([value]) => handleConfigChange('sizePenaltyFactor', value)}
+                      className="flex-1"
+                    />
+                    <span className="w-12 text-right text-xs">{(config.sizePenaltyFactor * 100).toFixed(0)}%</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Slider
-                    id="ratioPremium"
-                    min={0}
-                    max={1}
-                    step={0.1}
-                    value={[config.sizePenaltyFactor]}
-                    onValueChange={([value]) => handleConfigChange('sizePenaltyFactor', value)}
-                    className="flex-1"
-                  />
-                  <span className="w-12 text-right">{(config.sizePenaltyFactor * 100).toFixed(0)}%</span>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="ratioExponent" className="text-xs">Ratio Curve Exponent</Label>
+                  <div className="flex items-center space-x-2">
+                    <Slider
+                      id="ratioExponent"
+                      min={1}
+                      max={4}
+                      step={0.5}
+                      value={[config.ratioPenaltyExponent || 2]}
+                      onValueChange={([value]) => handleConfigChange('ratioPenaltyExponent', value)}
+                      className="flex-1"
+                    />
+                    <span className="w-8 text-right text-xs">{(config.ratioPenaltyExponent || 2).toFixed(1)}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {config.ratioPenaltyExponent === 1 ? 'Linear' : 
+                     config.ratioPenaltyExponent === 2 ? 'Quadratic' : 
+                     config.ratioPenaltyExponent === 3 ? 'Cubic' : 'Quartic'}
+                  </p>
                 </div>
               </div>
+            </div>
+            
+            {/* Size Premium Configuration */}
+            <div className="grid grid-cols-2 gap-4">
 
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
@@ -655,9 +688,15 @@ export const PricingModelTab: React.FC = () => {
             pricingService={pricingService} 
             config={config}
           />
+          
+          {/* Ratio Premium Curve Visualization */}
+          <RatioPremiumChart 
+            pricingService={pricingService} 
+            config={config}
+          />
 
           {/* Sample Pricing Table */}
-          <PricingSampleTable prices={pricingResult.samplePrices} />
+          <PricingSampleTableEnhanced pricingService={pricingService} />
 
           {/* 3D Visualization */}
           <Card>

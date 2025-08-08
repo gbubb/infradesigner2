@@ -169,13 +169,7 @@ export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingSer
             {/* Multipliers */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium">Pricing Adjustments</h4>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-900">
-                  <div className="text-orange-600 dark:text-orange-400 text-xs">HA Overhead</div>
-                  <div className="font-bold text-orange-700 dark:text-orange-300">
-                    {calculatedPrice.breakdown.haOverheadMultiplier.toFixed(2)}x
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 gap-3 text-sm">
                 <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
                   <div className="text-green-600 dark:text-green-400 text-xs">Total Premium</div>
                   <div className="font-bold text-green-700 dark:text-green-300">
