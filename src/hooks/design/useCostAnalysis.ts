@@ -150,68 +150,49 @@ export const useCostAnalysis = () => {
     let storageTotal = 0;
     let networkTotal = 0;
 
-    // For hyper-converged scenarios, use the storage cluster metrics that include 
-    // proportional server costs attributed to storage
-    const totalStorageCost = storageClustersMetrics.reduce((total, cluster) => {
-      if (cluster.isHyperConverged && cluster.totalStorageCost) {
-        return total + cluster.totalStorageCost;
-      } else {
-        return total + cluster.totalNodeCost;
-      }
-    }, 0);
-
-    // If we have storage clusters with calculated costs, use those
-    if (totalStorageCost > 0) {
-      storageTotal = totalStorageCost;
+    // First, calculate the total hardware cost by category
+    // Track hyper-converged nodes separately to split their costs
+    const hyperConvergedNodes = new Map(); // componentId -> cost
+    
+    activeDesign.components.forEach(component => {
+      const componentCost = component.cost;
       
-      // For compute total, include all compute components
-      // For hyper-converged nodes, we need to split the cost between compute and storage
-      activeDesign.components.forEach(component => {
-        const componentCost = component.cost;
-        
-        if (component.role === 'hyperConvergedNode') {
-          // For hyper-converged nodes, attribute part of the cost to compute
-          // The storage portion is already included in totalStorageCost above
-          // We'll attribute the remaining cost to compute
-          const storageCluster = storageClustersMetrics.find(cluster => 
-            cluster.nodes && cluster.nodes.some(node => node.id === component.id)
-          );
-          if (storageCluster && storageCluster.isHyperConverged && storageCluster.totalStorageCost && storageCluster.nodes && storageCluster.nodes.length > 0) {
-            // The storage cost is already calculated, so add the compute portion
-            const storagePortionPerNode = storageCluster.totalStorageCost / storageCluster.nodes.length;
-            const computePortion = componentCost - storagePortionPerNode;
-            if (computePortion > 0) {
-              computeTotal += computePortion;
-            }
-          } else {
-            // If no storage cluster info, treat it as compute
-            computeTotal += componentCost;
-          }
-        } else if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
-          // Pure storage components are already handled in totalStorageCost
-          // Do nothing here
-        } else if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
-          computeTotal += componentCost;
-        } else if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
-          networkTotal += componentCost;
+      if (component.role === 'hyperConvergedNode') {
+        // Track hyper-converged nodes for later splitting
+        hyperConvergedNodes.set(component.id, componentCost);
+      } else if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
+        storageTotal += componentCost;
+      } else if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
+        computeTotal += componentCost;
+      } else if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
+        networkTotal += componentCost;
+      }
+    });
+
+    // Now handle hyper-converged nodes by splitting between compute and storage
+    if (hyperConvergedNodes.size > 0) {
+      // Calculate the storage portion for hyper-converged nodes
+      let hyperConvergedStoragePortion = 0;
+      
+      storageClustersMetrics.forEach(cluster => {
+        if (cluster.isHyperConverged && cluster.totalStorageCost && cluster.nodes) {
+          // This is the proportional storage cost for this hyper-converged cluster
+          hyperConvergedStoragePortion += cluster.totalStorageCost;
         }
       });
-    } else {
-      // Fallback to component-level calculation
-      activeDesign.components.forEach(component => {
-        const componentCost = component.cost;
-        if (component.role === 'hyperConvergedNode') {
-          // For hyper-converged nodes without cluster metrics, treat as compute
-          // since they're primarily compute nodes with storage capability
-          computeTotal += componentCost;
-        } else if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
-          storageTotal += componentCost;
-        } else if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
-          computeTotal += componentCost;
-        } else if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
-          networkTotal += componentCost;
-        }
+      
+      // Calculate total cost of all hyper-converged nodes
+      let totalHyperConvergedCost = 0;
+      hyperConvergedNodes.forEach(cost => {
+        totalHyperConvergedCost += cost;
       });
+      
+      // The compute portion is the total hyper-converged cost minus the storage portion
+      const hyperConvergedComputePortion = totalHyperConvergedCost - hyperConvergedStoragePortion;
+      
+      // Add the portions to their respective totals
+      computeTotal += hyperConvergedComputePortion;
+      storageTotal += hyperConvergedStoragePortion;
     }
 
     const monthsInYear = 12;
