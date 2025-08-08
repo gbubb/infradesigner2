@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { VMPricing } from '@/services/pricing/pricingModelService';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatPreciseCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
@@ -89,7 +89,7 @@ export const PricingSampleTable: React.FC<PricingSampleTableProps> = ({ prices }
                   </TableCell>
                   <TableCell className="text-center font-medium">{price.vCPU}</TableCell>
                   <TableCell className="text-center font-medium">{price.memoryGB}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(price.baseHourlyPrice)}</TableCell>
+                  <TableCell className="text-right">{formatPreciseCurrency(price.baseHourlyPrice)}</TableCell>
                   <TableCell className="text-right font-bold">{formatCurrency(price.monthlyPrice)}</TableCell>
                   <TableCell className="text-center">
                     <span className={`text-sm ${price.breakdown.sizePenalty > 0.2 ? 'text-orange-600' : 'text-muted-foreground'}`}>

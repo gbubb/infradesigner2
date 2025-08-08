@@ -20,3 +20,38 @@ export function formatNumber(value: number, decimals: number = 2): string {
     maximumFractionDigits: decimals,
   }).format(value);
 }
+
+export function formatPreciseCurrency(value: number, currency: string = 'USD'): string {
+  // For very small values, show more decimal places
+  if (value === 0) {
+    return '$0.0000';
+  } else if (value < 0.01) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 6,
+    }).format(value);
+  } else if (value < 0.1) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 4,
+    }).format(value);
+  } else if (value < 1) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 3,
+    }).format(value);
+  } else {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  }
+}

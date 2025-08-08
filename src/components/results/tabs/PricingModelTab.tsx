@@ -7,7 +7,7 @@ import { Slider } from '@/components/ui/slider';
 import { useDesignStore } from '@/store';
 import { PricingModelService, PricingConfig, PricingModelResult } from '@/services/pricing/pricingModelService';
 import { ComputeCluster } from '@/types/placement';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatPreciseCurrency } from '@/lib/utils';
 import { Info, DollarSign, Cpu, MemoryStick, HardDrive, Download, FileText, Server } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -408,7 +408,7 @@ export const PricingModelTab: React.FC = () => {
                       {formatCurrency(pricingResult.baseCostPerVCPU * 730)}/mo
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatCurrency(pricingResult.baseCostPerVCPU)}/hr
+                      {formatPreciseCurrency(pricingResult.baseCostPerVCPU)}/hr
                     </p>
                   </div>
                   <Cpu className="h-8 w-8 text-muted-foreground" />
@@ -425,7 +425,7 @@ export const PricingModelTab: React.FC = () => {
                       {formatCurrency(pricingResult.baseCostPerGBMemory * 730)}/mo
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatCurrency(pricingResult.baseCostPerGBMemory)}/hr
+                      {formatPreciseCurrency(pricingResult.baseCostPerGBMemory)}/hr
                     </p>
                   </div>
                   <MemoryStick className="h-8 w-8 text-muted-foreground" />

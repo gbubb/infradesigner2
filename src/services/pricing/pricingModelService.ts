@@ -389,10 +389,26 @@ export class PricingModelService {
     }
 
     // Calculate costs for all components
+    console.log('[PricingModelService] Calculating costs for components:', allComponents.length);
+    
     allComponents.forEach(comp => {
       const qty = comp.quantity || 1;
-      const capex = (comp.component.pricing?.basePrice || 0) * qty;
-      const opex = (comp.component.pricing?.yearlyOperationalCost || 0) * qty;
+      // Try different cost fields
+      const capex = (comp.component.pricing?.basePrice || 
+                     comp.component.cost || 
+                     comp.component.basePrice || 0) * qty;
+      const opex = (comp.component.pricing?.yearlyOperationalCost || 
+                    comp.component.yearlyOperationalCost || 0) * qty;
+      
+      if (capex > 0 || opex > 0) {
+        console.log('[PricingModelService] Component cost:', {
+          name: comp.component.name,
+          qty,
+          capex,
+          opex,
+          component: comp.component
+        });
+      }
       
       totalCapitalCost += capex;
       totalOperationalCost += opex;
@@ -409,6 +425,14 @@ export class PricingModelService {
     const monthlyCapital = totalCapitalCost / 60;
     const monthlyOperational = totalOperationalCost / 12;
     const totalMonthlyCost = monthlyCapital + monthlyOperational;
+
+    console.log('[PricingModelService] Infrastructure costs:', {
+      totalCapitalCost,
+      totalOperationalCost,
+      monthlyCapital,
+      monthlyOperational,
+      totalMonthlyCost
+    });
 
     return {
       totalCapitalCost,
@@ -462,11 +486,21 @@ export class PricingModelService {
     // Apply profit margin for cost plus model
     const margin = this.config.profitMargin;
     
-    return {
+    const result = {
       cpuCost: costPerWeightedUnit * margin,
       memoryCost: (costPerWeightedUnit / cpuMemoryRatio) * margin,
       storageCost: 0.00005 * margin // $0.05 per TB per hour = ~$36/TB/month
     };
+    
+    console.log('[PricingModelService] Base costs calculated:', {
+      totalMonthlyCost,
+      totalWeightedUnits,
+      costPerWeightedUnit,
+      margin,
+      result
+    });
+    
+    return result;
   }
 
   private calculateEffectiveMargin(
