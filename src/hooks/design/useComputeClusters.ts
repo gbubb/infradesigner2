@@ -118,10 +118,39 @@ export const useComputeClusters = () => {
       console.log('[useComputeClusters] Total node count:', nodeCount);
 
       // Get component specifications
-      const cores = component.specifications?.cpu?.cores || 
-                   component.cpu?.cores || 
-                   component.cpuCores || 0;
-      const memory = component.specifications?.memory?.capacity || 
+      console.log('[useComputeClusters] Component structure:', {
+        componentName: component.name,
+        hasSpecifications: !!component.specifications,
+        specifications: component.specifications,
+        directCpu: component.cpu,
+        directCpuCores: component.cpuCores,
+        cpuSockets: component.cpuSockets,
+        cpuCoresPerSocket: component.cpuCoresPerSocket,
+        coreCount: component.coreCount,
+        cores: component.cores,
+        totalCores: component.totalCores
+      });
+      
+      // Try different ways to get cores - check for socket-based calculation first
+      let cores = 0;
+      if (component.cpuSockets && component.cpuCoresPerSocket) {
+        cores = component.cpuSockets * component.cpuCoresPerSocket;
+      } else if (component.specifications?.cpu?.cores) {
+        cores = component.specifications.cpu.cores;
+      } else if (component.cpu?.cores) {
+        cores = component.cpu.cores;
+      } else if (component.cpuCores) {
+        cores = component.cpuCores;
+      } else if (component.coreCount) {
+        cores = component.coreCount;
+      } else if (component.cores) {
+        cores = component.cores;
+      } else if (component.totalCores) {
+        cores = component.totalCores;
+      }
+      
+      const memory = component.memoryCapacity || 
+                    component.specifications?.memory?.capacity || 
                     component.memory?.capacity || 
                     component.memoryGB || 0;
       const gpuCount = component.specifications?.gpu?.quantity || 

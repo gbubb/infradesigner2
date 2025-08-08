@@ -131,11 +131,26 @@ export class PricingModelService {
         sum + (role.adjustedRequiredCount || role.requiredCount || 0), 0
       );
 
-      // Get component specifications
-      const cores = component.specifications?.cpu?.cores || 
-                   component.cpu?.cores || 
-                   component.cpuCores || 0;
-      const memory = component.specifications?.memory?.capacity || 
+      // Get component specifications - check for socket-based calculation first
+      let cores = 0;
+      if (component.cpuSockets && component.cpuCoresPerSocket) {
+        cores = component.cpuSockets * component.cpuCoresPerSocket;
+      } else if (component.specifications?.cpu?.cores) {
+        cores = component.specifications.cpu.cores;
+      } else if (component.cpu?.cores) {
+        cores = component.cpu.cores;
+      } else if (component.cpuCores) {
+        cores = component.cpuCores;
+      } else if (component.coreCount) {
+        cores = component.coreCount;
+      } else if (component.cores) {
+        cores = component.cores;
+      } else if (component.totalCores) {
+        cores = component.totalCores;
+      }
+      
+      const memory = component.memoryCapacity || 
+                    component.specifications?.memory?.capacity || 
                     component.memory?.capacity || 
                     component.memoryGB || 0;
       const gpuCount = component.specifications?.gpu?.quantity || 
@@ -209,8 +224,31 @@ export class PricingModelService {
 
     computeComponents.forEach(comp => {
       const qty = comp.quantity || 1;
-      const cores = comp.component.specifications?.cpu?.cores || 0;
-      const memory = comp.component.specifications?.memory?.capacity || 0;
+      const component = comp.component;
+      
+      // Get cores - check for socket-based calculation first
+      let cores = 0;
+      if (component.cpuSockets && component.cpuCoresPerSocket) {
+        cores = component.cpuSockets * component.cpuCoresPerSocket;
+      } else if (component.specifications?.cpu?.cores) {
+        cores = component.specifications.cpu.cores;
+      } else if (component.cpu?.cores) {
+        cores = component.cpu.cores;
+      } else if (component.cpuCores) {
+        cores = component.cpuCores;
+      } else if (component.coreCount) {
+        cores = component.coreCount;
+      } else if (component.cores) {
+        cores = component.cores;
+      } else if (component.totalCores) {
+        cores = component.totalCores;
+      }
+      
+      // Get memory
+      const memory = component.memoryCapacity || 
+                    component.specifications?.memory?.capacity || 
+                    component.memory?.capacity || 
+                    component.memoryGB || 0;
       
       totalPhysicalCores += cores * qty;
       totalPhysicalMemoryGB += memory * qty;
