@@ -374,7 +374,7 @@ export class PricingModelService {
     return Math.min(0.5, reservation);
   }
 
-  private getClusterComponents(): PlacedComponent[] {
+  public getClusterComponents(): PlacedComponent[] {
     if (!this.design || !this.design.componentRoles) return [];
 
     const components: PlacedComponent[] = [];
@@ -825,7 +825,7 @@ export class PricingModelService {
     return { x, y, z };
   }
 
-  private getAllComponents(): PlacedComponent[] {
+  public getAllComponents(): PlacedComponent[] {
     if (!this.design) return [];
     
     const components: PlacedComponent[] = [];

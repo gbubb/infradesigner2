@@ -92,39 +92,47 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
         <div>
           <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
             <AlertCircle className="h-4 w-4" />
-            Capacity Allocation Waterfall
+            Cluster Capacity Allocation
           </h4>
           <TooltipProvider>
-            <div className="space-y-3">
-              {/* vCPU Waterfall */}
+            <div className="space-y-4">
+              {/* Unified Cluster Waterfall */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">vCPU Allocation</span>
-                  <span className="font-medium">{formatNumber(capacity.sellingvCPUs)} / {formatNumber(capacity.totalvCPUs)}</span>
+                  <span className="text-muted-foreground">Resource Allocation</span>
+                  <span className="font-medium">
+                    {formatNumber(capacity.sellingvCPUs)} vCPUs | {formatNumber(capacity.sellingMemoryGB)} GB RAM
+                  </span>
                 </div>
-                <div className="relative h-10 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
-                  {/* Sellable capacity - green (matching Overhead Components) */}
+                <div className="relative h-14 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+                  {/* Sellable capacity - green */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div 
-                        className="absolute inset-y-0 left-0 bg-green-600 dark:bg-green-500 flex items-center justify-center cursor-help"
+                        className="absolute inset-y-0 left-0 bg-green-600 dark:bg-green-500 flex flex-col items-center justify-center cursor-help"
                         style={{ width: `${cpuSellablePercent}%` }}
                       >
-                        <span className="text-xs text-white font-medium px-1">
-                          {cpuSellablePercent > 10 && 'Sellable'}
+                        <span className="text-xs text-white font-semibold px-1">
+                          {cpuSellablePercent > 15 && 'Sellable Capacity'}
                         </span>
+                        {cpuSellablePercent > 20 && (
+                          <span className="text-xs text-white/80 px-1">
+                            {cpuSellablePercent.toFixed(0)}%
+                          </span>
+                        )}
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="space-y-1">
                         <p className="font-medium">Sellable Capacity</p>
-                        <p>{formatNumber(capacity.sellingvCPUs)} vCPUs ({cpuSellablePercent.toFixed(1)}%)</p>
-                        <p className="text-xs text-muted-foreground">Available for VM allocation</p>
+                        <p className="text-sm">CPU: {formatNumber(capacity.sellingvCPUs)} vCPUs</p>
+                        <p className="text-sm">Memory: {formatNumber(capacity.sellingMemoryGB)} GB</p>
+                        <p className="text-xs text-muted-foreground mt-1">Available for VM allocation at target utilization</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
                   
-                  {/* Reserved for target utilization - green (lighter, matching Target Utilization box) */}
+                  {/* Reserved for target utilization - lighter green */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div 
@@ -135,117 +143,16 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                         }}
                       >
                         <span className="text-xs text-white font-medium px-1">
-                          {cpuReservePercent > 10 && 'Reserve'}
+                          {cpuReservePercent > 8 && 'Reserve'}
                         </span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="space-y-1">
                         <p className="font-medium">Reserve Capacity</p>
-                        <p>{formatNumber((capacity.usablevCPUs - capacity.sellingvCPUs))} vCPUs ({cpuReservePercent.toFixed(1)}%)</p>
-                        <p className="text-xs text-muted-foreground">Operational buffer for burst & growth</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  {/* Virtualization overhead - blue (matching Virtualization box) */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className="absolute inset-y-0 bg-blue-600 dark:bg-blue-500 flex items-center justify-center cursor-help"
-                        style={{ 
-                          left: `${cpuSellablePercent + cpuReservePercent}%`,
-                          width: `${cpuVirtPercent}%` 
-                        }}
-                      >
-                        <span className="text-xs text-white font-medium px-1">
-                          {cpuVirtPercent > 5 && 'Virt'}
-                        </span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-medium">Virtualization Overhead</p>
-                        <p>{formatNumber(capacity.totalvCPUs * capacity.virtualizationOverhead)} vCPUs ({cpuVirtPercent.toFixed(1)}%)</p>
-                        <p className="text-xs text-muted-foreground">Reserved for hypervisor operations</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  {/* HA reservation - orange (matching HA Reservation box) */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className="absolute inset-y-0 bg-orange-600 dark:bg-orange-500 flex items-center justify-center cursor-help"
-                        style={{ 
-                          left: `${cpuSellablePercent + cpuReservePercent + cpuVirtPercent}%`,
-                          width: `${cpuHAPercent}%` 
-                        }}
-                      >
-                        <span className="text-xs text-white font-medium px-1">
-                          {cpuHAPercent > 5 && 'HA'}
-                        </span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-medium">HA Reservation</p>
-                        <p>{formatNumber(capacity.totalvCPUs * capacity.haReservation)} vCPUs ({cpuHAPercent.toFixed(1)}%)</p>
-                        <p className="text-xs text-muted-foreground">Reserved for failure tolerance</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
-              
-              {/* Memory Waterfall */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Memory Allocation</span>
-                  <span className="font-medium">{formatNumber(capacity.sellingMemoryGB)} / {formatNumber(capacity.totalMemoryGB)} GB</span>
-                </div>
-                <div className="relative h-10 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
-                  {/* Sellable capacity - green */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className="absolute inset-y-0 left-0 bg-green-600 dark:bg-green-500 flex items-center justify-center cursor-help"
-                        style={{ width: `${memSellablePercent}%` }}
-                      >
-                        <span className="text-xs text-white font-medium px-1">
-                          {memSellablePercent > 10 && 'Sellable'}
-                        </span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-medium">Sellable Memory</p>
-                        <p>{formatNumber(capacity.sellingMemoryGB)} GB ({memSellablePercent.toFixed(1)}%)</p>
-                        <p className="text-xs text-muted-foreground">Available for VM allocation</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  {/* Reserved for target utilization - green (lighter) */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className="absolute inset-y-0 bg-green-400 dark:bg-green-600 flex items-center justify-center cursor-help"
-                        style={{ 
-                          left: `${memSellablePercent}%`,
-                          width: `${memReservePercent}%` 
-                        }}
-                      >
-                        <span className="text-xs text-white font-medium px-1">
-                          {memReservePercent > 10 && 'Reserve'}
-                        </span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-medium">Reserve Memory</p>
-                        <p>{formatNumber((capacity.usableMemoryGB - capacity.sellingMemoryGB))} GB ({memReservePercent.toFixed(1)}%)</p>
-                        <p className="text-xs text-muted-foreground">Operational buffer for burst & growth</p>
+                        <p className="text-sm">CPU: {formatNumber((capacity.usablevCPUs - capacity.sellingvCPUs))} vCPUs</p>
+                        <p className="text-sm">Memory: {formatNumber((capacity.usableMemoryGB - capacity.sellingMemoryGB))} GB</p>
+                        <p className="text-xs text-muted-foreground mt-1">Operational buffer for burst & growth</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
@@ -256,20 +163,21 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                       <div 
                         className="absolute inset-y-0 bg-blue-600 dark:bg-blue-500 flex items-center justify-center cursor-help"
                         style={{ 
-                          left: `${memSellablePercent + memReservePercent}%`,
-                          width: `${memVirtPercent}%` 
+                          left: `${cpuSellablePercent + cpuReservePercent}%`,
+                          width: `${cpuVirtPercent}%` 
                         }}
                       >
                         <span className="text-xs text-white font-medium px-1">
-                          {memVirtPercent > 5 && 'Virt'}
+                          {cpuVirtPercent > 3 && 'Virt'}
                         </span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="space-y-1">
                         <p className="font-medium">Virtualization Overhead</p>
-                        <p>{formatNumber(capacity.totalMemoryGB * capacity.virtualizationOverhead)} GB ({memVirtPercent.toFixed(1)}%)</p>
-                        <p className="text-xs text-muted-foreground">Reserved for hypervisor operations</p>
+                        <p className="text-sm">CPU: {formatNumber(capacity.totalvCPUs * capacity.virtualizationOverhead)} vCPUs</p>
+                        <p className="text-sm">Memory: {formatNumber(capacity.totalMemoryGB * capacity.virtualizationOverhead)} GB</p>
+                        <p className="text-xs text-muted-foreground mt-1">Reserved for hypervisor operations</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
@@ -280,23 +188,44 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                       <div 
                         className="absolute inset-y-0 bg-orange-600 dark:bg-orange-500 flex items-center justify-center cursor-help"
                         style={{ 
-                          left: `${memSellablePercent + memReservePercent + memVirtPercent}%`,
-                          width: `${memHAPercent}%` 
+                          left: `${cpuSellablePercent + cpuReservePercent + cpuVirtPercent}%`,
+                          width: `${cpuHAPercent}%` 
                         }}
                       >
                         <span className="text-xs text-white font-medium px-1">
-                          {memHAPercent > 5 && 'HA'}
+                          {cpuHAPercent > 3 && 'HA'}
                         </span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="space-y-1">
                         <p className="font-medium">HA Reservation</p>
-                        <p>{formatNumber(capacity.totalMemoryGB * capacity.haReservation)} GB ({memHAPercent.toFixed(1)}%)</p>
-                        <p className="text-xs text-muted-foreground">Reserved for failure tolerance</p>
+                        <p className="text-sm">CPU: {formatNumber(capacity.totalvCPUs * capacity.haReservation)} vCPUs</p>
+                        <p className="text-sm">Memory: {formatNumber(capacity.totalMemoryGB * capacity.haReservation)} GB</p>
+                        <p className="text-xs text-muted-foreground mt-1">Reserved for failure tolerance</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
+                </div>
+              </div>
+              
+              {/* Waterfall Legend */}
+              <div className="grid grid-cols-4 gap-2 mt-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-600 dark:bg-green-500 rounded"></div>
+                  <span className="text-muted-foreground">Sellable ({cpuSellablePercent.toFixed(0)}%)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-400 dark:bg-green-600 rounded"></div>
+                  <span className="text-muted-foreground">Reserve ({cpuReservePercent.toFixed(0)}%)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-600 dark:bg-blue-500 rounded"></div>
+                  <span className="text-muted-foreground">Virtualization ({cpuVirtPercent.toFixed(0)}%)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-orange-600 dark:bg-orange-500 rounded"></div>
+                  <span className="text-muted-foreground">HA ({cpuHAPercent.toFixed(0)}%)</span>
                 </div>
               </div>
             </div>

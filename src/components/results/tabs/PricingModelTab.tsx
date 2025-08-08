@@ -19,13 +19,19 @@ import { VMPriceCalculator } from './pricing/VMPriceCalculator';
 import { PricingCurveChart } from './pricing/PricingCurveChart';
 import { RatioPremiumChart } from './pricing/RatioPremiumChart';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useCostAnalysis } from '@/hooks/design/useCostAnalysis';
 
 export const PricingModelTab: React.FC = () => {
   const activeDesign = useDesignStore((state) => state.activeDesign);
   const componentTemplates = useDesignStore((state) => state.componentTemplates);
   const [selectedClusterId, setSelectedClusterId] = useState<string>('all');
   const [availableClusters, setAvailableClusters] = useState<ComputeCluster[]>([]);
+  const [vmPremiumsOpen, setVmPremiumsOpen] = useState(false);
+  const [sizePremiumChartOpen, setSizePremiumChartOpen] = useState(false);
+  const [ratioPremiumChartOpen, setRatioPremiumChartOpen] = useState(false);
+  const { operationalCosts } = useCostAnalysis();
   
   const [config, setConfig] = useState<PricingConfig>({
     operatingModel: 'costPlus',
@@ -244,31 +250,34 @@ export const PricingModelTab: React.FC = () => {
           {config.operatingModel === 'costPlus' ? (
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <Label htmlFor="profitMargin">Profit Margin</Label>
+                <Label htmlFor="profitMargin">Profit Margin (%)</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
                       <Info className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Multiplier applied to base costs (e.g., 1.3 = 30% margin)</p>
+                      <p>Target profit margin percentage (e.g., 30 for 30% margin)</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
               <div className="flex items-center space-x-4">
-                <Slider
+                <Input
                   id="profitMargin"
-                  min={1}
-                  max={2}
-                  step={0.05}
-                  value={[config.profitMargin]}
-                  onValueChange={([value]) => handleConfigChange('profitMargin', value)}
-                  className="flex-1"
+                  type="number"
+                  step="1"
+                  min="0"
+                  max="100"
+                  value={((config.profitMargin - 1) * 100).toFixed(0)}
+                  onChange={(e) => {
+                    const percentage = parseFloat(e.target.value) || 0;
+                    const multiplier = 1 + (percentage / 100);
+                    handleConfigChange('profitMargin', multiplier);
+                  }}
+                  className="w-32"
                 />
-                <span className="w-16 text-right font-medium">
-                  {((config.profitMargin - 1) * 100).toFixed(0)}%
-                </span>
+                <span className="text-sm text-muted-foreground">%</span>
               </div>
             </div>
           ) : (
@@ -354,16 +363,20 @@ export const PricingModelTab: React.FC = () => {
                   </TooltipProvider>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Slider
+                  <Input
                     id="virtOverhead"
-                    min={0}
-                    max={0.2}
-                    step={0.01}
-                    value={[config.virtualizationOverhead]}
-                    onValueChange={([value]) => handleConfigChange('virtualizationOverhead', value)}
-                    className="flex-1"
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="20"
+                    value={(config.virtualizationOverhead * 100).toFixed(0)}
+                    onChange={(e) => {
+                      const percentage = parseFloat(e.target.value) || 0;
+                      handleConfigChange('virtualizationOverhead', percentage / 100);
+                    }}
+                    className="w-32"
                   />
-                  <span className="w-12 text-right">{(config.virtualizationOverhead * 100).toFixed(0)}%</span>
+                  <span className="text-sm text-muted-foreground">%</span>
                 </div>
               </div>
             ) : (
@@ -401,39 +414,54 @@ export const PricingModelTab: React.FC = () => {
           </div>
 
           {/* Common configuration */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="targetUtil">Target Utilization</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Target cluster utilization for sellable capacity</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Slider
-                  id="targetUtil"
-                  min={0.5}
-                  max={1}
-                  step={0.05}
-                  value={[config.targetUtilization]}
-                  onValueChange={([value]) => handleConfigChange('targetUtilization', value)}
-                  className="flex-1"
-                />
-                <span className="w-12 text-right">{(config.targetUtilization * 100).toFixed(0)}%</span>
-              </div>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="targetUtil">Target Utilization (%)</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Target cluster utilization for sellable capacity</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Input
+                id="targetUtil"
+                type="number"
+                step="5"
+                min="50"
+                max="100"
+                value={(config.targetUtilization * 100).toFixed(0)}
+                onChange={(e) => {
+                  const percentage = parseFloat(e.target.value) || 80;
+                  handleConfigChange('targetUtilization', percentage / 100);
+                }}
+                className="w-32"
+              />
+              <span className="text-sm text-muted-foreground">%</span>
             </div>
           </div>
 
           {/* Premium Configuration */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium">VM Pricing Premiums</h4>
+          <Collapsible open={vmPremiumsOpen} onOpenChange={setVmPremiumsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-between p-4 hover:bg-muted/50"
+              >
+                <h4 className="text-sm font-medium">VM Pricing Premiums</h4>
+                {vmPremiumsOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-4">
             
             {/* Ratio Premium Configuration */}
             <div className="p-4 bg-muted/30 rounded-lg space-y-4">
@@ -599,7 +627,8 @@ export const PricingModelTab: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
 
         </CardContent>
       </Card>
@@ -612,7 +641,7 @@ export const PricingModelTab: React.FC = () => {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Base Cost per vCPU</p>
+                    <p className="text-sm text-muted-foreground">Base Price per vCPU</p>
                     <p className="text-2xl font-bold">
                       {formatMonthlyCurrency(pricingResult.baseCostPerVCPU * 730)}/mo
                     </p>
@@ -629,7 +658,7 @@ export const PricingModelTab: React.FC = () => {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Base Cost per GB RAM</p>
+                    <p className="text-sm text-muted-foreground">Base Price per GB RAM</p>
                     <p className="text-2xl font-bold">
                       {formatMonthlyCurrency(pricingResult.baseCostPerGBMemory * 730)}/mo
                     </p>
@@ -677,6 +706,121 @@ export const PricingModelTab: React.FC = () => {
             </Card>
           </div>
 
+          {/* Cost vs Price Analysis */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Cost & Profit Analysis</CardTitle>
+              <CardDescription>
+                Infrastructure costs vs sellable capacity pricing
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Total Infrastructure Cost */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Total Monthly Cost</p>
+                  <p className="text-xl font-bold">
+                    {formatMonthlyCurrency(operationalCosts.totalMonthly)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Infrastructure + operations</p>
+                </div>
+                
+                {/* Attributable Compute Cost */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Compute Cluster Cost</p>
+                  <p className="text-xl font-bold">
+                    {formatMonthlyCurrency(
+                      (() => {
+                        const computeComponents = pricingService.getClusterComponents();
+                        const allComponents = pricingService.getAllComponents();
+                        const computeRatio = computeComponents.length / (allComponents.length || 1);
+                        return operationalCosts.totalMonthly * computeRatio;
+                      })()
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {((pricingResult.cpuMemoryWeightRatio / (1 + pricingResult.cpuMemoryWeightRatio)) * 100).toFixed(0)}% CPU,
+                    {((1 / (1 + pricingResult.cpuMemoryWeightRatio)) * 100).toFixed(0)}% Memory
+                  </p>
+                </div>
+                
+                {/* Total Revenue Potential */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Monthly Revenue</p>
+                  <p className="text-xl font-bold text-blue-600">
+                    {formatMonthlyCurrency(
+                      (pricingResult.clusterCapacity.sellingvCPUs * pricingResult.baseCostPerVCPU * 730) +
+                      (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730)
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">At target utilization</p>
+                </div>
+                
+                {/* Monthly Profit */}
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Monthly Profit</p>
+                  <p className="text-xl font-bold text-green-600">
+                    {formatMonthlyCurrency(
+                      ((pricingResult.clusterCapacity.sellingvCPUs * pricingResult.baseCostPerVCPU * 730) +
+                       (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730)) -
+                      operationalCosts.totalMonthly
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {marginPercentage.toFixed(1)}% margin
+                  </p>
+                </div>
+              </div>
+              
+              {/* Cost Breakdown */}
+              <div className="pt-4 border-t">
+                <h5 className="text-sm font-medium mb-3">Monthly Cost Breakdown</h5>
+                <div className="space-y-2">
+                  {operationalCosts.amortizedMonthly > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Hardware Amortization</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.amortizedMonthly)}</span>
+                    </div>
+                  )}
+                  {operationalCosts.energyMonthly > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Energy Costs</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.energyMonthly)}</span>
+                    </div>
+                  )}
+                  {operationalCosts.racksMonthly > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Rack Costs</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.racksMonthly)}</span>
+                    </div>
+                  )}
+                  {operationalCosts.facilityMonthly > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Facility Costs</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.facilityMonthly)}</span>
+                    </div>
+                  )}
+                  {operationalCosts.licensingMonthly > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Licensing</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.licensingMonthly)}</span>
+                    </div>
+                  )}
+                  {operationalCosts.networkMonthly > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Network Operations</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.networkMonthly)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm font-medium pt-2 border-t">
+                    <span>Total Monthly Cost</span>
+                    <span>{formatMonthlyCurrency(operationalCosts.totalMonthly)}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Capacity Breakdown */}
           <CapacityBreakdown capacity={pricingResult.clusterCapacity} />
 
@@ -684,16 +828,50 @@ export const PricingModelTab: React.FC = () => {
           <VMPriceCalculator pricingService={pricingService} />
           
           {/* Size Premium Curve Visualization */}
-          <PricingCurveChart 
-            pricingService={pricingService} 
-            config={config}
-          />
+          <Collapsible open={sizePremiumChartOpen} onOpenChange={setSizePremiumChartOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-between p-3 hover:bg-muted/50 mb-2"
+              >
+                <span className="text-sm font-medium">Size Premium Curve</span>
+                {sizePremiumChartOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <PricingCurveChart 
+                pricingService={pricingService} 
+                config={config}
+              />
+            </CollapsibleContent>
+          </Collapsible>
           
           {/* Ratio Premium Curve Visualization */}
-          <RatioPremiumChart 
-            pricingService={pricingService} 
-            config={config}
-          />
+          <Collapsible open={ratioPremiumChartOpen} onOpenChange={setRatioPremiumChartOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-between p-3 hover:bg-muted/50 mb-2"
+              >
+                <span className="text-sm font-medium">Ratio Premium Curve</span>
+                {ratioPremiumChartOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <RatioPremiumChart 
+                pricingService={pricingService} 
+                config={config}
+              />
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Sample Pricing Table */}
           <PricingSampleTableEnhanced pricingService={pricingService} />
