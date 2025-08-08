@@ -33,11 +33,15 @@ export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingSer
 
   // Calculate natural ratio for reference
   const capacity = pricingService['calculateClusterCapacity']();
-  const naturalRatio = capacity.totalvCPUs / capacity.totalMemoryGB;
-  const naturalRatioDisplay = `1:${(1/naturalRatio).toFixed(1)}`;
+  const naturalRatio = capacity.totalMemoryGB > 0 && capacity.totalvCPUs > 0 
+    ? capacity.totalvCPUs / capacity.totalMemoryGB 
+    : 0.25; // Default to 1:4 ratio if no data
+  const naturalRatioDisplay = naturalRatio > 0 ? `1:${(1/naturalRatio).toFixed(1)}` : 'N/A';
   
   const vmRatio = vmSpec.memoryGB > 0 ? vmSpec.vCPU / vmSpec.memoryGB : 0;
-  const vmRatioDisplay = vmSpec.memoryGB > 0 ? `1:${(vmSpec.memoryGB/vmSpec.vCPU).toFixed(1)}` : 'N/A';
+  const vmRatioDisplay = vmSpec.memoryGB > 0 && vmSpec.vCPU > 0 
+    ? `1:${(vmSpec.memoryGB/vmSpec.vCPU).toFixed(1)}` 
+    : 'N/A';
 
   return (
     <Card>
@@ -103,7 +107,7 @@ export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingSer
           <div>
             <p className="text-sm text-muted-foreground">VM Ratio (vCPU:Memory)</p>
             <p className="text-lg font-medium">{vmRatioDisplay}</p>
-            {Math.abs(Math.log2(vmRatio) - Math.log2(naturalRatio)) > 2 && (
+            {naturalRatio > 0 && vmRatio > 0 && Math.abs(Math.log2(vmRatio) - Math.log2(naturalRatio)) > 2 && (
               <p className="text-xs text-orange-600 mt-1">
                 ⚠️ High deviation from natural ratio
               </p>

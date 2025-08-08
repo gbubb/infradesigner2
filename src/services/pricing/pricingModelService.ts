@@ -86,6 +86,23 @@ export class PricingModelService {
   }
 
   private calculateClusterCapacity(): ClusterCapacity {
+    // Handle case where design or placedComponents is undefined
+    if (!this.design || !this.design.placedComponents) {
+      return {
+        totalPhysicalCores: 0,
+        totalPhysicalMemoryGB: 0,
+        totalvCPUs: 0,
+        totalMemoryGB: 0,
+        usablevCPUs: 0,
+        usableMemoryGB: 0,
+        sellingvCPUs: 0,
+        sellingMemoryGB: 0,
+        haReservation: 0,
+        virtualizationOverhead: this.config.virtualizationOverhead,
+        targetUtilization: this.config.targetUtilization
+      };
+    }
+
     const computeComponents = this.design.placedComponents.filter(
       comp => comp.component.type === 'compute'
     );
@@ -139,6 +156,10 @@ export class PricingModelService {
   }
 
   private calculateHAReservation(computeComponents: PlacedComponent[]): number {
+    if (!computeComponents || computeComponents.length === 0) {
+      return 0;
+    }
+    
     // Group components by availability zone
     const azGroups = new Map<string, number>();
     
@@ -175,6 +196,16 @@ export class PricingModelService {
     let totalCapitalCost = 0;
     let totalOperationalCost = 0;
     const networkCostPerAZ = new Map<string, number>();
+
+    // Handle case where design or placedComponents is undefined
+    if (!this.design || !this.design.placedComponents) {
+      return {
+        totalCapitalCost: 0,
+        totalOperationalCost: 0,
+        totalMonthlyCost: 0,
+        networkCostPerAZ
+      };
+    }
 
     // Calculate costs for all placed components
     this.design.placedComponents.forEach(comp => {
@@ -234,9 +265,9 @@ export class PricingModelService {
     const totalMonthlyCost = infrastructureCosts.totalMonthlyCost;
     
     // Network costs distributed per host
-    const computeComponents = this.design.placedComponents.filter(
+    const computeComponents = this.design?.placedComponents?.filter(
       comp => comp.component.type === 'compute'
-    );
+    ) || [];
     const totalHosts = computeComponents.reduce((sum, comp) => sum + (comp.quantity || 1), 0);
     
     // Allocate costs between CPU and memory based on their ratio
@@ -285,6 +316,12 @@ export class PricingModelService {
   private calculateSizePenalty(vCPUs: number, memoryGB: number): number {
     // Calculate the natural ratio of the cluster
     const capacity = this.calculateClusterCapacity();
+    
+    // Handle edge cases
+    if (capacity.totalMemoryGB === 0 || capacity.totalvCPUs === 0) {
+      return 1; // No penalty if we can't calculate ratio
+    }
+    
     const naturalRatio = capacity.totalvCPUs / capacity.totalMemoryGB; // e.g., 0.25 for 1:4 ratio
     
     // Calculate the VM's ratio
