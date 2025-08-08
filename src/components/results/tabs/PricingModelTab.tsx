@@ -503,7 +503,7 @@ export const PricingModelTab: React.FC = () => {
                         <Info className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Base premium for large VMs due to scheduling challenges</p>
+                        <p>Base premium for large VMs. This premium is amplified for imbalanced VMs based on the ratio impact factor.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
