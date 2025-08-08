@@ -1,5 +1,5 @@
-import { DesignState } from '@/types/design';
-import { PlacedComponent } from '@/types/placement';
+import { InfrastructureDesign, InfrastructureComponent, ComponentRole } from '@/types/infrastructure';
+import { PlacedComponent, ComputeCluster } from '@/types/placement';
 
 export interface PricingConfig {
   operatingModel: 'costPlus' | 'fixedPrice';
@@ -54,12 +54,64 @@ export interface PricingModelResult {
 }
 
 export class PricingModelService {
-  private design: DesignState;
+  private design: InfrastructureDesign | null;
   private config: PricingConfig;
+  private selectedClusterId?: string;
 
-  constructor(design: DesignState, config: PricingConfig) {
+  constructor(design: InfrastructureDesign | null, config: PricingConfig, selectedClusterId?: string) {
     this.design = design;
     this.config = config;
+    this.selectedClusterId = selectedClusterId;
+  }
+
+  public getAvailableClusters(): ComputeCluster[] {
+    if (!this.design || !this.design.componentRoles) {
+      return [];
+    }
+
+    const clusters: ComputeCluster[] = [];
+    const roleGroups = new Map<string, ComponentRole[]>();
+
+    // Group components by cluster/role
+    this.design.componentRoles.forEach(role => {
+      if (role.assignedComponentId) {
+        const component = this.design?.components.find(c => c.id === role.assignedComponentId);
+        if (component && component.type === 'compute') {
+          const clusterKey = role.clusterInfo?.clusterId || role.role;
+          if (!roleGroups.has(clusterKey)) {
+            roleGroups.set(clusterKey, []);
+          }
+          roleGroups.get(clusterKey)?.push(role);
+        }
+      }
+    });
+
+    // Create cluster objects
+    roleGroups.forEach((roles, clusterId) => {
+      const firstRole = roles[0];
+      const component = this.design?.components.find(c => c.id === firstRole.assignedComponentId);
+      
+      if (component) {
+        const totalNodes = roles.reduce((sum, role) => sum + (role.requiredCount || 0), 0);
+        const cores = component.specifications?.cpu?.cores || 0;
+        const memory = component.specifications?.memory?.capacity || 0;
+        
+        clusters.push({
+          id: clusterId,
+          name: firstRole.clusterInfo?.clusterName || clusterId,
+          role: firstRole.role,
+          nodeType: component,
+          nodeCount: totalNodes,
+          specifications: {
+            totalCores: cores * totalNodes,
+            totalMemoryGB: memory * totalNodes,
+            gpuCount: component.specifications?.gpu?.quantity
+          }
+        });
+      }
+    });
+
+    return clusters;
   }
 
   calculatePricing(): PricingModelResult {
@@ -86,8 +138,10 @@ export class PricingModelService {
   }
 
   private calculateClusterCapacity(): ClusterCapacity {
-    // Handle case where design or placedComponents is undefined
-    if (!this.design || !this.design.placedComponents) {
+    // Get components based on selected cluster or all compute components
+    const computeComponents = this.getClusterComponents();
+    
+    if (computeComponents.length === 0) {
       return {
         totalPhysicalCores: 0,
         totalPhysicalMemoryGB: 0,
@@ -103,9 +157,7 @@ export class PricingModelService {
       };
     }
 
-    const computeComponents = this.design.placedComponents.filter(
-      comp => comp.component.type === 'compute'
-    );
+    // Already filtered in getClusterComponents()
 
     let totalPhysicalCores = 0;
     let totalPhysicalMemoryGB = 0;
@@ -187,6 +239,55 @@ export class PricingModelService {
     return Math.min(0.5, reservedHosts / totalHosts); // Cap at 50% reservation
   }
 
+  private getClusterComponents(): PlacedComponent[] {
+    if (!this.design) return [];
+
+    const components: PlacedComponent[] = [];
+    
+    // If a specific cluster is selected, filter to that cluster
+    if (this.selectedClusterId && this.design.componentRoles) {
+      this.design.componentRoles.forEach(role => {
+        if (role.assignedComponentId && 
+            (role.clusterInfo?.clusterId === this.selectedClusterId || role.role === this.selectedClusterId)) {
+          const component = this.design?.components.find(c => c.id === role.assignedComponentId);
+          if (component && component.type === 'compute') {
+            components.push({
+              id: role.id,
+              component,
+              quantity: role.requiredCount || 1,
+              metadata: {
+                cluster_id: role.clusterInfo?.clusterId || role.role,
+                cluster_name: role.clusterInfo?.clusterName || role.role,
+                role: role.role
+              }
+            });
+          }
+        }
+      });
+    } else if (this.design.componentRoles) {
+      // Get all compute components
+      this.design.componentRoles.forEach(role => {
+        if (role.assignedComponentId) {
+          const component = this.design?.components.find(c => c.id === role.assignedComponentId);
+          if (component && component.type === 'compute') {
+            components.push({
+              id: role.id,
+              component,
+              quantity: role.requiredCount || 1,
+              metadata: {
+                cluster_id: role.clusterInfo?.clusterId || role.role,
+                cluster_name: role.clusterInfo?.clusterName || role.role,
+                role: role.role
+              }
+            });
+          }
+        }
+      });
+    }
+
+    return components;
+  }
+
   private calculateInfrastructureCosts(): {
     totalCapitalCost: number;
     totalOperationalCost: number;
@@ -197,8 +298,10 @@ export class PricingModelService {
     let totalOperationalCost = 0;
     const networkCostPerAZ = new Map<string, number>();
 
-    // Handle case where design or placedComponents is undefined
-    if (!this.design || !this.design.placedComponents) {
+    // Get all components (not just compute)
+    const allComponents = this.getAllComponents();
+    
+    if (allComponents.length === 0) {
       return {
         totalCapitalCost: 0,
         totalOperationalCost: 0,
@@ -207,8 +310,8 @@ export class PricingModelService {
       };
     }
 
-    // Calculate costs for all placed components
-    this.design.placedComponents.forEach(comp => {
+    // Calculate costs for all components
+    allComponents.forEach(comp => {
       const qty = comp.quantity || 1;
       const capex = (comp.component.pricing?.basePrice || 0) * qty;
       const opex = (comp.component.pricing?.yearlyOperationalCost || 0) * qty;
@@ -265,9 +368,7 @@ export class PricingModelService {
     const totalMonthlyCost = infrastructureCosts.totalMonthlyCost;
     
     // Network costs distributed per host
-    const computeComponents = this.design?.placedComponents?.filter(
-      comp => comp.component.type === 'compute'
-    ) || [];
+    const computeComponents = this.getClusterComponents();
     const totalHosts = computeComponents.reduce((sum, comp) => sum + (comp.quantity || 1), 0);
     
     // Allocate costs between CPU and memory based on their ratio
