@@ -18,9 +18,18 @@ export const PricingCurveChart: React.FC<PricingCurveChartProps> = ({
   pricingService,
   config 
 }) => {
+  // Get the natural ratio from the cluster capacity
+  const naturalRatio = useMemo(() => {
+    const capacity = pricingService['calculateClusterCapacity']();
+    if (capacity.totalvCPUs === 0 || capacity.totalMemoryGB === 0) {
+      return 4; // Default fallback if no cluster data
+    }
+    // Calculate the natural CPU:Memory ratio
+    return capacity.totalMemoryGB / capacity.totalvCPUs;
+  }, [pricingService]);
+  
   const curveData = useMemo(() => {
     const data = [];
-    const naturalRatio = 4; // Assume 1:4 CPU:Memory as natural ratio
     
     // Generate data points along the natural ratio
     for (let vCPUs = 1; vCPUs <= 64; vCPUs += (vCPUs < 8 ? 1 : vCPUs < 32 ? 4 : 8)) {
@@ -37,14 +46,14 @@ export const PricingCurveChart: React.FC<PricingCurveChartProps> = ({
     }
     
     return data;
-  }, [pricingService]);
+  }, [pricingService, naturalRatio]);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload[0]) {
       const data = payload[0].payload;
       return (
         <div className="bg-background border rounded-lg shadow-lg p-3">
-          <p className="font-medium">{data.size} vCPUs / {data.size * 4} GB RAM</p>
+          <p className="font-medium">{data.size} vCPUs / {(data.size * naturalRatio).toFixed(0)} GB RAM</p>
           <p className="text-sm text-muted-foreground">
             Monthly: {formatMonthlyCurrency(data.monthlyPrice)}
           </p>
@@ -160,7 +169,7 @@ export const PricingCurveChart: React.FC<PricingCurveChartProps> = ({
           {/* Explanation */}
           <div className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
             <p>
-              This chart shows pricing along the natural CPU:Memory ratio (1:{naturalRatio}), 
+              This chart shows pricing along the natural CPU:Memory ratio (1:{naturalRatio.toFixed(1)}), 
               demonstrating how the size premium creates an upward curve as VM size increases. 
               The yellow line marks the threshold where premiums begin to apply significantly.
             </p>

@@ -205,7 +205,7 @@ export class PricingModelService {
     };
   }
 
-  private calculateClusterCapacity(): ClusterCapacity {
+  public calculateClusterCapacity(): ClusterCapacity {
     // Get components based on selected cluster or all compute components
     const computeComponents = this.getClusterComponents();
     
