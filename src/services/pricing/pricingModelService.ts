@@ -75,8 +75,24 @@ export class PricingModelService {
     // Group components by cluster/role
     this.design.componentRoles.forEach(role => {
       if (role.assignedComponentId) {
-        const component = this.design?.components.find(c => c.id === role.assignedComponentId);
-        if (component && component.type === 'compute') {
+        // Components can be either an array of component objects or array with placement info
+        const component = Array.isArray(this.design?.components) 
+          ? this.design.components.find((c: any) => 
+              (typeof c === 'object' && (c.id === role.assignedComponentId || c.componentId === role.assignedComponentId))
+            )
+          : null;
+          
+        // Check if this is a compute component
+        const isCompute = component && (
+          component.type === 'compute' || 
+          component.serverRole === 'compute' ||
+          component.role === 'computeNode' ||
+          component.role === 'hyperConvergedNode' ||
+          role.role === 'computeNode' ||
+          role.role === 'hyperConvergedNode'
+        );
+        
+        if (isCompute) {
           const clusterKey = role.clusterInfo?.clusterId || role.role;
           if (!roleGroups.has(clusterKey)) {
             roleGroups.set(clusterKey, []);
@@ -89,23 +105,32 @@ export class PricingModelService {
     // Create cluster objects
     roleGroups.forEach((roles, clusterId) => {
       const firstRole = roles[0];
-      const component = this.design?.components.find(c => c.id === firstRole.assignedComponentId);
+      const component = Array.isArray(this.design?.components)
+        ? this.design.components.find((c: any) => 
+            (typeof c === 'object' && (c.id === firstRole.assignedComponentId || c.componentId === firstRole.assignedComponentId))
+          )
+        : null;
       
-      if (component) {
-        const totalNodes = roles.reduce((sum, role) => sum + (role.requiredCount || 0), 0);
-        const cores = component.specifications?.cpu?.cores || 0;
-        const memory = component.specifications?.memory?.capacity || 0;
+      if (component || firstRole) {
+        const totalNodes = roles.reduce((sum, role) => sum + (role.requiredCount || role.adjustedRequiredCount || 0), 0);
+        // Handle different component structures
+        const cores = component?.specifications?.cpu?.cores || 
+                      component?.cpu?.cores || 
+                      component?.cpuCores || 0;
+        const memory = component?.specifications?.memory?.capacity || 
+                       component?.memory?.capacity || 
+                       component?.memoryGB || 0;
         
         clusters.push({
           id: clusterId,
           name: firstRole.clusterInfo?.clusterName || clusterId,
           role: firstRole.role,
-          nodeType: component,
+          nodeType: component || { id: firstRole.assignedComponentId, name: firstRole.role, type: 'compute' },
           nodeCount: totalNodes,
           specifications: {
             totalCores: cores * totalNodes,
             totalMemoryGB: memory * totalNodes,
-            gpuCount: component.specifications?.gpu?.quantity
+            gpuCount: component?.specifications?.gpu?.quantity || component?.gpu?.quantity || 0
           }
         });
       }
@@ -254,7 +279,7 @@ export class PricingModelService {
             components.push({
               id: role.id,
               component,
-              quantity: role.requiredCount || 1,
+              quantity: role.requiredCount || role.adjustedRequiredCount || 1,
               metadata: {
                 cluster_id: role.clusterInfo?.clusterId || role.role,
                 cluster_name: role.clusterInfo?.clusterName || role.role,
@@ -273,7 +298,7 @@ export class PricingModelService {
             components.push({
               id: role.id,
               component,
-              quantity: role.requiredCount || 1,
+              quantity: role.requiredCount || role.adjustedRequiredCount || 1,
               metadata: {
                 cluster_id: role.clusterInfo?.clusterId || role.role,
                 cluster_name: role.clusterInfo?.clusterName || role.role,
@@ -558,12 +583,16 @@ export class PricingModelService {
     if (this.design.componentRoles) {
       this.design.componentRoles.forEach(role => {
         if (role.assignedComponentId) {
-          const component = this.design?.components.find(c => c.id === role.assignedComponentId);
+          const component = Array.isArray(this.design?.components)
+            ? this.design.components.find((c: any) => 
+                (typeof c === 'object' && (c.id === role.assignedComponentId || c.componentId === role.assignedComponentId))
+              )
+            : null;
           if (component) {
             components.push({
               id: role.id,
               component,
-              quantity: role.requiredCount || 1,
+              quantity: role.requiredCount || role.adjustedRequiredCount || 1,
               metadata: {
                 cluster_id: role.clusterInfo?.clusterId,
                 cluster_name: role.clusterInfo?.clusterName,
