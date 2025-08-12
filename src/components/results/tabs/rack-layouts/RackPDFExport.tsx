@@ -66,7 +66,7 @@ export const RackPDFExport: React.FC<RackPDFExportProps> = ({
         const devicesWithComponents = devices.map(placedDevice => {
           const component = activeDesign?.components.find(c => c.id === placedDevice.deviceId);
           return component ? { placedDevice, component } : null;
-        }).filter(Boolean) as Array<{ placedDevice: PlacedDevice; component: Component }>;
+        }).filter(Boolean) as Array<{ placedDevice: PlacedDevice; component: InfrastructureComponent }>;
 
         return {
           rack: fullRackProfile || rackProfile as RackProfile,

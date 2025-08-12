@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useComponents } from '@/context/ComponentHooks';
-import { useComponentForm } from '@/hooks/components/useComponentForm';
+import { useComponentForm, ComponentFormValues } from '@/hooks/components/useComponentForm';
 import { ComponentFormDialog } from './dialogs/ComponentFormDialog';
 import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
 import { ComponentsTable } from './tables/ComponentsTable';
@@ -142,10 +142,9 @@ export const ComponentLibrary: React.FC = () => {
     const state = location.state as { selectedComponentId?: string; scrollToComponent?: boolean } | null;
     
     if (state?.selectedComponentId) {
-      // Find the component by ID or templateId
+      // Find the component by ID
       const component = componentTemplates.find(
-        c => c.id === state.selectedComponentId || 
-             c.templateId === state.selectedComponentId
+        c => c.id === state.selectedComponentId
       );
       
       if (component) {
@@ -233,7 +232,8 @@ export const ComponentLibrary: React.FC = () => {
     const processedData = {
       ...data,
       ports: componentForm.ports,
-    }
+      type: data.type, // Ensure type is explicitly included
+    } as ComponentFormValues;
 
     const componentToSave = processFormForSubmission(processedData);
     
@@ -308,7 +308,7 @@ export const ComponentLibrary: React.FC = () => {
           if (!open) handleCloseAddDialog();
           else setIsAddDialogOpen(true);
         }}
-        formValues={componentForm}
+        formValues={componentForm as Record<string, unknown>}
         onInputChange={handleInputChange}
         onSelectChange={handleSelectChange}
         onTypeChange={handleTypeChange}
@@ -338,7 +338,7 @@ export const ComponentLibrary: React.FC = () => {
           }
           else setIsEditDialogOpen(true);
         }}
-        formValues={componentForm}
+        formValues={componentForm as Record<string, unknown>}
         onInputChange={handleInputChange}
         onSelectChange={handleSelectChange}
         onTypeChange={handleTypeChange}

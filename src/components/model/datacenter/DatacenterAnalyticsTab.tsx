@@ -12,6 +12,20 @@ import { CapacityPlanningView } from './views/CapacityPlanningView';
 import { DatacenterCostCalculator } from '@/services/datacenter/DatacenterCostCalculator';
 import { PowerEfficiencyCalculator } from '@/services/datacenter/PowerEfficiencyCalculator';
 import { CapacityManagementService } from '@/services/datacenter/CapacityManagementService';
+import { RackType } from '@/types/infrastructure/rack-types';
+
+// Helper function to convert RackType enum to DatacenterRack rackType
+function convertRackType(rackType?: RackType): 'standard' | 'high_density' | 'network' | 'storage' | 'custom' {
+  if (!rackType) return 'standard';
+  switch (rackType) {
+    case RackType.Core:
+      return 'network';
+    case RackType.ComputeStorage:
+      return 'storage';
+    default:
+      return 'standard';
+  }
+}
 
 export const DatacenterAnalyticsTab: React.FC = () => {
   const { requirements, activeDesign } = useDesignStore();
@@ -130,7 +144,7 @@ export const DatacenterAnalyticsTab: React.FC = () => {
         // Add base DatacenterRack properties
         uHeight: totalSpaceU,
         status: 'occupied' as const,
-        rackType: profile.rackType || 'standard' as const
+        rackType: convertRackType(profile.rackType)
       };
     }) || [];
 

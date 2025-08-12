@@ -15,6 +15,7 @@ import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
 import { useDesignStore } from '@/store/designStore';
 import { RackOperationsService } from '@/services/RackOperationsService';
 import { RackPDFExport } from './rack-layouts/RackPDFExport';
+import { RackProfile } from '@/types/infrastructure/rack-types';
 import {
   useRackManagement,
   useDevicePlacement,

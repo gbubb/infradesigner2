@@ -24,7 +24,7 @@ interface RackPowerStats {
   idlePower: number;
   typicalPower: number;
   peakPower: number;
-  powerByType: Record<ComponentType, { idle: number; typical: number; peak: number; count: number }>;
+  powerByType: Partial<Record<ComponentType, { idle: number; typical: number; peak: number; count: number }>>;
   powerByComponent: Array<{ 
     name: string; 
     type: ComponentType; 

@@ -136,7 +136,7 @@ export const useRackInitialization = (resetTrigger: number) => {
           const result = RackService.placeDevice(
             targetRacks[rackIndex].id, 
             component.id,
-            ruStartPosition - (index % 10) * (component.ruHeight || 1),
+            ruStartPosition - (index % 10) * (component.ruSize || 1),
             true // Skip individual updates
           );
           
@@ -179,19 +179,22 @@ export const useRackInitialization = (resetTrigger: number) => {
     const componentsByRole: Record<string, InfrastructureComponent[]> = {};
     
     activeDesign.componentRoles.forEach(role => {
-      const assignedComponents = activeDesign.components.filter(comp => 
-        comp.assignedRoles && comp.assignedRoles.includes(role.id)
-      );
-      
-      if (assignedComponents.length > 0) {
-        componentsByRole[role.role] = assignedComponents;
+      // Find components assigned to this role
+      if (role.assignedComponentId) {
+        const assignedComponents = activeDesign.components.filter(comp => 
+          comp.id === role.assignedComponentId
+        );
+        
+        if (assignedComponents.length > 0) {
+          componentsByRole[role.role] = assignedComponents;
+        }
       }
     });
     
     // Distribute components by role and AZ
     Object.entries(componentsByRole).forEach(([roleName, components]) => {
       // Skip components that don't need rack placement
-      if (!components.some(comp => comp.ruHeight && comp.ruHeight > 0)) return;
+      if (!components.some(comp => comp.ruSize && comp.ruSize > 0)) return;
       
       // Get racks per AZ
       const racksByAZ: Record<string, { id: string; name: string }[]> = {};
