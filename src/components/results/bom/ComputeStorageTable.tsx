@@ -98,8 +98,8 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
                 <TableCell>{clusterName}</TableCell>
                 <TableCell>{component.manufacturer}</TableCell>
                 <TableCell>{component.model}</TableCell>
-                <TableCell>{'cpuModel' in component ? (component as any).cpuModel : '-'}</TableCell>
-                <TableCell className="text-right">{'memoryCapacity' in component ? (component as any).memoryCapacity : ('memoryGB' in component ? (component as any).memoryGB : '-')}</TableCell>
+                <TableCell>{component.type === ComponentType.Server ? (component as Server).cpuModel : '-'}</TableCell>
+                <TableCell className="text-right">{component.type === ComponentType.Server ? (component as Server).memoryGBTotal || (component as Server).memoryCapacity || '-' : '-'}</TableCell>
                 <TableCell className="text-right">{disksSummary}</TableCell>
                 <TableCell className="text-right flex items-center gap-1 justify-end">
                   {quantity}
@@ -140,8 +140,8 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
                 <TableCell>{clusterName}</TableCell>
                 <TableCell>{server.manufacturer}</TableCell>
                 <TableCell>{server.model}</TableCell>
-                <TableCell>{'cpuModel' in server ? (server as any).cpuModel : '-'}</TableCell>
-                <TableCell className="text-right">{'memoryCapacity' in server ? (server as any).memoryCapacity : ('memoryGB' in server ? (server as any).memoryGB : '-')}</TableCell>
+                <TableCell>{(server as Server).cpuModel || '-'}</TableCell>
+                <TableCell className="text-right">{(server as Server).memoryGBTotal || (server as Server).memoryCapacity || '-'}</TableCell>
                 <TableCell className="text-right">{disksSummary}</TableCell>
                 <TableCell className="text-right flex items-center gap-1 justify-end">
                   {quantity}

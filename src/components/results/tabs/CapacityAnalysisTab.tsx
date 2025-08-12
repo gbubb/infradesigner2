@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDesignStore } from '@/store/designStore';
+import { Server, ComponentType } from '@/types/infrastructure';
 import { useDesignCalculations } from '@/hooks/design/useDesignCalculations';
 import { usePowerCalculations } from '@/hooks/design/usePowerCalculations';
 import { ResourceUtilizationChart } from '../PowerDistributionChart';
@@ -53,8 +54,16 @@ export const CapacityAnalysisTab: React.FC = () => {
     computeNodes.forEach(node => {
       totalPower += node.powerTypical || 0;
       totalRU += node.ruSize || 1;
-      totalCores += (node as any).totalCores || (node as any).cores || 0;
-      totalMemoryGb += (node as any).memoryCapacity || (node as any).memoryGB || 0;
+      // For servers, calculate total cores from sockets and cores per socket
+      if (node.type === ComponentType.Server) {
+        const serverNode = node as Server;
+        totalCores += (serverNode.cpuCoresPerSocket * serverNode.cpuSockets) || 0;
+        totalMemoryGb += serverNode.memoryCapacity || 0;
+      } else {
+        // For other component types, use the optional cpuCores and memoryGB fields
+        totalCores += node.cpuCores || 0;
+        totalMemoryGb += node.memoryGB || 0;
+      }
     });
     
     const avgComputeNodePower = totalPower / computeNodes.length;

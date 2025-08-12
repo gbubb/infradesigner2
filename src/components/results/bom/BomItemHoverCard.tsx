@@ -2,7 +2,19 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { InfrastructureComponent, ComponentType, Cable } from "@/types/infrastructure";
+import { 
+  InfrastructureComponent, 
+  ComponentType, 
+  Cable, 
+  Server, 
+  Disk, 
+  Switch, 
+  Router, 
+  Firewall,
+  FiberPatchPanel,
+  CopperPatchPanel,
+  Cassette
+} from "@/types/infrastructure";
 import { useNavigate } from "react-router-dom";
 import { ExternalLink, Cpu, HardDrive, Network, Cable as CableIcon, Router, Shield } from "lucide-react";
 
@@ -56,44 +68,52 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
         if (component.memoryGB) {
           details.push({ label: "Memory", value: `${component.memoryGB} GB` });
         }
-        if ('diskBays' in component && (component as any).diskBays) {
-          details.push({ label: "Disk Bays", value: (component as any).diskBays });
+        const serverComponent = component as Server;
+        if ('diskSlotQuantity' in serverComponent && serverComponent.diskSlotQuantity) {
+          details.push({ label: "Disk Bays", value: serverComponent.diskSlotQuantity });
         }
         break;
 
       case ComponentType.Disk:
-        if ('diskBays' in component && (component as any).diskBays) {
-          details.push({ label: "Disk Bays", value: (component as any).diskBays });
+        const serverComponent = component as Server;
+        if ('diskSlotQuantity' in serverComponent && serverComponent.diskSlotQuantity) {
+          details.push({ label: "Disk Bays", value: serverComponent.diskSlotQuantity });
         }
-        if ('controllerCount' in component && (component as any).controllerCount) {
-          details.push({ label: "Controllers", value: (component as any).controllerCount });
-        }
+        // Controller count not in standard Disk type
         break;
 
       case ComponentType.Switch:
       case ComponentType.Router:
       case ComponentType.Firewall: {
-        const port100GCount = 'port100GCount' in component ? (component as any).port100GCount : 0;
-        const port400GCount = 'port400GCount' in component ? (component as any).port400GCount : 0;
-        const port10GCount = 'port10GCount' in component ? (component as any).port10GCount : 0;
-        const port25GCount = 'port25GCount' in component ? (component as any).port25GCount : 0;
-        const totalPorts = (port100GCount || 0) + 
-                          (port400GCount || 0) + 
-                          (port10GCount || 0) + 
-                          (port25GCount || 0);
-        if (totalPorts > 0) {
-          details.push({ label: "Total Ports", value: totalPorts });
-        }
-        if (port100GCount) {
-          details.push({ label: "100G Ports", value: port100GCount });
-        }
-        if (port400GCount) {
-          details.push({ label: "400G Ports", value: port400GCount });
+        if (component.type === ComponentType.Switch) {
+          const switchComponent = component as Switch;
+          if (switchComponent.portCount) {
+            details.push({ label: "Port Count", value: switchComponent.portCount });
+          }
+          if (switchComponent.portSpeed) {
+            details.push({ label: "Port Speed", value: switchComponent.portSpeed });
+          }
+        } else if (component.type === ComponentType.Router) {
+          const routerComponent = component as Router;
+          if (routerComponent.portCount) {
+            details.push({ label: "Port Count", value: routerComponent.portCount });
+          }
+          if (routerComponent.portSpeed) {
+            details.push({ label: "Port Speed", value: `${routerComponent.portSpeed}G` });
+          }
+        } else if (component.type === ComponentType.Firewall) {
+          const firewallComponent = component as Firewall;
+          if (firewallComponent.portCount) {
+            details.push({ label: "Port Count", value: firewallComponent.portCount });
+          }
+          if (firewallComponent.throughput) {
+            details.push({ label: "Throughput", value: `${firewallComponent.throughput} Gbps` });
+          }
         }
         break;
       }
 
-      case ComponentType.Cable:
+      case ComponentType.Cable: {
         const cableComponent = component as Cable;
         if (cableComponent.mediaType) {
           details.push({ label: "Media Type", value: cableComponent.mediaType });
@@ -108,28 +128,36 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
           details.push({ label: "Type", value: "Breakout Cable" });
         }
         break;
+      }
 
       case ComponentType.FiberPatchPanel:
       case ComponentType.CopperPatchPanel:
-      case ComponentType.Cassette:
+      case ComponentType.Cassette: {
         if (component.portCount) {
           details.push({ label: "Port Count", value: component.portCount });
         }
-        if ('mediaType' in component && (component as any).mediaType) {
-          details.push({ label: "Media Type", value: (component as any).mediaType });
+        if (component.type === ComponentType.CopperPatchPanel) {
+          const copperPanel = component as CopperPatchPanel;
+          if (copperPanel.frontPortType) {
+            details.push({ label: "Port Type", value: copperPanel.frontPortType });
+          }
+        } else if (component.type === ComponentType.Cassette) {
+          const cassette = component as Cassette;
+          if (cassette.frontPortType) {
+            details.push({ label: "Port Type", value: cassette.frontPortType });
+          }
         }
         break;
+      }
     }
 
     // Common technical details
-    if ('powerConsumptionW' in component && (component as any).powerConsumptionW) {
-      details.push({ label: "Power", value: `${(component as any).powerConsumptionW}W` });
-    } else if (component.powerTypical) {
+    if (component.powerTypical) {
       details.push({ label: "Power", value: `${component.powerTypical}W` });
+    } else if (component.powerPeak) {
+      details.push({ label: "Power", value: `${component.powerPeak}W` });
     }
-    if ('heightRU' in component && (component as any).heightRU) {
-      details.push({ label: "Height", value: `${(component as any).heightRU}U` });
-    } else if (component.ruSize) {
+    if (component.ruSize) {
       details.push({ label: "Height", value: `${component.ruSize}U` });
     }
     if (component.cost) {
@@ -143,7 +171,7 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
     // Navigate to component library with the component selected
     navigate('/components', { 
       state: { 
-        selectedComponentId: (component as any).templateId || component.id,
+        selectedComponentId: ('templateId' in component && (component as InfrastructureComponent & { templateId?: string }).templateId) || component.id,
         scrollToComponent: true 
       } 
     });
@@ -181,10 +209,10 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
           </div>
 
           {/* Notes if available */}
-          {(component as any).notes && (
+          {'notes' in component && (component as InfrastructureComponent & { notes?: string }).notes && (
             <div className="text-xs">
               <span className="text-muted-foreground">Notes:</span>
-              <p className="mt-1 text-xs">{(component as any).notes}</p>
+              <p className="mt-1 text-xs">{(component as InfrastructureComponent & { notes?: string }).notes}</p>
             </div>
           )}
 
