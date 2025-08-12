@@ -177,3 +177,5 @@ export const ModelPanel: React.FC = () => {
     </div>
   );
 };
+
+export default ModelPanel;

@@ -15,7 +15,7 @@ const ComponentLibrary = lazy(() => import(/* webpackPrefetch: true */ "@/compon
 const ConfigurePanel = lazy(() => import(/* webpackPrefetch: true */ "@/components/configure/ConfigurePanel").then(m => ({ default: m.ConfigurePanel })));
 const DatacenterPanel = lazy(() => import(/* webpackPrefetch: true */ "@/components/datacenter/DatacenterPanel").then(m => ({ default: m.DatacenterPanel })));
 const DesignPanel = lazy(() => import(/* webpackPrefetch: true */ "@/components/design/DesignPanel").then(m => ({ default: m.DesignPanel })));
-const ModelPanel = lazy(() => import(/* webpackPrefetch: true */ "@/components/model/ModelPanel").then(m => ({ default: m.ModelPanel })));
+const ModelPanel = lazy(() => import(/* webpackPrefetch: true */ "@/components/model/ModelPanel"));
 const ProcurePanel = lazy(() => import(/* webpackPrefetch: true */ "@/components/procure/ProcurePanel").then(m => ({ default: m.ProcurePanel })));
 const RequirementsPanel = lazy(() => import(/* webpackPrefetch: true */ "@/components/requirements/RequirementsPanel").then(m => ({ default: m.RequirementsPanel })));
 const ResultsPanel = lazy(() => import(/* webpackPrefetch: true */ "@/components/results/ResultsPanel").then(m => ({ default: m.ResultsPanel })));
