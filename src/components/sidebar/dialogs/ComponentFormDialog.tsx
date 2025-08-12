@@ -103,9 +103,9 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       powerPeak: (formValues.powerPeak as number) || 0,
       isDefault: (formValues.isDefault as boolean) || false,
       namingPrefix: (formValues.namingPrefix as string) || '',
-      validRUStart: (formValues.placement as any)?.validRUStart || 1,
-      validRUEnd: (formValues.placement as any)?.validRUEnd || maxRackUnits,
-      preferredRU: (formValues.placement as any)?.preferredRU || 1,
+      validRUStart: (formValues.placement as { validRUStart?: number; validRUEnd?: number; preferredRU?: number })?.validRUStart || 1,
+      validRUEnd: (formValues.placement as { validRUStart?: number; validRUEnd?: number; preferredRU?: number })?.validRUEnd || maxRackUnits,
+      preferredRU: (formValues.placement as { validRUStart?: number; validRUEnd?: number; preferredRU?: number })?.preferredRU || 1,
       // preferredRack: formValues.placement?.preferredRack || 1, // Removed
       serverRole: (formValues.type as ComponentType) === ComponentType.Server ? ((formValues.serverRole as ServerRole) || ServerRole.Compute) : undefined,
       cpuModel: (formValues.type as ComponentType) === ComponentType.Server ? ((formValues.cpuModel as string) || '') : undefined,

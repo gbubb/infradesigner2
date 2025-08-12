@@ -55,7 +55,15 @@ export const RatioPremiumChart: React.FC<RatioPremiumChartProps> = ({
     return data;
   }, [pricingService, naturalRatio]);
 
-  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ value: number; payload: any }> }) => {
+  interface TooltipPayload {
+    memoryGB: number;
+    ratio: number;
+    deviationPercent: number;
+    monthlyPrice: number;
+    premium: number;
+  }
+
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ value: number; payload: TooltipPayload }> }) => {
     if (active && payload && payload[0]) {
       const data = payload[0].payload;
       return (

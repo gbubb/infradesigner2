@@ -86,8 +86,18 @@ export const DatacenterAnalyticsTab: React.FC = () => {
       return sum + (Number(power) * Number(quantity)) / 1000; // Convert W to kW
     }, 0) || 0;
 
-    // Create mock racks for the services - explicitly type as any since Rack type is not defined
-    const mockRacks: any[] = activeDesign.rackprofiles?.map(profile => ({
+    // Create mock racks for the services
+    interface MockRack {
+      id: string;
+      name: string;
+      placedComponents: Array<InfrastructureComponent & {
+        power: number;
+        powerrequired?: number;
+        quantity: number;
+      }>;
+    }
+    
+    const mockRacks: MockRack[] = activeDesign.rackprofiles?.map(profile => ({
       id: profile.id,
       name: profile.name,
       placedComponents: activeDesign.components.filter(c => {
@@ -130,7 +140,7 @@ export const DatacenterAnalyticsTab: React.FC = () => {
         mappedRack: {
           id: profile.id,
           name: profile.name,
-          devices: mappedDevices as any, // Map PlacedDevice[] to InfrastructureComponent[]
+          devices: mappedDevices as InfrastructureComponent[], // Map PlacedDevice[] to InfrastructureComponent[]
           actualPowerUsageKw: actualPowerKw,
           powerAllocationKw: allocatedPowerKw
         },

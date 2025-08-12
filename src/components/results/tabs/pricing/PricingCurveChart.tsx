@@ -48,7 +48,14 @@ export const PricingCurveChart: React.FC<PricingCurveChartProps> = ({
     return data;
   }, [pricingService, naturalRatio]);
 
-  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ value: number; payload: any }> }) => {
+  interface TooltipPayload {
+    size: number;
+    monthlyPrice: number;
+    sizePremium: number;
+    totalPremium: number;
+  }
+
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ value: number; payload: TooltipPayload }> }) => {
     if (active && payload && payload[0]) {
       const data = payload[0].payload;
       return (
