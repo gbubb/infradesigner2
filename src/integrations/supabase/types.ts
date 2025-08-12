@@ -132,13 +132,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "datacenter_racks_facility_id_fkey"
-            columns: ["facility_id"]
-            isOneToOne: false
-            referencedRelation: "facility_utilization_summary"
-            referencedColumns: ["facilityId"]
-          },
-          {
             foreignKeyName: "datacenter_racks_hierarchy_level_id_fkey"
             columns: ["hierarchy_level_id"]
             isOneToOne: false
@@ -205,13 +198,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "facilities"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "design_facility_mapping_facility_id_fkey"
-            columns: ["facilityId"]
-            isOneToOne: false
-            referencedRelation: "facility_utilization_summary"
-            referencedColumns: ["facilityId"]
           },
         ]
       }
@@ -377,13 +363,6 @@ export type Database = {
             referencedRelation: "facilities"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "facility_cost_layers_facility_id_fkey"
-            columns: ["facilityId"]
-            isOneToOne: false
-            referencedRelation: "facility_utilization_summary"
-            referencedColumns: ["facilityId"]
-          },
         ]
       }
       facility_hierarchy: {
@@ -438,13 +417,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "facility_hierarchy_facility_id_fkey"
-            columns: ["facilityId"]
-            isOneToOne: false
-            referencedRelation: "facility_utilization_summary"
-            referencedColumns: ["facilityId"]
-          },
-          {
             foreignKeyName: "facility_hierarchy_parent_id_fkey"
             columns: ["parentId"]
             isOneToOne: false
@@ -495,13 +467,6 @@ export type Database = {
             referencedRelation: "facilities"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "facility_non_productive_loads_facility_id_fkey"
-            columns: ["facilityId"]
-            isOneToOne: false
-            referencedRelation: "facility_utilization_summary"
-            referencedColumns: ["facilityId"]
-          },
         ]
       }
       facility_power_layers: {
@@ -551,13 +516,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "facilities"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "facility_power_layers_facility_id_fkey"
-            columns: ["facilityId"]
-            isOneToOne: false
-            referencedRelation: "facility_utilization_summary"
-            referencedColumns: ["facilityId"]
           },
           {
             foreignKeyName: "facility_power_layers_parent_layer_id_fkey"
@@ -678,13 +636,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "facilities"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rack_hierarchy_assignments_facility_id_fkey"
-            columns: ["facility_id"]
-            isOneToOne: false
-            referencedRelation: "facility_utilization_summary"
-            referencedColumns: ["facilityId"]
           },
           {
             foreignKeyName: "rack_hierarchy_assignments_rack_id_fkey"
@@ -817,13 +768,6 @@ export type Database = {
             referencedRelation: "facilities"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "rack_profiles_facility_id_fkey"
-            columns: ["facility_id"]
-            isOneToOne: false
-            referencedRelation: "facility_utilization_summary"
-            referencedColumns: ["facilityId"]
-          },
         ]
       }
       rack_specifications: {
@@ -873,18 +817,7 @@ export type Database = {
       }
     }
     Views: {
-      facility_utilization_summary: {
-        Row: {
-          allocatedPowerKW: number | null
-          allocatedRacks: number | null
-          facilityId: string | null
-          facilityName: string | null
-          pue: number | null
-          totalPowerKW: number | null
-          totalRacks: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       calculate_facility_pue: {
@@ -916,6 +849,18 @@ export type Database = {
           status: string | null
           u_height: number | null
           updated_at: string | null
+        }[]
+      }
+      get_facility_utilization_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          facilityId: string
+          facilityName: string
+          totalRacks: number
+          allocatedRacks: number
+          allocatedPowerKW: number
+          totalPowerKW: number
+          pue: number
         }[]
       }
     }
