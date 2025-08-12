@@ -35,3 +35,32 @@ export interface ComponentDatabaseRow {
   details?: Record<string, unknown>;
   created_at?: string;
 }
+
+export interface FacilityDatabaseRow {
+  id: string;
+  name: string;
+  location?: string;
+  description?: string;
+  hierarchy_config?: string;
+  power_infrastructure?: string;
+  cost_layers?: string;
+  constraints?: string;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+}
+
+export interface FacilityHierarchyDatabaseRow {
+  id: string;
+  facility_id: string;
+  name: string;
+  parent_id?: string;
+  level: number;
+  custom_attributes?: string;
+  capacity?: string;
+  assigned_racks?: number;
+  actual_power_kw?: number;
+  rack_capacity?: string;
+  created_at?: string;
+  updated_at?: string;
+}

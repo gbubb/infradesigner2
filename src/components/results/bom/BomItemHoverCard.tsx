@@ -61,7 +61,7 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
 
     // Type-specific details
     switch (component.type) {
-      case ComponentType.Server:
+      case ComponentType.Server: {
         if (component.cpuCores) {
           details.push({ label: "CPU Cores", value: component.cpuCores });
         }
@@ -73,14 +73,16 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
           details.push({ label: "Disk Bays", value: serverComponent.diskSlotQuantity });
         }
         break;
+      }
 
-      case ComponentType.Disk:
+      case ComponentType.Disk: {
         const serverComponent = component as Server;
         if ('diskSlotQuantity' in serverComponent && serverComponent.diskSlotQuantity) {
           details.push({ label: "Disk Bays", value: serverComponent.diskSlotQuantity });
         }
         // Controller count not in standard Disk type
         break;
+      }
 
       case ComponentType.Switch:
       case ComponentType.Router:

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, UseQueryResult, UseMutationResult } from '@tanstack/react-query';
 import { supabase, TABLES, handleSupabaseError } from '@/lib/supabase';
 import { InfrastructureComponent } from '@/types/infrastructure';
+import { DesignDatabaseRow, FacilityDatabaseRow, FacilityHierarchyDatabaseRow } from '@/types/database-types';
 import { queryKeys, cacheUtils, createCachedQuery } from '@/utils/queryCache';
 import { toast } from 'sonner';
 
@@ -58,7 +59,7 @@ export function useComponentQuery(id: string): UseQueryResult<InfrastructureComp
 }
 
 // Designs Query Hook
-export function useDesignsQuery(userId?: string): UseQueryResult<any[], Error> {
+export function useDesignsQuery(userId?: string): UseQueryResult<DesignDatabaseRow[], Error> {
   return useQuery(
     createCachedQuery(
       [...queryKeys.designs(), userId].filter(Boolean),
@@ -76,7 +77,7 @@ export function useDesignsQuery(userId?: string): UseQueryResult<any[], Error> {
           throw error;
         }
         
-        return data;
+        return data as DesignDatabaseRow[];
       },
       {
         staleTime: 1000 * 60 * 5, // 5 minutes
@@ -87,7 +88,7 @@ export function useDesignsQuery(userId?: string): UseQueryResult<any[], Error> {
 }
 
 // Facilities Query Hook
-export function useFacilitiesQuery(): UseQueryResult<any[], Error> {
+export function useFacilitiesQuery(): UseQueryResult<FacilityDatabaseRow[], Error> {
   return useQuery(
     createCachedQuery(
       queryKeys.facilities(),
@@ -101,7 +102,7 @@ export function useFacilitiesQuery(): UseQueryResult<any[], Error> {
           throw error;
         }
         
-        return data;
+        return data as FacilityDatabaseRow[];
       },
       {
         staleTime: 1000 * 60 * 15, // 15 minutes - facilities don't change often
@@ -112,7 +113,7 @@ export function useFacilitiesQuery(): UseQueryResult<any[], Error> {
 }
 
 // Facility Hierarchy Query Hook
-export function useFacilityHierarchyQuery(facilityId?: string): UseQueryResult<any[], Error> {
+export function useFacilityHierarchyQuery(facilityId?: string): UseQueryResult<FacilityHierarchyDatabaseRow[], Error> {
   return useQuery(
     createCachedQuery(
       [...queryKeys.facilityHierarchy(), facilityId].filter(Boolean),
@@ -130,7 +131,7 @@ export function useFacilityHierarchyQuery(facilityId?: string): UseQueryResult<a
           throw error;
         }
         
-        return data;
+        return data as FacilityHierarchyDatabaseRow[];
       },
       {
         staleTime: 1000 * 60 * 15,

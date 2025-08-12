@@ -55,7 +55,7 @@ export function withSkeleton<P extends object>(
   Component: React.ComponentType<P>,
   SkeletonComponent: React.ComponentType
 ) {
-  return React.forwardRef<any, P & { isLoading?: boolean; error?: Error | null }>(
+  return React.forwardRef<unknown, P & { isLoading?: boolean; error?: Error | null }>(
     ({ isLoading = false, error = null, ...props }, ref) => {
       if (isLoading) {
         return <SkeletonComponent />;
