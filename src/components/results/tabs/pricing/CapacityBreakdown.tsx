@@ -20,6 +20,20 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
     return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(num);
   };
 
+  const formatCompactNumber = (num: number) => {
+    if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}k`;
+    }
+    return num.toString();
+  };
+
+  const formatMemory = (gb: number) => {
+    if (gb >= 1024) {
+      return `${(gb / 1024).toFixed(1)} TiB`;
+    }
+    return `${gb} GB`;
+  };
+
   const formatPercentage = (value: number) => {
     return `${(value * 100).toFixed(1)}%`;
   };
@@ -63,8 +77,16 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                     <Server className="h-3 w-3" />
                     <span>Physical</span>
                   </div>
-                  <div className="font-semibold">
-                    {formatNumber(capacity.totalPhysicalCores)} / {formatNumber(capacity.totalPhysicalMemoryGB)}GB
+                  <div className="font-semibold flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <Cpu className="h-3 w-3 text-muted-foreground" />
+                      <span>{formatCompactNumber(capacity.totalPhysicalCores)}</span>
+                    </div>
+                    <span className="text-muted-foreground">/</span>
+                    <div className="flex items-center gap-1">
+                      <MemoryStick className="h-3 w-3 text-muted-foreground" />
+                      <span>{formatMemory(capacity.totalPhysicalMemoryGB)}</span>
+                    </div>
                   </div>
                 </div>
               </TooltipTrigger>
@@ -89,8 +111,16 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                     <Cpu className="h-3 w-3" />
                     <span>Virtual</span>
                   </div>
-                  <div className="font-semibold">
-                    {formatNumber(capacity.totalvCPUs)} / {formatNumber(capacity.totalMemoryGB)}GB
+                  <div className="font-semibold flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <Cpu className="h-3 w-3 text-muted-foreground" />
+                      <span>{formatCompactNumber(capacity.totalvCPUs)} vCPUs</span>
+                    </div>
+                    <span className="text-muted-foreground">/</span>
+                    <div className="flex items-center gap-1">
+                      <MemoryStick className="h-3 w-3 text-muted-foreground" />
+                      <span>{formatMemory(capacity.totalMemoryGB)}</span>
+                    </div>
                   </div>
                 </div>
               </TooltipTrigger>
@@ -118,8 +148,16 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                     <DollarSign className="h-3 w-3" />
                     <span>Sellable</span>
                   </div>
-                  <div className="font-semibold text-green-700 dark:text-green-300">
-                    {formatNumber(capacity.sellingvCPUs)} / {formatNumber(capacity.sellingMemoryGB)}GB
+                  <div className="font-semibold text-green-700 dark:text-green-300 flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <Cpu className="h-3 w-3 text-green-600 dark:text-green-400" />
+                      <span>{formatCompactNumber(capacity.sellingvCPUs)} vCPUs</span>
+                    </div>
+                    <span className="text-green-600/60 dark:text-green-400/60">/</span>
+                    <div className="flex items-center gap-1">
+                      <MemoryStick className="h-3 w-3 text-green-600 dark:text-green-400" />
+                      <span>{formatMemory(capacity.sellingMemoryGB)}</span>
+                    </div>
                   </div>
                 </div>
               </TooltipTrigger>

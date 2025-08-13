@@ -21,6 +21,11 @@ export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingSer
   });
 
   const [calculatedPrice, setCalculatedPrice] = useState<ReturnType<typeof pricingService.calculateVMPrice> | null>(null);
+  
+  // Get the config to check if we're in cost plus mode and what the margin is
+  const config = (pricingService as any).config;
+  const isMarginApplied = config?.operatingModel === 'costPlus';
+  const margin = config?.profitMargin || 1;
 
   const handleCalculate = () => {
     const price = pricingService.calculateVMPrice(vmSpec.vCPU, vmSpec.memoryGB, vmSpec.storageGB);
@@ -145,24 +150,77 @@ export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingSer
 
             {/* Cost Breakdown */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium">Monthly Cost Breakdown</h4>
+              <h4 className="text-sm font-medium">
+                {isMarginApplied ? 'Actual Cost Breakdown (without margin)' : 'Monthly Cost Breakdown'}
+              </h4>
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between px-3 py-1.5 bg-muted/30 rounded">
                   <span className="text-muted-foreground">Compute:</span>
-                  <span>{formatMonthlyCurrency(calculatedPrice.breakdown.computeCost * 730)}/mo</span>
+                  <span>
+                    {formatMonthlyCurrency(
+                      isMarginApplied 
+                        ? (calculatedPrice.breakdown.computeCost / margin) * 730
+                        : calculatedPrice.breakdown.computeCost * 730
+                    )}/mo
+                  </span>
                 </div>
                 <div className="flex justify-between px-3 py-1.5 bg-muted/30 rounded">
                   <span className="text-muted-foreground">Memory:</span>
-                  <span>{formatMonthlyCurrency(calculatedPrice.breakdown.networkCost * 730)}/mo</span>
+                  <span>
+                    {formatMonthlyCurrency(
+                      isMarginApplied
+                        ? (calculatedPrice.breakdown.networkCost / margin) * 730
+                        : calculatedPrice.breakdown.networkCost * 730
+                    )}/mo
+                  </span>
                 </div>
                 <div className="flex justify-between px-3 py-1.5 bg-muted/30 rounded">
                   <span className="text-muted-foreground">Storage:</span>
-                  <span>{formatMonthlyCurrency(calculatedPrice.breakdown.storageCost * 730)}/mo</span>
+                  <span>
+                    {formatMonthlyCurrency(
+                      isMarginApplied
+                        ? (calculatedPrice.breakdown.storageCost / margin) * 730
+                        : calculatedPrice.breakdown.storageCost * 730
+                    )}/mo
+                  </span>
                 </div>
                 <div className="flex justify-between px-3 py-1.5 bg-muted/30 rounded">
                   <span className="text-muted-foreground">Licensing:</span>
                   <span>{formatMonthlyCurrency(calculatedPrice.breakdown.licensingCost * 730)}/mo</span>
                 </div>
+                {isMarginApplied && (
+                  <>
+                    <div className="border-t pt-1.5 mt-2">
+                      <div className="flex justify-between px-3 py-1.5">
+                        <span className="text-muted-foreground">Subtotal (cost):</span>
+                        <span className="font-medium">
+                          {formatMonthlyCurrency(
+                            ((calculatedPrice.breakdown.computeCost + 
+                              calculatedPrice.breakdown.networkCost + 
+                              calculatedPrice.breakdown.storageCost) / margin + 
+                              calculatedPrice.breakdown.licensingCost) * 730
+                          )}/mo
+                        </span>
+                      </div>
+                      <div className="flex justify-between px-3 py-1.5">
+                        <span className="text-muted-foreground">Margin ({((margin - 1) * 100).toFixed(0)}%):</span>
+                        <span className="text-green-600 font-medium">
+                          +{formatMonthlyCurrency(
+                            ((calculatedPrice.breakdown.computeCost + 
+                              calculatedPrice.breakdown.networkCost + 
+                              calculatedPrice.breakdown.storageCost) * (1 - 1/margin)) * 730
+                          )}/mo
+                        </span>
+                      </div>
+                      <div className="flex justify-between px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded">
+                        <span className="font-medium">Selling Price:</span>
+                        <span className="font-bold text-green-600">
+                          {formatMonthlyCurrency(calculatedPrice.monthlyPrice)}/mo
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
