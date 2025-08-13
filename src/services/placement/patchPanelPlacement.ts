@@ -64,11 +64,11 @@ export function placePatchPanel({
         return isCopperPatchPanel ? lbl.includes('copperpatchpanel') : lbl.includes('fiberpatchpanel');
       }).length;
       if (countOfThisType < perCoreRackQty) {
-        const ruHeight = component.ruSize || component.ruHeight || 1;
+        const ruSize = component.ruSize || 1;
         const placement = tryPlaceDeviceInRacksWithConstraints({
           racks: [r],
           device: component,
-          ruHeight,
+          ruSize,
           activeDesignState: state,
         });
         const instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
@@ -139,12 +139,12 @@ export function placePatchPanel({
 
       for (let i = 0; i < racks.length; i++) {
         if (placedPerRackForThisType[i] < limitPerRack[i]) {
-          const ruHeight = component.ruSize || component.ruHeight || 1;
+          const ruSize = component.ruSize || 1;
           const r = racks[i];
           const placement = tryPlaceDeviceInRacksWithConstraints({
             racks: [r],
             device: component,
-            ruHeight,
+            ruSize,
             activeDesignState: state,
           });
           const instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;

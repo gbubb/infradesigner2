@@ -42,7 +42,7 @@ export interface DevicePlacementConfig {
   device: InfrastructureComponent;
   minU?: number;
   maxU?: number;
-  ruHeight: number;
+  ruSize: number;
   startRackIndex?: number;
   racks: RackProfile[];
   activeDesignState: InfrastructureDesign;

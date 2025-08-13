@@ -98,13 +98,13 @@ export function placeComputeCluster({
       
       for (let i = 0; i < nodesForThisRack && componentIndex < clusterComponents.length; i++) {
         const component = clusterComponents[componentIndex];
-        const ruHeight = component.ruSize || component.ruHeight || 1;
+        const ruSize = component.ruSize || 1;
         const typeLabel = component.role?.toLowerCase() || 'compute-node';
         
         const placement = tryPlaceDeviceInRacksWithConstraints({
           racks: [rack],
           device: component,
-          ruHeight,
+          ruSize,
           activeDesignState: state
         });
         

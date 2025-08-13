@@ -46,11 +46,11 @@ export function placeCoreDevice({
     }
   }
   // Try placing in the minRack
-  const ruHeight = component.ruSize || component.ruHeight || 1;
+  const ruSize = component.ruSize || 1;
   const placement = tryPlaceDeviceInRacksWithConstraints({
     racks: [minRack],
     device: component,
-    ruHeight,
+    ruSize,
     activeDesignState: state
   });
   const instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;

@@ -196,19 +196,19 @@ export class RackExportService {
     pdf.rect(x, y, width, height, 'FD');
 
     // Draw RU markers
-    const ruHeight = height / rackData.rack.uHeight;
+    const unitHeight = height / rackData.rack.uHeight;
     pdf.setDrawColor(230, 230, 230);
     pdf.setLineWidth(0.1);
     
     for (let ru = 1; ru < rackData.rack.uHeight; ru++) {
-      const ruY = y + height - (ru * ruHeight);
+      const ruY = y + height - (ru * unitHeight);
       pdf.line(x, ruY, x + width, ruY);
     }
 
     // Draw devices
     rackData.devices.forEach(({ placedDevice, component }) => {
-      const deviceHeight = (component.ruSize || 1) * ruHeight;
-      const deviceY = y + height - (placedDevice.ruPosition * ruHeight);
+      const deviceHeight = (component.ruSize || 1) * unitHeight;
+      const deviceY = y + height - (placedDevice.ruPosition * unitHeight);
 
       // Set color based on device type
       const color = this.getDeviceColorForPDF(component.type, component);
@@ -278,25 +278,25 @@ export class RackExportService {
     pdf.rect(x, y, width, height, 'FD');
 
     // Draw RU grid
-    const ruHeight = height / rackData.rack.uHeight;
+    const unitHeight = height / rackData.rack.uHeight;
     pdf.setDrawColor(200, 200, 200);
     pdf.setLineWidth(0.1);
     
     for (let ru = 1; ru <= rackData.rack.uHeight; ru++) {
-      const ruY = y + height - (ru * ruHeight);
+      const ruY = y + height - (ru * unitHeight);
       pdf.line(x, ruY, x + width, ruY);
       
       // RU labels every 5 units
       if (ru % 5 === 0) {
         pdf.setFontSize(8);
-        pdf.text(String(ru), x - 8, ruY + ruHeight / 2);
+        pdf.text(String(ru), x - 8, ruY + unitHeight / 2);
       }
     }
 
     // Draw devices with details
     rackData.devices.forEach(({ placedDevice, component }) => {
-      const deviceHeight = (component.ruSize || 1) * ruHeight;
-      const deviceY = y + height - (placedDevice.ruPosition * ruHeight);
+      const deviceHeight = (component.ruSize || 1) * unitHeight;
+      const deviceY = y + height - (placedDevice.ruPosition * unitHeight);
 
       // Device rectangle
       const color = this.getDeviceColorForPDF(component.type, component);

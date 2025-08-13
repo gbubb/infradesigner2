@@ -19,7 +19,7 @@ export const initializeExampleRack = (): string => {
   
   // Find all rackable components
   const rackableComponents = activeDesign.components.filter(comp => 
-    comp.ruHeight && comp.ruHeight > 0
+    comp.ruSize && comp.ruSize > 0
   );
   
   // Place some components for demonstration
@@ -92,7 +92,7 @@ export const testRackPlacement = (rackId: string): void => {
   }
   
   // Find a component to place
-  const rackableComponent = activeDesign.components.find(comp => comp.ruHeight && comp.ruHeight > 0);
+  const rackableComponent = activeDesign.components.find(comp => comp.ruSize && comp.ruSize > 0);
   
   if (!rackableComponent) {
     console.error("No rackable components found");
@@ -110,7 +110,7 @@ export const testRackPlacement = (rackId: string): void => {
   if (result1.success) {
     console.log("Test 2: Trying to place another device at the same position (should fail)");
     const anotherComponent = activeDesign.components.find(comp => 
-      comp.id !== rackableComponent.id && comp.ruHeight && comp.ruHeight > 0
+      comp.id !== rackableComponent.id && comp.ruSize && comp.ruSize > 0
     );
     
     if (anotherComponent) {
@@ -124,7 +124,7 @@ export const testRackPlacement = (rackId: string): void => {
   // Test 3: Auto-placement (no position specified)
   console.log("Test 3: Auto-placement (no position specified)");
   const yetAnotherComponent = activeDesign.components.find(comp => 
-    comp.id !== rackableComponent.id && comp.ruHeight && comp.ruHeight > 0 && 
+    comp.id !== rackableComponent.id && comp.ruSize && comp.ruSize > 0 && 
     !RackService.getRackProfile(rackId)?.devices.some(d => d.deviceId === comp.id)
   );
   

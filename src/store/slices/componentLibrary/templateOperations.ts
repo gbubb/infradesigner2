@@ -76,16 +76,16 @@ export const handleTemplateOperations = (
     delete component.preferredRU;
     delete component.preferredRack;
     
-    // Set default ruHeight if it's a rack-mountable device and doesn't have ruHeight already
-    if (!component.ruHeight && ['Server', 'Switch', 'Router', 'Firewall'].includes(component.type)) {
+    // Set default ruSize if it's a rack-mountable device and doesn't have ruSize already
+    if (!component.ruSize && ['Server', 'Switch', 'Router', 'Firewall'].includes(component.type)) {
       // Default to 1U if not specified
-      component.ruHeight = 1;
+      component.ruSize = 1;
     }
     
-    // For patch panels, map ruSize to ruHeight for consistency
+    // For patch panels, ensure ruSize is set
     if ((component.type === ComponentType.FiberPatchPanel || component.type === ComponentType.CopperPatchPanel) && 
-        'ruSize' in component && !component.ruHeight) {
-      component.ruHeight = component.ruSize;
+        !component.ruSize) {
+      component.ruSize = 1;
     }
     
     // For Switch type, ensure the switchRole is set correctly

@@ -71,12 +71,12 @@ export function placeStorageCluster({
     
     for (let i = 0; i < targetCount && componentIndex < clusterComponents.length; i++) {
       const component = clusterComponents[componentIndex];
-      const ruHeight = component.ruSize || component.ruHeight || 1;
+      const ruSize = component.ruSize || 1;
       
       const placement = tryPlaceDeviceInRacksWithConstraints({
         racks: [rack],
         device: component,
-        ruHeight,
+        ruSize,
         activeDesignState: state
       });
       
