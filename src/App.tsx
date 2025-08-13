@@ -6,7 +6,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { MinimalLoader } from "@/components/MinimalLoader";
-// DnD temporarily removed
+import { DndProvider } from './components/providers/DndProvider';
 import { queryClient } from "@/utils/queryCache";
 
 // Lazy load heavy panel components with prefetch hints
@@ -86,6 +86,7 @@ const AppRoutes = () => {
 function App() {
   return (
     <ErrorBoundary componentName="Application Root">
+      <DndProvider>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <QueryClientProvider client={queryClient}>
             <TooltipProvider>
@@ -99,6 +100,7 @@ function App() {
             </TooltipProvider>
           </QueryClientProvider>
         </ThemeProvider>
+      </DndProvider>
     </ErrorBoundary>
   );
 }

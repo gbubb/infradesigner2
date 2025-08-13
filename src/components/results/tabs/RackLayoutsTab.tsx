@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-// DndProvider now provided globally
+import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ConnectionPanel } from '@/components/connections/ConnectionPanel';
 import { RackFilterControls } from './rack-layouts/RackFilterControls';
@@ -130,7 +130,8 @@ export const RackLayoutsTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <DndProvider backend={HTML5Backend}>
+      <div className="space-y-6">
         <div>
           <h2 className="text-xl font-semibold">Rack Layouts</h2>
           <p className="text-sm text-muted-foreground">
@@ -297,6 +298,7 @@ export const RackLayoutsTab: React.FC = () => {
             Auto-saving...
           </div>
         )}
-    </div>
+      </div>
+    </DndProvider>
   );
 };
