@@ -13,6 +13,7 @@ import { DatacenterCostCalculator } from '@/services/datacenter/DatacenterCostCa
 import { PowerEfficiencyCalculator } from '@/services/datacenter/PowerEfficiencyCalculator';
 import { CapacityManagementService } from '@/services/datacenter/CapacityManagementService';
 import { RackType } from '@/types/infrastructure/rack-types';
+import { InfrastructureComponent } from '@/types/infrastructure/component-types';
 
 // Helper function to convert RackType enum to DatacenterRack rackType
 function convertRackType(rackType?: RackType): 'standard' | 'high_density' | 'network' | 'storage' | 'custom' {

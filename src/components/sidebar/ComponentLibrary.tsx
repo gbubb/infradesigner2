@@ -233,7 +233,7 @@ export const ComponentLibrary: React.FC = () => {
       ...data,
       ports: componentForm.ports,
       type: data.type, // Ensure type is explicitly included
-    } as ComponentFormValues;
+    } as unknown as ComponentFormValues;
 
     const componentToSave = processFormForSubmission(processedData);
     
@@ -308,7 +308,7 @@ export const ComponentLibrary: React.FC = () => {
           if (!open) handleCloseAddDialog();
           else setIsAddDialogOpen(true);
         }}
-        formValues={componentForm as Record<string, unknown>}
+        formValues={componentForm as unknown as Record<string, unknown>}
         onInputChange={handleInputChange}
         onSelectChange={handleSelectChange}
         onTypeChange={handleTypeChange}
@@ -338,7 +338,7 @@ export const ComponentLibrary: React.FC = () => {
           }
           else setIsEditDialogOpen(true);
         }}
-        formValues={componentForm as Record<string, unknown>}
+        formValues={componentForm as unknown as Record<string, unknown>}
         onInputChange={handleInputChange}
         onSelectChange={handleSelectChange}
         onTypeChange={handleTypeChange}

@@ -161,7 +161,7 @@ export const useRackInitialization = (resetTrigger: number) => {
         const result = RackService.placeDevice(
           coreRacks[rackIndex].id, 
           component.id,
-          ruStartPosition - (index % 10) * (component.ruHeight || 1),
+          ruStartPosition - (index % 10) * (component.ruSize || 1),
           true // Skip individual updates
         );
         

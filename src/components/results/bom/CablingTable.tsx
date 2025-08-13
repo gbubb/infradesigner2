@@ -55,19 +55,19 @@ const CablingTableComponent: React.FC<CablingTableProps> = ({
           const totalCost = component.cost * quantity;
           let details = '-';
           if (component.type === ComponentType.FiberPatchPanel) {
-            const fiberPanel = component as FiberPatchPanel;
+            const fiberPanel = component as unknown as FiberPatchPanel;
             details = `${component.ruSize}RU, ${fiberPanel.cassetteCapacity} cassettes`;
           }
           else if (component.type === ComponentType.CopperPatchPanel) {
-            const copperPanel = component as CopperPatchPanel;
+            const copperPanel = component as unknown as CopperPatchPanel;
             details = `${component.ruSize}RU, ${copperPanel.portQuantity} ports`;
           }
           else if (component.type === ComponentType.Cassette) {
-            const cassette = component as Cassette;
+            const cassette = component as unknown as Cassette;
             details = `${cassette.portType}, ${cassette.portQuantity} ports`;
           }
           else if (component.type === ComponentType.Cable) {
-            const cable = component as Cable;
+            const cable = component as unknown as Cable;
             details = `${cable.length}m, ${cable.connectorA_Type} to ${cable.connectorB_Type}, ${cable.mediaType}`;
           }
           return (

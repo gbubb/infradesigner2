@@ -60,7 +60,8 @@ export const RatioPremiumChart: React.FC<RatioPremiumChartProps> = ({
     ratio: number;
     deviationPercent: number;
     monthlyPrice: number;
-    premium: number;
+    ratioPremium: number;
+    totalPremium: number;
   }
 
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ value: number; payload: TooltipPayload }> }) => {

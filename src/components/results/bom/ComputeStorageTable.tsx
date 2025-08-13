@@ -4,12 +4,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { FileSpreadsheet } from 'lucide-react';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
-import { ComponentType, InfrastructureComponent, Disk, Server } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent, Server } from '@/types/infrastructure';
 import { ComponentWithPlacement } from '@/types/service-types';
 import { BomItemHoverCard } from './BomItemHoverCard';
 
 interface DiskLineItem {
-  disk: Disk;
+  disk: InfrastructureComponent & { 
+    capacityTB?: number;
+    quantity?: number;
+  };
   summarizedQuantity: number;
   clusterName: string;
   clusterId: string;
@@ -87,7 +90,7 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
             : '-';
           const attachedDisks = (component as ComponentWithPlacement).attachedDisks || [];
           const disksSummary = attachedDisks.length > 0
-            ? attachedDisks.map((d: Disk & { quantity?: number }) => `${d.quantity || 1}x ${d.capacityTB || 0}TB`).join(', ')
+            ? attachedDisks.map((d: InfrastructureComponent & { quantity?: number; capacityTB?: number }) => `${d.quantity || 1}x ${d.capacityTB || 0}TB`).join(', ')
             : '-';
             
           return (
@@ -98,8 +101,8 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
                 <TableCell>{clusterName}</TableCell>
                 <TableCell>{component.manufacturer}</TableCell>
                 <TableCell>{component.model}</TableCell>
-                <TableCell>{component.type === ComponentType.Server ? (component as Server).cpuModel : '-'}</TableCell>
-                <TableCell className="text-right">{component.type === ComponentType.Server ? (component as Server).memoryGBTotal || (component as Server).memoryCapacity || '-' : '-'}</TableCell>
+                <TableCell>{component.type === ComponentType.Server ? (component as unknown as Server).cpuModel : '-'}</TableCell>
+                <TableCell className="text-right">{component.type === ComponentType.Server ? (component as unknown as Server).memoryCapacity || '-' : '-'}</TableCell>
                 <TableCell className="text-right">{disksSummary}</TableCell>
                 <TableCell className="text-right flex items-center gap-1 justify-end">
                   {quantity}
@@ -127,7 +130,7 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
           const attachedDisks = (server as ComponentWithPlacement).attachedDisks || [];
           const disksSummary = attachedDisks.length > 0
             ? attachedDisks
-                .map((disk: Disk & { quantity?: number }) =>
+                .map((disk: InfrastructureComponent & { quantity?: number; capacityTB?: number }) =>
                   `${disk.model} (${disk.quantity} × ${disk.capacityTB}TB)`
                 )
                 .join(', ')
@@ -140,8 +143,8 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
                 <TableCell>{clusterName}</TableCell>
                 <TableCell>{server.manufacturer}</TableCell>
                 <TableCell>{server.model}</TableCell>
-                <TableCell>{(server as Server).cpuModel || '-'}</TableCell>
-                <TableCell className="text-right">{(server as Server).memoryGBTotal || (server as Server).memoryCapacity || '-'}</TableCell>
+                <TableCell>{(server as unknown as Server).cpuModel || '-'}</TableCell>
+                <TableCell className="text-right">{(server as unknown as Server).memoryCapacity || '-'}</TableCell>
                 <TableCell className="text-right">{disksSummary}</TableCell>
                 <TableCell className="text-right flex items-center gap-1 justify-end">
                   {quantity}
@@ -163,7 +166,7 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
           return (
             <TableRow key={`disk-lineitem-${diskItem.configKey}-${disk.model}-${disk.capacityTB}-${diskItem.clusterId}-${idx}`}>
               <TableCell className="pl-4">Disk</TableCell>
-              <TableCell>{disk.diskType || '-'}</TableCell>
+              <TableCell>{(disk as any).diskType || '-'}</TableCell>
               <TableCell>{diskItem.clusterName}</TableCell>
               <TableCell>{disk.manufacturer}</TableCell>
               <TableCell>{disk.model}</TableCell>

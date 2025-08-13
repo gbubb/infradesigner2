@@ -18,7 +18,11 @@ import { ComponentWithPlacement } from '@/types/service-types';
 // Extended interface for components with additional properties
 interface ExtendedComponent extends InfrastructureComponent {
   templateId?: string;
-  clusterInfo?: ClusterInfo;
+  clusterInfo?: {
+    clusterId: string;
+    clusterName?: string;
+    clusterIndex?: number;
+  };
   attachedDisks?: DiskComponent[];
   details?: string;
 }
@@ -256,19 +260,24 @@ export const BillOfMaterialsTab: React.FC = () => {
     if (!category || ["Compute", "Storage", "Acceleration", "Network", "Cabling", "Cables"].includes(category)) {
       Object.values(summarizedComponentsByCategory).forEach(componentsArr => dataToExport.push(...componentsArr));
       // Disks
-      dataToExport.push(...Object.values(diskLineItems));
+      dataToExport.push(...Object.values(diskLineItems).map(item => ({
+        ...item,
+        cost: item.disk.cost || 0
+      })));
     }
     // --- Cables/Transceivers always included in All/summary
     if (!category || category === "Cabling") {
       dataToExport.push(...Object.values(cableLineItems).map(item => ({
         ...item,
         type: ComponentType.Cable,
+        cost: item.costPer || 0
       })));
     }
     if (!category || category === "Network") {
       dataToExport.push(...Object.values(transceiverLineItems).map(item => ({
         ...item,
         type: ComponentType.Transceiver,
+        cost: item.costPer || 0
       })));
     }
     dataToExport.forEach(component => {
@@ -280,7 +289,7 @@ export const BillOfMaterialsTab: React.FC = () => {
       const totalCost = component.totalDiskCost ?? component.total ?? component.cost * quantity;
       let details = component.details ?? '-';
       if (component.type === ComponentType.Cable) details = `${component.connectorTypes}, ${component.lengthMeters}m`;
-      else if (component.type === ComponentType.Transceiver) details = `${component.speed} ${component.connectorType}, ${component.mediaTypeSupported?.join(', ')} (${component.maxDistance})`;
+      else if (component.type === ComponentType.Transceiver) details = `${component.speed} ${component.connectorTypes || component.connectorType || '-'}, ${component.mediaTypeSupported?.join(', ')} (${component.maxDistance})`;
       else if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${component.cassetteCapacity} cassettes`;
       else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${component.portQuantity} ports`;
       else if (component.type === ComponentType.Cassette) details = `${component.portType}, ${component.portQuantity} ports`;
