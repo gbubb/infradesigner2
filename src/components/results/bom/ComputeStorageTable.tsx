@@ -166,7 +166,7 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
           return (
             <TableRow key={`disk-lineitem-${diskItem.configKey}-${disk.model}-${disk.capacityTB}-${diskItem.clusterId}-${idx}`}>
               <TableCell className="pl-4">Disk</TableCell>
-              <TableCell>{(disk as any).diskType || '-'}</TableCell>
+              <TableCell>{disk.diskType || '-'}</TableCell>
               <TableCell>{diskItem.clusterName}</TableCell>
               <TableCell>{disk.manufacturer}</TableCell>
               <TableCell>{disk.model}</TableCell>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VirtualTable, VirtualTableColumn } from '@/components/ui/virtual-table';
 import { TableCell } from '@/components/ui/table';
@@ -33,14 +33,14 @@ export const VirtualComponentsTable: React.FC<VirtualComponentsTableProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  const handlePowerPrediction = (component: InfrastructureComponent) => {
+  const handlePowerPrediction = useCallback((component: InfrastructureComponent) => {
     navigate('/model', { 
       state: { 
         selectedTab: 'power',
         selectedComponentId: component.id 
       } 
     });
-  };
+  }, [navigate]);
 
   const columns: VirtualTableColumn<InfrastructureComponent>[] = useMemo(() => [
     {

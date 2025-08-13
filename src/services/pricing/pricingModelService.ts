@@ -81,6 +81,10 @@ export class PricingModelService {
     this.selectedClusterId = selectedClusterId;
   }
 
+  public getConfig(): PricingConfig {
+    return this.config;
+  }
+
   public getAvailableClusters(): ComputeCluster[] {
     if (!this.design || !this.design.componentRoles) {
       return [];

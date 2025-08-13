@@ -23,9 +23,9 @@ export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingSer
   const [calculatedPrice, setCalculatedPrice] = useState<ReturnType<typeof pricingService.calculateVMPrice> | null>(null);
   
   // Get the config to check if we're in cost plus mode and what the margin is
-  const config = (pricingService as any).config;
-  const isMarginApplied = config?.operatingModel === 'costPlus';
-  const margin = config?.profitMargin || 1;
+  const config = pricingService.getConfig();
+  const isMarginApplied = config.operatingModel === 'costPlus';
+  const margin = config.profitMargin || 1;
 
   const handleCalculate = () => {
     const price = pricingService.calculateVMPrice(vmSpec.vCPU, vmSpec.memoryGB, vmSpec.storageGB);
