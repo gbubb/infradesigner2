@@ -187,7 +187,7 @@ export const DesignPanel: React.FC = () => {
       return;
     }
     
-    saveDesign();
+    saveDesign(true);
     toast.success("Design saved!");
   }, [activeDesign, componentRoles, saveDesign]);
   

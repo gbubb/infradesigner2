@@ -10,7 +10,7 @@ export interface DesignSlice {
   updateDesign: (id: string, updates: Partial<InfrastructureDesign>) => void;
   deleteDesign: (id: string) => void;
   setActiveDesign: (id: string) => void;
-  saveDesign: () => void;
+  saveDesign: (isManual?: boolean) => void;
   exportDesign: () => void;
   importDesign: (file: File) => Promise<void>;
   loadDesignsFromDB: () => Promise<void>;

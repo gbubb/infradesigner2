@@ -173,7 +173,7 @@ export const HeaderActions = () => {
           <TopbarButton
             icon={<Save size={26} />}
             label="Save"
-            onClick={() => saveDesign()}
+            onClick={() => saveDesign(true)}
             buttonKey="save"
           />
           <TopbarButton

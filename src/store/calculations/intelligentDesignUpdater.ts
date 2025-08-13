@@ -72,10 +72,8 @@ export class IntelligentDesignUpdater {
       this.updateRackConfiguration(context);
     }
     
-    // Step 4: Save the updated design
-    if (state.activeDesign) {
-      state.saveDesign();
-    }
+    // Step 4: Don't auto-save here - let the debounced save in the store handle it
+    // This prevents excessive database writes on every state change
   }
   
   /**

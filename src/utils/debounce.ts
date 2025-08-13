@@ -91,6 +91,7 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
 export const DEBOUNCE_DELAYS = {
   SEARCH: 300,
   INPUT: 500,
-  SAVE: 1000,
+  SAVE: 3000,  // Increased from 1000ms to reduce database writes
   RECALCULATE: 200,
+  AUTO_SAVE: 5000,  // New delay for automatic saves from state changes
 } as const;

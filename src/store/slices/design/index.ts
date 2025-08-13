@@ -13,6 +13,7 @@ import {
   togglePublicAccessInDB,
   loadSharedDesignFromDB
 } from './databaseOperations';
+import { saveDesignOptimized, trackDesignChange } from '@/services/optimizedDesignService';
 import {
   createNewDesignOperation,
   updateDesignOperation,
@@ -25,13 +26,16 @@ import { debounce, DEBOUNCE_DELAYS } from '@/utils/debounce';
 
 // Create debounced save function outside the slice to persist between renders
 const debouncedSaveToDatabase = debounce(
-  async (updatedDesign: InfrastructureDesign, userId?: string) => {
-    const success = await saveDesignToDB(updatedDesign, userId);
+  async (updatedDesign: InfrastructureDesign, userId?: string, forceFullSave = false) => {
+    const success = await saveDesignOptimized(updatedDesign, userId, forceFullSave);
     if (success) {
-      toast.success(`Saved design: ${updatedDesign.name}`);
+      // Only show toast for manual saves, not auto-saves
+      if (forceFullSave) {
+        toast.success(`Saved design: ${updatedDesign.name}`);
+      }
     }
   },
-  DEBOUNCE_DELAYS.SAVE
+  DEBOUNCE_DELAYS.AUTO_SAVE  // Using longer delay for auto-saves
 );
 
 export const createDesignSlice: StateCreator<
@@ -222,7 +226,7 @@ export const createDesignSlice: StateCreator<
     });
   },
   
-  saveDesign: () => {
+  saveDesign: (isManual = false) => {
     const state = get();
     if (!state.activeDesign) {
       toast.error("No active design to save");
@@ -264,12 +268,37 @@ export const createDesignSlice: StateCreator<
       };
     });
     
-    // Get the current user's ID and use debounced save
-    supabase.auth.getUser().then(({ data }) => {
+    // Get the current user's ID and use appropriate save method
+    supabase.auth.getUser().then(async ({ data }) => {
       const userId = data?.user?.id;
       
-      // Use debounced save to avoid excessive database writes
-      debouncedSaveToDatabase(updatedDesign, userId);
+      if (isManual) {
+        // For manual saves, do an immediate full save
+        const success = await saveDesignOptimized(updatedDesign, userId, true);
+        if (success) {
+          toast.success(`Saved design: ${updatedDesign.name}`);
+        }
+      } else {
+        // For auto-saves, track changes and use debounced save
+        const prevDesign = get().savedDesigns.find(d => d.id === updatedDesign.id);
+        if (prevDesign) {
+          // Track which fields have changed
+          const fieldsToCheck: (keyof InfrastructureDesign)[] = [
+            'name', 'description', 'requirements', 'components', 
+            'componentRoles', 'selectedDisksByRole', 'selectedGPUsByRole',
+            'connectionRules', 'placementRules', 'rowLayout'
+          ];
+          
+          fieldsToCheck.forEach(field => {
+            if (JSON.stringify(prevDesign[field]) !== JSON.stringify(updatedDesign[field])) {
+              trackDesignChange(updatedDesign.id, field, updatedDesign[field]);
+            }
+          });
+        }
+        
+        // Use debounced save to avoid excessive database writes
+        debouncedSaveToDatabase(updatedDesign, userId, false);
+      }
     });
   },
   
