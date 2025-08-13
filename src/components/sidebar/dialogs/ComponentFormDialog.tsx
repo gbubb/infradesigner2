@@ -21,6 +21,7 @@ import {
   DiskSlotType, 
   NetworkPortType,
   MemoryType,
+  PCIeFormFactor,
   SwitchRole,
   DiskType,
   ConnectorType,

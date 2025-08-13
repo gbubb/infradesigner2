@@ -16,7 +16,7 @@ import {
   Cassette
 } from "@/types/infrastructure";
 import { useNavigate } from "react-router-dom";
-import { ExternalLink, Cpu, HardDrive, Network, Cable as CableIcon, Router, Shield } from "lucide-react";
+import { ExternalLink, Cpu, HardDrive, Network, Cable as CableIcon, Router as RouterIcon, Shield } from "lucide-react";
 
 interface BomItemHoverCardProps {
   component: InfrastructureComponent;
@@ -35,7 +35,7 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
       case ComponentType.Switch:
         return <Network className="h-5 w-5" />;
       case ComponentType.Router:
-        return <Router className="h-5 w-5" />;
+        return <RouterIcon className="h-5 w-5" />;
       case ComponentType.Firewall:
         return <Shield className="h-5 w-5" />;
       case ComponentType.Cable:
@@ -96,37 +96,34 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
             details.push({ label: "Port Speed", value: switchComponent.portSpeed });
           }
         } else if (component.type === ComponentType.Router) {
-          const routerComponent = component as Router;
-          if (routerComponent.portCount) {
-            details.push({ label: "Port Count", value: routerComponent.portCount });
+          if (component.portCount) {
+            details.push({ label: "Port Count", value: component.portCount });
           }
-          if (routerComponent.portSpeed) {
-            details.push({ label: "Port Speed", value: `${routerComponent.portSpeed}G` });
+          if (component.portSpeed) {
+            details.push({ label: "Port Speed", value: `${component.portSpeed}G` });
           }
         } else if (component.type === ComponentType.Firewall) {
-          const firewallComponent = component as Firewall;
-          if (firewallComponent.portCount) {
-            details.push({ label: "Port Count", value: firewallComponent.portCount });
+          if (component.portCount) {
+            details.push({ label: "Port Count", value: component.portCount });
           }
-          if (firewallComponent.throughput) {
-            details.push({ label: "Throughput", value: `${firewallComponent.throughput} Gbps` });
+          if ('throughput' in component && component.throughput) {
+            details.push({ label: "Throughput", value: `${component.throughput} Gbps` });
           }
         }
         break;
       }
 
       case ComponentType.Cable: {
-        const cableComponent = component as Cable;
-        if (cableComponent.mediaType) {
-          details.push({ label: "Media Type", value: cableComponent.mediaType });
+        if ('mediaType' in component && component.mediaType) {
+          details.push({ label: "Media Type", value: String(component.mediaType) });
         }
-        if (cableComponent.connectorA_Type && cableComponent.connectorB_Type) {
+        if ('connectorA_Type' in component && 'connectorB_Type' in component && component.connectorA_Type && component.connectorB_Type) {
           details.push({ 
             label: "Connectors", 
-            value: `${cableComponent.connectorA_Type} to ${cableComponent.connectorB_Type}` 
+            value: `${component.connectorA_Type} to ${component.connectorB_Type}` 
           });
         }
-        if (cableComponent.isBreakout) {
+        if ('isBreakout' in component && component.isBreakout) {
           details.push({ label: "Type", value: "Breakout Cable" });
         }
         break;
@@ -139,14 +136,12 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
           details.push({ label: "Port Count", value: component.portCount });
         }
         if (component.type === ComponentType.CopperPatchPanel) {
-          const copperPanel = component as CopperPatchPanel;
-          if (copperPanel.frontPortType) {
-            details.push({ label: "Port Type", value: copperPanel.frontPortType });
+          if ('frontPortType' in component && component.frontPortType) {
+            details.push({ label: "Port Type", value: String(component.frontPortType) });
           }
         } else if (component.type === ComponentType.Cassette) {
-          const cassette = component as Cassette;
-          if (cassette.frontPortType) {
-            details.push({ label: "Port Type", value: cassette.frontPortType });
+          if ('frontPortType' in component && component.frontPortType) {
+            details.push({ label: "Port Type", value: String(component.frontPortType) });
           }
         }
         break;
