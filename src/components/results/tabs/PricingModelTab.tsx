@@ -38,7 +38,7 @@ export const PricingModelTab: React.FC = () => {
     profitMargin: 1.3, // 30% margin default
     fixedCpuPrice: 0.01,
     fixedMemoryPrice: 0.003,
-    fixedStoragePrice: 0.00005,
+    fixedStoragePrice: 0.00005, // per GB per hour
     targetUtilization: 0.8, // 80% target utilization
     virtualizationOverhead: 0.05, // 5% overhead default
     virtualizationOverheadType: 'percentage', // Default to percentage
@@ -217,232 +217,221 @@ export const PricingModelTab: React.FC = () => {
 
       {/* Configuration Panel */}
       <Card>
-        <CardHeader>
-          <CardTitle>Pricing Model Configuration</CardTitle>
-          <CardDescription>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Pricing Model Configuration</CardTitle>
+          <CardDescription className="text-sm">
             Configure the pricing model for virtual workloads based on infrastructure costs
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Operating Model Selection */}
-          <div className="space-y-3">
-            <Label>Operating Model</Label>
-            <RadioGroup 
-              value={config.operatingModel} 
-              onValueChange={(value) => handleConfigChange('operatingModel', value)}
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="costPlus" id="costPlus" />
-                <Label htmlFor="costPlus" className="font-normal cursor-pointer">
-                  Cost Plus - Calculate prices based on infrastructure costs plus margin
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="fixedPrice" id="fixedPrice" />
-                <Label htmlFor="fixedPrice" className="font-normal cursor-pointer">
-                  Fixed Price - Set fixed prices per resource unit
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {/* Model-specific inputs */}
-          {config.operatingModel === 'costPlus' ? (
+        <CardContent className="space-y-4">
+          {/* Operating Model and Profit Margin in same row */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* Operating Model Selection */}
             <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="profitMargin">Profit Margin (%)</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Target profit margin percentage (e.g., 30 for 30% margin)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className="flex items-center space-x-4">
-                <Input
-                  id="profitMargin"
-                  type="number"
-                  step="1"
-                  min="0"
-                  max="100"
-                  value={((config.profitMargin - 1) * 100).toFixed(0)}
-                  onChange={(e) => {
-                    const percentage = parseFloat(e.target.value) || 0;
-                    const multiplier = 1 + (percentage / 100);
-                    handleConfigChange('profitMargin', multiplier);
-                  }}
-                  className="w-32"
-                />
-                <span className="text-sm text-muted-foreground">%</span>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cpuPrice" className="flex items-center space-x-1">
-                  <Cpu className="h-4 w-4" />
-                  <span>vCPU Price ($/hour)</span>
-                </Label>
-                <Input
-                  id="cpuPrice"
-                  type="number"
-                  step="0.001"
-                  value={config.fixedCpuPrice}
-                  onChange={(e) => handleConfigChange('fixedCpuPrice', parseFloat(e.target.value))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="memPrice" className="flex items-center space-x-1">
-                  <MemoryStick className="h-4 w-4" />
-                  <span>Memory Price ($/GB/hour)</span>
-                </Label>
-                <Input
-                  id="memPrice"
-                  type="number"
-                  step="0.001"
-                  value={config.fixedMemoryPrice}
-                  onChange={(e) => handleConfigChange('fixedMemoryPrice', parseFloat(e.target.value))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="storagePrice" className="flex items-center space-x-1">
-                  <HardDrive className="h-4 w-4" />
-                  <span>Storage Price ($/TB/hour)</span>
-                </Label>
-                <Input
-                  id="storagePrice"
-                  type="number"
-                  step="0.0001"
-                  value={config.fixedStoragePrice}
-                  onChange={(e) => handleConfigChange('fixedStoragePrice', parseFloat(e.target.value))}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Virtualization Overhead Configuration */}
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <Label>Virtualization Overhead Type</Label>
+              <Label className="text-sm font-medium">Operating Model</Label>
               <RadioGroup 
-                value={config.virtualizationOverheadType} 
-                onValueChange={(value) => handleConfigChange('virtualizationOverheadType', value)}
+                value={config.operatingModel} 
+                onValueChange={(value) => handleConfigChange('operatingModel', value)}
+                className="space-y-1"
               >
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="percentage" id="percentage" />
-                  <Label htmlFor="percentage" className="font-normal cursor-pointer">
-                    Percentage - Apply overhead as percentage of resources
+                  <RadioGroupItem value="costPlus" id="costPlus" />
+                  <Label htmlFor="costPlus" className="font-normal cursor-pointer text-sm">
+                    Cost Plus
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="fixed" id="fixed" />
-                  <Label htmlFor="fixed" className="font-normal cursor-pointer">
-                    Fixed - Reserve fixed amount of resources
+                  <RadioGroupItem value="fixedPrice" id="fixedPrice" />
+                  <Label htmlFor="fixedPrice" className="font-normal cursor-pointer text-sm">
+                    Fixed Price
                   </Label>
                 </div>
               </RadioGroup>
             </div>
 
-            {config.virtualizationOverheadType === 'percentage' ? (
+            {/* Model-specific inputs */}
+            {config.operatingModel === 'costPlus' ? (
               <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="virtOverhead">Virtualization Overhead (%)</Label>
+                <div className="flex items-center space-x-1">
+                  <Label htmlFor="profitMargin" className="text-sm font-medium">Profit Margin</Label>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="h-4 w-4 text-muted-foreground" />
+                        <Info className="h-3 w-3 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Percentage of resources reserved for hypervisor</p>
+                        <p>Target profit margin percentage</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Input
-                    id="virtOverhead"
+                    id="profitMargin"
                     type="number"
                     step="1"
                     min="0"
-                    max="20"
-                    value={(config.virtualizationOverhead * 100).toFixed(0)}
+                    max="100"
+                    value={((config.profitMargin - 1) * 100).toFixed(0)}
                     onChange={(e) => {
                       const percentage = parseFloat(e.target.value) || 0;
-                      handleConfigChange('virtualizationOverhead', percentage / 100);
+                      const multiplier = 1 + (percentage / 100);
+                      handleConfigChange('profitMargin', multiplier);
                     }}
-                    className="w-32"
+                    className="w-full"
                   />
                   <span className="text-sm text-muted-foreground">%</span>
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fixedCpuOverhead" className="flex items-center space-x-1">
-                    <Cpu className="h-4 w-4" />
-                    <span>Fixed CPU Overhead (vCPUs)</span>
-                  </Label>
+              <div className="grid grid-cols-1 gap-2">
+                <div className="flex items-center gap-2">
+                  <Cpu className="h-3 w-3" />
+                  <Label htmlFor="cpuPrice" className="text-sm min-w-[80px]">vCPU</Label>
                   <Input
-                    id="fixedCpuOverhead"
+                    id="cpuPrice"
                     type="number"
-                    step="1"
-                    min="0"
-                    value={config.virtualizationOverhead}
-                    onChange={(e) => handleConfigChange('virtualizationOverhead', parseFloat(e.target.value) || 0)}
+                    step="0.001"
+                    value={config.fixedCpuPrice}
+                    onChange={(e) => handleConfigChange('fixedCpuPrice', parseFloat(e.target.value))}
+                    className="flex-1"
                   />
+                  <span className="text-xs text-muted-foreground">$/hr</span>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fixedMemOverhead" className="flex items-center space-x-1">
-                    <MemoryStick className="h-4 w-4" />
-                    <span>Fixed Memory Overhead (GB)</span>
-                  </Label>
+                <div className="flex items-center gap-2">
+                  <MemoryStick className="h-3 w-3" />
+                  <Label htmlFor="memPrice" className="text-sm min-w-[80px]">Memory</Label>
                   <Input
-                    id="fixedMemOverhead"
+                    id="memPrice"
                     type="number"
-                    step="1"
-                    min="0"
-                    value={config.virtualizationOverheadMemory || config.virtualizationOverhead}
-                    onChange={(e) => handleConfigChange('virtualizationOverheadMemory', parseFloat(e.target.value) || 0)}
+                    step="0.001"
+                    value={config.fixedMemoryPrice}
+                    onChange={(e) => handleConfigChange('fixedMemoryPrice', parseFloat(e.target.value))}
+                    className="flex-1"
                   />
+                  <span className="text-xs text-muted-foreground">$/GB/hr</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <HardDrive className="h-3 w-3" />
+                  <Label htmlFor="storagePrice" className="text-sm min-w-[80px]">Storage</Label>
+                  <Input
+                    id="storagePrice"
+                    type="number"
+                    step="0.00001"
+                    value={config.fixedStoragePrice}
+                    onChange={(e) => handleConfigChange('fixedStoragePrice', parseFloat(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-xs text-muted-foreground">$/GB/hr</span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Common configuration */}
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="targetUtil">Target Utilization (%)</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Target cluster utilization for sellable capacity</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+          {/* Virtualization Overhead and Target Utilization in same row */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* Virtualization Overhead */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Virtualization Overhead</Label>
+              <RadioGroup 
+                value={config.virtualizationOverheadType} 
+                onValueChange={(value) => handleConfigChange('virtualizationOverheadType', value)}
+                className="space-y-1"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="percentage" id="percentage" />
+                  <Label htmlFor="percentage" className="font-normal cursor-pointer text-sm">
+                    Percentage
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="fixed" id="fixed" />
+                  <Label htmlFor="fixed" className="font-normal cursor-pointer text-sm">
+                    Fixed
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              {config.virtualizationOverheadType === 'percentage' ? (
+                <div className="mt-2">
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="virtOverhead"
+                      type="number"
+                      step="1"
+                      min="0"
+                      max="20"
+                      value={(config.virtualizationOverhead * 100).toFixed(0)}
+                      onChange={(e) => {
+                        const percentage = parseFloat(e.target.value) || 0;
+                        handleConfigChange('virtualizationOverhead', percentage / 100);
+                      }}
+                      className="w-full"
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="fixedCpuOverhead"
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={config.virtualizationOverhead}
+                      onChange={(e) => handleConfigChange('virtualizationOverhead', parseFloat(e.target.value) || 0)}
+                      className="flex-1"
+                    />
+                    <span className="text-xs text-muted-foreground">vCPUs</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="fixedMemOverhead"
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={config.virtualizationOverheadMemory || config.virtualizationOverhead}
+                      onChange={(e) => handleConfigChange('virtualizationOverheadMemory', parseFloat(e.target.value) || 0)}
+                      className="flex-1"
+                    />
+                    <span className="text-xs text-muted-foreground">GB</span>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Input
-                id="targetUtil"
-                type="number"
-                step="5"
-                min="50"
-                max="100"
-                value={(config.targetUtilization * 100).toFixed(0)}
-                onChange={(e) => {
-                  const percentage = parseFloat(e.target.value) || 80;
-                  handleConfigChange('targetUtilization', percentage / 100);
-                }}
-                className="w-32"
-              />
-              <span className="text-sm text-muted-foreground">%</span>
+
+            {/* Target Utilization */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-1">
+                <Label htmlFor="targetUtil" className="text-sm font-medium">Target Utilization</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Target cluster utilization for sellable capacity</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="targetUtil"
+                  type="number"
+                  step="5"
+                  min="50"
+                  max="100"
+                  value={(config.targetUtilization * 100).toFixed(0)}
+                  onChange={(e) => {
+                    const percentage = parseFloat(e.target.value) || 80;
+                    handleConfigChange('targetUtilization', percentage / 100);
+                  }}
+                  className="w-full"
+                />
+                <span className="text-sm text-muted-foreground">%</span>
+              </div>
             </div>
           </div>
 
@@ -725,22 +714,15 @@ export const PricingModelTab: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Infrastructure + operations</p>
                 </div>
                 
-                {/* Attributable Compute Cost */}
+                {/* Sellable Capacity */}
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Compute Cluster Cost</p>
-                  <p className="text-xl font-bold">
-                    {formatMonthlyCurrency(
-                      (() => {
-                        const computeComponents = pricingService.getClusterComponents();
-                        const allComponents = pricingService.getAllComponents();
-                        const computeRatio = computeComponents.length / (allComponents.length || 1);
-                        return operationalCosts.totalMonthly * computeRatio;
-                      })()
-                    )}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Sellable Capacity</p>
+                  <div className="text-xl font-bold">
+                    <div className="text-sm">{pricingResult.clusterCapacity.sellingvCPUs.toFixed(0)} vCPUs</div>
+                    <div className="text-sm">{pricingResult.clusterCapacity.sellingMemoryGB.toFixed(0)} GB RAM</div>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    {((pricingResult.cpuMemoryWeightRatio / (1 + pricingResult.cpuMemoryWeightRatio)) * 100).toFixed(0)}% CPU,
-                    {((1 / (1 + pricingResult.cpuMemoryWeightRatio)) * 100).toFixed(0)}% Memory
+                    At {(config.targetUtilization * 100).toFixed(0)}% utilization
                   </p>
                 </div>
                 

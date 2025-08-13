@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ClusterCapacity } from '@/services/pricing/pricingModelService';
-import { Cpu, MemoryStick, Server, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Cpu, MemoryStick, Server, AlertCircle, Info, ChevronDown, ChevronUp, DollarSign } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -51,42 +51,96 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
           Understanding how cluster capacity is allocated and priced
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Physical Resources */}
-        <div>
-          <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-            <Server className="h-4 w-4" />
-            Physical Resources
-          </h4>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <span className="text-muted-foreground">Physical Cores</span>
-              <span className="font-medium">{formatNumber(capacity.totalPhysicalCores)}</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <span className="text-muted-foreground">Physical Memory</span>
-              <span className="font-medium">{formatNumber(capacity.totalPhysicalMemoryGB)} GB</span>
-            </div>
-          </div>
-        </div>
+      <CardContent className="space-y-4">
+        {/* Compact Resource Summary with Hover Details */}
+        <TooltipProvider>
+          <div className="grid grid-cols-3 gap-3 text-sm">
+            {/* Physical Resources */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="p-2 bg-muted/50 rounded-lg cursor-help hover:bg-muted/70 transition-colors">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                    <Server className="h-3 w-3" />
+                    <span>Physical</span>
+                  </div>
+                  <div className="font-semibold">
+                    {formatNumber(capacity.totalPhysicalCores)} / {formatNumber(capacity.totalPhysicalMemoryGB)}GB
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <div className="space-y-2">
+                  <p className="font-medium">Physical Resources</p>
+                  <div className="space-y-1 text-sm">
+                    <p>Cores: {formatNumber(capacity.totalPhysicalCores)}</p>
+                    <p>Memory: {formatNumber(capacity.totalPhysicalMemoryGB)} GB</p>
+                    <p>Nodes: {capacity.totalPhysicalNodes}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">Base hardware capacity before virtualization</p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
 
-        {/* Virtual Resources (after oversubscription) */}
-        <div>
-          <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-            <Cpu className="h-4 w-4" />
-            Virtual Resources (with oversubscription)
-          </h4>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <span className="text-muted-foreground">Total vCPUs</span>
-              <span className="font-medium">{formatNumber(capacity.totalvCPUs)}</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-              <span className="text-muted-foreground">Total Memory</span>
-              <span className="font-medium">{formatNumber(capacity.totalMemoryGB)} GB</span>
-            </div>
+            {/* Virtual Resources */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="p-2 bg-muted/50 rounded-lg cursor-help hover:bg-muted/70 transition-colors">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                    <Cpu className="h-3 w-3" />
+                    <span>Virtual</span>
+                  </div>
+                  <div className="font-semibold">
+                    {formatNumber(capacity.totalvCPUs)} / {formatNumber(capacity.totalMemoryGB)}GB
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <div className="space-y-2">
+                  <p className="font-medium">Virtual Resources</p>
+                  <div className="space-y-1 text-sm">
+                    <p>vCPUs: {formatNumber(capacity.totalvCPUs)}</p>
+                    <p>Memory: {formatNumber(capacity.totalMemoryGB)} GB</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    After oversubscription ratios:
+                    <br />• CPU: {(capacity.totalvCPUs / capacity.totalPhysicalCores).toFixed(1)}:1
+                    <br />• Memory: {(capacity.totalMemoryGB / capacity.totalPhysicalMemoryGB).toFixed(1)}:1
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Sellable Resources */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded-lg cursor-help hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors border border-green-200 dark:border-green-900">
+                  <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 mb-1">
+                    <DollarSign className="h-3 w-3" />
+                    <span>Sellable</span>
+                  </div>
+                  <div className="font-semibold text-green-700 dark:text-green-300">
+                    {formatNumber(capacity.sellingvCPUs)} / {formatNumber(capacity.sellingMemoryGB)}GB
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <div className="space-y-2">
+                  <p className="font-medium">Sellable Capacity</p>
+                  <div className="space-y-1 text-sm">
+                    <p>vCPUs: {formatNumber(capacity.sellingvCPUs)}</p>
+                    <p>Memory: {formatNumber(capacity.sellingMemoryGB)} GB</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    After deductions:
+                    <br />• HA Reserve: {(capacity.haReservation * 100).toFixed(1)}%
+                    <br />• Virtualization: {(capacity.virtualizationOverhead * 100).toFixed(1)}%
+                    <br />• Target Util: {(capacity.targetUtilization * 100).toFixed(0)}%
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
           </div>
-        </div>
+        </TooltipProvider>
 
         {/* Capacity Waterfall */}
         <div>

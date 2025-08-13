@@ -6,7 +6,7 @@ export interface PricingConfig {
   profitMargin: number; // Multiplier for cost plus model (e.g., 1.3 = 30% margin)
   fixedCpuPrice?: number; // $/vCPU/hour for fixed price model
   fixedMemoryPrice?: number; // $/GB/hour for fixed price model
-  fixedStoragePrice?: number; // $/TB/hour for fixed price model
+  fixedStoragePrice?: number; // $/GB/hour for fixed price model
   targetUtilization: number; // Target cluster utilization (0-1)
   virtualizationOverhead: number; // Overhead percentage (0-1) or fixed vCPUs
   virtualizationOverheadType: 'percentage' | 'fixed'; // New field
@@ -525,7 +525,37 @@ export class PricingModelService {
     const computeComponents = this.getClusterComponents();
     const totalHosts = computeComponents.reduce((sum, comp) => sum + (comp.quantity || 1), 0);
     
-    // Allocate costs between CPU and memory based on their ratio
+    // Calculate storage capacity from hyper-converged nodes
+    let totalStorageTB = 0;
+    computeComponents.forEach(comp => {
+      const component = comp.component;
+      const qty = comp.quantity || 1;
+      
+      // Check if this is a hyper-converged node with storage
+      if (comp.metadata?.role === 'hyperConvergedNode') {
+        // Look for storage capacity in various fields
+        const storageCapacityGB = 
+          component.storageCapacity || 
+          component.specifications?.storage?.capacity || 
+          component.storage?.capacity || 
+          0;
+        
+        if (storageCapacityGB > 0) {
+          totalStorageTB += (storageCapacityGB * qty) / 1024; // Convert GB to TB
+        }
+      }
+    });
+    
+    // Allocate costs between CPU, memory, and storage
+    // Estimate storage represents about 10-15% of total infrastructure cost for hyper-converged
+    const storageAllocationRatio = totalStorageTB > 0 ? 0.15 : 0; // 15% for storage if present
+    const computeAllocationRatio = 1 - storageAllocationRatio; // 85% for compute/memory
+    
+    // Compute and memory cost allocation
+    const computeMonthlyCost = totalMonthlyCost * computeAllocationRatio;
+    const storageMonthlyCost = totalMonthlyCost * storageAllocationRatio;
+    
+    // Allocate compute costs between CPU and memory based on their ratio
     // Total units = vCPUs + (Memory / ratio)
     const totalWeightedUnits = capacity.sellingvCPUs + (capacity.sellingMemoryGB / cpuMemoryRatio);
     
@@ -533,7 +563,19 @@ export class PricingModelService {
       return { cpuCost: 0, memoryCost: 0, storageCost: 0 };
     }
 
-    const costPerWeightedUnit = totalMonthlyCost / totalWeightedUnits / hoursPerMonth;
+    const costPerWeightedUnit = computeMonthlyCost / totalWeightedUnits / hoursPerMonth;
+    
+    // Calculate storage cost per GB per hour
+    let storageCostPerGBHour = 0;
+    if (totalStorageTB > 0) {
+      // Calculate sellable storage (applying same utilization factor as compute)
+      const sellableStorageTB = totalStorageTB * this.config.targetUtilization;
+      const sellableStorageGB = sellableStorageTB * 1024;
+      storageCostPerGBHour = storageMonthlyCost / sellableStorageGB / hoursPerMonth;
+    } else {
+      // Default storage cost if no storage infrastructure
+      storageCostPerGBHour = 0.00005; // ~$0.036/GB/month
+    }
     
     // Apply profit margin for cost plus model
     const margin = this.config.profitMargin;
@@ -541,7 +583,7 @@ export class PricingModelService {
     const result = {
       cpuCost: costPerWeightedUnit * margin,
       memoryCost: (costPerWeightedUnit / cpuMemoryRatio) * margin,
-      storageCost: 0.00005 * margin // $0.05 per TB per hour = ~$36/TB/month
+      storageCost: storageCostPerGBHour * margin // Now properly calculated per GB per hour
     };
     
     console.log('[PricingModelService] Base costs calculated:', {
@@ -667,7 +709,7 @@ export class PricingModelService {
     // Step 1: Calculate base linear costs
     const baseLinearCpuCost = baseCosts.cpuCost * vCPUs;
     const baseLinearMemCost = baseCosts.memoryCost * memoryGB;
-    const baseStorageCost = baseCosts.storageCost * (storageGB / 1000); // Convert GB to TB since price is per TB
+    const baseStorageCost = baseCosts.storageCost * storageGB; // Storage cost is now per GB per hour
     
     // Step 2: Calculate ratio deviation and impact
     const vmRatio = memoryGB / vCPUs;
