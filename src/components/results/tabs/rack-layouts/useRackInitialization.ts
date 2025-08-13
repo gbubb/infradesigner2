@@ -258,10 +258,18 @@ export const useRackInitialization = (resetTrigger: number) => {
     
     // Check if racks exist already for this design
     const existingRacks = RackService.getAllRackProfiles();
+    
+    // Check if any racks have placed devices
+    const hasPlacedDevices = existingRacks.some(rack => rack.devices && rack.devices.length > 0);
+    
+    // Only reinitialize if:
+    // 1. Reset is explicitly triggered (user clicked Reset button), OR
+    // 2. Design changed AND no devices are placed, OR  
+    // 3. No racks exist at all
     const shouldReinitialize =
-      isResetTriggered || // Only when reset actually changes
-      prevDesignIdRef.current !== activeDesign.id ||
-      existingRacks.length === 0;
+      isResetTriggered || // User explicitly clicked reset
+      (prevDesignIdRef.current !== activeDesign.id && !hasPlacedDevices) || // Design changed with no placements
+      existingRacks.length === 0; // No racks exist
     
     if (shouldReinitialize) {
       

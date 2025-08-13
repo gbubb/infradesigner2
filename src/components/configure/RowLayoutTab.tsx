@@ -168,7 +168,7 @@ const TopDownView: React.FC<TopDownViewProps> = ({ rowLayout }) => {
               currentX += props.widthMm + props.gapAfterMm;
               
               return (
-                <React.Fragment key={rackId}>
+                <div key={rackId}>
                   {/* Rack rectangle */}
                   <div
                     className="absolute bg-blue-100 border-2 border-blue-300 rounded flex items-center justify-center text-xs font-medium"
@@ -208,7 +208,7 @@ const TopDownView: React.FC<TopDownViewProps> = ({ rowLayout }) => {
                       </span>
                     </div>
                   )}
-                </React.Fragment>
+                </div>
               );
             })}
           </div>
