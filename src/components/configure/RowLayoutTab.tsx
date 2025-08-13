@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useDesignStore } from '@/store/designStore';
 import { RowLayoutConfiguration, RackPhysicalProperties } from '@/types/infrastructure/rack-types';
@@ -415,8 +415,7 @@ export const RowLayoutTab: React.FC = () => {
   }
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h2 className="text-xl font-semibold">Row Layout</h2>
           <p className="text-sm text-muted-foreground">
@@ -489,8 +488,7 @@ export const RowLayoutTab: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </DndProvider>
+    </div>
   );
 };
 
