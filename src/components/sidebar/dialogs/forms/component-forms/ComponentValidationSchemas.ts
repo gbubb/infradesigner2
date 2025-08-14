@@ -183,10 +183,10 @@ export const transceiverSchema = baseComponentSchema.extend({
 // GPU-specific schema (for future use)
 export const gpuSchema = baseComponentSchema.extend({
   gpuModel: z.string().optional(),
-  memoryGB: z.number().optional(),
-  tensorCores: z.number().optional(),
-  cudaCores: z.number().optional(),
-  tdp: z.number().optional(),
+  memoryGB: z.preprocess(numberPreprocess, z.number().optional()),
+  tensorCores: z.preprocess(numberPreprocess, z.number().optional()),
+  cudaCores: z.preprocess(numberPreprocess, z.number().optional()),
+  tdp: z.preprocess(numberPreprocess, z.number().optional()),
 });
 
 // Main form schema that combines all component-specific schemas
@@ -328,7 +328,13 @@ export const legacyFormSchema = z.object({
   maxDistanceMeters: z.number().optional(),
   breakoutCompatible: z.boolean().optional(),
   isBreakout: z.boolean().optional(),
-  connectorB_Quantity: z.number().optional()
+  connectorB_Quantity: z.number().optional(),
+  // GPU fields
+  gpuModel: z.string().optional(),
+  memoryGB: z.preprocess(numberPreprocess, z.number().optional()),
+  tensorCores: z.preprocess(numberPreprocess, z.number().optional()),
+  cudaCores: z.preprocess(numberPreprocess, z.number().optional()),
+  tdp: z.preprocess(numberPreprocess, z.number().optional())
 });
 
 // Type exports

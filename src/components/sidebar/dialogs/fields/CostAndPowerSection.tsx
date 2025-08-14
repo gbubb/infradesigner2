@@ -18,7 +18,7 @@ export const CostAndPowerSection: React.FC<Props> = ({
 }) => {
   // Hide for patch panels and cassette
   if (
-    ["FiberPatchPanel", "CopperPatchPanel", "Cassette"].includes(formValues.type)
+    ["FiberPatchPanel", "CopperPatchPanel", "Cassette"].includes(formValues.type as string)
   ) {
     return null;
   }

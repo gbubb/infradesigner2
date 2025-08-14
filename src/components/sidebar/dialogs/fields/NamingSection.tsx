@@ -35,7 +35,7 @@ export const NamingSection: React.FC<Props> = ({
               <Input
                 placeholder="Name Prefix"
                 {...field}
-                value={field.value || getDefaultPrefix(formValues.type)}
+                value={field.value || getDefaultPrefix(formValues.type as string)}
                 onChange={(e) => {
                   field.onChange(e);
                   onInputChange(e);

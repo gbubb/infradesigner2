@@ -270,7 +270,8 @@ export const BillOfMaterialsTab: React.FC = () => {
       dataToExport.push(...Object.values(cableLineItems).map(item => ({
         ...item,
         type: ComponentType.Cable,
-        cost: item.costPer || 0
+        cost: item.costPer || 0,
+        mediaType: item.mediaType as CableMediaType
       })));
     }
     if (!category || category === "Network") {
@@ -289,7 +290,7 @@ export const BillOfMaterialsTab: React.FC = () => {
       const totalCost = component.totalDiskCost ?? component.total ?? component.cost * quantity;
       let details = component.details ?? '-';
       if (component.type === ComponentType.Cable) details = `${component.connectorTypes}, ${component.lengthMeters}m`;
-      else if (component.type === ComponentType.Transceiver) details = `${component.speed} ${component.connectorTypes || component.connectorType || '-'}, ${component.mediaTypeSupported?.join(', ')} (${component.maxDistance})`;
+      else if (component.type === ComponentType.Transceiver) details = `${component.speed} ${component.connectorTypes || '-'}, ${component.mediaTypeSupported?.join(', ')} (${component.maxDistance})`;
       else if (component.type === ComponentType.FiberPatchPanel) details = `${component.ruSize}RU, ${component.cassetteCapacity} cassettes`;
       else if (component.type === ComponentType.CopperPatchPanel) details = `${component.ruSize}RU, ${component.portQuantity} ports`;
       else if (component.type === ComponentType.Cassette) details = `${component.portType}, ${component.portQuantity} ports`;

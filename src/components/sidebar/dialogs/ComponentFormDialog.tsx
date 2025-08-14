@@ -147,39 +147,39 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       throughput: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? ((formValues.throughput as number) || 10) : undefined,
       connectionPerSecond: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? ((formValues.connectionPerSecond as number) || 10000) : undefined,
       concurrentConnections: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? ((formValues.concurrentConnections as number) || 100000) : undefined,
-      features: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? (formValues.features || []) : undefined,
-      supportedProtocols: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? (formValues.supportedProtocols || []) : undefined,
-      cassetteCapacity: (formValues.type === ComponentType.FiberPatchPanel) ? (formValues.cassetteCapacity || 12) : undefined,
-      portQuantity: (formValues.type === ComponentType.FiberPatchPanel) ? (formValues.portQuantity || 24) : undefined,
-      length: formValues.type === ComponentType.Cable ? (formValues.length || 3) : undefined,
-      portType: (formValues.type === ComponentType.Cassette) ? (formValues.portType || ConnectorType.LC) : undefined,
+      features: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? ((formValues.features as string[]) || []) : undefined,
+      supportedProtocols: (formValues.type === ComponentType.Router || formValues.type === ComponentType.Firewall) ? ((formValues.supportedProtocols as string[]) || []) : undefined,
+      cassetteCapacity: (formValues.type === ComponentType.FiberPatchPanel) ? ((formValues.cassetteCapacity as number) || 12) : undefined,
+      portQuantity: (formValues.type === ComponentType.FiberPatchPanel) ? ((formValues.portQuantity as number) || 24) : undefined,
+      length: formValues.type === ComponentType.Cable ? ((formValues.length as number) || 3) : undefined,
+      portType: (formValues.type === ComponentType.Cassette) ? ((formValues.portType as ConnectorType) || ConnectorType.LC) : undefined,
       // New cassette fields
       frontPortType: (formValues.type === ComponentType.Cassette || formValues.type === ComponentType.CopperPatchPanel) ? 
-        (formValues.frontPortType || (formValues.type === ComponentType.Cassette ? ConnectorType.LC : ConnectorType.RJ45)) : undefined,
+        ((formValues.frontPortType as ConnectorType) || (formValues.type === ComponentType.Cassette ? ConnectorType.LC : ConnectorType.RJ45)) : undefined,
       frontPortQuantity: (formValues.type === ComponentType.Cassette || formValues.type === ComponentType.CopperPatchPanel) ? 
-        (formValues.frontPortQuantity || (formValues.type === ComponentType.Cassette ? 12 : 24)) : undefined,
+        ((formValues.frontPortQuantity as number) || (formValues.type === ComponentType.Cassette ? 12 : 24)) : undefined,
       backPortType: (formValues.type === ComponentType.Cassette || formValues.type === ComponentType.CopperPatchPanel) ? 
-        (formValues.backPortType || (formValues.type === ComponentType.Cassette ? ConnectorType.MPO12 : ConnectorType.RJ45)) : undefined,
+        ((formValues.backPortType as ConnectorType) || (formValues.type === ComponentType.Cassette ? ConnectorType.MPO12 : ConnectorType.RJ45)) : undefined,
       backPortQuantity: (formValues.type === ComponentType.Cassette || formValues.type === ComponentType.CopperPatchPanel) ? 
-        (formValues.backPortQuantity || (formValues.type === ComponentType.Cassette ? 1 : 24)) : undefined,
+        ((formValues.backPortQuantity as number) || (formValues.type === ComponentType.Cassette ? 1 : 24)) : undefined,
       // Cable specific defaults
-      connectorA_Type: formValues.type === ComponentType.Cable ? (formValues.connectorA_Type || ConnectorType.RJ45) : undefined,
-      connectorB_Type: formValues.type === ComponentType.Cable ? (formValues.connectorB_Type || ConnectorType.RJ45) : undefined,
-      mediaType: formValues.type === ComponentType.Cable ? (formValues.mediaType || CableMediaType.CopperCat6a) : undefined,
-      cableSpeed: formValues.type === ComponentType.Cable ? formValues.cableSpeed : undefined,
+      connectorA_Type: formValues.type === ComponentType.Cable ? ((formValues.connectorA_Type as ConnectorType) || ConnectorType.RJ45) : undefined,
+      connectorB_Type: formValues.type === ComponentType.Cable ? ((formValues.connectorB_Type as ConnectorType) || ConnectorType.RJ45) : undefined,
+      mediaType: formValues.type === ComponentType.Cable ? ((formValues.mediaType as CableMediaType) || CableMediaType.CopperCat6a) : undefined,
+      cableSpeed: formValues.type === ComponentType.Cable ? (formValues.cableSpeed as PortSpeed) : undefined,
       // Transceiver specific defaults - using direct field names from Transceiver interface
-      mediaTypeSupported: formValues.mediaTypeSupported || [],
+      mediaTypeSupported: (formValues.mediaTypeSupported as MediaType[]) || [],
       // For Transceiver, 'connectorType' is its port-side connector, 'speed' is its speed.
       // These will be conditionally relevant based on formValues.type when form loads.
       // Ensure these don't clash with *other* components' 'connectorType' or 'speed' if formValues is flat.
       // The schema has these as distinct now (e.g. cassette 'portType', switch 'portSpeedType').
-      connectorType: formValues.type === ComponentType.Transceiver ? (formValues.connectorType || ConnectorType.SFP) : (formValues.portType || ConnectorType.RJ45),
-      mediaConnectorType: formValues.mediaConnectorType || ConnectorType.LC,
-      speed: formValues.type === ComponentType.Transceiver ? (formValues.speed || PortSpeed.Speed10G) : (formValues.portSpeedType || PortSpeed.Speed10G),
-      maxDistanceMeters: formValues.maxDistanceMeters || 0,
-      breakoutCompatible: formValues.breakoutCompatible || false,
-      isBreakout: formValues.isBreakout || false,
-      connectorB_Quantity: formValues.connectorB_Quantity || 4
+      connectorType: formValues.type === ComponentType.Transceiver ? ((formValues.connectorType as ConnectorType) || ConnectorType.SFP) : ((formValues.portType as ConnectorType) || ConnectorType.RJ45),
+      mediaConnectorType: (formValues.mediaConnectorType as ConnectorType) || ConnectorType.LC,
+      speed: formValues.type === ComponentType.Transceiver ? ((formValues.speed as PortSpeed) || PortSpeed.Speed10G) : ((formValues.portSpeedType as PortSpeed) || PortSpeed.Speed10G),
+      maxDistanceMeters: (formValues.maxDistanceMeters as number) || 0,
+      breakoutCompatible: (formValues.breakoutCompatible as boolean) || false,
+      isBreakout: (formValues.isBreakout as boolean) || false,
+      connectorB_Quantity: (formValues.connectorB_Quantity as number) || 4
     },
     values: formValues,
   });
@@ -293,7 +293,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
               {/* Component-specific fields rendered by factory */}
               <ComponentFormFactory
                 control={control}
-                componentType={formValues.type}
+                componentType={formValues.type as ComponentType}
                 formValues={formValues}
                 onInputChange={onInputChange}
                 onSelectChange={onSelectChange}
@@ -301,7 +301,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
 
               {/* Port Management Section */}
               <PortManagementSection
-                componentType={formValues.type}
+                componentType={formValues.type as ComponentType}
                 formValues={formValues}
                 addPort={addPort}
                 removePort={removePort}
