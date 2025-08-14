@@ -107,8 +107,10 @@ export const DatacenterAnalyticsTab: React.FC = () => {
         return profile.devices.some(d => d.deviceId === c.id);
       }).map(c => ({
         ...c,
-        power: ('power' in c ? c.power : 0) || 
-               ('powerrequired' in c ? c.powerrequired : 0) || 0,
+        power: Number(('power' in c ? c.power : 0) || 
+               ('powerrequired' in c ? c.powerrequired : 0) || 
+               c.powerTypical || c.powerPeak || c.powerIdle || 0),
+        powerrequired: c.powerTypical || c.powerPeak || c.powerIdle || 0,
         quantity: c.quantity || 1
       }))
     })) || [];

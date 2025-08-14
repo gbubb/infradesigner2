@@ -11,7 +11,7 @@ export const RouterFirewallFormFields: React.FC<RouterFirewallFormFieldsProps> =
   return (
     <>
       <FormField
-        control={register.control}
+        control={register}
         name="ruSize"
         render={({ field }) => (
           <FormItem>

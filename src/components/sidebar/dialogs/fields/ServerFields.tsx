@@ -51,7 +51,7 @@ export const ServerFields: React.FC<Props> = ({
         name: 'pcieSlots',
         value: updatedSlots
       }
-    } as React.ChangeEvent<HTMLInputElement>;
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
     onInputChange(syntheticEvent);
   };
 
@@ -78,7 +78,7 @@ export const ServerFields: React.FC<Props> = ({
         name: 'pcieSlots',
         value: updatedSlots
       }
-    } as React.ChangeEvent<HTMLInputElement>;
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
     onInputChange(syntheticEvent);
   };
 

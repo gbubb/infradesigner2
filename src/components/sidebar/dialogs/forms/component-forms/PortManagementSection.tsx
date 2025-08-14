@@ -60,7 +60,7 @@ export const PortManagementSection: React.FC<PortManagementSectionProps> = ({
       alert("Please fill all fields for bulk port creation and use quantity >= 1.");
       return;
     }
-    const startNum = (formValues.ports?.length || 0) + 1;
+    const startNum = ((formValues.ports as any[])?.length || 0) + 1;
     const portsToAdd = Array.from({ length: quantity }).map((_, i) => ({
       id: crypto.randomUUID(),
       name: `${prefix}${startNum + i}`,
@@ -70,7 +70,7 @@ export const PortManagementSection: React.FC<PortManagementSectionProps> = ({
     }));
     // Append new ports to current list
     if (portsToAdd.length > 0) {
-      const updatedPorts = [...(formValues.ports || []), ...portsToAdd];
+      const updatedPorts = [...((formValues.ports as any[]) || []), ...portsToAdd];
       onInputChange({
         target: {
           name: "ports",
