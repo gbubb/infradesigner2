@@ -40,12 +40,13 @@ export default defineConfig(({ mode }) => ({
       output: {
         // Manual chunk splitting for better caching
         manualChunks(id) {
-          // Core React dependencies
-          if (id.includes('node_modules/react/') || 
-              id.includes('node_modules/react-dom/') || 
-              id.includes('node_modules/react-router-dom/')) {
-            return 'react-vendor';
-          }
+          // Core React dependencies - DO NOT SEPARATE
+          // Keep React in main vendor bundle to avoid loading order issues
+          // if (id.includes('node_modules/react/') || 
+          //     id.includes('node_modules/react-dom/') || 
+          //     id.includes('node_modules/react-router-dom/')) {
+          //   return 'react-vendor';
+          // }
           
           // Radix UI components (all UI primitives)
           if (id.includes('@radix-ui/')) {
