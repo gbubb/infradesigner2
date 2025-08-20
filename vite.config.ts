@@ -73,10 +73,11 @@ export default defineConfig(({ mode }) => ({
             return 'pdf-export';
           }
           
-          // Drag and drop functionality
-          if (id.includes('react-dnd')) {
-            return 'dnd';
-          }
+          // Don't separate react-dnd to avoid loading order issues
+          // Let it be included with vendor to ensure React is available
+          // if (id.includes('react-dnd')) {
+          //   return 'dnd';
+          // }
           
           // Form handling
           if (id.includes('react-hook-form') || 
@@ -148,6 +149,8 @@ export default defineConfig(({ mode }) => ({
       '@supabase/realtime-js',
       '@supabase/storage-js',
       '@supabase/functions-js',
+      'react-dnd',
+      'react-dnd-html5-backend',
     ],
   },
 }));

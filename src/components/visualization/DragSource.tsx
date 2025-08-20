@@ -9,17 +9,28 @@ interface DragSourceProps {
 }
 
 export const DragSource: React.FC<DragSourceProps> = ({ component, children }) => {
-  const [{ isDragging }, drag] = useDrag({
-    type: 'COMPONENT',
-    item: { component },
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
-    }),
-  });
+  let dragRef: React.Ref<HTMLDivElement> | null = null;
+  let isDragging = false;
+
+  try {
+    // Try to use the drag hook, but gracefully handle if it's not available
+    const [dragState, drag] = useDrag({
+      type: 'COMPONENT',
+      item: { component },
+      collect: (monitor) => ({
+        isDragging: !!monitor.isDragging(),
+      }),
+    });
+    dragRef = drag;
+    isDragging = dragState.isDragging;
+  } catch (error) {
+    // If DnD context is not available, just render without drag functionality
+    console.warn('DnD context not available, rendering without drag functionality');
+  }
 
   return (
     <div 
-      ref={drag} 
+      ref={dragRef} 
       style={{ 
         opacity: isDragging ? 0.5 : 1,
         cursor: 'move',
