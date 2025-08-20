@@ -7,8 +7,10 @@ import { Switch } from '@/components/ui/switch';
 import { ConnectorType } from '@/types/infrastructure';
 import { PortSpeed, CableMediaType, PortSide } from '@/types/infrastructure/port-types';
 
+import { Control, FieldValues } from 'react-hook-form';
+
 interface CablingFormFieldsProps {
-  register: any; // This should be a control object from react-hook-form
+  register: Control<FieldValues>; // Control object from react-hook-form
   componentType: string;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectChange: (name: string, value: string) => void;

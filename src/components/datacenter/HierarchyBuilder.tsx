@@ -9,8 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Edit2, Trash2, Building, Home, Server, Grid3x3, Box, AlertCircle } from 'lucide-react';
 import { DatacenterFacility, HierarchyLevel } from '@/types/infrastructure/datacenter-types';
 import { cn } from '@/lib/utils';
-import { useDrag, useDrop, DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useDrag, useDrop } from 'react-dnd';
 
 interface HierarchyBuilderProps {
   facility: DatacenterFacility;
@@ -319,8 +318,7 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
             </p>
           </div>
         ) : (
-          <DndProvider backend={HTML5Backend}>
-            <ScrollArea className="h-full max-h-[600px] pr-4">
+          <ScrollArea className="h-full max-h-[600px] pr-4">
               <div className="space-y-2">
                 {rootLevels.map(level => (
                   <HierarchyNode
@@ -333,8 +331,7 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
                   />
                 ))}
               </div>
-            </ScrollArea>
-          </DndProvider>
+          </ScrollArea>
         )}
 
         {/* Add Level Dialog */}

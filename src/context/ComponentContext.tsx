@@ -1,7 +1,6 @@
-
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { toast } from 'sonner';
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
 
 interface ComponentContextType {
@@ -13,7 +12,7 @@ interface ComponentContextType {
   setDefaultComponent: (type: ComponentType, role: string, id: string) => void;
 }
 
-export const ComponentContext = createContext<ComponentContextType | undefined>(undefined);
+const ComponentContext = createContext<ComponentContextType | undefined>(undefined);
 
 export const ComponentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const componentTemplates = useDesignStore(state => state.componentTemplates);
@@ -37,3 +36,11 @@ export const ComponentProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
 };
 
+// Export hook separately to avoid fast-refresh warning
+export const useComponentContext = () => {
+  const context = useContext(ComponentContext);
+  if (!context) {
+    throw new Error('useComponentContext must be used within a ComponentProvider');
+  }
+  return context;
+};
