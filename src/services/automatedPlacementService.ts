@@ -133,8 +133,7 @@ export class AutomatedPlacementService {
       if (isComputeCluster && !clusterId) {
         // For controller and infrastructure nodes, we need to find the role ID to use as cluster ID
         // This matches the logic in PlacementRulesDialog.tsx
-        const designState = useDesignStore.getState();
-        const matchingRole = designState.activeDesign?.componentRoles?.find(role => 
+        const matchingRole = state.componentRoles?.find(role => 
           role.role === component.role && 
           role.assignedComponentId // Only consider roles that have assigned components
         );

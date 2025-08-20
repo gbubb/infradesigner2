@@ -177,13 +177,9 @@ export const useComputeClusters = () => {
                             activeDesign.requirements?.compute?.clusters || [];
       const clusterConfig = computeClusters.find((c) => c.id === clusterId || c.name === name);
       
-      // Calculate actual AZ count for this cluster
-      let availabilityZoneCount = totalAvailabilityZones;
-      if (clusterConfig?.availabilityZoneRedundancy === 'N+1') {
-        availabilityZoneCount = totalAvailabilityZones + 1;
-      } else if (clusterConfig?.availabilityZoneRedundancy === 'N+2') {
-        availabilityZoneCount = totalAvailabilityZones + 2;
-      }
+      // AZ count should be the actual number of availability zones, not affected by redundancy
+      // N+1 or N+2 redundancy means extra nodes/capacity for failure tolerance, not extra AZs
+      const availabilityZoneCount = totalAvailabilityZones;
 
       clusters.push({
         id: clusterId,
