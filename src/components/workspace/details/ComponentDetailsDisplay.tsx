@@ -28,7 +28,10 @@ export const ComponentDetailsDisplay: React.FC<ComponentDetailsDisplayProps> = (
         <div className="font-normal">${component.cost}</div>
         
         <div className="font-medium text-muted-foreground">Power</div>
-        <div className="font-normal">{component.powerRequired} W</div>
+        <div className="font-normal">{('powerTypical' in component && component.powerTypical) || 
+                                    ('powerPeak' in component && component.powerPeak) || 
+                                    ('powerIdle' in component && component.powerIdle) || 
+                                    0} W</div>
       </div>
       
       <Separator className="my-4" />

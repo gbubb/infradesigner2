@@ -25,7 +25,7 @@ export const SwitchFormFields: React.FC<SwitchFormFieldsProps> = ({
       <div className="space-y-2">
         <Label htmlFor="switchRole">Switch Role</Label>
         <Select
-          value={formValues.switchRole || ''}
+          value={(formValues.switchRole as string) || ''}
           onValueChange={(value) => {
             console.log("Switch role selected:", value);
             onChange('switchRole', value);
@@ -50,7 +50,7 @@ export const SwitchFormFields: React.FC<SwitchFormFieldsProps> = ({
           id="cost"
           name="cost"
           type="number"
-          value={formValues.cost !== undefined ? formValues.cost : 0}
+          value={formValues.cost !== undefined ? (formValues.cost as number) : 0}
           onChange={onInputChange}
           required
         />
@@ -62,7 +62,7 @@ export const SwitchFormFields: React.FC<SwitchFormFieldsProps> = ({
           id="powerRequired"
           name="powerRequired"
           type="number"
-          value={formValues.powerRequired !== undefined ? formValues.powerRequired : 0}
+          value={formValues.powerRequired !== undefined ? (formValues.powerRequired as number) : 0}
           onChange={onInputChange}
         />
       </div>
@@ -74,7 +74,7 @@ export const SwitchFormFields: React.FC<SwitchFormFieldsProps> = ({
             id="ruSize"
             name="ruSize"
             type="number"
-            value={formValues.ruSize || 0}
+            value={(formValues.ruSize as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />
@@ -83,7 +83,7 @@ export const SwitchFormFields: React.FC<SwitchFormFieldsProps> = ({
         <div className="space-y-2">
           <Label htmlFor="portSpeedType">Port Speed</Label>
           <Select
-            value={formValues.portSpeedType || ''}
+            value={(formValues.portSpeedType as string) || ''}
             onValueChange={(value) => {
               console.log("Port speed selected:", value);
               onChange('portSpeedType', value);
@@ -110,7 +110,7 @@ export const SwitchFormFields: React.FC<SwitchFormFieldsProps> = ({
             id="portsProvidedQuantity"
             name="portsProvidedQuantity"
             type="number"
-            value={formValues.portsProvidedQuantity || 0}
+            value={(formValues.portsProvidedQuantity as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />

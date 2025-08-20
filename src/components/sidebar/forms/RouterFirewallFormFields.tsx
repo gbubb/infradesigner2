@@ -2,9 +2,10 @@
 import React from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Control, FieldValues } from 'react-hook-form';
 
 interface RouterFirewallFormFieldsProps {
-  register: Record<string, unknown>;
+  register: { control: Control<FieldValues> };
 }
 
 export const RouterFirewallFormFields: React.FC<RouterFirewallFormFieldsProps> = ({ register }) => {

@@ -30,7 +30,6 @@ export const fiberPatchPanelTemplates: FiberPatchPanel[] = [
     manufacturer: 'Corning',
     model: 'CCH-04U',
     cost: 450,
-    powerRequired: 0,
     ruSize: 4,
     cassetteCapacity: 12
   },
@@ -41,7 +40,6 @@ export const fiberPatchPanelTemplates: FiberPatchPanel[] = [
     manufacturer: 'FS',
     model: 'FHD-1U',
     cost: 180,
-    powerRequired: 0,
     ruSize: 1,
     cassetteCapacity: 4
   }
@@ -56,7 +54,6 @@ export const copperPatchPanelTemplates: CopperPatchPanel[] = [
     manufacturer: 'Panduit',
     model: 'NK6PPG48P',
     cost: 220,
-    powerRequired: 0,
     ruSize: 2,
     portQuantity: 48
   },
@@ -67,7 +64,6 @@ export const copperPatchPanelTemplates: CopperPatchPanel[] = [
     manufacturer: 'Leviton',
     model: '6A-PP24',
     cost: 130,
-    powerRequired: 0,
     ruSize: 1,
     portQuantity: 24
   }
@@ -82,7 +78,6 @@ export const cassetteTemplates: Cassette[] = [
     manufacturer: 'FS',
     model: 'FHD-MPO12-LC',
     cost: 85,
-    powerRequired: 0,
     portType: ConnectorType.MPO12,
     portQuantity: 12
   }
@@ -97,7 +92,6 @@ export const cableTemplates: Cable[] = [
     manufacturer: 'Panduit',
     model: 'UTP6A3M',
     cost: 8,
-    powerRequired: 0,
     length: 3,
     connectorA_Type: ConnectorType.RJ45,
     connectorB_Type: ConnectorType.RJ45,
@@ -110,7 +104,6 @@ export const cableTemplates: Cable[] = [
     manufacturer: 'Generic',
     model: 'SM-LC-LC-10M',
     cost: 15,
-    powerRequired: 0,
     length: 10,
     connectorA_Type: ConnectorType.LC,
     connectorB_Type: ConnectorType.LC,
@@ -123,7 +116,6 @@ export const cableTemplates: Cable[] = [
     manufacturer: 'Generic',
     model: 'MM-LC-LC-OM4-10M',
     cost: 12,
-    powerRequired: 0,
     length: 10,
     connectorA_Type: ConnectorType.LC,
     connectorB_Type: ConnectorType.LC,
@@ -136,7 +128,6 @@ export const cableTemplates: Cable[] = [
     manufacturer: 'Generic',
     model: 'MM-MPO-OM4-10M',
     cost: 75,
-    powerRequired: 0,
     length: 10,
     connectorA_Type: ConnectorType.MPO12,
     connectorB_Type: ConnectorType.MPO12,
@@ -149,7 +140,6 @@ export const cableTemplates: Cable[] = [
     manufacturer: 'Corning',
     model: 'MPO-SM-5M',
     cost: 65,
-    powerRequired: 0,
     length: 5,
     connectorA_Type: ConnectorType.MPO12,
     connectorB_Type: ConnectorType.MPO12,
@@ -162,7 +152,6 @@ export const cableTemplates: Cable[] = [
     manufacturer: 'Cisco',
     model: 'SFP-H10GB-CU3M',
     cost: 45,
-    powerRequired: 0,
     length: 3,
     connectorA_Type: ConnectorType.SFP,
     connectorB_Type: ConnectorType.SFP,
@@ -176,7 +165,6 @@ export const cableTemplates: Cable[] = [
     manufacturer: 'Mellanox',
     model: 'MC2210130-003',
     cost: 85,
-    powerRequired: 0,
     length: 3,
     connectorA_Type: ConnectorType.QSFP,
     connectorB_Type: ConnectorType.QSFP,

@@ -56,7 +56,10 @@ export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClos
         manufacturer: component.manufacturer,
         model: component.model,
         cost: component.cost,
-        powerRequired: component.powerRequired,
+        powerRequired: ('powerTypical' in component && component.powerTypical) || 
+                      ('powerPeak' in component && component.powerPeak) || 
+                      ('powerIdle' in component && component.powerIdle) || 
+                      0,
       });
       startEditingComponent(selectedComponentId);
     }

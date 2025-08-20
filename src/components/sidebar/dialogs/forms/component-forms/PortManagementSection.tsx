@@ -76,7 +76,7 @@ export const PortManagementSection: React.FC<PortManagementSectionProps> = ({
           name: "ports",
           value: updatedPorts,
         },
-      } as React.ChangeEvent<HTMLInputElement>);
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
     }
     setBulkPort((prev) => ({ ...prev, quantity: 1 }));
   };
@@ -192,7 +192,7 @@ export const PortManagementSection: React.FC<PortManagementSectionProps> = ({
             Add Port
           </Button>
         </div>
-        {formValues.ports && formValues.ports.length > 0 ? (
+        {formValues.ports && (formValues.ports as Port[]).length > 0 ? (
           <div className="space-y-2">
             {(formValues.ports as Port[]).map((port, idx: number) => (
               <div

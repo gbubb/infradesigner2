@@ -20,8 +20,8 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Increase chunk size warning limit to 1000kb (reasonable for modern web apps)
-    chunkSizeWarningLimit: 1000,
+    // Increase chunk size warning limit to 1500kb (reasonable for modern web apps with many dependencies)
+    chunkSizeWarningLimit: 1500,
     
     // Enable source maps for production debugging (hidden from users)
     sourcemap: mode === 'production' ? 'hidden' : true,

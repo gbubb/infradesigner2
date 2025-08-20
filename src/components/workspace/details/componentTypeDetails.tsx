@@ -6,11 +6,11 @@ export const renderComponentSpecificDetails = (component: InfrastructureComponen
   switch (component.type) {
     case ComponentType.Server:
       if ('cpuModel' in component) {
-        const totalCores = component.cpuSockets && component.cpuCoresPerSocket ? 
-          component.cpuSockets * component.cpuCoresPerSocket : 
-          component.coreCount || 0;
+        const totalCores = ('cpuSockets' in component && 'cpuCoresPerSocket' in component && component.cpuSockets && component.cpuCoresPerSocket) ? 
+          (component.cpuSockets as number) * (component.cpuCoresPerSocket as number) : 
+          ('coreCount' in component ? component.coreCount : 0) as number;
         
-        const serverMemory = component.memoryCapacity || component.memoryGB || 0;
+        const serverMemory = ('memoryCapacity' in component ? component.memoryCapacity : ('memoryGB' in component ? component.memoryGB : 0)) as number;
         
         return (
           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -22,19 +22,19 @@ export const renderComponentSpecificDetails = (component: InfrastructureComponen
             )}
             
             <div className="text-gray-500">CPU Model</div>
-            <div>{component.cpuModel}</div>
+            <div>{component.cpuModel as string}</div>
             
-            {component.cpuSockets && (
+            {'cpuSockets' in component && component.cpuSockets && (
               <>
                 <div className="text-gray-500">CPU Sockets</div>
-                <div>{component.cpuSockets}</div>
+                <div>{component.cpuSockets as number}</div>
               </>
             )}
             
-            {component.cpuCoresPerSocket && (
+            {'cpuCoresPerSocket' in component && component.cpuCoresPerSocket && (
               <>
                 <div className="text-gray-500">Cores per Socket</div>
-                <div>{component.cpuCoresPerSocket}</div>
+                <div>{component.cpuCoresPerSocket as number}</div>
               </>
             )}
             
@@ -44,10 +44,10 @@ export const renderComponentSpecificDetails = (component: InfrastructureComponen
             <div className="text-gray-500">Memory</div>
             <div>{serverMemory} GB</div>
             
-            {component.diskSlotType && component.diskSlotQuantity && (
+            {'diskSlotType' in component && 'diskSlotQuantity' in component && component.diskSlotType && component.diskSlotQuantity && (
               <>
                 <div className="text-gray-500">Disk Slots</div>
-                <div>{component.diskSlotQuantity}x {component.diskSlotType}</div>
+                <div>{component.diskSlotQuantity as number}x {component.diskSlotType as string}</div>
               </>
             )}
           </div>
@@ -67,13 +67,13 @@ export const renderComponentSpecificDetails = (component: InfrastructureComponen
             )}
             
             <div className="text-gray-500">Ports</div>
-            <div>{component.portsProvidedQuantity || component.portCount}</div>
+            <div>{('portsProvidedQuantity' in component ? component.portsProvidedQuantity : ('portCount' in component ? component.portCount : 0)) as number}</div>
             
             <div className="text-gray-500">Port Speed</div>
-            <div>{component.portSpeedType || component.portSpeed} Gbps</div>
+            <div>{('portSpeedType' in component ? component.portSpeedType : ('portSpeed' in component ? component.portSpeed : '')) as string} Gbps</div>
             
             <div className="text-gray-500">Rack Units</div>
-            <div>{component.ruSize || component.rackUnitsConsumed} RU</div>
+            <div>{('ruSize' in component ? component.ruSize : ('rackUnitsConsumed' in component ? component.rackUnitsConsumed : 1)) as number} RU</div>
           </div>
         );
       }

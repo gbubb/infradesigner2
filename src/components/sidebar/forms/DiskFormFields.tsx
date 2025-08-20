@@ -27,7 +27,7 @@ export const DiskFormFields: React.FC<DiskFormFieldsProps> = ({
             id="capacityTB"
             name="capacityTB"
             type="number"
-            value={formValues.capacityTB || 0}
+            value={(formValues.capacityTB as number) || 0}
             onChange={onInputChange}
             placeholder="e.g. 8"
             min={0}
@@ -97,7 +97,7 @@ export const DiskFormFields: React.FC<DiskFormFieldsProps> = ({
             id="rpm"
             name="rpm"
             type="number"
-            value={formValues.rpm || 0}
+            value={(formValues.rpm as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />
@@ -111,7 +111,7 @@ export const DiskFormFields: React.FC<DiskFormFieldsProps> = ({
             id="iops"
             name="iops"
             type="number"
-            value={formValues.iops || 0}
+            value={(formValues.iops as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />
@@ -123,7 +123,7 @@ export const DiskFormFields: React.FC<DiskFormFieldsProps> = ({
             id="readSpeed"
             name="readSpeed"
             type="number"
-            value={formValues.readSpeed || 0}
+            value={(formValues.readSpeed as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />
@@ -135,7 +135,7 @@ export const DiskFormFields: React.FC<DiskFormFieldsProps> = ({
             id="writeSpeed"
             name="writeSpeed"
             type="number"
-            value={formValues.writeSpeed || 0}
+            value={(formValues.writeSpeed as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />

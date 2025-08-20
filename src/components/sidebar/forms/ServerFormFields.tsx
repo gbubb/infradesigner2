@@ -43,7 +43,7 @@ export const ServerFormFields: React.FC<ServerFormFieldsProps> = ({
           <Input
             id="cpuModel"
             name="cpuModel"
-            value={formValues.cpuModel || ''}
+            value={(formValues.cpuModel as string) || ''}
             onChange={onInputChange}
             placeholder="CPU Model"
           />
@@ -55,7 +55,7 @@ export const ServerFormFields: React.FC<ServerFormFieldsProps> = ({
             id="cpuSockets"
             name="cpuSockets"
             type="number"
-            value={formValues.cpuSockets || 0}
+            value={(formValues.cpuSockets as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />
@@ -69,7 +69,7 @@ export const ServerFormFields: React.FC<ServerFormFieldsProps> = ({
             id="cpuCoresPerSocket"
             name="cpuCoresPerSocket"
             type="number"
-            value={formValues.cpuCoresPerSocket || 0}
+            value={(formValues.cpuCoresPerSocket as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />
@@ -81,7 +81,7 @@ export const ServerFormFields: React.FC<ServerFormFieldsProps> = ({
             id="memoryCapacity"
             name="memoryCapacity"
             type="number"
-            value={formValues.memoryCapacity || 0}
+            value={(formValues.memoryCapacity as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />
@@ -114,7 +114,7 @@ export const ServerFormFields: React.FC<ServerFormFieldsProps> = ({
             id="diskSlotQuantity"
             name="diskSlotQuantity"
             type="number"
-            value={formValues.diskSlotQuantity || 0}
+            value={(formValues.diskSlotQuantity as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />
@@ -128,7 +128,7 @@ export const ServerFormFields: React.FC<ServerFormFieldsProps> = ({
             id="ruSize"
             name="ruSize"
             type="number"
-            value={formValues.ruSize || 0}
+            value={(formValues.ruSize as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />
@@ -159,7 +159,7 @@ export const ServerFormFields: React.FC<ServerFormFieldsProps> = ({
             id="portsConsumedQuantity"
             name="portsConsumedQuantity"
             type="number"
-            value={formValues.portsConsumedQuantity || 0}
+            value={(formValues.portsConsumedQuantity as number) || 0}
             onChange={onInputChange}
             placeholder="0"
           />
