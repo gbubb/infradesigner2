@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDrag } from 'react-dnd';
-import { ComponentType } from '@/types/infrastructure/component-types';
+import { ComponentType, InfrastructureComponent } from '@/types/infrastructure/component-types';
 import { cn } from '@/lib/utils';
 import { getDeviceColor } from './rackUtils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -71,7 +71,7 @@ export const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
             ref={drag}
             className={cn(
               "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-1 py-0 overflow-hidden", // Minimal padding
-              getDeviceColor(type, component),
+              getDeviceColor(type, serverRole ? { serverRole } as Pick<InfrastructureComponent, 'serverRole'> : undefined),
               "cursor-move"
             )}
             style={{
