@@ -7,36 +7,38 @@ import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType,
 export const calculateComponentRoles = (requirements: DesignRequirements): ComponentRole[] => {
   const getValue = <T>(obj: DesignRequirements, path: string, defaultValue: T): T => {
     try {
-      return path.split('.').reduce((o: Record<string, unknown>, key) => o?.[key], obj as Record<string, unknown>) || defaultValue;
+      const result = path.split('.').reduce((o: Record<string, unknown>, key) => o?.[key], obj as Record<string, unknown>);
+      // Check for null or undefined explicitly to handle boolean false values correctly
+      return result !== null && result !== undefined ? result : defaultValue;
     } catch (error) {
       return defaultValue;
     }
   };
   
-  const totalAvailabilityZones = getValue(requirements, 'physicalConstraints.totalAvailabilityZones', 8) || 8;
+  const totalAvailabilityZones = getValue(requirements, 'physicalConstraints.totalAvailabilityZones', 8);
   const controllerClusterRequired = getValue(requirements, 'computeRequirements.controllerClusterRequired', true);
-  const controllerNodeCount = getValue(requirements, 'computeRequirements.controllerNodeCount', 3) || 3;
-  const infrastructureClusterRequired = getValue(requirements, 'computeRequirements.infrastructureClusterRequired', false) || false;
-  const infrastructureNodeCount = getValue(requirements, 'computeRequirements.infrastructureNodeCount', 3) || 3;
+  const controllerNodeCount = getValue(requirements, 'computeRequirements.controllerNodeCount', 3);
+  const infrastructureClusterRequired = getValue(requirements, 'computeRequirements.infrastructureClusterRequired', false);
+  const infrastructureNodeCount = getValue(requirements, 'computeRequirements.infrastructureNodeCount', 3);
   
-  const computeClusters = getValue(requirements, 'computeRequirements.computeClusters', []) || [];
-  const storageClusters = getValue(requirements, 'storageRequirements.storageClusters', []) || [];
+  const computeClusters = getValue(requirements, 'computeRequirements.computeClusters', []);
+  const storageClusters = getValue(requirements, 'storageRequirements.storageClusters', []);
   
-  const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', "Spine-Leaf") as NetworkTopology || "Spine-Leaf";
-  const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false) || false;
-  const leafSwitchesPerAZ = getValue(requirements, 'networkRequirements.leafSwitchesPerAZ', 2) || 2;
-  const dedicatedStorageNetwork = getValue(requirements, 'networkRequirements.dedicatedStorageNetwork', false) || false;
-  const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', "Dual Home") as ManagementNetworkType || "Dual Home";
+  const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', "Spine-Leaf") as NetworkTopology;
+  const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false);
+  const leafSwitchesPerAZ = getValue(requirements, 'networkRequirements.leafSwitchesPerAZ', 2);
+  const dedicatedStorageNetwork = getValue(requirements, 'networkRequirements.dedicatedStorageNetwork', false);
+  const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', "Dual Home") as ManagementNetworkType;
   
   // Structured cabling requirements
-  const copperPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.copperPatchPanelsPerAZ', 2) || 0;
-  const fiberPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.fiberPatchPanelsPerAZ', 2) || 0;
-  const copperPatchPanelsPerCoreRack = getValue(requirements, 'networkRequirements.copperPatchPanelsPerCoreRack', 1) || 0;
-  const fiberPatchPanelsPerCoreRack = getValue(requirements, 'networkRequirements.fiberPatchPanelsPerCoreRack', 1) || 0;
+  const copperPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.copperPatchPanelsPerAZ', 0);
+  const fiberPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.fiberPatchPanelsPerAZ', 0);
+  const copperPatchPanelsPerCoreRack = getValue(requirements, 'networkRequirements.copperPatchPanelsPerCoreRack', 0);
+  const fiberPatchPanelsPerCoreRack = getValue(requirements, 'networkRequirements.fiberPatchPanelsPerCoreRack', 0);
   
-  const dedicatedNetworkCoreRacks = getValue(requirements, 'networkRequirements.dedicatedNetworkCoreRacks', true) || false;
-  const networkCoreRackQuantity = getValue(requirements, 'physicalConstraints.networkCoreRackQuantity', 2) || 
-    (dedicatedNetworkCoreRacks ? 2 : 0);
+  const dedicatedNetworkCoreRacks = getValue(requirements, 'networkRequirements.dedicatedNetworkCoreRacks', true);
+  const networkCoreRackQuantity = getValue(requirements, 'physicalConstraints.networkCoreRackQuantity', 
+    dedicatedNetworkCoreRacks ? 2 : 0);
   
   // Check for converged management and IPMI network configuration
   const isConvergedManagement = managementNetwork === 'Converged Management Plane';
