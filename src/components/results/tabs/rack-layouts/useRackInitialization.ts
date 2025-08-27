@@ -32,6 +32,16 @@ export const useRackInitialization = (resetTrigger: number) => {
   const distributeComponentsAcrossRacks = useCallback((racks: RackProfileInitializationData[]) => {
     if (!activeDesign || !activeDesign.components || !activeDesign.componentRoles) return;
     
+    // Check if any devices are already placed - if so, skip distribution
+    const currentRackProfiles = RackService.getAllRackProfiles();
+    const hasExistingPlacements = currentRackProfiles.some((rack) => 
+      rack.devices && rack.devices.length > 0
+    );
+    if (hasExistingPlacements) {
+      console.log('[useRackInitialization] Skipping distribution - devices already placed');
+      return;
+    }
+    
     const azNames = [...new Set(racks.map(rack => rack.azName))].filter(az => az !== 'Core');
     const coreRacks = racks.filter(rack => rack.azName === 'Core');
     
@@ -290,8 +300,8 @@ export const useRackInitialization = (resetTrigger: number) => {
     // 1. Reset is explicitly triggered (user clicked Reset button), OR
     // 2. Design changed AND no devices are placed, OR  
     // 3. No racks exist at all, OR
-    // 4. Rack count doesn't match requirements, OR
-    // 5. AZ count doesn't match requirements
+    // 4. Rack count doesn't match requirements AND no devices are placed, OR
+    // 5. AZ count doesn't match requirements AND no devices are placed
     const shouldReinitialize =
       isResetTriggered || // User explicitly clicked reset
       (prevDesignIdRef.current !== activeDesign.id && !hasPlacedDevices) || // Design changed with no placements
@@ -395,8 +405,9 @@ export const useRackInitialization = (resetTrigger: number) => {
       RackService.batchUpdateRackProfiles();
       
       // Only distribute components if we have racks and components to distribute
-      // Skip if we already have racks with placed devices in the activeDesign
-      const existingPlacedDevices = activeDesign.rackprofiles?.some((rack) => 
+      // Skip if we already have racks with placed devices (check actual RackService state, not just activeDesign)
+      const currentRackProfiles = RackService.getAllRackProfiles();
+      const existingPlacedDevices = currentRackProfiles.some((rack) => 
         rack.devices && rack.devices.length > 0
       );
       

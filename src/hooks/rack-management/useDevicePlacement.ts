@@ -63,10 +63,10 @@ export function useDevicePlacement() {
     // Use saved placement rules directly
     setClusterAZAssignments(activeDesign.placementRules);
     
-    // Execute auto-placement immediately
+    // Execute auto-placement immediately - clear existing placements first
     setIsPlacing(true);
     
-    const report = AutomatedPlacementService.placeAllDesignDevices(undefined, placementRulesWithAzIds);
+    const report = AutomatedPlacementService.placeAllDesignDevices(undefined, placementRulesWithAzIds, true);
     console.log('Generated placement report in RackLayoutsTab:', report);
     
     setPlacementReport(report);
@@ -88,7 +88,7 @@ export function useDevicePlacement() {
   const handleConfirmAutoPlacement = useCallback((azNameMap: Record<string, string>) => {
     setIsPlacing(true);
 
-    const report = AutomatedPlacementService.placeAllDesignDevices(undefined, clusterAZAssignments);
+    const report = AutomatedPlacementService.placeAllDesignDevices(undefined, clusterAZAssignments, true);
     console.log('Generated placement report in RackLayoutsTab:', report); 
 
     setPlacementReport(report);

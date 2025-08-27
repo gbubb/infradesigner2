@@ -36,6 +36,7 @@ export class AutomatedPlacementService {
    * 
    * @param designId - Optional design ID to place (uses active design if not provided)
    * @param clusterAZAssignments - Optional availability zone assignments for clusters
+   * @param clearExisting - If true, clears all existing placements before placing (default: false)
    * 
    * @returns PlacementReport containing placement status for all devices
    * 
@@ -53,7 +54,7 @@ export class AutomatedPlacementService {
    * - Weight limits
    * - Availability zone assignments
    */
-  static placeAllDesignDevices(designId?: string, clusterAZAssignments?: ClusterAZAssignment[]): PlacementReport {
+  static placeAllDesignDevices(designId?: string, clusterAZAssignments?: ClusterAZAssignment[], clearExisting: boolean = false): PlacementReport {
     const state = useDesignStore.getState();
     const activeDesign = state.activeDesign;
 
@@ -71,7 +72,22 @@ export class AutomatedPlacementService {
     }
 
     const components = activeDesign.components;
-    const rackProfiles = RackService.getAllRackProfiles();
+    let rackProfiles = RackService.getAllRackProfiles();
+    
+    // Clear existing placements if requested
+    if (clearExisting) {
+      rackProfiles.forEach(rack => {
+        if (rack.devices && rack.devices.length > 0) {
+          // Clear all devices from this rack
+          RackService.updateRackProfile(rack.id, { devices: [] }, true); // Skip individual updates
+        }
+      });
+      // Batch update after clearing
+      RackService.batchUpdateRackProfiles();
+      // Re-fetch the cleared profiles
+      rackProfiles = RackService.getAllRackProfiles();
+    }
+    
     const allAZs = [...new Set(rackProfiles.map(r => r.availabilityZoneId).filter(Boolean))] as string[];
     const { coreRacks, computeRacks } = getCoreAndComputeRacks(rackProfiles);
     const coreAZId = rackProfiles.find(r => r.rackType === 'Core')?.availabilityZoneId || "core-az-id";

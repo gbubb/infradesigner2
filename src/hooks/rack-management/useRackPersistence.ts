@@ -21,8 +21,8 @@ export function useRackPersistence() {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const updateDesign = useDesignStore(state => state.updateDesign);
 
-  // Listen for requirements changes
-  const requirementsHash = JSON.stringify(activeDesign?.requirements || {});
+  // Listen for requirements changes - only compute hash when activeDesign changes
+  const requirementsHash = activeDesign ? JSON.stringify(activeDesign.requirements || {}) : '';
 
   // Effect: Auto-save when devices are placed (with 2s debounce)
   useEffect(() => {
@@ -129,18 +129,33 @@ export function useRackPersistence() {
   useEffect(() => {
     if (!activeDesign || isResettingRef.current) return;
     
-    // Check if requirements actually changed
-    if (previousRequirementsHashRef.current !== null && 
-        previousRequirementsHashRef.current !== requirementsHash) {
-      // Requirements changed - clear racks and force regeneration
-      RackService.clearAllRackProfiles();
-      setResetTrigger(prev => prev + 1);
-      hasUnsavedChangesRef.current = false;
+    // Skip initial mount - don't clear racks on first render
+    if (previousRequirementsHashRef.current === null) {
+      previousRequirementsHashRef.current = requirementsHash;
+      return;
     }
     
-    // Update the previous hash
-    previousRequirementsHashRef.current = requirementsHash;
-  }, [activeDesign, activeDesign?.id, requirementsHash]);
+    // Check if requirements actually changed (content comparison, not reference)
+    if (previousRequirementsHashRef.current !== requirementsHash) {
+      // Double-check this is a real change by checking if any devices are placed
+      const currentRacks = RackService.getAllRackProfiles();
+      const hasPlacedDevices = currentRacks.some(rack => rack.devices && rack.devices.length > 0);
+      
+      // Only clear if requirements truly changed AND we don't have manually placed devices
+      if (!hasPlacedDevices) {
+        console.log('[useRackPersistence] Requirements changed, clearing racks');
+        // Requirements changed - clear racks and force regeneration
+        RackService.clearAllRackProfiles();
+        setResetTrigger(prev => prev + 1);
+        hasUnsavedChangesRef.current = false;
+      } else {
+        console.log('[useRackPersistence] Requirements changed but devices are placed, keeping racks');
+      }
+      
+      // Update the previous hash regardless
+      previousRequirementsHashRef.current = requirementsHash;
+    }
+  }, [requirementsHash, activeDesign]);
 
   // Manual save handler
   const handleSaveLayout = useCallback(async () => {
