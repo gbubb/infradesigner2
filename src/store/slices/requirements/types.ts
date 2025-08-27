@@ -28,6 +28,7 @@ export interface RequirementsSlice extends RequirementsState {
 export const defaultRequirements: DesignRequirements = {
   computeRequirements: {
     computeClusters: [],
+    controllerClusterRequired: true,
     controllerNodeCount: 3,
     infrastructureClusterRequired: false,
     infrastructureNodeCount: 3,

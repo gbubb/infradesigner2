@@ -14,6 +14,7 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
   };
   
   const totalAvailabilityZones = getValue(requirements, 'physicalConstraints.totalAvailabilityZones', 8) || 8;
+  const controllerClusterRequired = getValue(requirements, 'computeRequirements.controllerClusterRequired', true);
   const controllerNodeCount = getValue(requirements, 'computeRequirements.controllerNodeCount', 3) || 3;
   const infrastructureClusterRequired = getValue(requirements, 'computeRequirements.infrastructureClusterRequired', false) || false;
   const infrastructureNodeCount = getValue(requirements, 'computeRequirements.infrastructureNodeCount', 3) || 3;
@@ -60,21 +61,25 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
   
   const leafSwitchCount = totalAvailabilityZones * leafSwitchesPerAZ;
   
-  const controllerRole = {
-    id: uuidv4(),
-    role: 'controllerNode',
-    description: 'Handles cluster management and monitoring',
-    requiredCount: controllerNodeCount,
-    clusterInfo: {
-      clusterId: 'controller-cluster',
-      clusterName: 'Controller Cluster',
-      clusterIndex: 0
-    }
-  };
+  const newRoles: ComponentRole[] = [];
   
-  // console.log('Creating controller role with clusterInfo:', controllerRole.clusterInfo);
-  
-  const newRoles: ComponentRole[] = [controllerRole];
+  // Only add controller role if controller cluster is required
+  if (controllerClusterRequired) {
+    const controllerRole = {
+      id: uuidv4(),
+      role: 'controllerNode',
+      description: 'Handles cluster management and monitoring',
+      requiredCount: controllerNodeCount,
+      clusterInfo: {
+        clusterId: 'controller-cluster',
+        clusterName: 'Controller Cluster',
+        clusterIndex: 0
+      }
+    };
+    
+    // console.log('Creating controller role with clusterInfo:', controllerRole.clusterInfo);
+    newRoles.push(controllerRole);
+  }
   
   // Build a map of compute clusters that are used for hyper-converged storage
   const hyperConvergedComputeClusters = new Map<string, StorageClusterRequirement>();

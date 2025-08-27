@@ -23,6 +23,7 @@ export interface AvailabilityZone {
 // Infrastructure Design Requirements
 export interface DesignRequirements {
   computeRequirements: {
+    controllerClusterRequired?: boolean;
     controllerNodeCount?: number;
     infrastructureClusterRequired?: boolean;
     infrastructureNodeCount?: number;

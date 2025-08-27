@@ -70,6 +70,17 @@ export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center justify-between space-x-2 rounded-md border p-4">
+              <div>
+                <h4 className="text-sm font-medium">Controller Cluster Required</h4>
+                <p className="text-sm text-muted-foreground">Deploy controller nodes for management</p>
+              </div>
+              <Switch
+                checked={requirements.controllerClusterRequired !== false}
+                onCheckedChange={(checked) => onUpdate({ ...requirements, controllerClusterRequired: checked })}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="controllerNodeCount">Controller Node Count</Label>
               <Input
@@ -80,9 +91,21 @@ export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
                 placeholder="e.g., 3"
                 value={requirements.controllerNodeCount || ''}
                 onChange={handleInputChange}
+                disabled={!requirements.controllerClusterRequired}
               />
             </div>
 
+            <div className="flex items-center justify-between space-x-2 rounded-md border p-4">
+              <div>
+                <h4 className="text-sm font-medium">Infrastructure Cluster Required</h4>
+                <p className="text-sm text-muted-foreground">Use dedicated nodes for infrastructure services</p>
+              </div>
+              <Switch
+                checked={requirements.infrastructureClusterRequired || false}
+                onCheckedChange={(checked) => onUpdate({ ...requirements, infrastructureClusterRequired: checked })}
+              />
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="infrastructureNodeCount">Infrastructure Node Count</Label>
               <Input
@@ -93,17 +116,7 @@ export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
                 placeholder="e.g., 3"
                 value={requirements.infrastructureNodeCount || ''}
                 onChange={handleInputChange}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between space-x-2 rounded-md border p-4">
-              <div>
-                <h4 className="text-sm font-medium">Infrastructure Cluster Required</h4>
-                <p className="text-sm text-muted-foreground">Use dedicated nodes for infrastructure services</p>
-              </div>
-              <Switch
-                checked={requirements.infrastructureClusterRequired || false}
-                onCheckedChange={(checked) => onUpdate({ ...requirements, infrastructureClusterRequired: checked })}
+                disabled={!requirements.infrastructureClusterRequired}
               />
             </div>
             

@@ -96,6 +96,21 @@ export const DesignPanel: React.FC = () => {
         );
       case 'firewall':
         return componentTemplates.filter(c => c.type === ComponentType.Firewall);
+      case 'torSwitch': {
+        // For Core-Distribution-Access topology, ToR switches can also be leaf switches
+        const requirements = useStore.getState().requirements;
+        const networkTopology = requirements.networkRequirements?.networkTopology;
+        if (networkTopology === 'Core-Distribution-Access') {
+          return componentTemplates.filter(
+            (c): c is SwitchComponent => c.type === ComponentType.Switch && 
+            (c.switchRole === 'access' || c.switchRole === 'leaf')
+          );
+        }
+        // Default to access switches for ToR
+        return componentTemplates.filter(
+          (c): c is SwitchComponent => c.type === ComponentType.Switch && c.switchRole === 'access'
+        );
+      }
       case 'copperPatchPanel':
         return componentTemplates.filter(c => c.type === ComponentType.CopperPatchPanel);
       case 'fiberPatchPanel':
