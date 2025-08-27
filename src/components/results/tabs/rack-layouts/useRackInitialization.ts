@@ -24,6 +24,8 @@ export const useRackInitialization = (resetTrigger: number) => {
   const prevDesignIdRef = useRef<string | null>(null);
   // Store previous reset trigger to detect actual changes
   const prevResetTriggerRef = useRef<number>(0);
+  // Add a ref to prevent re-initialization while one is in progress
+  const isInitializingRef = useRef(false);
 
   // Distribute components across racks based on role and AZ
   // MOVED BEFORE useEffect to avoid temporal dead zone
@@ -250,6 +252,12 @@ export const useRackInitialization = (resetTrigger: number) => {
       return;
     }
     
+    // Skip if already initializing to prevent loops
+    if (isInitializingRef.current) {
+      // console.log('[useRackInitialization] Skipping - initialization already in progress');
+      return;
+    }
+    
     // Check if this is an actual reset trigger change
     const isResetTriggered = resetTrigger !== prevResetTriggerRef.current && resetTrigger !== 0;
     if (isResetTriggered) {
@@ -292,6 +300,8 @@ export const useRackInitialization = (resetTrigger: number) => {
       (azCountMismatch && !hasPlacedDevices); // Wrong number of AZs and no placements
     
     if (shouldReinitialize) {
+      // Mark that we're initializing to prevent re-entry
+      isInitializingRef.current = true;
       
       // Update refs
       initializedRef.current = false;
@@ -303,20 +313,21 @@ export const useRackInitialization = (resetTrigger: number) => {
       // Determine availability zones - reuse the definedAZs from above
       const totalAvailabilityZonesFromRequirements = activeDesign.requirements.physicalConstraints.totalAvailabilityZones;
       
-      console.log('[useRackInitialization] Reinitializing racks:', {
-        shouldReinitialize,
-        rackCountMismatch,
-        azCountMismatch,
-        expectedRackCount,
-        actualRackCount,
-        expectedAZCount,
-        actualAZCount,
-        definedAZs,
-        definedAZsLength: definedAZs.length,
-        totalAvailabilityZonesFromRequirements,
-        computeStorageRackQuantity: activeDesign.requirements.physicalConstraints.computeStorageRackQuantity,
-        dedicatedNetworkCoreRacks: activeDesign.requirements.networkRequirements.dedicatedNetworkCoreRacks
-      });
+      // Debug logging - commented out for production
+      // console.log('[useRackInitialization] Reinitializing racks:', {
+      //   shouldReinitialize,
+      //   rackCountMismatch,
+      //   azCountMismatch,
+      //   expectedRackCount,
+      //   actualRackCount,
+      //   expectedAZCount,
+      //   actualAZCount,
+      //   definedAZs,
+      //   definedAZsLength: definedAZs.length,
+      //   totalAvailabilityZonesFromRequirements,
+      //   computeStorageRackQuantity: activeDesign.requirements.physicalConstraints.computeStorageRackQuantity,
+      //   dedicatedNetworkCoreRacks: activeDesign.requirements.networkRequirements.dedicatedNetworkCoreRacks
+      // });
       
       const azCount = definedAZs.length > 0 
         ? definedAZs.length 
@@ -396,6 +407,8 @@ export const useRackInitialization = (resetTrigger: number) => {
       }
       
       initializedRef.current = true;
+      // Clear the initializing flag
+      isInitializingRef.current = false;
     } else {
       // Just update our state with existing racks
       const existingRackProfiles: RackProfileInitializationData[] = existingRacks.map(rack => ({
