@@ -262,14 +262,34 @@ export const useRackInitialization = (resetTrigger: number) => {
     // Check if any racks have placed devices
     const hasPlacedDevices = existingRacks.some(rack => rack.devices && rack.devices.length > 0);
     
+    // Check if rack count matches requirements
+    const expectedRackCount = (activeDesign.requirements.physicalConstraints.computeStorageRackQuantity || 1) +
+      (activeDesign.requirements.networkRequirements.dedicatedNetworkCoreRacks ? 
+        (activeDesign.requirements.physicalConstraints.networkCoreRackQuantity || 2) : 0);
+    const actualRackCount = existingRacks.length;
+    const rackCountMismatch = actualRackCount !== expectedRackCount;
+    
+    // Check if AZ count matches
+    const definedAZs = activeDesign.requirements.physicalConstraints.availabilityZones || [];
+    const expectedAZCount = definedAZs.length > 0 ? definedAZs.length : 
+      (activeDesign.requirements.physicalConstraints.totalAvailabilityZones || 1);
+    const uniqueExistingAZs = [...new Set(existingRacks.map(r => r.availabilityZoneId))];
+    // Filter out core-az-id from the count
+    const actualAZCount = uniqueExistingAZs.filter(az => az !== 'core-az-id').length;
+    const azCountMismatch = actualAZCount !== expectedAZCount;
+    
     // Only reinitialize if:
     // 1. Reset is explicitly triggered (user clicked Reset button), OR
     // 2. Design changed AND no devices are placed, OR  
-    // 3. No racks exist at all
+    // 3. No racks exist at all, OR
+    // 4. Rack count doesn't match requirements, OR
+    // 5. AZ count doesn't match requirements
     const shouldReinitialize =
       isResetTriggered || // User explicitly clicked reset
       (prevDesignIdRef.current !== activeDesign.id && !hasPlacedDevices) || // Design changed with no placements
-      existingRacks.length === 0; // No racks exist
+      existingRacks.length === 0 || // No racks exist
+      (rackCountMismatch && !hasPlacedDevices) || // Wrong number of racks and no placements
+      (azCountMismatch && !hasPlacedDevices); // Wrong number of AZs and no placements
     
     if (shouldReinitialize) {
       
@@ -280,11 +300,27 @@ export const useRackInitialization = (resetTrigger: number) => {
       // Clear existing racks completely
       RackService.clearAllRackProfiles(false);
       
-      // Determine availability zones
-      const definedAZs = activeDesign.requirements.physicalConstraints.availabilityZones || [];
+      // Determine availability zones - reuse the definedAZs from above
+      const totalAvailabilityZonesFromRequirements = activeDesign.requirements.physicalConstraints.totalAvailabilityZones;
+      
+      console.log('[useRackInitialization] Reinitializing racks:', {
+        shouldReinitialize,
+        rackCountMismatch,
+        azCountMismatch,
+        expectedRackCount,
+        actualRackCount,
+        expectedAZCount,
+        actualAZCount,
+        definedAZs,
+        definedAZsLength: definedAZs.length,
+        totalAvailabilityZonesFromRequirements,
+        computeStorageRackQuantity: activeDesign.requirements.physicalConstraints.computeStorageRackQuantity,
+        dedicatedNetworkCoreRacks: activeDesign.requirements.networkRequirements.dedicatedNetworkCoreRacks
+      });
+      
       const azCount = definedAZs.length > 0 
         ? definedAZs.length 
-        : (activeDesign.requirements.physicalConstraints.totalAvailabilityZones || 1);
+        : (totalAvailabilityZonesFromRequirements || 1);
       
       // Calculate number of racks needed based on requirements
       // Use the actual value from requirements, don't create excessive defaults
