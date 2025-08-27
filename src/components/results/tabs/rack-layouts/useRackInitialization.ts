@@ -287,10 +287,13 @@ export const useRackInitialization = (resetTrigger: number) => {
         : (activeDesign.requirements.physicalConstraints.totalAvailabilityZones || 1);
       
       // Calculate number of racks needed based on requirements
-      const computeStorageRackTotalQuantity = activeDesign.requirements.physicalConstraints.computeStorageRackQuantity || (azCount * 2);
+      // Use the actual value from requirements, don't create excessive defaults
+      const computeStorageRackTotalQuantity = activeDesign.requirements.physicalConstraints.computeStorageRackQuantity || azCount;
       const computeRacksPerAZ = Math.ceil(computeStorageRackTotalQuantity / azCount);
-      const networkCoreRackQuantity = activeDesign.requirements.physicalConstraints.networkCoreRackQuantity || 
-        (activeDesign.requirements.networkRequirements.dedicatedNetworkCoreRacks ? 2 : 0);
+      // Only create network core racks if explicitly set in requirements
+      const dedicatedNetworkCoreRacks = activeDesign.requirements.networkRequirements.dedicatedNetworkCoreRacks || false;
+      const networkCoreRackQuantity = dedicatedNetworkCoreRacks ? 
+        (activeDesign.requirements.physicalConstraints.networkCoreRackQuantity || 2) : 0;
       
       const newRacks: RackProfileInitializationData[] = [];
       const newAvailabilityZones: string[] = [];
