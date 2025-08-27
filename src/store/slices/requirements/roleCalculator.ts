@@ -31,10 +31,11 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
   const managementNetwork = getValue(requirements, 'networkRequirements.managementNetwork', "Dual Home") as ManagementNetworkType;
   
   // Structured cabling requirements
-  const copperPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.copperPatchPanelsPerAZ', 0);
-  const fiberPatchPanelsPerAZ = getValue(requirements, 'networkRequirements.fiberPatchPanelsPerAZ', 0);
-  const copperPatchPanelsPerCoreRack = getValue(requirements, 'networkRequirements.copperPatchPanelsPerCoreRack', 0);
-  const fiberPatchPanelsPerCoreRack = getValue(requirements, 'networkRequirements.fiberPatchPanelsPerCoreRack', 0);
+  const structuredCablingEnabled = getValue(requirements, 'networkRequirements.structuredCablingEnabled', false);
+  const copperPatchPanelsPerAZ = structuredCablingEnabled ? getValue(requirements, 'networkRequirements.copperPatchPanelsPerAZ', 0) : 0;
+  const fiberPatchPanelsPerAZ = structuredCablingEnabled ? getValue(requirements, 'networkRequirements.fiberPatchPanelsPerAZ', 0) : 0;
+  const copperPatchPanelsPerCoreRack = structuredCablingEnabled ? getValue(requirements, 'networkRequirements.copperPatchPanelsPerCoreRack', 0) : 0;
+  const fiberPatchPanelsPerCoreRack = structuredCablingEnabled ? getValue(requirements, 'networkRequirements.fiberPatchPanelsPerCoreRack', 0) : 0;
   
   const dedicatedNetworkCoreRacks = getValue(requirements, 'networkRequirements.dedicatedNetworkCoreRacks', true);
   const networkCoreRackQuantity = getValue(requirements, 'physicalConstraints.networkCoreRackQuantity', 
@@ -269,12 +270,10 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
     });
   } else {
     // For Three-Tier and Core-Distribution-Access topologies
-    // ToR switches are based on the number of racks, not nodes
-    // Typically 2 ToR switches per rack for redundancy
-    const computeStorageRackQuantity = getValue(requirements, 'physicalConstraints.computeStorageRackQuantity', 16);
-    
-    // 2 ToR switches per rack for redundancy
-    const torSwitchCount = computeStorageRackQuantity * 2;
+    // ToR switches should align with leaf switches per AZ for consistency
+    // This accounts for AZs that may contain multiple racks
+    const torSwitchesPerAZ = leafSwitchesPerAZ; // Use the same value as leaf switches
+    const torSwitchCount = totalAvailabilityZones * torSwitchesPerAZ;
     
     newRoles.push({
       id: uuidv4(),
@@ -293,8 +292,8 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
     });
   }
   
-  // Add copper patch panel role
-  if (copperPatchPanelsPerAZ > 0 || copperPatchPanelsPerCoreRack > 0) {
+  // Add copper patch panel role (only if structured cabling is enabled)
+  if (structuredCablingEnabled && (copperPatchPanelsPerAZ > 0 || copperPatchPanelsPerCoreRack > 0)) {
     // Calculate total copper panels: (panels per AZ * AZ count) + (panels per core rack * core rack count)
     const totalCopperPanels = (copperPatchPanelsPerAZ * totalAvailabilityZones) + 
       (networkCoreRackQuantity * copperPatchPanelsPerCoreRack);
@@ -315,8 +314,8 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
     });
   }
 
-  // Add fiber patch panel role
-  if (fiberPatchPanelsPerAZ > 0 || fiberPatchPanelsPerCoreRack > 0) {
+  // Add fiber patch panel role (only if structured cabling is enabled)
+  if (structuredCablingEnabled && (fiberPatchPanelsPerAZ > 0 || fiberPatchPanelsPerCoreRack > 0)) {
     // Calculate total fiber panels: (panels per AZ * AZ count) + (panels per core rack * core rack count)
     const totalFiberPanels = (fiberPatchPanelsPerAZ * totalAvailabilityZones) + 
       (networkCoreRackQuantity * fiberPatchPanelsPerCoreRack);

@@ -188,59 +188,72 @@ export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
           <CardTitle>Structured Cabling</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="copperPatchPanelsPerAZ">Copper Patch Panels Per AZ</Label>
-              <Input
-                id="copperPatchPanelsPerAZ"
-                name="copperPatchPanelsPerAZ"
-                type="number"
-                min="0"
-                placeholder="e.g., 2"
-                value={requirements.copperPatchPanelsPerAZ || ''}
-                onChange={handleInputChange}
-              />
+          <div className="flex items-center justify-between space-x-2 rounded-md border p-4">
+            <div>
+              <h4 className="text-sm font-medium">Enable Structured Cabling</h4>
+              <p className="text-sm text-muted-foreground">Include patch panels for cable management</p>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="fiberPatchPanelsPerAZ">Fiber Patch Panels Per AZ</Label>
-              <Input
-                id="fiberPatchPanelsPerAZ"
-                name="fiberPatchPanelsPerAZ"
-                type="number"
-                min="0"
-                placeholder="e.g., 2"
-                value={requirements.fiberPatchPanelsPerAZ || ''}
-                onChange={handleInputChange}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="copperPatchPanelsPerCoreRack">Copper Patch Panels Per Core Rack</Label>
-              <Input
-                id="copperPatchPanelsPerCoreRack"
-                name="copperPatchPanelsPerCoreRack"
-                type="number"
-                min="0"
-                placeholder="e.g., 1"
-                value={requirements.copperPatchPanelsPerCoreRack || ''}
-                onChange={handleInputChange}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="fiberPatchPanelsPerCoreRack">Fiber Patch Panels Per Core Rack</Label>
-              <Input
-                id="fiberPatchPanelsPerCoreRack"
-                name="fiberPatchPanelsPerCoreRack"
-                type="number"
-                min="0"
-                placeholder="e.g., 1"
-                value={requirements.fiberPatchPanelsPerCoreRack || ''}
-                onChange={handleInputChange}
-              />
-            </div>
+            <Switch
+              checked={requirements.structuredCablingEnabled || false}
+              onCheckedChange={(checked) => handleSwitchChange('structuredCablingEnabled', checked)}
+            />
           </div>
+
+          {requirements.structuredCablingEnabled && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="copperPatchPanelsPerAZ">Copper Patch Panels Per AZ</Label>
+                <Input
+                  id="copperPatchPanelsPerAZ"
+                  name="copperPatchPanelsPerAZ"
+                  type="number"
+                  min="0"
+                  placeholder="e.g., 2"
+                  value={requirements.copperPatchPanelsPerAZ || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="fiberPatchPanelsPerAZ">Fiber Patch Panels Per AZ</Label>
+                <Input
+                  id="fiberPatchPanelsPerAZ"
+                  name="fiberPatchPanelsPerAZ"
+                  type="number"
+                  min="0"
+                  placeholder="e.g., 2"
+                  value={requirements.fiberPatchPanelsPerAZ || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="copperPatchPanelsPerCoreRack">Copper Patch Panels Per Core Rack</Label>
+                <Input
+                  id="copperPatchPanelsPerCoreRack"
+                  name="copperPatchPanelsPerCoreRack"
+                  type="number"
+                  min="0"
+                  placeholder="e.g., 1"
+                  value={requirements.copperPatchPanelsPerCoreRack || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="fiberPatchPanelsPerCoreRack">Fiber Patch Panels Per Core Rack</Label>
+                <Input
+                  id="fiberPatchPanelsPerCoreRack"
+                  name="fiberPatchPanelsPerCoreRack"
+                  type="number"
+                  min="0"
+                  placeholder="e.g., 1"
+                  value={requirements.fiberPatchPanelsPerCoreRack || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

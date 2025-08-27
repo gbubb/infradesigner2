@@ -45,7 +45,8 @@ export const defaultRequirements: DesignRequirements = {
     physicalFirewalls: false,
     leafSwitchesPerAZ: 2,
     dedicatedStorageNetwork: false,
-    dedicatedNetworkCoreRacks: true
+    dedicatedNetworkCoreRacks: true,
+    structuredCablingEnabled: false
   },
   physicalConstraints: {
     computeStorageRackQuantity: 16,

@@ -45,6 +45,7 @@ export interface DesignRequirements {
     dedicatedStorageNetwork?: boolean;
     dedicatedNetworkCoreRacks?: boolean;
     deviceLifespanYears?: number;
+    structuredCablingEnabled?: boolean;
     copperPatchPanelsPerAZ?: number;
     fiberPatchPanelsPerAZ?: number;
     copperPatchPanelsPerCoreRack?: number;
