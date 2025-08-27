@@ -358,6 +358,11 @@ export class AutomatedPlacementService {
     placementResult.placedDevices = placedDevices;
     placementResult.failedDevices = failedDevices;
 
+    // Batch update all rack profiles after all placements are complete
+    // This is critical - all device placements above use skipUpdate: true
+    // So we need to sync the changes to the design store here
+    RackService.batchUpdateRackProfiles();
+
     return placementResult;
   }
 }

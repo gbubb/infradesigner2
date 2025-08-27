@@ -38,7 +38,7 @@ export function tryPlaceDeviceInRacksWithConstraints({
     ) {
       const available = isRUAvailableWithComponentRU(rack, preferredRU, ruSize, activeDesignState);
       if (available) {
-        const result = RackService.placeDevice(rack.id, device.id, preferredRU);
+        const result = RackService.placeDevice(rack.id, device.id, preferredRU, true); // Skip individual updates during batch placement
         if (result.success) {
           return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: preferredRU };
         }
@@ -65,7 +65,7 @@ export function tryPlaceDeviceInRacksWithConstraints({
       for (const ru of positions) {
         const available = isRUAvailableWithComponentRU(rack, ru, ruSize, activeDesignState);
         if (available) {
-          const result = RackService.placeDevice(rack.id, device.id, ru);
+          const result = RackService.placeDevice(rack.id, device.id, ru, true); // Skip individual updates during batch placement
           if (result.success) {
             return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: ru };
           }
@@ -80,7 +80,7 @@ export function tryPlaceDeviceInRacksWithConstraints({
       ) {
         const available = isRUAvailableWithComponentRU(rack, ru, ruSize, activeDesignState);
         if (available) {
-          const result = RackService.placeDevice(rack.id, device.id, ru);
+          const result = RackService.placeDevice(rack.id, device.id, ru, true); // Skip individual updates during batch placement
           if (result.success) {
             return { success: true, azId: rack.availabilityZoneId, rackId: rack.id, ruPosition: ru };
           }

@@ -277,8 +277,27 @@ export const useRackInitialization = (resetTrigger: number) => {
     // Check if racks exist already for this design
     const existingRacks = RackService.getAllRackProfiles();
     
-    // Check if any racks have placed devices
+    // Check if any racks have placed devices - this is our protection against unwanted reinitialization
     const hasPlacedDevices = existingRacks.some(rack => rack.devices && rack.devices.length > 0);
+    
+    // If devices are placed, don't reinitialize unless explicitly reset
+    if (hasPlacedDevices && !isResetTriggered) {
+      // Just update our state with existing racks and return early
+      const existingRackProfiles: RackProfileInitializationData[] = existingRacks.map(rack => ({
+        id: rack.id,
+        name: rack.name,
+        azName: rack.azName || (rack.availabilityZoneId === 'core-az-id' ? 'Core' : rack.availabilityZoneId || ''),
+        availabilityZoneId: rack.availabilityZoneId,
+        rackType: rack.rackType === RackType.Core ? 'Core' : 'ComputeStorage'
+      }));
+      
+      setRackProfiles(existingRackProfiles);
+      
+      // Extract unique AZ names
+      const uniqueAZs = [...new Set(existingRackProfiles.map(rack => rack.azName))];
+      setAvailabilityZones(uniqueAZs);
+      return;
+    }
     
     // Check if rack count matches requirements
     const expectedRackCount = (activeDesign.requirements.physicalConstraints.computeStorageRackQuantity || 1) +
