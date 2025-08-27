@@ -268,28 +268,19 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
       requiredCount: 2
     });
   } else {
-    const totalComputeNodes = computeClusters.reduce((sum, cluster) => {
-      const totalVCPUs = cluster.totalVCPUs || 5000;
-      const overcommitRatio = cluster.overcommitRatio || 2;
-      const totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommitRatio);
-      const nodesPerAZ = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones);
-      const baseNodeCount = nodesPerAZ * totalAvailabilityZones;
-      
-      let additionalAZs = 0;
-      if (cluster.availabilityZoneRedundancy === 'N+1') {
-        additionalAZs = 1;
-      } else if (cluster.availabilityZoneRedundancy === 'N+2') {
-        additionalAZs = 2;
-      }
-      
-      return sum + baseNodeCount + (additionalAZs * nodesPerAZ);
-    }, 0);
+    // For Three-Tier and Core-Distribution-Access topologies
+    // ToR switches are based on the number of racks, not nodes
+    // Typically 2 ToR switches per rack for redundancy
+    const computeStorageRackQuantity = getValue(requirements, 'physicalConstraints.computeStorageRackQuantity', 16);
+    
+    // 2 ToR switches per rack for redundancy
+    const torSwitchCount = computeStorageRackQuantity * 2;
     
     newRoles.push({
       id: uuidv4(),
       role: 'torSwitch',
       description: 'Provides top-of-rack switching for servers',
-      requiredCount: Math.ceil(totalComputeNodes / 2)
+      requiredCount: torSwitchCount
     });
   }
   
