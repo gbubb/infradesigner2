@@ -60,16 +60,27 @@ export const createDesignSlice: StateCreator<
       const updatedDesigns = [...state.savedDesigns, newDesign];
       
       // Get the current user's ID
-      const user = supabase.auth.getUser().then(({ data }) => {
-        const userId = data?.user?.id;
-        
-        // Save with user ID if available
-        saveDesignToDB(newDesign, userId).then(success => {
+      supabase.auth.getUser()
+        .then(({ data }) => {
+          const userId = data?.user?.id;
+          
+          // Save with user ID if available
+          return saveDesignToDB(newDesign, userId);
+        })
+        .then(success => {
           if (success) {
             toast.success(`Created new design: ${name}`);
           }
+        })
+        .catch(error => {
+          console.error('Error getting user or saving design:', error);
+          // Still try to save without user ID if auth fails
+          saveDesignToDB(newDesign, undefined).then(success => {
+            if (success) {
+              toast.success(`Created new design: ${name}`);
+            }
+          });
         });
-      });
       
       return {
         savedDesigns: updatedDesigns,
@@ -102,17 +113,24 @@ export const createDesignSlice: StateCreator<
       );
       
       // Get the current user's ID
-      supabase.auth.getUser().then(({ data }) => {
-        const userId = data?.user?.id;
-        
-        // Save with user ID if available
-        saveDesignToDB(updatedDesign, userId).then(success => {
+      supabase.auth.getUser()
+        .then(({ data }) => {
+          const userId = data?.user?.id;
+          
+          // Save with user ID if available
+          return saveDesignToDB(updatedDesign, userId);
+        })
+        .then(success => {
           if (success) {
             // Commented out to reduce noise - too many updates happen automatically
             // toast.success(`Updated design: ${updatedDesign.name}`);
           }
+        })
+        .catch(error => {
+          console.error('Error getting user or saving design:', error);
+          // Still try to save without user ID if auth fails
+          saveDesignToDB(updatedDesign, undefined);
         });
-      });
       
       return {
         savedDesigns: updatedDesigns,
@@ -147,17 +165,24 @@ export const createDesignSlice: StateCreator<
           : state.activeDesign;
       
       // Get the current user's ID
-      supabase.auth.getUser().then(({ data }) => {
-        const userId = data?.user?.id;
-        
-        // Save with user ID if available
-        saveDesignToDB(updatedDesign, userId).then(success => {
+      supabase.auth.getUser()
+        .then(({ data }) => {
+          const userId = data?.user?.id;
+          
+          // Save with user ID if available
+          return saveDesignToDB(updatedDesign, userId);
+        })
+        .then(success => {
           if (success) {
             // Commented out to reduce noise - too many updates happen automatically
             // toast.success(`Updated design: ${updatedDesign.name}`);
           }
+        })
+        .catch(error => {
+          console.error('Error getting user or saving design:', error);
+          // Still try to save without user ID if auth fails
+          saveDesignToDB(updatedDesign, undefined);
         });
-      });
       
       return {
         savedDesigns: updatedDesigns,
@@ -269,37 +294,65 @@ export const createDesignSlice: StateCreator<
     });
     
     // Get the current user's ID and use appropriate save method
-    supabase.auth.getUser().then(async ({ data }) => {
-      const userId = data?.user?.id;
-      
-      if (isManual) {
-        // For manual saves, do an immediate full save
-        const success = await saveDesignOptimized(updatedDesign, userId, true);
-        if (success) {
-          toast.success(`Saved design: ${updatedDesign.name}`);
-        }
-      } else {
-        // For auto-saves, track changes and use debounced save
-        const prevDesign = get().savedDesigns.find(d => d.id === updatedDesign.id);
-        if (prevDesign) {
-          // Track which fields have changed
-          const fieldsToCheck: (keyof InfrastructureDesign)[] = [
-            'name', 'description', 'requirements', 'components', 
-            'componentRoles', 'selectedDisksByRole', 'selectedGPUsByRole',
-            'connectionRules', 'placementRules', 'rowLayout'
-          ];
+    supabase.auth.getUser()
+      .then(async ({ data }) => {
+        const userId = data?.user?.id;
+        
+        if (isManual) {
+          // For manual saves, do an immediate full save
+          const success = await saveDesignOptimized(updatedDesign, userId, true);
+          if (success) {
+            toast.success(`Saved design: ${updatedDesign.name}`);
+          }
+        } else {
+          // For auto-saves, track changes and use debounced save
+          const prevDesign = get().savedDesigns.find(d => d.id === updatedDesign.id);
+          if (prevDesign) {
+            // Track which fields have changed
+            const fieldsToCheck: (keyof InfrastructureDesign)[] = [
+              'name', 'description', 'requirements', 'components', 
+              'componentRoles', 'selectedDisksByRole', 'selectedGPUsByRole',
+              'connectionRules', 'placementRules', 'rowLayout'
+            ];
+            
+            fieldsToCheck.forEach(field => {
+              if (JSON.stringify(prevDesign[field]) !== JSON.stringify(updatedDesign[field])) {
+                trackDesignChange(updatedDesign.id, field, updatedDesign[field]);
+              }
+            });
+          }
           
-          fieldsToCheck.forEach(field => {
-            if (JSON.stringify(prevDesign[field]) !== JSON.stringify(updatedDesign[field])) {
-              trackDesignChange(updatedDesign.id, field, updatedDesign[field]);
+          // Use debounced save to avoid excessive database writes
+          debouncedSaveToDatabase(updatedDesign, userId, false);
+        }
+      })
+      .catch(error => {
+        console.error('Error getting user:', error);
+        // Still try to save without user ID if auth fails
+        if (isManual) {
+          saveDesignOptimized(updatedDesign, undefined, true).then(success => {
+            if (success) {
+              toast.success(`Saved design: ${updatedDesign.name}`);
             }
           });
+        } else {
+          const prevDesign = get().savedDesigns.find(d => d.id === updatedDesign.id);
+          if (prevDesign) {
+            const fieldsToCheck: (keyof InfrastructureDesign)[] = [
+              'name', 'description', 'requirements', 'components', 
+              'componentRoles', 'selectedDisksByRole', 'selectedGPUsByRole',
+              'connectionRules', 'placementRules', 'rowLayout'
+            ];
+            
+            fieldsToCheck.forEach(field => {
+              if (JSON.stringify(prevDesign[field]) !== JSON.stringify(updatedDesign[field])) {
+                trackDesignChange(updatedDesign.id, field, updatedDesign[field]);
+              }
+            });
+          }
+          debouncedSaveToDatabase(updatedDesign, undefined, false);
         }
-        
-        // Use debounced save to avoid excessive database writes
-        debouncedSaveToDatabase(updatedDesign, userId, false);
-      }
-    });
+      });
   },
   
   exportDesign: () => {
@@ -327,10 +380,16 @@ export const createDesignSlice: StateCreator<
         updatedDesigns[existingDesignIndex] = importedDesign;
         
         // Get the current user's ID for saving
-        supabase.auth.getUser().then(({ data }) => {
-          const userId = data?.user?.id;
-          saveDesignToDB(importedDesign, userId);
-        });
+        supabase.auth.getUser()
+          .then(({ data }) => {
+            const userId = data?.user?.id;
+            saveDesignToDB(importedDesign, userId);
+          })
+          .catch(error => {
+            console.error('Error getting user:', error);
+            // Still try to save without user ID if auth fails
+            saveDesignToDB(importedDesign, undefined);
+          });
         
         return {
           savedDesigns: updatedDesigns,
@@ -340,10 +399,16 @@ export const createDesignSlice: StateCreator<
         const updatedDesigns = [...state.savedDesigns, importedDesign];
         
         // Get the current user's ID for saving
-        supabase.auth.getUser().then(({ data }) => {
-          const userId = data?.user?.id;
-          saveDesignToDB(importedDesign, userId);
-        });
+        supabase.auth.getUser()
+          .then(({ data }) => {
+            const userId = data?.user?.id;
+            saveDesignToDB(importedDesign, userId);
+          })
+          .catch(error => {
+            console.error('Error getting user:', error);
+            // Still try to save without user ID if auth fails
+            saveDesignToDB(importedDesign, undefined);
+          });
         
         return {
           savedDesigns: updatedDesigns,
