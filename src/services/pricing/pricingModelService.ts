@@ -272,8 +272,33 @@ export class PricingModelService {
     });
 
     // Apply oversubscription ratios from requirements
-    const cpuOversubscription = this.design.requirements?.compute?.cpu?.oversubscriptionRatio || 4;
-    const memoryOversubscription = this.design.requirements?.compute?.memory?.oversubscriptionRatio || 1;
+    // First check if a specific cluster is selected and get its overcommit ratio
+    let cpuOversubscription = 4; // Default
+    let memoryOversubscription = 1; // Default
+    
+    if (this.selectedClusterId && this.selectedClusterId !== 'all') {
+      // Find the specific cluster configuration
+      const clusterConfig = this.design?.requirements?.computeRequirements?.computeClusters?.find(
+        cluster => cluster.id === this.selectedClusterId || cluster.name === this.selectedClusterId
+      );
+      
+      if (clusterConfig?.overcommitRatio) {
+        cpuOversubscription = clusterConfig.overcommitRatio;
+      }
+    }
+    
+    // Fall back to global compute requirements if no cluster-specific ratio
+    if (!this.selectedClusterId || this.selectedClusterId === 'all') {
+      // Use the highest overcommit ratio from all clusters when analyzing all
+      const clusters = this.design?.requirements?.computeRequirements?.computeClusters || [];
+      if (clusters.length > 0) {
+        cpuOversubscription = Math.max(...clusters.map(c => c.overcommitRatio || 4));
+      }
+    }
+    
+    // Check for memory overcommit ratio in global requirements
+    memoryOversubscription = this.design?.requirements?.compute?.memory?.oversubscriptionRatio || 
+                            this.design?.requirements?.computeRequirements?.memory?.oversubscriptionRatio || 1;
 
     const totalvCPUs = totalPhysicalCores * cpuOversubscription;
     const totalMemoryGB = totalPhysicalMemoryGB * memoryOversubscription;
