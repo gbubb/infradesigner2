@@ -95,7 +95,23 @@ export function useRackPersistence() {
     const loadSavedLayout = async () => {
       if (!activeDesign) return;
       
+      // Don't auto-load if we have unsaved changes or if racks already have devices
+      const currentRacks = activeDesign.rackprofiles || [];
+      const hasDevicesPlaced = currentRacks.some(rack => rack.devices && rack.devices.length > 0);
+      
+      // Skip auto-load if:
+      // 1. We have unsaved changes (just placed devices)
+      // 2. Racks already have devices placed
+      if (hasUnsavedChangesRef.current || hasDevicesPlaced) {
+        console.log('[useRackPersistence] Skipping auto-load', { 
+          hasUnsavedChanges: hasUnsavedChangesRef.current,
+          hasDevicesPlaced 
+        });
+        return;
+      }
+      
       try {
+        console.log('[useRackPersistence] Auto-loading saved layout from database...');
         const data = await LayoutPersistenceService.loadLayoutForDesign();
         if (data?.rackprofiles?.length > 0) {
           // Only load if requirements haven't changed
@@ -112,9 +128,17 @@ export function useRackPersistence() {
             );
             
             if (isValid) {
+              console.log('[useRackPersistence] Loading saved layout with', 
+                data.rackprofiles.reduce((acc, r) => acc + (r.devices?.length || 0), 0), 
+                'devices'
+              );
               updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
               hasUnsavedChangesRef.current = false;
+            } else {
+              console.log('[useRackPersistence] Saved layout has invalid device IDs, skipping');
             }
+          } else {
+            console.log('[useRackPersistence] Requirements changed, not loading saved layout');
           }
         }
       } catch (error) {
