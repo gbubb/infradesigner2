@@ -12,6 +12,7 @@ import { PlacementRulesDialog } from './rack-layouts/PlacementRulesDialog';
 import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
 import { useDesignStore } from '@/store/designStore';
 import { RackOperationsService } from '@/services/RackOperationsService';
+import { RackService } from '@/services/rackService';
 import { RackPDFExport } from './rack-layouts/RackPDFExport';
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import {
@@ -24,17 +25,6 @@ import {
 
 export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
-  
-  // Monitor rack changes to detect when devices disappear
-  React.useEffect(() => {
-    const checkInterval = setInterval(() => {
-      const racks = RackService.getAllRackProfiles();
-      const deviceCount = racks.reduce((acc, r) => acc + (r.devices?.length || 0), 0);
-      console.log(`[RackLayoutsTab][${new Date().toISOString()}] Device count check: ${deviceCount} devices across ${racks.length} racks`);
-    }, 500);
-    
-    return () => clearInterval(checkInterval);
-  }, []);
   
   // Initialize persistence hook first to get resetTrigger
   const {
@@ -112,6 +102,23 @@ export const RackLayoutsTab: React.FC = () => {
     const rules = RackOperationsService.loadPlacementRules();
     setClusterAZAssignments(rules);
   }, [activeDesign, setClusterAZAssignments]);
+  
+  // Monitor rack changes only during placement to detect when devices disappear
+  useEffect(() => {
+    if (isPlacing) {
+      console.log('[RackLayoutsTab] Starting placement monitoring...');
+      const checkInterval = setInterval(() => {
+        const racks = RackService.getAllRackProfiles();
+        const deviceCount = racks.reduce((acc, r) => acc + (r.devices?.length || 0), 0);
+        console.log(`[RackLayoutsTab][${new Date().toISOString()}] PLACEMENT MONITOR: ${deviceCount} devices across ${racks.length} racks`);
+      }, 100); // Check every 100ms during placement
+      
+      return () => {
+        console.log('[RackLayoutsTab] Stopping placement monitoring');
+        clearInterval(checkInterval);
+      };
+    }
+  }, [isPlacing]);
   
   // Wrapped handlers to call updateRackStats after placement
   const handleAutoPlaceDevicesWrapper = () => {

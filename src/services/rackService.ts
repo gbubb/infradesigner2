@@ -21,7 +21,8 @@ export class RackService {
     // Return from design if available
     if (state.activeDesign?.rackprofiles) {
       const profiles = state.activeDesign.rackprofiles;
-      console.log(`[RackService][${new Date().toISOString()}] getAllRackProfiles returning ${profiles.length} profiles from design`);
+      // Only log during placement operations or when explicitly debugging
+      // console.log(`[RackService][${new Date().toISOString()}] getAllRackProfiles returning ${profiles.length} profiles from design`);
       return profiles;
     }
 
