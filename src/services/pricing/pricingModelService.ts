@@ -68,17 +68,20 @@ export class PricingModelService {
   private config: PricingConfig;
   private selectedClusterId?: string;
   private componentTemplates: InfrastructureComponent[];
+  private externalOperationalCosts?: { totalMonthly: number };
 
   constructor(
     design: InfrastructureDesign | null, 
     config: PricingConfig, 
     componentTemplates: InfrastructureComponent[] = [],
-    selectedClusterId?: string
+    selectedClusterId?: string,
+    externalOperationalCosts?: { totalMonthly: number }
   ) {
     this.design = design;
     this.config = config;
     this.componentTemplates = componentTemplates;
     this.selectedClusterId = selectedClusterId;
+    this.externalOperationalCosts = externalOperationalCosts;
   }
 
   public getConfig(): PricingConfig {
@@ -463,6 +466,18 @@ export class PricingModelService {
     totalMonthlyCost: number;
     networkCostPerAZ: Map<string, number>;
   } {
+    // If external operational costs are provided, use them
+    if (this.externalOperationalCosts && this.externalOperationalCosts.totalMonthly > 0) {
+      console.log('[PricingModelService] Using external operational costs:', this.externalOperationalCosts.totalMonthly);
+      return {
+        totalCapitalCost: 0, // Not used when external costs provided
+        totalOperationalCost: 0, // Not used when external costs provided
+        totalMonthlyCost: this.externalOperationalCosts.totalMonthly,
+        networkCostPerAZ: new Map<string, number>()
+      };
+    }
+
+    // Otherwise calculate from components
     let totalCapitalCost = 0;
     let totalOperationalCost = 0;
     const networkCostPerAZ = new Map<string, number>();
@@ -480,7 +495,7 @@ export class PricingModelService {
     }
 
     // Calculate costs for all components
-    console.log('[PricingModelService] Calculating costs for components:', allComponents.length);
+    console.log('[PricingModelService] Calculating costs from components:', allComponents.length);
     
     allComponents.forEach(comp => {
       const qty = comp.quantity || 1;
@@ -517,7 +532,7 @@ export class PricingModelService {
     const monthlyOperational = totalOperationalCost / 12;
     const totalMonthlyCost = monthlyCapital + monthlyOperational;
 
-    console.log('[PricingModelService] Infrastructure costs:', {
+    console.log('[PricingModelService] Infrastructure costs from components:', {
       totalCapitalCost,
       totalOperationalCost,
       monthlyCapital,
@@ -627,10 +642,14 @@ export class PricingModelService {
     
     console.log('[PricingModelService] Base costs calculated:', {
       totalMonthlyCost,
+      computeMonthlyCost,
+      sellableCPUs: capacity.sellingvCPUs,
+      sellableMemory: capacity.sellingMemoryGB,
       totalWeightedUnits,
       costPerWeightedUnit,
       margin,
-      result
+      result,
+      expectedRevenue: (capacity.sellingvCPUs * result.cpuCost + capacity.sellingMemoryGB * result.memoryCost) * hoursPerMonth
     });
     
     return result;

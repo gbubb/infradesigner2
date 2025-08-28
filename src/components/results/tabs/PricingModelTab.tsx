@@ -55,8 +55,8 @@ export const PricingModelTab: React.FC = () => {
 
   const pricingService = useMemo(() => {
     const clusterId = selectedClusterId === 'all' ? undefined : selectedClusterId;
-    return new PricingModelService(activeDesign, config, componentTemplates, clusterId);
-  }, [activeDesign, config, componentTemplates, selectedClusterId]);
+    return new PricingModelService(activeDesign, config, componentTemplates, clusterId, operationalCosts);
+  }, [activeDesign, config, componentTemplates, selectedClusterId, operationalCosts]);
 
   useEffect(() => {
     // Get available clusters
@@ -718,8 +718,8 @@ export const PricingModelTab: React.FC = () => {
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Sellable Capacity</p>
                   <div className="text-xl font-bold">
-                    <div className="text-sm">{pricingResult.clusterCapacity.sellingvCPUs.toFixed(0)} vCPUs</div>
-                    <div className="text-sm">{pricingResult.clusterCapacity.sellingMemoryGB.toFixed(0)} GB RAM</div>
+                    <div className="text-sm">{Math.round(pricingResult.clusterCapacity.sellingvCPUs)} vCPUs</div>
+                    <div className="text-sm">{Math.round(pricingResult.clusterCapacity.sellingMemoryGB)} GB RAM</div>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     At {(config.targetUtilization * 100).toFixed(0)}% utilization
@@ -741,16 +741,23 @@ export const PricingModelTab: React.FC = () => {
                 {/* Monthly Profit */}
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Monthly Profit</p>
-                  <p className="text-xl font-bold text-green-600">
-                    {formatMonthlyCurrency(
+                  {(() => {
+                    const monthlyProfit = 
                       ((pricingResult.clusterCapacity.sellingvCPUs * pricingResult.baseCostPerVCPU * 730) +
                        (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730)) -
-                      operationalCosts.totalMonthly
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {marginPercentage.toFixed(1)}% margin
-                  </p>
+                      operationalCosts.totalMonthly;
+                    const isPositive = monthlyProfit >= 0;
+                    return (
+                      <>
+                        <p className={`text-xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatMonthlyCurrency(Math.round(monthlyProfit))}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {marginPercentage.toFixed(1)}% margin
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               
