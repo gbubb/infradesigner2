@@ -25,6 +25,17 @@ import {
 export const RackLayoutsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   
+  // Monitor rack changes to detect when devices disappear
+  React.useEffect(() => {
+    const checkInterval = setInterval(() => {
+      const racks = RackService.getAllRackProfiles();
+      const deviceCount = racks.reduce((acc, r) => acc + (r.devices?.length || 0), 0);
+      console.log(`[RackLayoutsTab][${new Date().toISOString()}] Device count check: ${deviceCount} devices across ${racks.length} racks`);
+    }, 500);
+    
+    return () => clearInterval(checkInterval);
+  }, []);
+  
   // Initialize persistence hook first to get resetTrigger
   const {
     isSaving,

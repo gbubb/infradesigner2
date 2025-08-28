@@ -127,6 +127,12 @@ export function useRackPersistence() {
 
   // Effect: Clear and regenerate racks when requirements change
   useEffect(() => {
+    console.log('[useRackPersistence] Requirements change check effect triggered', {
+      hasActiveDesign: !!activeDesign,
+      isResetting: isResettingRef.current,
+      requirementsHash: requirementsHash?.substring(0, 50) + '...'
+    });
+    
     if (!activeDesign || isResettingRef.current) return;
     
     // Skip initial mount - don't clear racks on first render

@@ -66,8 +66,9 @@ export function useDevicePlacement() {
     // Execute auto-placement immediately - clear existing placements first
     setIsPlacing(true);
     
+    console.log('[useDevicePlacement] Starting auto-placement...');
     const report = AutomatedPlacementService.placeAllDesignDevices(undefined, placementRulesWithAzIds, true);
-    console.log('Generated placement report in RackLayoutsTab:', report);
+    console.log('[useDevicePlacement] Generated placement report:', report);
     
     setPlacementReport(report);
     setSnapshotAzNameMap(azNameMap);
@@ -75,6 +76,7 @@ export function useDevicePlacement() {
     
     setIsPlacing(false);
     setReadyToOpenReportDialog(true);
+    console.log('[useDevicePlacement] Auto-placement complete, ready to show dialog');
     
     // Show toast if any failed placements
     if (report.failedDevices > 0) {

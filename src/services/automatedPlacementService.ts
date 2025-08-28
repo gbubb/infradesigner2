@@ -55,6 +55,12 @@ export class AutomatedPlacementService {
    * - Availability zone assignments
    */
   static placeAllDesignDevices(designId?: string, clusterAZAssignments?: ClusterAZAssignment[], clearExisting: boolean = false): PlacementReport {
+    console.log('[AutomatedPlacementService] Starting placeAllDesignDevices', { 
+      designId, 
+      clearExisting,
+      clusterAZAssignments: clusterAZAssignments?.length || 0 
+    });
+    
     const state = useDesignStore.getState();
     const activeDesign = state.activeDesign;
 
@@ -73,19 +79,36 @@ export class AutomatedPlacementService {
 
     const components = activeDesign.components;
     let rackProfiles = RackService.getAllRackProfiles();
+    console.log('[AutomatedPlacementService] Initial rack profiles:', {
+      rackCount: rackProfiles.length,
+      devicesPerRack: rackProfiles.map(r => ({ 
+        rackId: r.id, 
+        rackName: r.name,
+        deviceCount: r.devices?.length || 0 
+      }))
+    });
     
     // Clear existing placements if requested
     if (clearExisting) {
+      console.log('[AutomatedPlacementService] Clearing existing placements...');
       rackProfiles.forEach(rack => {
         if (rack.devices && rack.devices.length > 0) {
+          console.log(`[AutomatedPlacementService] Clearing ${rack.devices.length} devices from rack ${rack.name}`);
           // Clear all devices from this rack
           RackService.updateRackProfile(rack.id, { devices: [] }, true); // Skip individual updates
         }
       });
       // Batch update after clearing
+      console.log('[AutomatedPlacementService] Calling batchUpdateRackProfiles after clearing');
       RackService.batchUpdateRackProfiles();
       // Re-fetch the cleared profiles
       rackProfiles = RackService.getAllRackProfiles();
+      console.log('[AutomatedPlacementService] Rack profiles after clearing:', {
+        devicesPerRack: rackProfiles.map(r => ({ 
+          rackId: r.id, 
+          deviceCount: r.devices?.length || 0 
+        }))
+      });
     }
     
     const allAZs = [...new Set(rackProfiles.map(r => r.availabilityZoneId).filter(Boolean))] as string[];
@@ -136,6 +159,12 @@ export class AutomatedPlacementService {
     
     // Main placement loop: filter out devices already placed (user/manual placement protection)
     const toPlaceComponents = components.filter(c => !placedDeviceIds.has(c.id));
+    console.log('[AutomatedPlacementService] Components to place:', {
+      totalComponents: components.length,
+      alreadyPlaced: placedDeviceIds.size,
+      toPlace: toPlaceComponents.length,
+      componentNames: toPlaceComponents.map(c => c.name)
+    });
     
     // Separate cluster components from standalone components
     toPlaceComponents.forEach(component => {
@@ -358,11 +387,41 @@ export class AutomatedPlacementService {
     placementResult.placedDevices = placedDevices;
     placementResult.failedDevices = failedDevices;
 
+    console.log('[AutomatedPlacementService] Placement complete, before batch update:', {
+      totalDevices,
+      placedDevices,
+      failedDevices
+    });
+
+    // Check rack state before batch update
+    const racksBeforeBatch = RackService.getAllRackProfiles();
+    console.log('[AutomatedPlacementService] Rack state before batch update:', {
+      devicesPerRack: racksBeforeBatch.map(r => ({ 
+        rackId: r.id,
+        rackName: r.name,
+        deviceCount: r.devices?.length || 0,
+        deviceIds: r.devices?.map(d => d.deviceId)
+      }))
+    });
+
     // Batch update all rack profiles after all placements are complete
     // This is critical - all device placements above use skipUpdate: true
     // So we need to sync the changes to the design store here
+    console.log('[AutomatedPlacementService] Calling final batchUpdateRackProfiles...');
     RackService.batchUpdateRackProfiles();
 
+    // Check rack state after batch update
+    const racksAfterBatch = RackService.getAllRackProfiles();
+    console.log('[AutomatedPlacementService] Rack state after batch update:', {
+      devicesPerRack: racksAfterBatch.map(r => ({ 
+        rackId: r.id,
+        rackName: r.name,
+        deviceCount: r.devices?.length || 0,
+        deviceIds: r.devices?.map(d => d.deviceId)
+      }))
+    });
+
+    console.log('[AutomatedPlacementService] Returning placement report');
     return placementResult;
   }
 }

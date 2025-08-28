@@ -20,7 +20,9 @@ export class RackService {
 
     // Return from design if available
     if (state.activeDesign?.rackprofiles) {
-      return state.activeDesign.rackprofiles;
+      const profiles = state.activeDesign.rackprofiles;
+      console.log(`[RackService][${new Date().toISOString()}] getAllRackProfiles returning ${profiles.length} profiles from design`);
+      return profiles;
     }
 
     // Otherwise load from local storage
@@ -77,23 +79,39 @@ export class RackService {
   }
   
   static batchUpdateRackProfiles(): void {
+    console.log('[RackService] batchUpdateRackProfiles called');
     const state = useDesignStore.getState();
     const profiles = this.getAllRackProfiles();
     
+    console.log('[RackService] Batch update - profiles to save:', {
+      profileCount: profiles.length,
+      profiles: profiles.map(p => ({
+        id: p.id,
+        name: p.name,
+        deviceCount: p.devices?.length || 0
+      }))
+    });
+    
     // Update design with all current profiles
     if (state.activeDesign) {
+      console.log('[RackService] Updating design with rack profiles...');
       state.updateDesign(state.activeDesign.id, {
         rackprofiles: profiles
       });
+      console.log('[RackService] Design updated with rack profiles');
+    } else {
+      console.log('[RackService] No active design to update');
     }
   }
 
 
   static clearAllRackProfiles(skipDesignUpdate: boolean = false): void {
+    console.log('[RackService] clearAllRackProfiles called', { skipDesignUpdate });
     const state = useDesignStore.getState();
 
     // Update in design if possible (unless explicitly skipped)
     if (state.activeDesign && !skipDesignUpdate) {
+      console.log('[RackService] Clearing rack profiles in design');
       state.updateDesign(state.activeDesign.id, {
         rackprofiles: []
       });
@@ -102,6 +120,7 @@ export class RackService {
     // Also clear local storage backup
     const storageKey = this.getStorageKey();
     localStorage.removeItem(storageKey);
+    console.log('[RackService] Rack profiles cleared');
   }
 
   static updateRackProfile(rackId: string, updates: Partial<RackProfile>, skipDesignUpdate: boolean = false): boolean {
@@ -167,10 +186,18 @@ export class RackService {
   }
 
   static placeDevice(rackId: string, deviceId: string, targetRuPosition?: number, skipUpdate: boolean = false): PlacementResult {
+    console.log('[RackService] placeDevice called', { 
+      rackId, 
+      deviceId, 
+      targetRuPosition, 
+      skipUpdate 
+    });
+    
     const state = useDesignStore.getState();
     const rack = this.getRackProfile(rackId);
 
     if (!rack) {
+      console.log('[RackService] Rack not found:', rackId);
       return { success: false, error: "Rack not found" };
     }
 
@@ -249,11 +276,18 @@ export class RackService {
     };
 
     rack.devices.push(placedDevice);
+    console.log('[RackService] Device placed successfully', { 
+      deviceId, 
+      rackId, 
+      position: targetRuPosition,
+      totalDevicesInRack: rack.devices.length 
+    });
 
     // Save the updated rack
     const updated = this.updateRackProfile(rackId, { devices: rack.devices }, skipUpdate);
 
     if (!updated) {
+      console.log('[RackService] Failed to update rack profile');
       return { success: false, error: "Failed to update rack profile" };
     }
 

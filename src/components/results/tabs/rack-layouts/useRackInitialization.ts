@@ -257,6 +257,13 @@ export const useRackInitialization = (resetTrigger: number) => {
 
   // Initialize racks based on requirements
   useEffect(() => {
+    console.log('[useRackInitialization] useEffect triggered', {
+      hasActiveDesign: !!activeDesign,
+      activeDesignId: activeDesign?.id,
+      isInitializing: isInitializingRef.current,
+      resetTrigger
+    });
+    
     // Skip if no active design
     if (!activeDesign) {
       return;
@@ -264,24 +271,35 @@ export const useRackInitialization = (resetTrigger: number) => {
     
     // Skip if already initializing to prevent loops
     if (isInitializingRef.current) {
-      // console.log('[useRackInitialization] Skipping - initialization already in progress');
+      console.log('[useRackInitialization] Skipping - initialization already in progress');
       return;
     }
     
     // Check if this is an actual reset trigger change
     const isResetTriggered = resetTrigger !== prevResetTriggerRef.current && resetTrigger !== 0;
     if (isResetTriggered) {
+      console.log('[useRackInitialization] Reset triggered', { resetTrigger, prevResetTrigger: prevResetTriggerRef.current });
       prevResetTriggerRef.current = resetTrigger;
     }
     
     // Check if racks exist already for this design
     const existingRacks = RackService.getAllRackProfiles();
+    console.log('[useRackInitialization] Existing racks:', {
+      rackCount: existingRacks.length,
+      racks: existingRacks.map(r => ({
+        id: r.id,
+        name: r.name,
+        deviceCount: r.devices?.length || 0
+      }))
+    });
     
     // Check if any racks have placed devices - this is our protection against unwanted reinitialization
     const hasPlacedDevices = existingRacks.some(rack => rack.devices && rack.devices.length > 0);
+    console.log('[useRackInitialization] Has placed devices:', hasPlacedDevices);
     
     // If devices are placed, don't reinitialize unless explicitly reset
     if (hasPlacedDevices && !isResetTriggered) {
+      console.log('[useRackInitialization] Devices already placed, using existing racks without reinitializing');
       // Just update our state with existing racks and return early
       const existingRackProfiles: RackProfileInitializationData[] = existingRacks.map(rack => ({
         id: rack.id,
@@ -328,7 +346,20 @@ export const useRackInitialization = (resetTrigger: number) => {
       (rackCountMismatch && !hasPlacedDevices) || // Wrong number of racks and no placements
       (azCountMismatch && !hasPlacedDevices); // Wrong number of AZs and no placements
     
+    console.log('[useRackInitialization] Should reinitialize check:', {
+      shouldReinitialize,
+      isResetTriggered,
+      prevDesignId: prevDesignIdRef.current,
+      currentDesignId: activeDesign.id,
+      designChanged: prevDesignIdRef.current !== activeDesign.id,
+      hasPlacedDevices,
+      existingRacksCount: existingRacks.length,
+      rackCountMismatch,
+      azCountMismatch
+    });
+    
     if (shouldReinitialize) {
+      console.log('[useRackInitialization] Starting rack reinitialization...');
       // Mark that we're initializing to prevent re-entry
       isInitializingRef.current = true;
       
@@ -337,6 +368,7 @@ export const useRackInitialization = (resetTrigger: number) => {
       prevDesignIdRef.current = activeDesign.id;
       
       // Clear existing racks completely
+      console.log('[useRackInitialization] Clearing all rack profiles...');
       RackService.clearAllRackProfiles(false);
       
       // Determine availability zones - reuse the definedAZs from above
