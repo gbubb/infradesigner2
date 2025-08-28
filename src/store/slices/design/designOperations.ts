@@ -43,18 +43,6 @@ export const updateDesignOperation: UpdateDesignOperationFn = (
   design,
   updates
 ) => {
-  // Log when rackprofiles are being updated
-  if ('rackprofiles' in updates) {
-    const deviceCount = updates.rackprofiles?.reduce((acc, r) => acc + (r.devices?.length || 0), 0) || 0;
-    console.log(`[designOperations] updateDesign called with rackprofiles update:`, {
-      timestamp: new Date().toISOString(),
-      designId: design.id,
-      rackCount: updates.rackprofiles?.length || 0,
-      deviceCount,
-      calledFrom: new Error().stack?.split('\n')[2]?.trim() // Get calling location
-    });
-  }
-  
   return {
     ...design,
     ...updates,

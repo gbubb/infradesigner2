@@ -103,23 +103,6 @@ export const RackLayoutsTab: React.FC = () => {
     setClusterAZAssignments(rules);
   }, [activeDesign, setClusterAZAssignments]);
   
-  // Monitor rack changes only during placement to detect when devices disappear
-  useEffect(() => {
-    if (isPlacing) {
-      console.log('[RackLayoutsTab] Starting placement monitoring...');
-      const checkInterval = setInterval(() => {
-        const racks = RackService.getAllRackProfiles();
-        const deviceCount = racks.reduce((acc, r) => acc + (r.devices?.length || 0), 0);
-        console.log(`[RackLayoutsTab][${new Date().toISOString()}] PLACEMENT MONITOR: ${deviceCount} devices across ${racks.length} racks`);
-      }, 100); // Check every 100ms during placement
-      
-      return () => {
-        console.log('[RackLayoutsTab] Stopping placement monitoring');
-        clearInterval(checkInterval);
-      };
-    }
-  }, [isPlacing]);
-  
   // Wrapped handlers to call updateRackStats after placement
   const handleAutoPlaceDevicesWrapper = () => {
     handleAutoPlaceDevices(azNameMap);

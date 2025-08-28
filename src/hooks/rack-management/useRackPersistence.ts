@@ -103,15 +103,10 @@ export function useRackPersistence() {
       // 1. We have unsaved changes (just placed devices)
       // 2. Racks already have devices placed
       if (hasUnsavedChangesRef.current || hasDevicesPlaced) {
-        console.log('[useRackPersistence] Skipping auto-load', { 
-          hasUnsavedChanges: hasUnsavedChangesRef.current,
-          hasDevicesPlaced 
-        });
         return;
       }
       
       try {
-        console.log('[useRackPersistence] Auto-loading saved layout from database...');
         const data = await LayoutPersistenceService.loadLayoutForDesign();
         if (data?.rackprofiles?.length > 0) {
           // Only load if requirements haven't changed
@@ -128,17 +123,9 @@ export function useRackPersistence() {
             );
             
             if (isValid) {
-              console.log('[useRackPersistence] Loading saved layout with', 
-                data.rackprofiles.reduce((acc, r) => acc + (r.devices?.length || 0), 0), 
-                'devices'
-              );
               updateDesign(activeDesign.id, { rackprofiles: data.rackprofiles });
               hasUnsavedChangesRef.current = false;
-            } else {
-              console.log('[useRackPersistence] Saved layout has invalid device IDs, skipping');
             }
-          } else {
-            console.log('[useRackPersistence] Requirements changed, not loading saved layout');
           }
         }
       } catch (error) {
@@ -151,12 +138,6 @@ export function useRackPersistence() {
 
   // Effect: Clear and regenerate racks when requirements change
   useEffect(() => {
-    console.log('[useRackPersistence] Requirements change check effect triggered', {
-      hasActiveDesign: !!activeDesign,
-      isResetting: isResettingRef.current,
-      requirementsHash: requirementsHash?.substring(0, 50) + '...'
-    });
-    
     if (!activeDesign || isResettingRef.current) return;
     
     // Skip initial mount - don't clear racks on first render
@@ -173,13 +154,10 @@ export function useRackPersistence() {
       
       // Only clear if requirements truly changed AND we don't have manually placed devices
       if (!hasPlacedDevices) {
-        console.log('[useRackPersistence] Requirements changed, clearing racks');
         // Requirements changed - clear racks and force regeneration
         RackService.clearAllRackProfiles();
         setResetTrigger(prev => prev + 1);
         hasUnsavedChangesRef.current = false;
-      } else {
-        console.log('[useRackPersistence] Requirements changed but devices are placed, keeping racks');
       }
       
       // Update the previous hash regardless
