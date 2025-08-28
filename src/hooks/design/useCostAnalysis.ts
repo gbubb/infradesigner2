@@ -164,20 +164,35 @@ export const useCostAnalysis = () => {
 
     // First, calculate the total hardware cost by category
     // Track hyper-converged nodes separately to split their costs
-    const hyperConvergedNodes = new Map(); // componentId -> cost
+    const hyperConvergedNodes = new Map(); // componentId -> cost (including attached disks)
     
     activeDesign.components.forEach(component => {
       const componentCost = component.cost;
       
+      // Calculate cost of attached disks for this component
+      let attachedDisksCost = 0;
+      if ('attachedDisks' in component && Array.isArray(component.attachedDisks)) {
+        const attachedDisks = component.attachedDisks as Array<InfrastructureComponent & { quantity?: number }>;
+        attachedDisksCost = attachedDisks.reduce((diskTotal, disk) => {
+          const diskQuantity = disk.quantity || 1;
+          return diskTotal + (disk.cost * diskQuantity);
+        }, 0);
+      }
+      
       if (component.role === 'hyperConvergedNode') {
-        // Track hyper-converged nodes for later splitting
-        hyperConvergedNodes.set(component.id, componentCost);
+        // Track hyper-converged nodes for later splitting, including their attached disk costs
+        hyperConvergedNodes.set(component.id, componentCost + attachedDisksCost);
       } else if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
-        storageTotal += componentCost;
+        // Storage nodes and standalone disks go to storage total, including attached disks
+        storageTotal += componentCost + attachedDisksCost;
       } else if (component.type === ComponentType.Server || component.type === ComponentType.GPU) {
+        // For compute nodes, the node itself goes to compute, but attached disks go to storage
         computeTotal += componentCost;
+        storageTotal += attachedDisksCost;
       } else if (component.type === ComponentType.Switch || component.type === ComponentType.Router || component.type === ComponentType.Firewall) {
+        // Network devices - unlikely to have attached disks, but handle them just in case
         networkTotal += componentCost;
+        storageTotal += attachedDisksCost;
       }
     });
 
@@ -264,10 +279,24 @@ export const useCostAnalysis = () => {
   const costPerTB = useMemo(() => {
     if (!actualHardwareTotals.totalStorageTB || actualHardwareTotals.totalStorageTB === 0) return 0;
     const storageCapitalCost = activeDesign?.components?.reduce((total, component) => {
+      let storageCost = 0;
+      
+      // Add cost if this is a storage component
       if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
-        return total + component.cost;
+        storageCost += component.cost;
       }
-      return total;
+      
+      // Add costs of any attached disks
+      if ('attachedDisks' in component && Array.isArray(component.attachedDisks)) {
+        const attachedDisks = component.attachedDisks as Array<InfrastructureComponent & { quantity?: number }>;
+        const attachedDisksCost = attachedDisks.reduce((diskTotal, disk) => {
+          const diskQuantity = disk.quantity || 1;
+          return diskTotal + (disk.cost * diskQuantity);
+        }, 0);
+        storageCost += attachedDisksCost;
+      }
+      
+      return total + storageCost;
     }, 0) || 0;
     return storageCapitalCost / actualHardwareTotals.totalStorageTB;
   }, [actualHardwareTotals.totalStorageTB, activeDesign?.components]);
