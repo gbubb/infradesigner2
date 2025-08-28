@@ -47,7 +47,13 @@ export const useNetworkPortsMetrics = () => {
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
       
-      if (component.type === ComponentType.Server) {
+      // Check component type - handle both exact match and case-insensitive match
+      const isServer = component.type === ComponentType.Server || 
+                      (typeof component.type === 'string' && component.type.toLowerCase() === 'server');
+      const isSwitch = component.type === ComponentType.Switch || 
+                      (typeof component.type === 'string' && component.type.toLowerCase() === 'switch');
+      
+      if (isServer) {
         // Track storage nodes separately
         if (component.role === 'storageNode') {
           storageNodes.push(component);
@@ -99,12 +105,12 @@ export const useNetworkPortsMetrics = () => {
             mgmtPortsUsed += quantity;
           }
         }
-      } else if (component.type === ComponentType.Switch) {
+      } else if (isSwitch) {
         // Calculate switch ports
+        const switchComponent = component as Switch;
         let portCount = 0;
         
         // Try different properties for port counts
-        const switchComponent = component as Switch;
         if ('portsProvidedQuantity' in switchComponent && switchComponent.portsProvidedQuantity && switchComponent.portsProvidedQuantity > 0) {
           portCount = switchComponent.portsProvidedQuantity;
         } else if ('portCount' in component && component.portCount && component.portCount > 0) {
@@ -113,19 +119,22 @@ export const useNetworkPortsMetrics = () => {
         
         // Add ports based on switch role - check both 'role' and 'switchRole' properties
         // Some switches use 'switchRole' instead of 'role'
-        const effectiveRole = component.role || switchComponent.switchRole;
+        const effectiveRole = (component.role || switchComponent.switchRole || '').toLowerCase();
         
-        if (effectiveRole === 'managementSwitch' || effectiveRole === 'management') {
+        // Categorize switches
+        if (effectiveRole.includes('management') || effectiveRole === 'mgmt') {
           totalMgmtSwitches += quantity;
           mgmtPortsAvailable += portCount * quantity;
-        } else if (effectiveRole === 'ipmiSwitch' || effectiveRole === 'ipmi') {
+        } else if (effectiveRole.includes('ipmi')) {
           totalIPMISwitches += quantity;
           // IPMI switches handle IPMI ports only
           // We don't add these to management ports available
-        } else if (effectiveRole === 'storageSwitch' || effectiveRole === 'storage') {
+        } else if (effectiveRole.includes('storage')) {
           totalStorageSwitches += quantity;
           storagePortsAvailable += portCount * quantity;
-        } else if (['computeSwitch', 'leafSwitch', 'borderLeafSwitch', 'leaf', 'compute'].includes(effectiveRole || '')) {
+        } else {
+          // All other switches are considered data plane switches
+          // This includes: leaf, spine, core, access, distribution, compute, border leaf, etc.
           totalLeafSwitches += quantity;
           leafPortsAvailable += portCount * quantity;
         }

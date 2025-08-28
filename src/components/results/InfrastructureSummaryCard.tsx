@@ -29,7 +29,7 @@ export const InfrastructureSummaryCard: React.FC<InfrastructureSummaryProps> = (
             <span className="font-medium">{totalServers}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Total Leaf/Compute Switches:</span>
+            <span className="text-muted-foreground">Total Data Plane Switches:</span>
             <span className="font-medium">{totalLeafSwitches}</span>
           </div>
           <div className="flex justify-between">

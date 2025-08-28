@@ -179,9 +179,25 @@ export const useCostAnalysis = () => {
         }, 0);
       }
       
+      // Debug logging to track storage costs
+      if (attachedDisksCost > 0) {
+        console.log('[useCostAnalysis] Component with attached disks:', {
+          name: component.name,
+          role: component.role,
+          componentCost,
+          attachedDisksCost,
+          totalCost: componentCost + attachedDisksCost
+        });
+      }
+      
       if (component.role === 'hyperConvergedNode') {
         // Track hyper-converged nodes for later splitting, including their attached disk costs
-        hyperConvergedNodes.set(component.id, componentCost + attachedDisksCost);
+        // The attached disks will be allocated to storage in the splitting logic below
+        hyperConvergedNodes.set(component.id, {
+          baseCost: componentCost,
+          disksCost: attachedDisksCost,
+          totalCost: componentCost + attachedDisksCost
+        });
       } else if (component.role === 'storageNode' || component.type === ComponentType.Disk) {
         // Storage nodes and standalone disks go to storage total, including attached disks
         storageTotal += componentCost + attachedDisksCost;
@@ -198,35 +214,72 @@ export const useCostAnalysis = () => {
 
     // Now handle hyper-converged nodes by splitting between compute and storage
     if (hyperConvergedNodes.size > 0) {
-      // Calculate the storage portion for hyper-converged nodes
-      let hyperConvergedStoragePortion = 0;
+      // For hyper-converged nodes, all attached disk costs go to storage
+      // The server cost is split based on the storage cluster metrics
       
+      let totalHyperConvergedBaseCost = 0;
+      let totalHyperConvergedDisksCost = 0;
+      
+      hyperConvergedNodes.forEach(nodeData => {
+        totalHyperConvergedBaseCost += nodeData.baseCost;
+        totalHyperConvergedDisksCost += nodeData.disksCost;
+      });
+      
+      // All disk costs from hyper-converged nodes go to storage
+      storageTotal += totalHyperConvergedDisksCost;
+      
+      // For the base server cost, check if we have storage cluster metrics to guide the split
+      let hyperConvergedStoragePortion = 0;
       storageClustersMetrics.forEach(cluster => {
-        if (cluster.isHyperConverged && cluster.totalStorageCost && cluster.nodes) {
-          // This is the proportional storage cost for this hyper-converged cluster
-          hyperConvergedStoragePortion += cluster.totalStorageCost;
+        if (cluster.isHyperConverged && cluster.totalStorageCost) {
+          // This cluster's storage cost should already include the disk costs
+          // So we use it to determine what portion of the base server cost is for storage
+          const clusterBaseCost = cluster.totalNodeCost || 0;
+          const clusterStorageCost = cluster.totalStorageCost || 0;
+          // Storage portion is the disk cost as a proportion of total
+          if (clusterBaseCost > 0) {
+            const storageRatio = Math.min(clusterStorageCost / clusterBaseCost, 1);
+            hyperConvergedStoragePortion += clusterBaseCost * storageRatio;
+          }
         }
       });
       
-      // Calculate total cost of all hyper-converged nodes
-      let totalHyperConvergedCost = 0;
-      hyperConvergedNodes.forEach(cost => {
-        totalHyperConvergedCost += cost;
-      });
+      // If we couldn't determine the split from cluster metrics, use a default split
+      if (hyperConvergedStoragePortion === 0 && totalHyperConvergedBaseCost > 0) {
+        // Default: assume 30% of base server cost is for storage functionality
+        hyperConvergedStoragePortion = totalHyperConvergedBaseCost * 0.3;
+      }
       
-      // The compute portion is the total hyper-converged cost minus the storage portion
-      const hyperConvergedComputePortion = totalHyperConvergedCost - hyperConvergedStoragePortion;
+      const hyperConvergedComputePortion = totalHyperConvergedBaseCost - hyperConvergedStoragePortion;
       
       // Add the portions to their respective totals
       computeTotal += hyperConvergedComputePortion;
       storageTotal += hyperConvergedStoragePortion;
     }
 
+    // Debug: Log the totals before amortization
+    console.log('[useCostAnalysis] Cost totals before amortization:', {
+      computeTotal,
+      storageTotal,
+      networkTotal,
+      computeLifespan,
+      storageLifespan,
+      networkLifespan
+    });
+    
     const monthsInYear = 12;
     const computeAmortized = computeTotal / (computeLifespan * monthsInYear);
     const storageAmortized = storageTotal / (storageLifespan * monthsInYear);
     const networkAmortized = networkTotal / (networkLifespan * monthsInYear);
     const totalAmortized = computeAmortized + storageAmortized + networkAmortized;
+    
+    console.log('[useCostAnalysis] Amortized costs:', {
+      computeAmortized,
+      storageAmortized,
+      networkAmortized,
+      totalAmortized
+    });
+    
     return { compute: computeAmortized, storage: storageAmortized, network: networkAmortized, total: totalAmortized };
   }, [activeDesign?.components, activeDesign?.requirements, storageClustersMetrics]);
   
