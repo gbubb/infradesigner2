@@ -146,6 +146,16 @@ export const calculateComputeNodeQuantity: CalculateComputeNodeQuantityFn = (
     additionalNodesCount = Math.ceil(redundancyNodesNeeded / totalAvailabilityZones) * totalAvailabilityZones;
     calculationSteps.push(`N+2 redundancy: Need ${redundancyNodesNeeded} more nodes to handle 2 AZ failures`);
     calculationSteps.push(`For even distribution: ${additionalNodesCount} additional nodes (${Math.ceil(redundancyNodesNeeded / totalAvailabilityZones)} extra nodes per AZ)`);
+  } else if (availabilityZoneRedundancy === '1 Node') {
+    // Node-level redundancy: Add 1 extra node to survive single node failure
+    additionalNodesCount = 1;
+    calculationSteps.push(`1 Node redundancy: Adding 1 extra node to survive single node failure`);
+    calculationSteps.push(`With ${baseNodeCount + 1} nodes, the cluster can maintain ${baseNodeCount} working nodes if any single node fails`);
+  } else if (availabilityZoneRedundancy === '2 Nodes') {
+    // Node-level redundancy: Add 2 extra nodes to survive dual node failure
+    additionalNodesCount = 2;
+    calculationSteps.push(`2 Nodes redundancy: Adding 2 extra nodes to survive dual node failure`);
+    calculationSteps.push(`With ${baseNodeCount + 2} nodes, the cluster can maintain ${baseNodeCount} working nodes if any two nodes fail`);
   } else {
     calculationSteps.push(`No redundancy configured: Adding 0 additional nodes`);
   }

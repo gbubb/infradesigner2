@@ -104,14 +104,18 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
     const nodesPerAZ = Math.ceil(totalPhysicalCoresNeeded / totalAvailabilityZones);
     const baseComputeNodeCount = nodesPerAZ * totalAvailabilityZones;
     
-    let additionalAZs = 0;
+    let additionalNodes = 0;
     if (availabilityZoneRedundancy === 'N+1') {
-      additionalAZs = 1;
+      additionalNodes = nodesPerAZ; // Add one AZ worth of nodes
     } else if (availabilityZoneRedundancy === 'N+2') {
-      additionalAZs = 2;
+      additionalNodes = 2 * nodesPerAZ; // Add two AZs worth of nodes
+    } else if (availabilityZoneRedundancy === '1 Node') {
+      additionalNodes = 1; // Add 1 node for single node failure tolerance
+    } else if (availabilityZoneRedundancy === '2 Nodes') {
+      additionalNodes = 2; // Add 2 nodes for dual node failure tolerance
     }
     
-    const totalComputeNodeCount = baseComputeNodeCount + (additionalAZs * nodesPerAZ);
+    const totalComputeNodeCount = baseComputeNodeCount + additionalNodes;
     
     const clusterInfo = {
       clusterId: cluster.id,

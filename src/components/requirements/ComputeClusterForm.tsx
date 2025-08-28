@@ -138,6 +138,8 @@ export const ComputeClusterForm: React.FC<ComputeClusterFormProps> = ({
                       <SelectItem value="None">None (No additional capacity)</SelectItem>
                       <SelectItem value="N+1">N+1 (One additional AZ worth of capacity)</SelectItem>
                       <SelectItem value="N+2">N+2 (Two additional AZs worth of capacity)</SelectItem>
+                      <SelectItem value="1 Node">1 Node (Survive single node failure)</SelectItem>
+                      <SelectItem value="2 Nodes">2 Nodes (Survive dual node failure)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

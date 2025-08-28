@@ -369,6 +369,11 @@ export class PricingModelService {
         const redundancyMatch = clusterConfig.availabilityZoneRedundancy.match(/N\+(\d+)/);
         if (redundancyMatch) {
           azFailuresToTolerate = parseInt(redundancyMatch[1], 10);
+        } else if (clusterConfig.availabilityZoneRedundancy === '1 Node' || 
+                   clusterConfig.availabilityZoneRedundancy === '2 Nodes') {
+          // For node-level redundancy, we don't tolerate AZ failures
+          // The redundancy is at the individual node level
+          azFailuresToTolerate = 0;
         }
       }
     } else {
@@ -380,6 +385,11 @@ export class PricingModelService {
           if (redundancyMatch) {
             const failures = parseInt(redundancyMatch[1], 10);
             azFailuresToTolerate = Math.max(azFailuresToTolerate, failures);
+          } else if (cluster.availabilityZoneRedundancy === '1 Node' || 
+                     cluster.availabilityZoneRedundancy === '2 Nodes') {
+            // For node-level redundancy, we don't tolerate AZ failures
+            // The redundancy is handled at the node level in calculations
+            // azFailuresToTolerate remains unchanged
           }
         }
       });
