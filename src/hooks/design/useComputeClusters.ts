@@ -156,9 +156,16 @@ export const useComputeClusters = () => {
       const gpuCount = component.specifications?.gpu?.quantity || 
                       component.gpu?.quantity || 0;
 
-      // Get overcommit ratios from requirements
-      const cpuOvercommitRatio = activeDesign.requirements?.compute?.cpu?.oversubscriptionRatio || 
-                                activeDesign.requirements?.computeRequirements?.cpu?.oversubscriptionRatio || 4;
+      // Get overcommit ratios from the specific compute cluster configuration
+      // First find the corresponding compute cluster configuration
+      const computeClusters = activeDesign.requirements?.computeRequirements?.computeClusters || 
+                            activeDesign.requirements?.compute?.clusters || [];
+      const clusterConfig = computeClusters.find((c) => c.id === clusterId || c.name === name);
+      
+      // Use the cluster-specific overcommit ratio, falling back to global or default
+      const cpuOvercommitRatio = clusterConfig?.overcommitRatio || 
+                                activeDesign.requirements?.computeRequirements?.overcommitRatio || 
+                                activeDesign.requirements?.compute?.cpu?.oversubscriptionRatio || 4;
       const memoryOvercommitRatio = activeDesign.requirements?.compute?.memory?.oversubscriptionRatio || 
                                    activeDesign.requirements?.computeRequirements?.memory?.oversubscriptionRatio || 1;
 
@@ -171,11 +178,6 @@ export const useComputeClusters = () => {
       // Get availability zone count from requirements
       const totalAvailabilityZones = activeDesign.requirements?.physicalConstraints?.totalAvailabilityZones || 
                                     activeDesign.requirements?.physical?.datacenter?.availabilityZoneCount || 8;
-      
-      // Find the corresponding compute cluster configuration to get AZ redundancy
-      const computeClusters = activeDesign.requirements?.computeRequirements?.computeClusters || 
-                            activeDesign.requirements?.compute?.clusters || [];
-      const clusterConfig = computeClusters.find((c) => c.id === clusterId || c.name === name);
       
       // AZ count should be the actual number of availability zones, not affected by redundancy
       // N+1 or N+2 redundancy means extra nodes/capacity for failure tolerance, not extra AZs

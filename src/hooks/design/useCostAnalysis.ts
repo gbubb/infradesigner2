@@ -106,12 +106,24 @@ export const useCostAnalysis = () => {
     return { oneTime: oneTimeCosts, monthly: monthlyCosts };
   }, [activeDesign?.requirements?.licensingRequirements, activeDesign?.components]);
   
-  // Calculate total capital cost (including one-time licensing costs)
+  // Calculate total capital cost (including one-time licensing costs and attached disks)
   const capitalCost = useMemo(() => {
     if (!activeDesign?.components || activeDesign.components.length === 0) return 0;
     
     const hardwareCost = activeDesign.components.reduce((total, component) => {
-      return total + component.cost;
+      let componentTotalCost = component.cost;
+      
+      // Add costs of attached disks if present
+      if ('attachedDisks' in component && Array.isArray(component.attachedDisks)) {
+        const attachedDisks = component.attachedDisks as Array<InfrastructureComponent & { quantity?: number }>;
+        const disksCost = attachedDisks.reduce((diskTotal, disk) => {
+          const diskQuantity = disk.quantity || 1;
+          return diskTotal + (disk.cost * diskQuantity);
+        }, 0);
+        componentTotalCost += disksCost;
+      }
+      
+      return total + componentTotalCost;
     }, 0);
     
     return hardwareCost + licensingCosts.oneTime;
