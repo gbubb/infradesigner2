@@ -6,18 +6,36 @@ import { ComponentType, Server, Switch, InfrastructureComponent } from '@/types/
 export const useComponentsByType = () => {
   const { activeDesign, componentTemplates } = useDesignStore();
   
-  // Component types grouping
+  // Component types grouping - includes attached disks as separate entries
   const componentsByType = useMemo(() => {
     if (!activeDesign?.components) return {} as Record<ComponentType, InfrastructureComponent[]>;
     
-    return activeDesign.components.reduce((groups, component) => {
+    const groups = activeDesign.components.reduce((acc, component) => {
       const type = component.type;
-      if (!groups[type]) {
-        groups[type] = [];
+      if (!acc[type]) {
+        acc[type] = [];
       }
-      groups[type].push(component);
-      return groups;
+      acc[type].push(component);
+      
+      // Also add attached disks as separate entries in the Disk category
+      if ('attachedDisks' in component && Array.isArray(component.attachedDisks)) {
+        const attachedDisks = component.attachedDisks as Array<InfrastructureComponent & { quantity?: number }>;
+        attachedDisks.forEach(disk => {
+          if (!acc[ComponentType.Disk]) {
+            acc[ComponentType.Disk] = [];
+          }
+          // Create a disk entry with proper quantity
+          acc[ComponentType.Disk].push({
+            ...disk,
+            quantity: disk.quantity || 1
+          });
+        });
+      }
+      
+      return acc;
     }, {} as Record<ComponentType, InfrastructureComponent[]>);
+    
+    return groups;
   }, [activeDesign]);
 
   // Find default component for each type/role combination

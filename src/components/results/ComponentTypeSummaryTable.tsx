@@ -157,12 +157,14 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="cost"
+                      nameKey="type"
+                      label={(entry) => `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`}
                     >
                       {typeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={getTypeColor(entry.originalType)} />
                       ))}
                     </Pie>
-                    <Legend />
+                    <Legend formatter={(value) => value} />
                     <Tooltip content={<CustomTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -181,12 +183,14 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="power"
+                      nameKey="type"
+                      label={(entry) => `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`}
                     >
                       {typeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={getTypeColor(entry.originalType)} />
                       ))}
                     </Pie>
-                    <Legend />
+                    <Legend formatter={(value) => value} />
                     <Tooltip content={<CustomTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -205,6 +209,8 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="rackUnits"
+                      nameKey="type"
+                      label={(entry) => `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`}
                     >
                       {typeData
                         .filter(item => item.rackUnits > 0)
@@ -212,7 +218,7 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
                           <Cell key={`cell-${index}`} fill={getTypeColor(entry.originalType)} />
                         ))}
                     </Pie>
-                    <Legend />
+                    <Legend formatter={(value) => value} />
                     <Tooltip content={<CustomTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>

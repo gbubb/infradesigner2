@@ -111,18 +111,21 @@ export const useNetworkPortsMetrics = () => {
           portCount = component.portCount;
         }
         
-        // Add ports based on switch role - ensure IPMI switches are counted separately
-        if (component.role === 'managementSwitch') {
+        // Add ports based on switch role - check both 'role' and 'switchRole' properties
+        // Some switches use 'switchRole' instead of 'role'
+        const effectiveRole = component.role || switchComponent.switchRole;
+        
+        if (effectiveRole === 'managementSwitch' || effectiveRole === 'management') {
           totalMgmtSwitches += quantity;
           mgmtPortsAvailable += portCount * quantity;
-        } else if (component.role === 'ipmiSwitch') {
+        } else if (effectiveRole === 'ipmiSwitch' || effectiveRole === 'ipmi') {
           totalIPMISwitches += quantity;
           // IPMI switches handle IPMI ports only
           // We don't add these to management ports available
-        } else if (component.role === 'storageSwitch') {
+        } else if (effectiveRole === 'storageSwitch' || effectiveRole === 'storage') {
           totalStorageSwitches += quantity;
           storagePortsAvailable += portCount * quantity;
-        } else if (['computeSwitch', 'leafSwitch', 'borderLeafSwitch'].includes(component.role || '')) {
+        } else if (['computeSwitch', 'leafSwitch', 'borderLeafSwitch', 'leaf', 'compute'].includes(effectiveRole || '')) {
           totalLeafSwitches += quantity;
           leafPortsAvailable += portCount * quantity;
         }
