@@ -44,6 +44,20 @@ export const useNetworkPortsMetrics = () => {
     // Track storage nodes for dedicated storage network calculation
     const storageNodes = [];
     
+    // Debug: Log all components to understand what we have
+    console.log('[useNetworkPortsMetrics] Total components:', activeDesign.components.length);
+    activeDesign.components.forEach((c, idx) => {
+      if (c.type === ComponentType.Switch || (typeof c.type === 'string' && c.type.toLowerCase() === 'switch')) {
+        console.log(`[useNetworkPortsMetrics] Component ${idx}:`, {
+          name: c.name,
+          type: c.type,
+          role: c.role,
+          switchRole: (c as any).switchRole,
+          quantity: c.quantity || 1
+        });
+      }
+    });
+    
     activeDesign.components.forEach(component => {
       const quantity = component.quantity || 1;
       
@@ -119,29 +133,43 @@ export const useNetworkPortsMetrics = () => {
         
         // Add ports based on switch role - check both 'role' and 'switchRole' properties
         // Some switches use 'switchRole' instead of 'role'
-        const effectiveRole = (component.role || switchComponent.switchRole || '').toLowerCase();
+        const rawRole = component.role || switchComponent.switchRole || '';
+        const effectiveRole = rawRole.toLowerCase();
+        
+        console.log('[useNetworkPortsMetrics] Processing switch:', {
+          name: component.name,
+          rawRole,
+          effectiveRole,
+          checkManagement: effectiveRole.includes('management') || effectiveRole === 'mgmt',
+          checkIPMI: effectiveRole.includes('ipmi'),
+          checkStorage: effectiveRole.includes('storage')
+        });
         
         // Categorize switches
         if (effectiveRole.includes('management') || effectiveRole === 'mgmt') {
+          console.log('[useNetworkPortsMetrics] Adding to management switches:', quantity);
           totalMgmtSwitches += quantity;
           mgmtPortsAvailable += portCount * quantity;
         } else if (effectiveRole.includes('ipmi')) {
+          console.log('[useNetworkPortsMetrics] Adding to IPMI switches:', quantity);
           totalIPMISwitches += quantity;
           // IPMI switches handle IPMI ports only
           // We don't add these to management ports available
         } else if (effectiveRole.includes('storage')) {
+          console.log('[useNetworkPortsMetrics] Adding to storage switches:', quantity);
           totalStorageSwitches += quantity;
           storagePortsAvailable += portCount * quantity;
         } else {
           // All other switches are considered data plane switches
           // This includes: leaf, spine, core, access, distribution, compute, border leaf, etc.
+          console.log('[useNetworkPortsMetrics] Adding to data plane switches:', quantity);
           totalLeafSwitches += quantity;
           leafPortsAvailable += portCount * quantity;
         }
       }
     });
     
-    return {
+    const result = {
       totalLeafSwitches,
       totalStorageSwitches,
       totalMgmtSwitches,
@@ -155,5 +183,14 @@ export const useNetworkPortsMetrics = () => {
       hasDedicatedStorageNetwork,
       isConvergedManagement
     };
+    
+    console.log('[useNetworkPortsMetrics] Final counts:', {
+      totalLeafSwitches: result.totalLeafSwitches,
+      totalMgmtSwitches: result.totalMgmtSwitches,
+      totalStorageSwitches: result.totalStorageSwitches,
+      totalIPMISwitches: result.totalIPMISwitches
+    });
+    
+    return result;
   }, [activeDesign]);
 };
