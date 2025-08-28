@@ -43,8 +43,10 @@ export const DesignStatisticsTab: React.FC = () => {
     ? (totalPower / resourceMetrics.totalRackQuantity)
     : 0;
 
-  // Get storage device lifespan from requirements
+  // Get device lifespans from requirements
+  const computeLifespanYears = activeDesign?.requirements?.computeRequirements?.deviceLifespanYears || 3;
   const storageLifespanYears = activeDesign?.requirements?.storageRequirements?.deviceLifespanYears || 3;
+  const networkLifespanYears = activeDesign?.requirements?.networkRequirements?.deviceLifespanYears || 3;
   const storageAmortisationMonths = storageLifespanYears * 12;
 
   // Calculate storage cluster costs per TiB per month
@@ -127,6 +129,11 @@ export const DesignStatisticsTab: React.FC = () => {
         licensingCosts={licensingCosts}
         facilityType={facilityType}
         facilityCosts={facilityCosts || undefined}
+        lifespans={{
+          compute: computeLifespanYears,
+          storage: storageLifespanYears,
+          network: networkLifespanYears
+        }}
       />
       
       <ComputeClustersTable clusters={computeClustersMetrics} />

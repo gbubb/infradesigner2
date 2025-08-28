@@ -34,6 +34,11 @@ interface DetailedCostAnalysisCardProps {
       monthlyAmount: number;
     }>;
   };
+  lifespans?: {
+    compute: number;
+    storage: number;
+    network: number;
+  };
 }
 
 const DetailedCostAnalysisCardComponent: React.FC<DetailedCostAnalysisCardProps> = ({
@@ -43,11 +48,9 @@ const DetailedCostAnalysisCardComponent: React.FC<DetailedCostAnalysisCardProps>
   totalCostOfOwnership,
   licensingCosts,
   facilityType = 'none',
-  facilityCosts
+  facilityCosts,
+  lifespans = { compute: 3, storage: 3, network: 3 }
 }) => {
-  // Calculate first year operational costs (monthly × 12)
-  const firstYearOperationalCost = operationalCosts.totalMonthly * 12;
-
   // Calculate hardware capital cost (excluding licensing)
   const hardwareCapitalCost = licensingCosts ? capitalCost - licensingCosts.oneTime : capitalCost;
 
@@ -123,15 +126,15 @@ const DetailedCostAnalysisCardComponent: React.FC<DetailedCostAnalysisCardProps>
               <div className="space-y-1 ml-4">
                 <h4 className="text-sm font-medium">Hardware Amortization</h4>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Compute Hardware</span>
+                  <span className="text-muted-foreground">Compute Hardware ({lifespans.compute} year lifespan)</span>
                   <span className="font-medium">${amortizedCostsByType.compute.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Storage Hardware</span>
+                  <span className="text-muted-foreground">Storage Hardware ({lifespans.storage} year lifespan)</span>
                   <span className="font-medium">${amortizedCostsByType.storage.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Network Hardware</span>
+                  <span className="text-muted-foreground">Network Hardware ({lifespans.network} year lifespan)</span>
                   <span className="font-medium">${amortizedCostsByType.network.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between font-medium">
@@ -158,19 +161,6 @@ const DetailedCostAnalysisCardComponent: React.FC<DetailedCostAnalysisCardProps>
                 <span>${operationalCosts.totalMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
               </div>
             </div>
-          </div>
-          
-          <Separator />
-          
-          <div>
-            <h3 className="text-lg font-medium mb-2">3. Total Cost of Ownership (First Year)</h3>
-            <div className="flex justify-between font-bold text-lg">
-              <span>First Year Operational Costs</span>
-              <span>${firstYearOperationalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Includes 12 months of operational costs (amortization, {facilityType === 'owned' ? 'facility' : facilityType === 'colocation' ? 'rack colocation' : 'energy'}, and licensing)
-            </p>
           </div>
         </div>
       </CardContent>
