@@ -77,24 +77,36 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
   };
   
   // Custom tooltip for pie charts
-  const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
+  const CustomTooltip = ({ active, payload, label }: ChartTooltipProps & { label?: string }) => {
     if (active && payload && payload.length) {
-      // Cast to include percent property that Recharts adds for pie charts
-      const payloadItem = payload[0] as typeof payload[0] & { percent?: number };
+      const payloadItem = payload[0];
       const data = payloadItem.payload as {
         type: string;
         cost?: number;
         power?: number;
         rackUnits?: number;
       };
+      
+      // Calculate percentage based on the data key being displayed
+      const dataKey = payloadItem.dataKey as string;
+      const total = typeData.reduce((sum, item) => sum + (item[dataKey] || 0), 0);
+      const value = data[dataKey] || 0;
+      const percentage = total > 0 ? (value / total * 100) : 0;
+      
       return (
         <div className="bg-white p-2 border shadow-md rounded-md">
           <p className="font-medium">{data.type}</p>
-          {data.cost && <p className="text-sm">${data.cost.toLocaleString()}</p>}
-          {data.power && <p className="text-sm">{data.power.toLocaleString()} W</p>}
-          {data.rackUnits && data.rackUnits > 0 && <p className="text-sm">{data.rackUnits} RU</p>}
+          {dataKey === 'cost' && data.cost !== undefined && (
+            <p className="text-sm">${data.cost.toLocaleString()}</p>
+          )}
+          {dataKey === 'power' && data.power !== undefined && (
+            <p className="text-sm">{data.power.toLocaleString()} W</p>
+          )}
+          {dataKey === 'rackUnits' && data.rackUnits !== undefined && (
+            <p className="text-sm">{data.rackUnits} RU</p>
+          )}
           <p className="text-xs text-gray-500">
-            {payloadItem.percent ? (payloadItem.percent * 100).toFixed(1) : '0'}% of total
+            {percentage.toFixed(1)}% of total
           </p>
         </div>
       );

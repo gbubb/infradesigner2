@@ -15,19 +15,36 @@ export const useComponentsByType = () => {
       if (!acc[type]) {
         acc[type] = [];
       }
-      acc[type].push(component);
       
-      // Also add attached disks as separate entries in the Disk category
+      // Calculate total power for servers including their attached disks
+      const componentWithAdjustedPower = { ...component };
+      if (component.type === ComponentType.Server && 'attachedDisks' in component && Array.isArray(component.attachedDisks)) {
+        const attachedDisks = component.attachedDisks as Array<InfrastructureComponent & { quantity?: number; powerTypical?: number }>;
+        const totalDiskPower = attachedDisks.reduce((sum, disk) => {
+          const diskQuantity = disk.quantity || 1;
+          const diskPower = disk.powerTypical || 0;
+          return sum + (diskPower * diskQuantity);
+        }, 0);
+        // Add disk power to server power
+        componentWithAdjustedPower.powerTypical = (component.powerTypical || 0) + totalDiskPower;
+      }
+      
+      acc[type].push(componentWithAdjustedPower);
+      
+      // Also add attached disks as separate entries in the Disk category for cost tracking
+      // But without power since that's included in the server
       if ('attachedDisks' in component && Array.isArray(component.attachedDisks)) {
         const attachedDisks = component.attachedDisks as Array<InfrastructureComponent & { quantity?: number }>;
         attachedDisks.forEach(disk => {
           if (!acc[ComponentType.Disk]) {
             acc[ComponentType.Disk] = [];
           }
-          // Create a disk entry with proper quantity
+          // Create a disk entry with proper quantity but no power (already counted in server)
           acc[ComponentType.Disk].push({
             ...disk,
-            quantity: disk.quantity || 1
+            quantity: disk.quantity || 1,
+            powerTypical: 0, // Power is already included in the server's total
+            ruSize: 0 // Disks don't consume rack units directly
           });
         });
       }
