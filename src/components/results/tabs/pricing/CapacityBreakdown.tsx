@@ -151,12 +151,12 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                   <div className="font-semibold text-green-700 dark:text-green-300 flex items-center gap-2">
                     <div className="flex items-center gap-1">
                       <Cpu className="h-3 w-3 text-green-600 dark:text-green-400" />
-                      <span>{formatCompactNumber(capacity.sellingvCPUs)} vCPUs</span>
+                      <span>{formatCompactNumber(Math.round(capacity.sellingvCPUs))} vCPUs</span>
                     </div>
                     <span className="text-green-600/60 dark:text-green-400/60">/</span>
                     <div className="flex items-center gap-1">
                       <MemoryStick className="h-3 w-3 text-green-600 dark:text-green-400" />
-                      <span>{formatMemory(capacity.sellingMemoryGB)}</span>
+                      <span>{formatMemory(Math.round(capacity.sellingMemoryGB))}</span>
                     </div>
                   </div>
                 </div>
@@ -165,8 +165,8 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                 <div className="space-y-2">
                   <p className="font-medium">Sellable Capacity</p>
                   <div className="space-y-1 text-sm">
-                    <p>vCPUs: {formatNumber(capacity.sellingvCPUs)}</p>
-                    <p>Memory: {formatNumber(capacity.sellingMemoryGB)} GB</p>
+                    <p>vCPUs: {formatNumber(Math.round(capacity.sellingvCPUs))}</p>
+                    <p>Memory: {formatNumber(Math.round(capacity.sellingMemoryGB))} GB</p>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
                     After deductions:
@@ -193,7 +193,7 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Resource Allocation</span>
                   <span className="font-medium">
-                    {formatNumber(capacity.sellingvCPUs)} vCPUs | {formatNumber(capacity.sellingMemoryGB)} GB RAM
+                    {formatNumber(Math.round(capacity.sellingvCPUs))} vCPUs | {formatNumber(Math.round(capacity.sellingMemoryGB))} GB RAM
                   </span>
                 </div>
                 <div className="relative h-14 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
@@ -217,8 +217,8 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                     <TooltipContent>
                       <div className="space-y-1">
                         <p className="font-medium">Sellable Capacity</p>
-                        <p className="text-sm">CPU: {formatNumber(capacity.sellingvCPUs)} vCPUs</p>
-                        <p className="text-sm">Memory: {formatNumber(capacity.sellingMemoryGB)} GB</p>
+                        <p className="text-sm">CPU: {formatNumber(Math.round(capacity.sellingvCPUs))} vCPUs</p>
+                        <p className="text-sm">Memory: {formatNumber(Math.round(capacity.sellingMemoryGB))} GB</p>
                         <p className="text-xs text-muted-foreground mt-1">Available for VM allocation at target utilization</p>
                       </div>
                     </TooltipContent>
