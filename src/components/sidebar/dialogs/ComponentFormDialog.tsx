@@ -181,7 +181,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       isBreakout: (formValues.isBreakout as boolean) || false,
       connectorB_Quantity: (formValues.connectorB_Quantity as number) || 4
     },
-    values: formValues,
+    values: formValues && Object.keys(formValues).length > 0 ? formValues : undefined,
   });
 
   const getDefaultPrefix = (type: string) => {

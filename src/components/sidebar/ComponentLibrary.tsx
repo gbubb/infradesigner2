@@ -215,6 +215,28 @@ export const ComponentLibrary: React.FC = () => {
           ? JSON.parse((component as { pcieSlots?: string }).pcieSlots!)
           : (component as { pcieSlots?: Array<{ quantity: number; formFactor: string }> }).pcieSlots
         : undefined,
+      // Ensure Cable-specific fields are properly initialized
+      length: component.type === ComponentType.Cable && 'length' in component 
+        ? (component as { length?: number }).length || 3 
+        : undefined,
+      connectorA_Type: component.type === ComponentType.Cable && 'connectorA_Type' in component
+        ? (component as { connectorA_Type?: string }).connectorA_Type 
+        : undefined,
+      connectorB_Type: component.type === ComponentType.Cable && 'connectorB_Type' in component
+        ? (component as { connectorB_Type?: string }).connectorB_Type 
+        : undefined,
+      mediaType: component.type === ComponentType.Cable && 'mediaType' in component
+        ? (component as { mediaType?: string }).mediaType 
+        : undefined,
+      cableSpeed: component.type === ComponentType.Cable && 'cableSpeed' in component
+        ? (component as { cableSpeed?: string }).cableSpeed 
+        : undefined,
+      isBreakout: component.type === ComponentType.Cable && 'isBreakout' in component
+        ? (component as { isBreakout?: boolean }).isBreakout || false
+        : false,
+      connectorB_Quantity: component.type === ComponentType.Cable && 'connectorB_Quantity' in component
+        ? (component as { connectorB_Quantity?: number }).connectorB_Quantity || 4
+        : 4
     };
     
     // Log form values being set
