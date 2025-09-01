@@ -69,8 +69,8 @@ export function generateConnections(
   const allCablesToProcess = allCableTemplates || [];
   console.log('[ConnectionService] Processing', allCablesToProcess.length, 'cable templates for lookup map');
 
-  // Pre-build cable lookup map for efficiency
-  const cableLookup = new Map<string, Cable>();
+  // Pre-build cable lookup map for efficiency - now supports multiple cables per connector combination
+  const cableLookup = new Map<string, Cable[]>();
   allCablesToProcess.forEach((cable: Cable) => {
     if (!('connectorA_Type' in cable) || !('connectorB_Type' in cable)) {
       return;
@@ -84,8 +84,9 @@ export function generateConnections(
     if (typeA && typeB) {
       const key1 = [typeA, typeB].sort().join(':');
       if (!cableLookup.has(key1)) {
-        cableLookup.set(key1, cable);
+        cableLookup.set(key1, []);
       }
+      cableLookup.get(key1)!.push(cable);
     }
   });
 
@@ -98,6 +99,16 @@ export function generateConnections(
   }
 
   console.log('[ConnectionService] Cable lookup map constructed with', cableLookup.size, 'entries');
+  console.log('[ConnectionService] Cable lookup keys:', Array.from(cableLookup.keys()));
+  // Log sample cables for debugging
+  for (const [key, cables] of cableLookup.entries()) {
+    console.log(`[ConnectionService] ${key}:`, cables.map(c => ({ 
+      name: c.name, 
+      mediaType: c.mediaType,
+      connectorA: c.connectorA_Type,
+      connectorB: c.connectorB_Type
+    })));
+  }
 
   const allDevices = components.filter((c: InfrastructureComponent) =>
     [ComponentType.Server, ComponentType.Switch, ComponentType.Router, ComponentType.Firewall].includes(c.type)
@@ -301,15 +312,19 @@ export function generateConnections(
           );
 
           if (connectionResult.success && connectionResult.connection) {
+            // Get port names for the report
+            const srcPort = srcDevice.ports?.find(p => p.id === connectionResult.connection.sourcePortId);
+            const dstPort = targetDevice.ports?.find(p => p.id === connectionResult.connection.destinationPortId);
+            
             connectionAttempts.push({
               ruleId: rule.id,
               ruleName: rule.name,
               sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
               sourceDeviceId: srcDevice.id,
-              sourcePortId: connectionResult.connection.sourcePortId,
+              sourcePortId: srcPort?.name || connectionResult.connection.sourcePortId,
               targetDeviceName: getDeviceName(allDevices, targetDevice.id),
               targetDeviceId: targetDevice.id,
-              targetPortId: connectionResult.connection.destinationPortId,
+              targetPortId: dstPort?.name || connectionResult.connection.destinationPortId,
               status: "Success",
               reason: connectionResult.reason,
               connection: connectionResult.connection,
@@ -319,13 +334,21 @@ export function generateConnections(
             connectionsMadeForThisSrcDeviceOverall++;
             connectionCounter++;
           } else {
+            // For failed attempts, try to show port information if available
+            const srcPort = mutableAvailableSrcPorts[0]; // Use first available port for debugging
+            const dstPorts = filterPorts(targetDevice, rule.targetPortCriteria, false, false)
+              .filter(p => !usedDstPorts.has(`${targetDevice.id}:${p.id}`) && !p.connectedToDeviceId);
+            const dstPort = dstPorts[0]; // Use first available port for debugging
+            
             connectionAttempts.push({
               ruleId: rule.id,
               ruleName: rule.name,
               sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
               sourceDeviceId: srcDevice.id,
+              sourcePortId: srcPort?.name || "No ports available",
               targetDeviceName: getDeviceName(allDevices, targetDevice.id),
               targetDeviceId: targetDevice.id,
+              targetPortId: dstPort?.name || "No ports available",
               status: "Failed",
               reason: connectionResult.reason || "Could not establish connection",
             });
@@ -351,7 +374,7 @@ function attemptConnection(
   srcRack: RackProfile | undefined,
   dstRack: RackProfile | undefined,
   rowLayout: RowLayoutConfiguration | undefined,
-  cableLookup: Map<string, Cable>,
+  cableLookup: Map<string, Cable[]>,
   allTransceiverTemplates: Transceiver[],
   allDevices: InfrastructureComponent[],
   usedSrcPorts: Set<string>,
@@ -431,7 +454,7 @@ function determineConnectionPath(
   srcPort: Port,
   dstPort: Port,
   lengthMeters: number,
-  cableLookup: Map<string, Cable>,
+  cableLookup: Map<string, Cable[]>,
   allTransceiverTemplates: Transceiver[]
 ): {
   cable?: Cable;
@@ -446,17 +469,31 @@ function determineConnectionPath(
   // 1. Direct Copper connection
   if (effectiveSrcMediaType === MediaType.Copper && effectiveDstMediaType === MediaType.Copper) {
     if (srcPort.connectorType === dstPort.connectorType) {
-      const cable = getCableTemplate(cableLookup, srcPort.connectorType, dstPort.connectorType, CableMediaType.CopperTwisted);
-      if (cable) {
-        return {
-          cable,
-          mediaType: cable.mediaType,
-          reason: "Direct copper connection."
-        };
+      // Try to find any copper cable that matches the connectors
+      const copperMediaTypes = [
+        CableMediaType.CopperCat6a,
+        CableMediaType.CopperCat6,
+        CableMediaType.CopperCat5e,
+        CableMediaType.CopperCat7,
+        CableMediaType.CopperCat8
+      ];
+      
+      for (const copperType of copperMediaTypes) {
+        const cable = getCableTemplate(cableLookup, srcPort.connectorType, dstPort.connectorType, copperType);
+        if (cable) {
+          return {
+            cable,
+            mediaType: cable.mediaType,
+            reason: "Direct copper connection."
+          };
+        }
       }
-      return { reason: "Matching copper cable template not found." };
+      // Debug: log what we're looking for
+      console.log(`[ConnectionGenerator] No copper cable found for connector type: ${srcPort.connectorType}`);
+      console.log(`[ConnectionGenerator] Available cables in lookup:`, Array.from(cableLookup.keys()));
+      return { reason: `Matching copper cable template not found for connector type: ${srcPort.connectorType}` };
     }
-    return { reason: "Copper port connector types do not match." };
+    return { reason: `Copper port connector types do not match (Src: ${srcPort.connectorType}, Dst: ${dstPort.connectorType})` };
   }
 
   // 2. DAC or Fiber/Optics for non-copper ports
@@ -491,7 +528,7 @@ function determineConnectionPath(
 function tryDACConnection(
   srcPort: Port,
   dstPort: Port,
-  cableLookup: Map<string, Cable>
+  cableLookup: Map<string, Cable[]>
 ): {
   cable?: Cable;
   mediaType?: CableMediaType;
@@ -526,7 +563,7 @@ function tryFiberConnection(
   srcPort: Port,
   dstPort: Port,
   lengthMeters: number,
-  cableLookup: Map<string, Cable>,
+  cableLookup: Map<string, Cable[]>,
   allTransceiverTemplates: Transceiver[]
 ): {
   cable?: Cable;

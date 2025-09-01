@@ -23,7 +23,11 @@ export function estimateCableLength(
   dstRack?: RackProfile,
   rowLayout?: RowLayoutConfiguration
 ): number {
-  if (!srcPlaced || !dstPlaced) return DEFAULT_INTER_RACK_LENGTH_M;
+  // Check if placement info is actually available
+  if (!srcPlaced || !dstPlaced || typeof srcPlaced.ruPosition !== 'number' || typeof dstPlaced.ruPosition !== 'number') {
+    console.log('[CableManager] Missing placement info - using default distance');
+    return DEFAULT_INTER_RACK_LENGTH_M;
+  }
 
   if (srcRack && dstRack && srcRack.id === dstRack.id) {
     // Same rack calculation
@@ -80,16 +84,16 @@ export function estimateCableLength(
  * Gets a cable template from the lookup map
  */
 export function getCableTemplate(
-  cableLookup: Map<string, Cable>,
+  cableLookup: Map<string, Cable[]>,
   connectorA: ConnectorType,
   connectorB: ConnectorType,
   mediaType: CableMediaType
 ): Cable | undefined {
   const key = [connectorA, connectorB].sort().join(':');
-  const cable = cableLookup.get(key);
+  const cables = cableLookup.get(key);
   
-  if (cable && cable.mediaType === mediaType) {
-    return cable;
+  if (cables) {
+    return cables.find(cable => cable.mediaType === mediaType);
   }
   
   return undefined;
@@ -99,14 +103,15 @@ export function getCableTemplate(
  * Finds a compatible cable template for the given requirements
  */
 export function findCompatibleCableTemplate(
-  cableLookup: Map<string, Cable>,
+  cableLookup: Map<string, Cable[]>,
   connectorA: ConnectorType,
   connectorB: ConnectorType,
   requiredMediaType: CableMediaType,
   requiredSpeed?: PortSpeed
 ): Cable | undefined {
   const key = [connectorA, connectorB].sort().join(':');
-  const allCables = Array.from(cableLookup.values());
+  const cablesForConnectors = cableLookup.get(key) || [];
+  const allCables = Array.from(cableLookup.values()).flat();
   
   // Enhanced debugging for fiber cable search
   if (requiredMediaType === CableMediaType.FiberMMDuplex || requiredMediaType === CableMediaType.FiberSMDuplex) {
