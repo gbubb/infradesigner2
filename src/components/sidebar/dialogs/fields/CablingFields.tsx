@@ -12,5 +12,5 @@ interface Props {
 }
 
 export const CablingFields: React.FC<Props> = ({ control, componentType, onInputChange, onSelectChange }) => (
-  <CablingFormFields register={{ control }} componentType={componentType} onInputChange={onInputChange} onSelectChange={onSelectChange} />
+  <CablingFormFields control={control} componentType={componentType} onInputChange={onInputChange} onSelectChange={onSelectChange} />
 );

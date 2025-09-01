@@ -10,15 +10,15 @@ import { PortSpeed, CableMediaType, PortSide } from '@/types/infrastructure/port
 import { Control, FieldValues } from 'react-hook-form';
 
 interface CablingFormFieldsProps {
-  register: Control<FieldValues>; // Control object from react-hook-form
+  control: Control<FieldValues>; // Control object from react-hook-form
   componentType: string;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectChange: (name: string, value: string) => void;
 }
 
-export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, componentType, onInputChange, onSelectChange }) => {
+export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ control, componentType, onInputChange, onSelectChange }) => {
   const isBreakout = useWatch({
-    control: register,
+    control: control,
     name: 'isBreakout',
     defaultValue: false
   });
@@ -40,7 +40,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
       {componentType === 'FiberPatchPanel' && (
         <>
           <FormField
-            control={register}
+            control={control}
             name="ruSize"
             render={({ field }) => (
               <FormItem>
@@ -63,7 +63,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
           />
           
           <FormField
-            control={register}
+            control={control}
             name="cassetteCapacity"
             render={({ field }) => (
               <FormItem>
@@ -90,7 +90,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
       {componentType === 'CopperPatchPanel' && (
         <>
           <FormField
-            control={register}
+            control={control}
             name="ruSize"
             render={({ field }) => (
               <FormItem>
@@ -115,7 +115,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
           <div className="space-y-4">
             <h4 className="font-medium text-sm">Back-Side Ports (Input)</h4>
             <FormField
-              control={register}
+              control={control}
               name="backPortType"
               render={({ field }) => (
                 <FormItem>
@@ -143,7 +143,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
             />
             
             <FormField
-              control={register}
+              control={control}
               name="backPortQuantity"
               render={({ field }) => (
                 <FormItem>
@@ -169,7 +169,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
           <div className="space-y-4">
             <h4 className="font-medium text-sm">Front-Side Ports (Output)</h4>
             <FormField
-              control={register}
+              control={control}
               name="frontPortType"
               render={({ field }) => (
                 <FormItem>
@@ -197,7 +197,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
             />
             
             <FormField
-              control={register}
+              control={control}
               name="frontPortQuantity"
               render={({ field }) => (
                 <FormItem>
@@ -227,7 +227,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
           <div className="space-y-4">
             <h4 className="font-medium text-sm">Back-Side Ports (Input)</h4>
             <FormField
-              control={register}
+              control={control}
               name="backPortType"
               render={({ field }) => (
                 <FormItem>
@@ -255,7 +255,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
             />
             
             <FormField
-              control={register}
+              control={control}
               name="backPortQuantity"
               render={({ field }) => (
                 <FormItem>
@@ -281,7 +281,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
           <div className="space-y-4">
             <h4 className="font-medium text-sm">Front-Side Ports (Output)</h4>
             <FormField
-              control={register}
+              control={control}
               name="frontPortType"
               render={({ field }) => (
                 <FormItem>
@@ -309,7 +309,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
             />
             
             <FormField
-              control={register}
+              control={control}
               name="frontPortQuantity"
               render={({ field }) => (
                 <FormItem>
@@ -337,7 +337,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
       {componentType === 'Cable' && (
         <>
           <FormField
-            control={register}
+            control={control}
             name="length"
             render={({ field }) => (
               <FormItem>
@@ -360,7 +360,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
           />
           
           <FormField
-            control={register}
+            control={control}
             name="connectorA_Type"
             render={({ field }) => (
               <FormItem>
@@ -387,7 +387,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
             )}
           />
           <FormField
-            control={register}
+            control={control}
             name="connectorB_Type"
             render={({ field }) => (
               <FormItem>
@@ -414,7 +414,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
             )}
           />
           <FormField
-            control={register}
+            control={control}
             name="mediaType"
             render={({ field }) => (
               <FormItem>
@@ -441,7 +441,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
             )}
           />
           <FormField
-            control={register}
+            control={control}
             name="cableSpeed"
             render={({ field }) => (
               <FormItem>
@@ -471,7 +471,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
           />
           
           <FormField
-            control={register}
+            control={control}
             name="isBreakout"
             render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
@@ -493,7 +493,7 @@ export const CablingFormFields: React.FC<CablingFormFieldsProps> = ({ register, 
           
           {isBreakout && (
             <FormField
-              control={register}
+              control={control}
               name="connectorB_Quantity"
               render={({ field }) => (
                 <FormItem>
