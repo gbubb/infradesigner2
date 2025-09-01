@@ -11,6 +11,7 @@ export { generateConnections } from "./connection/ConnectionGenerator";
 export {
   estimateCableLength,
   getCableTemplate,
+  getAnyCopperCable,
   findCompatibleCableTemplate,
   findCompatibleBreakoutCableTemplate,
 } from "./connection/CableManager";

@@ -100,6 +100,36 @@ export function getCableTemplate(
 }
 
 /**
+ * Gets any copper cable for the given connectors (RJ45 connections)
+ */
+export function getAnyCopperCable(
+  cableLookup: Map<string, Cable[]>,
+  connectorA: ConnectorType,
+  connectorB: ConnectorType
+): Cable | undefined {
+  const key = [connectorA, connectorB].sort().join(':');
+  const cables = cableLookup.get(key);
+  
+  if (cables) {
+    // Find any copper cable - prefer Cat6a, then Cat6, then any
+    const copperCables = cables.filter(cable => 
+      cable.mediaType === CableMediaType.CopperCat6a ||
+      cable.mediaType === CableMediaType.CopperCat6 ||
+      cable.mediaType === CableMediaType.CopperCat5e ||
+      cable.mediaType === CableMediaType.CopperCat7 ||
+      cable.mediaType === CableMediaType.CopperCat8
+    );
+    
+    // Try to get Cat6a first, then Cat6, then any copper
+    return copperCables.find(c => c.mediaType === CableMediaType.CopperCat6a) ||
+           copperCables.find(c => c.mediaType === CableMediaType.CopperCat6) ||
+           copperCables[0];
+  }
+  
+  return undefined;
+}
+
+/**
  * Finds a compatible cable template for the given requirements
  */
 export function findCompatibleCableTemplate(

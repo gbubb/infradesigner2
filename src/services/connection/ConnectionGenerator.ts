@@ -19,7 +19,7 @@ import { CableMediaType, ConnectorType } from "@/types/infrastructure";
 import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
 
 import { filterDevicesByCriteria, filterPorts, getDeviceName } from "./PortMatcher";
-import { estimateCableLength, getCableTemplate, findCompatibleCableTemplate } from "./CableManager";
+import { estimateCableLength, getCableTemplate, findCompatibleCableTemplate, getAnyCopperCable } from "./CableManager";
 import { getTransceiverForConnection, findCompatibleTransceiverTemplate } from "./TransceiverManager";
 import { generateBreakoutConnections, getBreakoutTargetSpeed, areDevicesWithinBreakoutDistance } from "./BreakoutManager";
 
@@ -205,8 +205,21 @@ export function generateConnections(
 
     // Regular connection generation logic
     sources.forEach((srcDevice: InfrastructureComponent) => {
-      const availableSrcPorts = filterPorts(srcDevice, rule.sourcePortCriteria, false, false)
+      const allSrcPorts = filterPorts(srcDevice, rule.sourcePortCriteria, false, false);
+      const availableSrcPorts = allSrcPorts
         .filter(p => !usedSrcPorts.has(`${srcDevice.id}:${p.id}`) && !p.connectedToDeviceId);
+      
+      // Debug port filtering
+      if (rule.sourcePortCriteria?.portRole?.includes(PortRole.Management) || 
+          rule.targetPortCriteria?.portRole?.includes(PortRole.Management)) {
+        console.log(`[ConnectionGenerator] Source device ${srcDevice.name} ports:`, {
+          total: srcDevice.ports?.length,
+          filtered: allSrcPorts.length,
+          available: availableSrcPorts.length,
+          criteria: rule.sourcePortCriteria,
+          samplePort: availableSrcPorts[0]
+        });
+      }
 
       if (!availableSrcPorts.length) {
         connectionAttempts.push({
@@ -382,8 +395,21 @@ function attemptConnection(
   connectionId: number
 ): { success: boolean; connection?: NetworkConnection; reason: string; srcPortIndex?: number } {
   // Find available destination ports
-  const availableDstPorts = filterPorts(targetDevice, rule.targetPortCriteria, false, false)
+  const allDstPorts = filterPorts(targetDevice, rule.targetPortCriteria, false, false);
+  const availableDstPorts = allDstPorts
     .filter(p => !usedDstPorts.has(`${targetDevice.id}:${p.id}`) && !p.connectedToDeviceId);
+
+  // Debug destination port filtering for management connections
+  if (rule.targetPortCriteria?.portRole?.includes(PortRole.Management) || 
+      rule.sourcePortCriteria?.portRole?.includes(PortRole.Management)) {
+    console.log(`[ConnectionGenerator] Target device ${targetDevice.name} ports:`, {
+      total: targetDevice.ports?.length,
+      filtered: allDstPorts.length,
+      available: availableDstPorts.length,
+      criteria: rule.targetPortCriteria,
+      samplePort: availableDstPorts[0]
+    });
+  }
 
   if (!availableDstPorts.length) {
     return {
@@ -463,41 +489,77 @@ function determineConnectionPath(
   mediaType?: CableMediaType;
   reason: string;
 } {
-  const effectiveSrcMediaType = srcPort.mediaType;
-  const effectiveDstMediaType = dstPort.mediaType;
+  // Infer media type from connector when not specified - RJ45 always means copper
+  const effectiveSrcMediaType = srcPort.mediaType || 
+    (srcPort.connectorType === ConnectorType.RJ45 ? MediaType.Copper : undefined);
+  const effectiveDstMediaType = dstPort.mediaType || 
+    (dstPort.connectorType === ConnectorType.RJ45 ? MediaType.Copper : undefined);
 
-  // 1. Direct Copper connection
-  if (effectiveSrcMediaType === MediaType.Copper && effectiveDstMediaType === MediaType.Copper) {
+  // 1. Direct Copper connection - RJ45 connectors are always copper
+  if ((effectiveSrcMediaType === MediaType.Copper || srcPort.connectorType === ConnectorType.RJ45) && 
+      (effectiveDstMediaType === MediaType.Copper || dstPort.connectorType === ConnectorType.RJ45)) {
     if (srcPort.connectorType === dstPort.connectorType) {
-      // Try to find any copper cable that matches the connectors
-      const copperMediaTypes = [
-        CableMediaType.CopperCat6a,
-        CableMediaType.CopperCat6,
-        CableMediaType.CopperCat5e,
-        CableMediaType.CopperCat7,
-        CableMediaType.CopperCat8
-      ];
-      
-      for (const copperType of copperMediaTypes) {
-        const cable = getCableTemplate(cableLookup, srcPort.connectorType, dstPort.connectorType, copperType);
+      // For RJ45 connections, just get any available copper cable
+      if (srcPort.connectorType === ConnectorType.RJ45) {
+        const cable = getAnyCopperCable(cableLookup, srcPort.connectorType, dstPort.connectorType);
         if (cable) {
           return {
             cable,
             mediaType: cable.mediaType,
-            reason: "Direct copper connection."
+            reason: "Direct copper connection (RJ45)."
           };
+        }
+      } else {
+        // For non-RJ45 copper, try specific media types
+        const copperMediaTypes = [
+          CableMediaType.CopperCat6a,
+          CableMediaType.CopperCat6,
+          CableMediaType.CopperCat5e,
+          CableMediaType.CopperCat7,
+          CableMediaType.CopperCat8
+        ];
+        
+        for (const copperType of copperMediaTypes) {
+          const cable = getCableTemplate(cableLookup, srcPort.connectorType, dstPort.connectorType, copperType);
+          if (cable) {
+            return {
+              cable,
+              mediaType: cable.mediaType,
+              reason: "Direct copper connection."
+            };
+          }
         }
       }
       // Debug: log what we're looking for
       console.log(`[ConnectionGenerator] No copper cable found for connector type: ${srcPort.connectorType}`);
+      console.log(`[ConnectionGenerator] Src port:`, { 
+        connector: srcPort.connectorType, 
+        mediaType: srcPort.mediaType,
+        effectiveMedia: effectiveSrcMediaType,
+        role: srcPort.role,
+        name: srcPort.name 
+      });
+      console.log(`[ConnectionGenerator] Dst port:`, { 
+        connector: dstPort.connectorType, 
+        mediaType: dstPort.mediaType,
+        effectiveMedia: effectiveDstMediaType,
+        role: dstPort.role,
+        name: dstPort.name 
+      });
       console.log(`[ConnectionGenerator] Available cables in lookup:`, Array.from(cableLookup.keys()));
-      return { reason: `Matching copper cable template not found for connector type: ${srcPort.connectorType}` };
+      return { reason: `Matching copper cable template not found for RJ45 connector` };
     }
+    // Debug connector mismatch
+    console.log(`[ConnectionGenerator] Connector type mismatch:`, {
+      src: { connector: srcPort.connectorType, mediaType: srcPort.mediaType },
+      dst: { connector: dstPort.connectorType, mediaType: dstPort.mediaType }
+    });
     return { reason: `Copper port connector types do not match (Src: ${srcPort.connectorType}, Dst: ${dstPort.connectorType})` };
   }
 
-  // 2. DAC or Fiber/Optics for non-copper ports
-  if ((!effectiveSrcMediaType || effectiveSrcMediaType !== MediaType.Copper) && 
+  // 2. DAC or Fiber/Optics for non-RJ45/non-copper ports
+  if (srcPort.connectorType !== ConnectorType.RJ45 && dstPort.connectorType !== ConnectorType.RJ45 &&
+      (!effectiveSrcMediaType || effectiveSrcMediaType !== MediaType.Copper) && 
       (!effectiveDstMediaType || effectiveDstMediaType !== MediaType.Copper)) {
     
     // Try DAC first if length is suitable
