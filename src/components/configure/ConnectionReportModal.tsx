@@ -9,7 +9,7 @@ const statusColors: Record<string, string> = {
   "Success": "bg-green-500 text-white",
   "Failed": "bg-red-500 text-white",
   "Skipped": "bg-yellow-400 text-black",
-  "Info": "bg-gray-200 text-black"
+  "Info": "bg-blue-500 text-white"
 }
 
 interface Props {
@@ -146,7 +146,13 @@ const ConnectionReportModal: React.FC<Props> = ({ open, onClose, report }) => {
                   <TableCell>
                     {a.targetPortId || "-"}
                   </TableCell>
-                  <TableCell>{a.reason}</TableCell>
+                  <TableCell>
+                    {a.status === "Info" && a.reason?.includes("⚠️") ? (
+                      <div className="font-medium text-amber-600">{a.reason}</div>
+                    ) : (
+                      a.reason
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
               {displayedReport.length === 0 && (

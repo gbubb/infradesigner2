@@ -247,6 +247,29 @@ const NetworkConnectionsTab: React.FC = () => {
 
   const handleGenerate = () => {
     if (!activeDesign) return;
+    
+    // Check for unplaced devices
+    const allDevices = activeDesign.components?.filter((c: InfrastructureComponent) =>
+      [ComponentType.Server, ComponentType.Switch, ComponentType.Router, ComponentType.Firewall].includes(c.type)
+    ) || [];
+    
+    const placedDeviceIds = new Set<string>();
+    if (activeDesign.rackprofiles) {
+      for (const rack of activeDesign.rackprofiles) {
+        for (const device of rack.devices || []) {
+          placedDeviceIds.add(device.deviceId);
+        }
+      }
+    }
+    
+    const unplacedCount = allDevices.filter(d => !placedDeviceIds.has(d.id)).length;
+    if (unplacedCount > 0) {
+      const percentUnplaced = Math.round((unplacedCount / allDevices.length) * 100);
+      toast.warning(`${unplacedCount} of ${allDevices.length} devices (${percentUnplaced}%) are not placed in racks. Rack/RU positions won't be available.`, {
+        duration: 5000,
+      });
+    }
+    
     setGenerating(true);
 
     // Get all cable templates from the component library store

@@ -121,19 +121,35 @@ export function generateConnections(
   
   // Map deviceId to rack and ru
   const rackPlacement: Record<string, { rackId?: string; ruPosition?: number }> = {};
+  let placedDeviceCount = 0;
   if (rackprofiles && Array.isArray(rackprofiles)) {
     for (const rack of rackprofiles as RackProfile[]) {
-      for (const placed of rack.devices) {
+      for (const placed of rack.devices || []) {
         rackPlacement[placed.deviceId] = { rackId: rack.id, ruPosition: placed.ruPosition };
+        placedDeviceCount++;
       }
     }
+  }
+  
+  // Check for unplaced devices and add warning
+  const unplacedDevices = allDevices.filter(d => !rackPlacement[d.id]);
+  if (unplacedDevices.length > 0) {
+    const totalDevices = allDevices.length;
+    const percentPlaced = Math.round((placedDeviceCount / totalDevices) * 100);
+    
+    connectionAttempts.push({
+      status: "Info",
+      reason: `⚠️ ${unplacedDevices.length} of ${totalDevices} devices (${100 - percentPlaced}%) are not placed in racks. Rack/RU positions and accurate cable distances will not be available for unplaced devices. Consider placing all devices in racks (Configure → Rack Layouts) before generating connections.`,
+    });
+    
+    console.log('[ConnectionService] Warning: Unplaced devices detected:', unplacedDevices.map(d => d.name));
   }
 
   const enabledRules = rules.filter((r: ConnectionRule) => r.enabled);
   if (enabledRules.length === 0) {
     connectionAttempts.push({
       status: "Info",
-      reason: "No enabled connection rules found.",
+      reason: "No enabled connection rules found. Create and enable connection rules to generate network connections.",
     });
     return connectionAttempts;
   }
