@@ -14,16 +14,19 @@ import { CableDistanceSettingsDialog } from "./CableDistanceSettingsDialog";
 import { CableDistanceTooltip } from "./CableDistanceTooltip";
 import { RowLayoutConfiguration, DeviceOrientation } from "@/types/infrastructure/rack-types";
 import { estimateCableLengthWithBreakdown, CableDistanceSettings, DEFAULT_CABLE_DISTANCE_SETTINGS } from "@/services/connection/CableManager";
+import { BomItemHoverCard } from "@/components/results/bom/BomItemHoverCard";
 
 // Table display row type for formatted data
 type NetworkConnectionTableRow = {
   id: string;
   connectionId: string;
+  sourceDevice?: InfrastructureComponent;
   sourceDeviceId: string;
   sourcePortId: string;
   srcRack: string;
   srcRU: string | number;
   srcOrientation: string;
+  destinationDevice?: InfrastructureComponent;
   destinationDeviceId: string;
   destinationPortId: string;
   dstRack: string;
@@ -36,7 +39,7 @@ type NetworkConnectionTableRow = {
   transceiverDestinationModel: string;
   status: string;
   notes?: string;
-  distanceBreakdown?: any;
+  distanceBreakdown?: ReturnType<typeof estimateCableLengthWithBreakdown>;
 };
 
 // Utility for searching/filtering table rows
@@ -95,7 +98,7 @@ const calculateCableDistance = (
   srcOrientation: DeviceOrientation = DeviceOrientation.Front,
   dstOrientation: DeviceOrientation = DeviceOrientation.Front,
   settings: CableDistanceSettings = DEFAULT_CABLE_DISTANCE_SETTINGS
-): { distanceMm: number; breakdown: any } => {
+): { distanceMm: number; breakdown: ReturnType<typeof estimateCableLengthWithBreakdown> | null } => {
   if (!srcRackId || !dstRackId || !racks) {
     return { distanceMm: settings.defaultInterRackLengthM * 1000, breakdown: null };
   }
@@ -163,8 +166,11 @@ const formatConnectionRow = (
   rowLayout?: RowLayoutConfiguration,
   cableDistanceSettings?: CableDistanceSettings
 ): NetworkConnectionTableRow => {
-  const srcDeviceName = getDeviceName(allDesignComponents, row.sourceDeviceId);
-  const dstDeviceName = getDeviceName(allDesignComponents, row.destinationDeviceId);
+  const sourceDevice = allDesignComponents.find(d => d.id === row.sourceDeviceId);
+  const destinationDevice = allDesignComponents.find(d => d.id === row.destinationDeviceId);
+  
+  const srcDeviceName = sourceDevice?.name || row.sourceDeviceId.substring(0, 6);
+  const dstDeviceName = destinationDevice?.name || row.destinationDeviceId.substring(0, 6);
   
   const srcPortName = getPortName(row.sourceDeviceId, row.sourcePortId, allDesignComponents);
   const dstPortName = getPortName(row.destinationDeviceId, row.destinationPortId, allDesignComponents);
@@ -206,11 +212,13 @@ const formatConnectionRow = (
   return {
     id: row.id,
     connectionId: row.connectionId || "-",
+    sourceDevice,
     sourceDeviceId: srcDeviceName,
     sourcePortId: srcPortName,
     srcRack: srcRackObj.rack,
     srcRU: srcRackObj.ru,
     srcOrientation: srcOrientationStr,
+    destinationDevice,
     destinationDeviceId: dstDeviceName,
     destinationPortId: dstPortName,
     dstRack: dstRackObj.rack,
@@ -259,7 +267,7 @@ const NetworkConnectionsTab: React.FC = () => {
       });
     }
     return filtered;
-  }, [networkConnections, searchQuery, sortCol, sortDir, activeDesign, componentTemplates]);
+  }, [networkConnections, searchQuery, sortCol, sortDir, activeDesign, componentTemplates, cableDistanceSettings]);
 
   const handleGenerate = () => {
     if (!activeDesign) return;
@@ -512,7 +520,19 @@ const NetworkConnectionsTab: React.FC = () => {
                 <TableRow key={row.id + "-" + idx}>
                   {columns.map(col => (
                     <TableCell key={col.key}>
-                      {col.key === 'calculatedDistanceMm' ? (
+                      {col.key === 'sourceDeviceId' && row.sourceDevice ? (
+                        <BomItemHoverCard component={row.sourceDevice}>
+                          <span className="cursor-pointer hover:underline">
+                            {row[col.key as keyof NetworkConnectionTableRow]}
+                          </span>
+                        </BomItemHoverCard>
+                      ) : col.key === 'destinationDeviceId' && row.destinationDevice ? (
+                        <BomItemHoverCard component={row.destinationDevice}>
+                          <span className="cursor-pointer hover:underline">
+                            {row[col.key as keyof NetworkConnectionTableRow]}
+                          </span>
+                        </BomItemHoverCard>
+                      ) : col.key === 'calculatedDistanceMm' ? (
                         <CableDistanceTooltip 
                           distanceMm={row[col.key]} 
                           breakdown={row.distanceBreakdown} 
