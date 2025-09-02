@@ -114,6 +114,9 @@ export function BomItemHoverCard({ component, children }: BomItemHoverCardProps)
       }
 
       case ComponentType.Cable: {
+        if ('length' in component && component.length) {
+          details.push({ label: "Length", value: `${component.length}m` });
+        }
         if ('mediaType' in component && component.mediaType) {
           details.push({ label: "Media Type", value: String(component.mediaType) });
         }
