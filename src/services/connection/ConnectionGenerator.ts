@@ -517,7 +517,7 @@ function determineConnectionPath(
     if (srcPort.connectorType === dstPort.connectorType) {
       // For RJ45 connections, just get any available copper cable
       if (srcPort.connectorType === ConnectorType.RJ45) {
-        const cable = getAnyCopperCable(cableLookup, srcPort.connectorType, dstPort.connectorType);
+        const cable = getAnyCopperCable(cableLookup, srcPort.connectorType, dstPort.connectorType, lengthMeters);
         if (cable) {
           return {
             cable,
@@ -536,7 +536,7 @@ function determineConnectionPath(
         ];
         
         for (const copperType of copperMediaTypes) {
-          const cable = getCableTemplate(cableLookup, srcPort.connectorType, dstPort.connectorType, copperType);
+          const cable = getCableTemplate(cableLookup, srcPort.connectorType, dstPort.connectorType, copperType, lengthMeters);
           if (cable) {
             return {
               cable,

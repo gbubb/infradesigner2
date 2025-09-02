@@ -191,13 +191,29 @@ export function getCableTemplate(
   cableLookup: Map<string, Cable[]>,
   connectorA: ConnectorType,
   connectorB: ConnectorType,
-  mediaType: CableMediaType
+  mediaType: CableMediaType,
+  requiredLengthMeters?: number
 ): Cable | undefined {
   const key = [connectorA, connectorB].sort().join(':');
   const cables = cableLookup.get(key);
   
   if (cables) {
-    return cables.find(cable => cable.mediaType === mediaType);
+    // Filter by media type and length requirement
+    let matchingCables = cables.filter(cable => 
+      cable.mediaType === mediaType &&
+      (!requiredLengthMeters || (cable.length !== undefined && cable.length >= requiredLengthMeters))
+    );
+    
+    // Sort by length to get the shortest suitable cable
+    if (requiredLengthMeters && matchingCables.length > 0) {
+      matchingCables.sort((a, b) => {
+        if (!a.length) return 1;
+        if (!b.length) return -1;
+        return a.length - b.length;
+      });
+    }
+    
+    return matchingCables[0];
   }
   
   return undefined;
@@ -209,22 +225,34 @@ export function getCableTemplate(
 export function getAnyCopperCable(
   cableLookup: Map<string, Cable[]>,
   connectorA: ConnectorType,
-  connectorB: ConnectorType
+  connectorB: ConnectorType,
+  requiredLengthMeters?: number
 ): Cable | undefined {
   const key = [connectorA, connectorB].sort().join(':');
   const cables = cableLookup.get(key);
   
   if (cables) {
-    // Find any copper cable - prefer Cat6a, then Cat6, then any
-    const copperCables = cables.filter(cable => 
-      cable.mediaType === CableMediaType.CopperCat6a ||
-      cable.mediaType === CableMediaType.CopperCat6 ||
-      cable.mediaType === CableMediaType.CopperCat5e ||
-      cable.mediaType === CableMediaType.CopperCat7 ||
-      cable.mediaType === CableMediaType.CopperCat8
+    // Find copper cables that meet the length requirement
+    let copperCables = cables.filter(cable => 
+      (cable.mediaType === CableMediaType.CopperCat6a ||
+       cable.mediaType === CableMediaType.CopperCat6 ||
+       cable.mediaType === CableMediaType.CopperCat5e ||
+       cable.mediaType === CableMediaType.CopperCat7 ||
+       cable.mediaType === CableMediaType.CopperCat8) &&
+      (!requiredLengthMeters || (cable.length !== undefined && cable.length >= requiredLengthMeters))
     );
     
-    // Try to get Cat6a first, then Cat6, then any copper
+    // Sort by length to get the shortest suitable cable
+    if (requiredLengthMeters && copperCables.length > 0) {
+      copperCables.sort((a, b) => {
+        if (!a.length) return 1;
+        if (!b.length) return -1;
+        return a.length - b.length;
+      });
+      console.log(`[CableManager] Copper cable selection: Found ${copperCables.length} suitable cables, selected: ${copperCables[0].name} (${copperCables[0].length}m) for ${requiredLengthMeters}m requirement`);
+    }
+    
+    // Try to get Cat6a first, then Cat6, then any copper (from the filtered list)
     return copperCables.find(c => c.mediaType === CableMediaType.CopperCat6a) ||
            copperCables.find(c => c.mediaType === CableMediaType.CopperCat6) ||
            copperCables[0];
