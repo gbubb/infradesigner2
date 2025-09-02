@@ -72,6 +72,11 @@ export class AutomatedPlacementService {
     }
 
     const components = activeDesign.components;
+    
+    // Ensure rack profiles are synced before starting placement
+    // This is important if racks were modified visually but not saved
+    RackService.syncRackProfiles();
+    
     let rackProfiles = RackService.getAllRackProfiles();
     
     // Clear existing placements if requested

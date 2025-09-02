@@ -79,15 +79,46 @@ export class RackService {
     return newProfile.id;
   }
   
+  static syncRackProfiles(): void {
+    // Ensures localStorage and design state are in sync
+    // Prefers design state as the source of truth if it exists
+    const state = useDesignStore.getState();
+    
+    if (state.activeDesign?.rackprofiles && state.activeDesign.rackprofiles.length > 0) {
+      // Design state exists - ensure it's saved to localStorage
+      const storageKey = this.getStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(state.activeDesign.rackprofiles));
+      console.log('[RackService] Synced', state.activeDesign.rackprofiles.length, 'rack profiles from design to localStorage');
+    }
+  }
+
   static batchUpdateRackProfiles(): void {
     const state = useDesignStore.getState();
-    const profiles = this.getAllRackProfiles();
     
-    // Update design with all current profiles
-    if (state.activeDesign) {
+    // IMPORTANT: During batch placement, devices are added with skipUpdate: true
+    // This means the localStorage has the latest changes but design state doesn't.
+    // We need to sync localStorage back to the design state.
+    
+    const storageKey = this.getStorageKey();
+    const storedProfiles = localStorage.getItem(storageKey);
+    
+    if (storedProfiles && state.activeDesign) {
+      const profiles = JSON.parse(storedProfiles);
+      console.log('[RackService] Batch updating', profiles.length, 'rack profiles from localStorage to design state');
+      
+      // Count placed devices for debugging
+      let totalPlacedDevices = 0;
+      profiles.forEach((rack: RackProfile) => {
+        totalPlacedDevices += rack.devices?.length || 0;
+      });
+      console.log('[RackService] Total devices placed across all racks:', totalPlacedDevices);
+      
       state.updateDesign(state.activeDesign.id, {
         rackprofiles: profiles
       });
+    } else if (!storedProfiles && state.activeDesign?.rackprofiles) {
+      // If no localStorage but we have design state, this is unusual but handle it
+      console.warn('[RackService] No localStorage found during batch update, using existing design state');
     }
   }
 
