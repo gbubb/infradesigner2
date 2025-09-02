@@ -233,6 +233,9 @@ export function getAnyCopperCable(
   
   if (cables) {
     // Find copper cables that meet the length requirement
+    console.log(`[CableManager] getAnyCopperCable: Looking for copper cable with min length ${requiredLengthMeters}m`);
+    console.log(`[CableManager] Available cables:`, cables.map(c => `${c.name} (${c.length}m, ${c.mediaType})`));
+    
     let copperCables = cables.filter(cable => 
       (cable.mediaType === CableMediaType.CopperCat6a ||
        cable.mediaType === CableMediaType.CopperCat6 ||
@@ -242,6 +245,8 @@ export function getAnyCopperCable(
       (!requiredLengthMeters || (cable.length !== undefined && cable.length >= requiredLengthMeters))
     );
     
+    console.log(`[CableManager] Filtered copper cables:`, copperCables.map(c => `${c.name} (${c.length}m)`));
+    
     // Sort by length to get the shortest suitable cable
     if (requiredLengthMeters && copperCables.length > 0) {
       copperCables.sort((a, b) => {
@@ -250,9 +255,12 @@ export function getAnyCopperCable(
         return a.length - b.length;
       });
       console.log(`[CableManager] Copper cable selection: Found ${copperCables.length} suitable cables, selected: ${copperCables[0].name} (${copperCables[0].length}m) for ${requiredLengthMeters}m requirement`);
+      
+      // When we have a length requirement, prioritize shortest cable regardless of type
+      return copperCables[0];
     }
     
-    // Try to get Cat6a first, then Cat6, then any copper (from the filtered list)
+    // Only prioritize by cable type when no length requirement
     return copperCables.find(c => c.mediaType === CableMediaType.CopperCat6a) ||
            copperCables.find(c => c.mediaType === CableMediaType.CopperCat6) ||
            copperCables[0];

@@ -17,6 +17,7 @@ import {
 import { Transceiver } from "@/types/infrastructure/transceiver-types";
 import { CableMediaType, ConnectorType } from "@/types/infrastructure";
 import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
+import type { CableDistanceSettings } from "@/types/infrastructure/cable-settings-types";
 
 import { filterDevicesByCriteria, filterPorts, getDeviceName } from "./PortMatcher";
 import { estimateCableLength, getCableTemplate, findCompatibleCableTemplate, getAnyCopperCable } from "./CableManager";
@@ -52,7 +53,8 @@ export function generateConnections(
   design: InfrastructureDesign,
   rules: ConnectionRule[],
   allCableTemplates: Cable[],
-  allTransceiverTemplates: Transceiver[]
+  allTransceiverTemplates: Transceiver[],
+  cableDistanceSettings?: CableDistanceSettings
 ): ConnectionAttempt[] {
   const { components, rackprofiles } = design;
   const connectionAttempts: ConnectionAttempt[] = [];
@@ -337,7 +339,8 @@ export function generateConnections(
             allDevices,
             usedSrcPorts,
             usedDstPorts,
-            connectionCounter
+            connectionCounter,
+            cableDistanceSettings
           );
 
           if (connectionResult.success && connectionResult.connection) {
@@ -408,7 +411,8 @@ function attemptConnection(
   allDevices: InfrastructureComponent[],
   usedSrcPorts: Set<string>,
   usedDstPorts: Set<string>,
-  connectionId: number
+  connectionId: number,
+  cableDistanceSettings?: CableDistanceSettings
 ): { success: boolean; connection?: NetworkConnection; reason: string; srcPortIndex?: number } {
   // Find available destination ports
   const allDstPorts = filterPorts(targetDevice, rule.targetPortCriteria, false, false);
@@ -440,7 +444,7 @@ function attemptConnection(
     
     // Try each destination port
     for (const currentDstPort of availableDstPorts) {
-      const lengthMeters = estimateCableLength(srcPlace as PlacedDevice, srcRack, dstPlace as PlacedDevice, dstRack, rowLayout);
+      const lengthMeters = estimateCableLength(srcPlace as PlacedDevice, srcRack, dstPlace as PlacedDevice, dstRack, rowLayout, cableDistanceSettings);
       
       // Determine connection media and find cable/transceivers
       const connectionPath = determineConnectionPath(

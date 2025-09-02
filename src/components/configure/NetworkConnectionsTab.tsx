@@ -386,7 +386,8 @@ const NetworkConnectionsTab: React.FC = () => {
       design: activeDesign, 
       rules: activeDesign.connectionRules || [],
       allCableTemplates: allCableTemplates, // Pass cable templates to worker
-      allTransceiverTemplates: allTransceiverTemplates // Pass transceiver templates to worker
+      allTransceiverTemplates: allTransceiverTemplates, // Pass transceiver templates to worker
+      cableDistanceSettings: cableDistanceSettings // Pass cable distance settings to worker
     });
   };
 
