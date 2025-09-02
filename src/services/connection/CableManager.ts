@@ -4,38 +4,92 @@ import {
   RowLayoutConfiguration,
   Cable,
   PortSpeed,
+  DeviceOrientation,
 } from "@/types/infrastructure";
 import { CableMediaType, ConnectorType } from "@/types/infrastructure";
+import { 
+  CableDistanceSettings, 
+  CableDistanceBreakdown, 
+  DEFAULT_CABLE_DISTANCE_SETTINGS 
+} from "@/types/infrastructure/cable-settings-types";
 
-// Constants for cable length estimation
-const RU_HEIGHT_CM = 4.45; // 1 RU height in cm
-const SLACK_PER_END_CM = 50;
-const INTRA_RACK_EXTRA_CM = 50; // extra for routing
-const DEFAULT_INTER_RACK_LENGTH_M = 10;
+// Re-export types for backward compatibility
+export type { CableDistanceBreakdown, CableDistanceSettings } from "@/types/infrastructure/cable-settings-types";
+export { DEFAULT_CABLE_DISTANCE_SETTINGS } from "@/types/infrastructure/cable-settings-types";
 
 /**
- * Estimates the cable length between two devices based on their rack placement
+ * Estimates the cable length between two devices with detailed breakdown
+ * @param srcPlaced Source device placement
+ * @param srcRack Source rack profile
+ * @param dstPlaced Destination device placement
+ * @param dstRack Destination rack profile
+ * @param rowLayout Row layout configuration for inter-rack calculations
+ * @param settings Optional cable distance settings (uses defaults if not provided)
  */
-export function estimateCableLength(
+export function estimateCableLengthWithBreakdown(
   srcPlaced: PlacedDevice,
   srcRack?: RackProfile,
   dstPlaced?: PlacedDevice,
   dstRack?: RackProfile,
-  rowLayout?: RowLayoutConfiguration
-): number {
+  rowLayout?: RowLayoutConfiguration,
+  settings: CableDistanceSettings = DEFAULT_CABLE_DISTANCE_SETTINGS
+): CableDistanceBreakdown {
   // Check if placement info is actually available
   if (!srcPlaced || !dstPlaced || typeof srcPlaced.ruPosition !== 'number' || typeof dstPlaced.ruPosition !== 'number') {
-    console.log('[CableManager] Missing placement info - using default distance');
-    return DEFAULT_INTER_RACK_LENGTH_M;
+    if (settings.enableDistanceLogging) {
+      console.log('[CableManager] Missing placement info - using default distance');
+    }
+    return {
+      totalMeters: settings.defaultInterRackLengthM,
+      totalMillimeters: settings.defaultInterRackLengthM * 1000,
+      components: {},
+      description: 'Default distance (missing placement information)',
+      sameRack: false
+    };
   }
 
   if (srcRack && dstRack && srcRack.id === dstRack.id) {
     // Same rack calculation
     const ruDelta = Math.abs((srcPlaced.ruPosition ?? 0) - (dstPlaced.ruPosition ?? 0));
-    const verticalCM = ruDelta * RU_HEIGHT_CM;
-    // Add slack both ends and intra-rack routing
-    const totalCM = verticalCM + 2 * SLACK_PER_END_CM + INTRA_RACK_EXTRA_CM;
-    return Math.ceil(totalCM / 100); // convert to meters, round up
+    const verticalMm = ruDelta * settings.ruHeightMm;
+    
+    // Check if devices are on opposite sides (front vs rear)
+    let orientationAdjustmentMm = 0;
+    if (srcPlaced.orientation !== dstPlaced.orientation) {
+      // Cable needs to route around the rack (front to rear or vice versa)
+      orientationAdjustmentMm = settings.rackDepthMm;
+    }
+    
+    // Calculate total with all components
+    const slackMm = 2 * settings.slackPerEndMm;
+    const totalMm = verticalMm + orientationAdjustmentMm + slackMm + settings.intraRackRoutingMm;
+    const totalMeters = Math.ceil(totalMm / 1000);
+    
+    const breakdown: CableDistanceBreakdown = {
+      totalMeters,
+      totalMillimeters: totalMm,
+      components: {
+        verticalDistanceMm: verticalMm,
+        orientationAdjustmentMm: orientationAdjustmentMm,
+        slackAllowanceMm: slackMm,
+        intraRackRoutingMm: settings.intraRackRoutingMm
+      },
+      description: `Same rack: ${ruDelta} RU vertical${orientationAdjustmentMm > 0 ? ', front-to-rear routing' : ', same side'}`,
+      sameRack: true
+    };
+    
+    if (settings.enableDistanceLogging) {
+      console.log('[CableManager] Cable distance breakdown:', {
+        total: `${totalMeters}m (${totalMm}mm)`,
+        vertical: `${verticalMm}mm`,
+        orientation: `${orientationAdjustmentMm}mm`,
+        slack: `${slackMm}mm`,
+        routing: `${settings.intraRackRoutingMm}mm`,
+        description: breakdown.description
+      });
+    }
+    
+    return breakdown;
   } else {
     // Different racks - calculate using row layout if available
     if (rowLayout && srcRack && dstRack) {
@@ -60,24 +114,74 @@ export function estimateCableLength(
         }
         
         // Add vertical components
-        const srcRU = srcPlaced.ruPosition ?? 20; // Default to middle of rack
+        const srcRU = srcPlaced.ruPosition ?? 20;
         const dstRU = dstPlaced.ruPosition ?? 20;
         
+        // Use configured overhead height if row layout doesn't specify
+        const cableHeightMm = rowLayout.cableHeightMm || settings.overheadCableHeightMm;
+        
         // Vertical distance from device to cable height
-        const srcVerticalMm = rowLayout.cableHeightMm + (srcRU * RU_HEIGHT_CM * 10);
-        const dstVerticalMm = rowLayout.cableHeightMm + (dstRU * RU_HEIGHT_CM * 10);
+        const srcVerticalMm = cableHeightMm + (srcRU * settings.ruHeightMm);
+        const dstVerticalMm = cableHeightMm + (dstRU * settings.ruHeightMm);
+        const slackMm = 2 * settings.slackPerEndMm;
         
         // Total cable distance in mm
-        const totalDistanceMm = srcVerticalMm + horizontalDistanceMm + dstVerticalMm + (2 * SLACK_PER_END_CM * 10);
+        const totalDistanceMm = srcVerticalMm + horizontalDistanceMm + dstVerticalMm + slackMm;
         
         // Convert to meters and round up
-        return Math.ceil(totalDistanceMm / 1000);
+        const totalMeters = Math.ceil(totalDistanceMm / 1000);
+        
+        const breakdown: CableDistanceBreakdown = {
+          totalMeters,
+          totalMillimeters: totalDistanceMm,
+          components: {
+            cableHeightTraversalMm: srcVerticalMm + dstVerticalMm,
+            horizontalDistanceMm: horizontalDistanceMm,
+            slackAllowanceMm: slackMm
+          },
+          description: `Inter-rack: ${Math.abs(srcIndex - dstIndex)} rack(s) apart`,
+          sameRack: false
+        };
+        
+        if (settings.enableDistanceLogging) {
+          console.log('[CableManager] Inter-rack distance breakdown:', {
+            total: `${totalMeters}m (${totalDistanceMm}mm)`,
+            horizontal: `${horizontalDistanceMm}mm`,
+            verticalTraversal: `${srcVerticalMm + dstVerticalMm}mm`,
+            slack: `${slackMm}mm`,
+            description: breakdown.description
+          });
+        }
+        
+        return breakdown;
       }
     }
     
     // Fallback to default if row layout not available
-    return DEFAULT_INTER_RACK_LENGTH_M;
+    return {
+      totalMeters: settings.defaultInterRackLengthM,
+      totalMillimeters: settings.defaultInterRackLengthM * 1000,
+      components: {},
+      description: 'Default inter-rack distance (no row layout available)',
+      sameRack: false
+    };
   }
+}
+
+/**
+ * Estimates the cable length between two devices based on their rack placement
+ * (Legacy function for backward compatibility)
+ */
+export function estimateCableLength(
+  srcPlaced: PlacedDevice,
+  srcRack?: RackProfile,
+  dstPlaced?: PlacedDevice,
+  dstRack?: RackProfile,
+  rowLayout?: RowLayoutConfiguration,
+  settings?: CableDistanceSettings
+): number {
+  const breakdown = estimateCableLengthWithBreakdown(srcPlaced, srcRack, dstPlaced, dstRack, rowLayout, settings);
+  return breakdown.totalMeters;
 }
 
 /**

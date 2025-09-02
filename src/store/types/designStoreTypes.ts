@@ -4,6 +4,7 @@ import { RequirementsSlice } from '../slices/requirementsSlice';
 import { WorkspaceSlice } from '../slices/workspaceSlice';
 import { ComponentLibrarySlice } from '../slices/componentLibrary';
 import { FacilitiesSlice } from '../slices/facilitiesSlice';
+import { CableSettingsSlice } from '../slices/cableSettingsSlice';
 
 // Combined store type
-export type DesignStoreState = RequirementsSlice & DesignSlice & WorkspaceSlice & ComponentLibrarySlice & FacilitiesSlice;
+export type DesignStoreState = RequirementsSlice & DesignSlice & WorkspaceSlice & ComponentLibrarySlice & FacilitiesSlice & CableSettingsSlice;

@@ -6,6 +6,7 @@ import { createDesignSlice } from './slices/design';
 import { createWorkspaceSlice } from './slices/workspaceSlice';
 import { createComponentLibrarySlice } from './slices/componentLibrary';
 import { createFacilitiesSlice } from './slices/facilitiesSlice';
+import { createCableSettingsSlice } from './slices/cableSettingsSlice';
 import { initializeStore } from './initialization/storeInitializer';
 import { recalculateDesign, manualRecalculateDesign } from './calculations/designCalculator';
 
@@ -16,6 +17,7 @@ export const useDesignStore = create<DesignStoreState>()((...a) => ({
   ...createWorkspaceSlice(...a),
   ...createComponentLibrarySlice(...a),
   ...createFacilitiesSlice(...a),
+  ...createCableSettingsSlice(...a),
 }));
 
 // Export initialization function

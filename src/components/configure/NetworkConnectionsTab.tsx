@@ -5,12 +5,15 @@ import { generateConnections } from "@/services/connectionService";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Save, Trash2, Plus, Network, Download, Cable } from "lucide-react";
+import { Save, Trash2, Plus, Network, Download, Cable, Settings } from "lucide-react";
 import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable as CableType, Port, Transceiver } from "@/types/infrastructure";
 import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
 import ConnectionReportModal from "./ConnectionReportModal";
 import ManualConnectionDialog from "./ManualConnectionDialog";
-import { RowLayoutConfiguration } from "@/types/infrastructure/rack-types";
+import { CableDistanceSettingsDialog } from "./CableDistanceSettingsDialog";
+import { CableDistanceTooltip } from "./CableDistanceTooltip";
+import { RowLayoutConfiguration, DeviceOrientation } from "@/types/infrastructure/rack-types";
+import { estimateCableLengthWithBreakdown, CableDistanceSettings, DEFAULT_CABLE_DISTANCE_SETTINGS } from "@/services/connection/CableManager";
 
 // Table display row type for formatted data
 type NetworkConnectionTableRow = {
@@ -84,60 +87,49 @@ const calculateCableDistance = (
   srcRU: string | number,
   dstRackId: string | null,
   dstRU: string | number,
-  rowLayout?: RowLayoutConfiguration
-): number => {
-  const RU_HEIGHT_MM = 44.5; // 1 RU height in mm
-  const SLACK_PER_END_MM = 500; // 50cm slack per end
-  const INTRA_RACK_EXTRA_MM = 500; // Extra for routing within rack
-  const DEFAULT_INTER_RACK_LENGTH_MM = 10000; // 10m default
-
-  if (!srcRackId || !dstRackId) return DEFAULT_INTER_RACK_LENGTH_MM;
+  rowLayout?: RowLayoutConfiguration,
+  racks?: RackProfile[],
+  srcOrientation: DeviceOrientation = DeviceOrientation.Front,
+  dstOrientation: DeviceOrientation = DeviceOrientation.Front,
+  settings: CableDistanceSettings = DEFAULT_CABLE_DISTANCE_SETTINGS
+): { distanceMm: number; breakdown: any } => {
+  if (!srcRackId || !dstRackId || !racks) {
+    return { distanceMm: settings.defaultInterRackLengthM * 1000, breakdown: null };
+  }
 
   const srcRUNum = typeof srcRU === 'number' ? srcRU : 0;
   const dstRUNum = typeof dstRU === 'number' ? dstRU : 0;
 
-  if (srcRackId === dstRackId) {
-    // Same rack
-    const ruDelta = Math.abs(srcRUNum - dstRUNum);
-    const verticalMm = ruDelta * RU_HEIGHT_MM;
-    // Add slack both ends and intra-rack routing
-    return verticalMm + 2 * SLACK_PER_END_MM + INTRA_RACK_EXTRA_MM;
-  } else {
-    // Different racks - calculate using row layout if available
-    if (rowLayout) {
-      const srcIndex = rowLayout.rackOrder.indexOf(srcRackId);
-      const dstIndex = rowLayout.rackOrder.indexOf(dstRackId);
-      
-      if (srcIndex !== -1 && dstIndex !== -1) {
-        // Calculate horizontal distance between racks
-        let horizontalDistanceMm = 0;
-        const startIdx = Math.min(srcIndex, dstIndex);
-        const endIdx = Math.max(srcIndex, dstIndex);
-        
-        for (let i = startIdx; i < endIdx; i++) {
-          const rackId = rowLayout.rackOrder[i];
-          const rackProps = rowLayout.rackProperties[rackId];
-          if (rackProps) {
-            horizontalDistanceMm += rackProps.widthMm;
-            if (i < endIdx - 1) {
-              horizontalDistanceMm += rackProps.gapAfterMm;
-            }
-          }
-        }
-        
-        // Add vertical components
-        // Vertical distance from device to cable height
-        const srcVerticalMm = rowLayout.cableHeightMm + (srcRUNum * RU_HEIGHT_MM);
-        const dstVerticalMm = rowLayout.cableHeightMm + (dstRUNum * RU_HEIGHT_MM);
-        
-        // Total cable distance in mm
-        return srcVerticalMm + horizontalDistanceMm + dstVerticalMm + (2 * SLACK_PER_END_MM);
-      }
-    }
-    
-    // Fallback to default if row layout not available
-    return DEFAULT_INTER_RACK_LENGTH_MM;
-  }
+  // Find the racks
+  const srcRack = racks.find(r => r.id === srcRackId);
+  const dstRack = racks.find(r => r.id === dstRackId);
+
+  // Create PlacedDevice objects for the calculation
+  const srcPlaced = {
+    deviceId: '',
+    ruPosition: srcRUNum,
+    orientation: srcOrientation
+  };
+  const dstPlaced = {
+    deviceId: '',
+    ruPosition: dstRUNum,
+    orientation: dstOrientation
+  };
+
+  // Use the unified cable length calculation
+  const breakdown = estimateCableLengthWithBreakdown(
+    srcPlaced,
+    srcRack,
+    dstPlaced,
+    dstRack,
+    rowLayout,
+    settings
+  );
+
+  return { 
+    distanceMm: breakdown.totalMillimeters, 
+    breakdown 
+  };
 };
 
 const columns = [
@@ -163,7 +155,8 @@ const formatConnectionRow = (
   racks: RackProfile[] | undefined,
   allTransceiverTemplates: Transceiver[],
   rowLayoutProperties?: Record<string, { friendlyName: string }> | null,
-  rowLayout?: RowLayoutConfiguration
+  rowLayout?: RowLayoutConfiguration,
+  cableDistanceSettings?: CableDistanceSettings
 ): NetworkConnectionTableRow => {
   const srcDeviceName = getDeviceName(allDesignComponents, row.sourceDeviceId);
   const dstDeviceName = getDeviceName(allDesignComponents, row.destinationDeviceId);
@@ -174,13 +167,23 @@ const formatConnectionRow = (
   const srcRackObj = getRackAndRU(racks, row.sourceDeviceId, rowLayoutProperties);
   const dstRackObj = getRackAndRU(racks, row.destinationDeviceId, rowLayoutProperties);
   
-  // Calculate cable distance
-  const calculatedDistanceMm = calculateCableDistance(
+  // Get device orientations from rack placement
+  const srcDevice = srcRackObj.rackId && racks.find(r => r.id === srcRackObj.rackId)
+    ?.devices.find(d => d.deviceId === row.sourceDeviceId);
+  const dstDevice = dstRackObj.rackId && racks.find(r => r.id === dstRackObj.rackId)
+    ?.devices.find(d => d.deviceId === row.destinationDeviceId);
+
+  // Calculate cable distance with the unified function
+  const { distanceMm, breakdown } = calculateCableDistance(
     srcRackObj.rackId,
     srcRackObj.ru,
     dstRackObj.rackId,
     dstRackObj.ru,
-    rowLayout
+    rowLayout,
+    racks,
+    srcDevice?.orientation || DeviceOrientation.Front,
+    dstDevice?.orientation || DeviceOrientation.Front,
+    cableDistanceSettings || DEFAULT_CABLE_DISTANCE_SETTINGS
   );
   
   // Get transceiver names from IDs
@@ -203,7 +206,8 @@ const formatConnectionRow = (
     dstRack: dstRackObj.rack,
     dstRU: dstRackObj.ru,
     cableType: row.mediaType || "-",
-    calculatedDistanceMm: calculatedDistanceMm.toFixed(0),
+    calculatedDistanceMm: distanceMm.toFixed(0),
+    distanceBreakdown: breakdown,
     lengthMeters: typeof row.lengthMeters === "number" && !isNaN(row.lengthMeters) ? row.lengthMeters.toFixed(1) : "-",
     transceiverSourceModel: srcTransceiverName,
     transceiverDestinationModel: dstTransceiverName,
@@ -213,7 +217,7 @@ const formatConnectionRow = (
 };
 
 const NetworkConnectionsTab: React.FC = () => {
-  const { activeDesign, updateDesign, componentTemplates } = useDesignStore();
+  const { activeDesign, updateDesign, componentTemplates, cableDistanceSettings } = useDesignStore();
   const [generating, setGenerating] = useState(false);
   const [networkConnections, setNetworkConnections] = useState<NetworkConnection[]>(activeDesign?.networkConnections || []);
   const [searchQuery, setSearchQuery] = useState("");
@@ -222,6 +226,7 @@ const NetworkConnectionsTab: React.FC = () => {
   const [generationReport, setGenerationReport] = useState<ConnectionAttempt[] | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [showManualDialog, setShowManualDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
   const displayedRows = useMemo(() => {
     const designComponents = activeDesign?.components || [];
@@ -229,7 +234,7 @@ const NetworkConnectionsTab: React.FC = () => {
       (c): c is Transceiver => c.type === ComponentType.Transceiver
     );
     const rows: NetworkConnectionTableRow[] = (networkConnections || []).map(r =>
-      formatConnectionRow(r, designComponents, activeDesign?.rackprofiles, allTransceiverTemplates, activeDesign?.rowLayout?.rackProperties, activeDesign?.rowLayout)
+      formatConnectionRow(r, designComponents, activeDesign?.rackprofiles, allTransceiverTemplates, activeDesign?.rowLayout?.rackProperties, activeDesign?.rowLayout, cableDistanceSettings)
     );
     const filtered = filterConnections(rows, searchQuery);
 
@@ -450,6 +455,9 @@ const NetworkConnectionsTab: React.FC = () => {
           <Button size="sm" variant="outline" onClick={handleGenerate} disabled={generating}>
             <Plus className="w-4 h-4" /> {generating ? 'Generating...' : 'Generate'}
           </Button>
+          <Button size="sm" variant="outline" onClick={() => setShowSettingsDialog(true)}>
+            <Settings className="w-4 h-4" /> Distance Settings
+          </Button>
           <Button size="sm" variant="outline" onClick={handleSave}><Save className="w-4 h-4" /> Save</Button>
           <Button size="sm" variant="outline" onClick={handleReset}><Trash2 className="w-4 h-4" /> Reset</Button>
           <Button size="sm" variant="outline" onClick={handleExportCSV} disabled={displayedRows.length === 0}>
@@ -492,7 +500,16 @@ const NetworkConnectionsTab: React.FC = () => {
               displayedRows.map((row, idx) => (
                 <TableRow key={row.id + "-" + idx}>
                   {columns.map(col => (
-                    <TableCell key={col.key}>{row[col.key as keyof NetworkConnectionTableRow]}</TableCell>
+                    <TableCell key={col.key}>
+                      {col.key === 'calculatedDistanceMm' ? (
+                        <CableDistanceTooltip 
+                          distanceMm={row[col.key]} 
+                          breakdown={row.distanceBreakdown} 
+                        />
+                      ) : (
+                        row[col.key as keyof NetworkConnectionTableRow]
+                      )}
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
@@ -514,6 +531,12 @@ const NetworkConnectionsTab: React.FC = () => {
         open={showManualDialog}
         onClose={() => setShowManualDialog(false)}
         onSave={handleManualConnectionsSave}
+      />
+      
+      {/* Cable Distance Settings Dialog */}
+      <CableDistanceSettingsDialog
+        open={showSettingsDialog}
+        onOpenChange={setShowSettingsDialog}
       />
     </div>
   );

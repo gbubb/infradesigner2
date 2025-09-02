@@ -18,4 +18,16 @@ export interface NetworkConnection {
   transceiverDestinationId?: string; // ID of the transceiver component from library
   status: 'planned' | 'provisioned' | 'decommissioned';
   notes?: string;
+  distanceBreakdown?: {
+    totalMeters: number;
+    components: {
+      verticalDistance?: number;
+      orientationAdjustment?: number;
+      slackAllowance?: number;
+      intraRackRouting?: number;
+      horizontalDistance?: number;
+      cableHeightTraversal?: number;
+    };
+    description: string;
+  };
 }
