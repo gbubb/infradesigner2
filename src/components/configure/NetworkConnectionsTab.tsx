@@ -23,10 +23,12 @@ type NetworkConnectionTableRow = {
   sourcePortId: string;
   srcRack: string;
   srcRU: string | number;
+  srcOrientation: string;
   destinationDeviceId: string;
   destinationPortId: string;
   dstRack: string;
   dstRU: string | number;
+  dstOrientation: string;
   cableType: string;
   calculatedDistanceMm: string | number;
   lengthMeters: string | number;
@@ -34,6 +36,7 @@ type NetworkConnectionTableRow = {
   transceiverDestinationModel: string;
   status: string;
   notes?: string;
+  distanceBreakdown?: any;
 };
 
 // Utility for searching/filtering table rows
@@ -138,10 +141,12 @@ const columns = [
   { key: 'sourcePortId', label: 'Source Port' },
   { key: 'srcRack', label: 'Source Rack' },
   { key: 'srcRU', label: 'Source RU' },
+  { key: 'srcOrientation', label: 'Src Orientation' },
   { key: 'destinationDeviceId', label: 'Destination Device' },
   { key: 'destinationPortId', label: 'Destination Port' },
   { key: 'dstRack', label: 'Destination Rack' },
   { key: 'dstRU', label: 'Destination RU' },
+  { key: 'dstOrientation', label: 'Dst Orientation' },
   { key: 'cableType', label: 'Cable Type' },
   { key: 'calculatedDistanceMm', label: 'Calculated Distance (mm)' },
   { key: 'lengthMeters', label: 'Selected Cable (m)' },
@@ -194,6 +199,10 @@ const formatConnectionRow = (
     ? allTransceiverTemplates.find(t => t.id === row.transceiverDestinationId)?.name || "-"
     : "-";
   
+  // Get orientation strings, defaulting to "Front" if not found
+  const srcOrientationStr = srcDevice?.orientation === DeviceOrientation.Rear ? "Rear" : "Front";
+  const dstOrientationStr = dstDevice?.orientation === DeviceOrientation.Rear ? "Rear" : "Front";
+
   return {
     id: row.id,
     connectionId: row.connectionId || "-",
@@ -201,10 +210,12 @@ const formatConnectionRow = (
     sourcePortId: srcPortName,
     srcRack: srcRackObj.rack,
     srcRU: srcRackObj.ru,
+    srcOrientation: srcOrientationStr,
     destinationDeviceId: dstDeviceName,
     destinationPortId: dstPortName,
     dstRack: dstRackObj.rack,
     dstRU: dstRackObj.ru,
+    dstOrientation: dstOrientationStr,
     cableType: row.mediaType || "-",
     calculatedDistanceMm: distanceMm.toFixed(0),
     distanceBreakdown: breakdown,
