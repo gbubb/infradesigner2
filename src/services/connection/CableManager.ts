@@ -241,7 +241,8 @@ export function findCompatibleCableTemplate(
   connectorA: ConnectorType,
   connectorB: ConnectorType,
   requiredMediaType: CableMediaType,
-  requiredSpeed?: PortSpeed
+  requiredSpeed?: PortSpeed,
+  requiredLengthMeters?: number
 ): Cable | undefined {
   const key = [connectorA, connectorB].sort().join(':');
   const cablesForConnectors = cableLookup.get(key) || [];
@@ -256,7 +257,8 @@ export function findCompatibleCableTemplate(
       connectorA: c.connectorA_Type,
       connectorB: c.connectorB_Type,
       mediaType: c.mediaType,
-      speed: c.speed
+      speed: c.speed,
+      length: c.length
     })));
   }
   
@@ -265,17 +267,30 @@ export function findCompatibleCableTemplate(
                          (c.connectorA_Type === connectorB && c.connectorB_Type === connectorA);
     const mediaMatch = c.mediaType === requiredMediaType;
     const speedMatch = !requiredSpeed || c.speed === requiredSpeed || !c.speed; // If cable has no speed, it's generic
+    const lengthMatch = !requiredLengthMeters || !c.length || c.length >= requiredLengthMeters;
     
     // Debug individual match criteria for fiber cables
     if (requiredMediaType === CableMediaType.FiberMMDuplex || requiredMediaType === CableMediaType.FiberSMDuplex) {
-      console.log(`[CableManager] Cable ${c.name}: connectorMatch=${connectorMatch}, mediaMatch=${mediaMatch}, speedMatch=${speedMatch}`);
+      console.log(`[CableManager] Cable ${c.name}: connectorMatch=${connectorMatch}, mediaMatch=${mediaMatch}, speedMatch=${speedMatch}, lengthMatch=${lengthMatch} (cable: ${c.length}m, required: ${requiredLengthMeters}m)`);
     }
     
-    return connectorMatch && mediaMatch && speedMatch;
+    return connectorMatch && mediaMatch && speedMatch && lengthMatch;
   });
 
   if (requiredMediaType === CableMediaType.FiberMMDuplex || requiredMediaType === CableMediaType.FiberSMDuplex) {
-    console.log(`[CableManager] Found ${candidates.length} matching cables:`, candidates.map(c => c.name));
+    console.log(`[CableManager] Found ${candidates.length} matching cables:`, candidates.map(c => `${c.name} (${c.length}m)`));
+  }
+  
+  // Sort by length to get the shortest cable that meets requirements
+  if (requiredLengthMeters && candidates.length > 0) {
+    candidates.sort((a, b) => {
+      // If either cable doesn't have a length, put it last
+      if (!a.length) return 1;
+      if (!b.length) return -1;
+      return a.length - b.length;
+    });
+    
+    console.log(`[CableManager] Selected cable: ${candidates[0].name} (${candidates[0].length}m) for required length ${requiredLengthMeters}m`);
   }
   
   return candidates[0];

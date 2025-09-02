@@ -460,7 +460,7 @@ function attemptConnection(
           destinationDeviceId: targetDevice.id,
           destinationPortId: currentDstPort.id,
           cableTemplateId: connectionPath.cable.id,
-          lengthMeters,
+          lengthMeters: connectionPath.cable.length || lengthMeters, // Use actual cable length if available
           mediaType: connectionPath.mediaType,
           speed: currentSrcPort.speed,
           transceiverSourceId: connectionPath.srcTransceiver?.id,
@@ -580,7 +580,7 @@ function determineConnectionPath(
     
     // Try DAC first if length is suitable
     if (lengthMeters <= 5) {
-      const dacResult = tryDACConnection(srcPort, dstPort, cableLookup);
+      const dacResult = tryDACConnection(srcPort, dstPort, cableLookup, lengthMeters);
       if (dacResult.cable) {
         return dacResult;
       }
@@ -606,7 +606,8 @@ function determineConnectionPath(
 function tryDACConnection(
   srcPort: Port,
   dstPort: Port,
-  cableLookup: Map<string, Cable[]>
+  cableLookup: Map<string, Cable[]>,
+  lengthMeters: number
 ): {
   cable?: Cable;
   mediaType?: CableMediaType;
@@ -623,7 +624,7 @@ function tryDACConnection(
   }
 
   if (dacMediaType && srcPort.connectorType === dstPort.connectorType && srcPort.speed === dstPort.speed) {
-    const cable = findCompatibleCableTemplate(cableLookup, srcPort.connectorType, dstPort.connectorType, dacMediaType, srcPort.speed);
+    const cable = findCompatibleCableTemplate(cableLookup, srcPort.connectorType, dstPort.connectorType, dacMediaType, srcPort.speed, lengthMeters);
     if (cable) {
       return {
         cable,
@@ -631,7 +632,7 @@ function tryDACConnection(
         reason: "Direct Attach Cable (DAC) used."
       };
     }
-    return { reason: `Suitable DAC (${dacMediaType}, ${srcPort.speed}) not found in library.` };
+    return { reason: `Suitable DAC (${dacMediaType}, ${srcPort.speed}) not found in library for ${lengthMeters}m.` };
   }
 
   return { reason: `Ports not suitable for DAC (mismatched types/speeds).` };
@@ -695,7 +696,7 @@ function tryFiberConnection(
 
     if (srcTransceiver.mediaConnectorType === dstTransceiver.mediaConnectorType) {
       const fiberCableType = srcRequiredFiberMedia === MediaType.FiberSM ? CableMediaType.FiberSMDuplex : CableMediaType.FiberMMDuplex;
-      const cable = findCompatibleCableTemplate(cableLookup, srcTransceiver.mediaConnectorType, dstTransceiver.mediaConnectorType, fiberCableType);
+      const cable = findCompatibleCableTemplate(cableLookup, srcTransceiver.mediaConnectorType, dstTransceiver.mediaConnectorType, fiberCableType, undefined, lengthMeters);
       
       if (cable) {
         return {
@@ -706,7 +707,7 @@ function tryFiberConnection(
           reason: `Fiber with ${srcTransceiver.name} to ${dstTransceiver.name}.`
         };
       }
-      return { reason: `No ${fiberCableType} cable with ${srcTransceiver.mediaConnectorType} connectors found.` };
+      return { reason: `No ${fiberCableType} cable with ${srcTransceiver.mediaConnectorType} connectors found for ${lengthMeters}m.` };
     }
     return { reason: `Transceiver media connectors mismatch.` };
   }

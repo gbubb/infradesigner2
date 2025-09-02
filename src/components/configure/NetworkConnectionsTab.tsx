@@ -32,6 +32,7 @@ type NetworkConnectionTableRow = {
   dstRack: string;
   dstRU: string | number;
   dstOrientation: string;
+  cable?: InfrastructureComponent;
   cableType: string;
   calculatedDistanceMm: string | number;
   lengthMeters: string | number;
@@ -162,12 +163,14 @@ const formatConnectionRow = (
   allDesignComponents: InfrastructureComponent[],
   racks: RackProfile[] | undefined,
   allTransceiverTemplates: Transceiver[],
+  allCableTemplates: InfrastructureComponent[],
   rowLayoutProperties?: Record<string, { friendlyName: string }> | null,
   rowLayout?: RowLayoutConfiguration,
   cableDistanceSettings?: CableDistanceSettings
 ): NetworkConnectionTableRow => {
   const sourceDevice = allDesignComponents.find(d => d.id === row.sourceDeviceId);
   const destinationDevice = allDesignComponents.find(d => d.id === row.destinationDeviceId);
+  const cable = row.cableTemplateId ? allCableTemplates.find(c => c.id === row.cableTemplateId) : undefined;
   
   const srcDeviceName = sourceDevice?.name || row.sourceDeviceId.substring(0, 6);
   const dstDeviceName = destinationDevice?.name || row.destinationDeviceId.substring(0, 6);
@@ -224,7 +227,8 @@ const formatConnectionRow = (
     dstRack: dstRackObj.rack,
     dstRU: dstRackObj.ru,
     dstOrientation: dstOrientationStr,
-    cableType: row.mediaType || "-",
+    cable,
+    cableType: cable?.name || row.mediaType || "-",
     calculatedDistanceMm: distanceMm.toFixed(0),
     distanceBreakdown: breakdown,
     lengthMeters: typeof row.lengthMeters === "number" && !isNaN(row.lengthMeters) ? row.lengthMeters.toFixed(1) : "-",
@@ -252,8 +256,11 @@ const NetworkConnectionsTab: React.FC = () => {
     const allTransceiverTemplates = componentTemplates.filter(
       (c): c is Transceiver => c.type === ComponentType.Transceiver
     );
+    const allCableTemplates = componentTemplates.filter(
+      (c): c is Cable => c.type === ComponentType.Cable
+    );
     const rows: NetworkConnectionTableRow[] = (networkConnections || []).map(r =>
-      formatConnectionRow(r, designComponents, activeDesign?.rackprofiles, allTransceiverTemplates, activeDesign?.rowLayout?.rackProperties, activeDesign?.rowLayout, cableDistanceSettings)
+      formatConnectionRow(r, designComponents, activeDesign?.rackprofiles, allTransceiverTemplates, allCableTemplates, activeDesign?.rowLayout?.rackProperties, activeDesign?.rowLayout, cableDistanceSettings)
     );
     const filtered = filterConnections(rows, searchQuery);
 
@@ -528,6 +535,12 @@ const NetworkConnectionsTab: React.FC = () => {
                         </BomItemHoverCard>
                       ) : col.key === 'destinationDeviceId' && row.destinationDevice ? (
                         <BomItemHoverCard component={row.destinationDevice}>
+                          <span className="cursor-pointer hover:underline">
+                            {row[col.key as keyof NetworkConnectionTableRow]}
+                          </span>
+                        </BomItemHoverCard>
+                      ) : col.key === 'cableType' && row.cable ? (
+                        <BomItemHoverCard component={row.cable}>
                           <span className="cursor-pointer hover:underline">
                             {row[col.key as keyof NetworkConnectionTableRow]}
                           </span>
