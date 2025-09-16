@@ -82,7 +82,7 @@ export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
                 onChange={handleInputChange}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="deviceLifespanYears">Device Lifespan (years)</Label>
               <Input
@@ -97,6 +97,19 @@ export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
               />
             </div>
           </div>
+
+          {requirements.networkTopology === 'Spine-Leaf' && (
+            <div className="flex items-center justify-between space-x-2 rounded-md border p-4">
+              <div>
+                <h4 className="text-sm font-medium">Include Border Leaf Switches</h4>
+                <p className="text-sm text-muted-foreground">Add border leaf switches to connect to external networks (typically 2 switches)</p>
+              </div>
+              <Switch
+                checked={requirements.includeBorderLeafSwitches !== false}
+                onCheckedChange={(checked) => handleSwitchChange('includeBorderLeafSwitches', checked)}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

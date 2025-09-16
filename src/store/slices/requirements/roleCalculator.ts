@@ -236,18 +236,18 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
       description: 'Provides network connectivity for compute nodes',
       requiredCount: leafSwitchCount
     });
-    
+
     if (dedicatedStorageNetwork) {
       // Calculate storage switches: we need 2 switches per AZ for each storage cluster
       let totalStorageSwitches = 0;
-      
+
       // Sum up the number of AZs used by all storage clusters
       for (const cluster of storageClusters) {
         const azCount = cluster.availabilityZoneQuantity || 3;
         // Each AZ needs 2 switches for redundancy
         totalStorageSwitches += azCount * 2;
       }
-      
+
       // Only add storage switches if we actually have storage clusters
       if (storageClusters.length > 0) {
         newRoles.push({
@@ -258,14 +258,18 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
         });
       }
     }
-    
-    newRoles.push({
-      id: uuidv4(),
-      role: 'borderLeafSwitch',
-      description: 'Connects the internal network to external networks',
-      requiredCount: 2
-    });
-    
+
+    // Only add border leaf switches if explicitly requested (default to true for backward compatibility)
+    const includeBorderLeafSwitches = requirements.networkRequirements?.includeBorderLeafSwitches !== false;
+    if (includeBorderLeafSwitches) {
+      newRoles.push({
+        id: uuidv4(),
+        role: 'borderLeafSwitch',
+        description: 'Connects the internal network to external networks',
+        requiredCount: 2
+      });
+    }
+
     newRoles.push({
       id: uuidv4(),
       role: 'spineSwitch',

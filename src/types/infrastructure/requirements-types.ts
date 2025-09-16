@@ -50,6 +50,7 @@ export interface DesignRequirements {
     fiberPatchPanelsPerAZ?: number;
     copperPatchPanelsPerCoreRack?: number;
     fiberPatchPanelsPerCoreRack?: number;
+    includeBorderLeafSwitches?: boolean;
   };
   physicalConstraints: {
     computeStorageRackQuantity?: number;
