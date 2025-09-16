@@ -6,6 +6,7 @@ export const useComputeClusters = () => {
   const activeDesign = useDesignStore((state) => state.activeDesign);
   const componentRoles = useDesignStore((state) => state.componentRoles);
   const componentTemplates = useDesignStore((state) => state.componentTemplates);
+  const requirements = useDesignStore((state) => state.requirements);
   
   const computeClustersMetrics = useMemo(() => {
     console.log('[useComputeClusters] Starting calculation:', {
@@ -176,12 +177,21 @@ export const useComputeClusters = () => {
       const allocatableMemoryGB = physicalMemoryGB * memoryOvercommitRatio;
 
       // Get availability zone count from requirements
-      const totalAvailabilityZones = activeDesign.requirements?.physicalConstraints?.totalAvailabilityZones || 
+      const totalAvailabilityZones = activeDesign.requirements?.physicalConstraints?.totalAvailabilityZones ||
                                     activeDesign.requirements?.physical?.datacenter?.availabilityZoneCount || 8;
-      
-      // AZ count should be the actual number of availability zones, not affected by redundancy
-      // N+1 or N+2 redundancy means extra nodes/capacity for failure tolerance, not extra AZs
-      const availabilityZoneCount = totalAvailabilityZones;
+
+      // Get cluster-specific AZ count if available
+      let availabilityZoneCount = totalAvailabilityZones;
+
+      // Find the matching compute cluster in requirements to get its specific AZ configuration
+      const computeClusterRequirements = requirements?.computeRequirements?.computeClusters || [];
+      const matchingCluster = computeClusterRequirements.find(cc =>
+        cc.id === clusterId || cc.name === name
+      );
+
+      if (matchingCluster?.availabilityZoneCount) {
+        availabilityZoneCount = matchingCluster.availabilityZoneCount;
+      }
 
       clusters.push({
         id: clusterId,
@@ -202,7 +212,7 @@ export const useComputeClusters = () => {
 
     console.log('[useComputeClusters] Final clusters:', clusters);
     return clusters;
-  }, [activeDesign, componentRoles, componentTemplates]);
+  }, [activeDesign, componentRoles, componentTemplates, requirements]);
 
   return { computeClustersMetrics };
 };
