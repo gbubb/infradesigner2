@@ -9,6 +9,7 @@ import { StorageClustersTable } from '../StorageClustersTable';
 import { ComputeClustersTable } from '../ComputeClustersTable';
 import { InfrastructureSummaryCard } from '../InfrastructureSummaryCard';
 import { ComponentTypeSummaryTable } from '../ComponentTypeSummaryTable';
+import { ComputeClusterMetricsCard } from '../ComputeClusterMetricsCard';
 
 export const DesignStatisticsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
@@ -34,7 +35,8 @@ export const DesignStatisticsTab: React.FC = () => {
     totalAvailabilityZones,
     redundantVCPUs,
     redundantMemoryGB,
-    redundantNodes
+    redundantNodes,
+    computeClusterMetrics
   } = useDesignCalculations();
   
   const { computeClustersMetrics } = useComputeClusters();
@@ -138,7 +140,16 @@ export const DesignStatisticsTab: React.FC = () => {
           redundantNodes={redundantNodes}
         />
       </div>
-      
+
+      {/* New per-cluster VM cost metrics */}
+      {computeClusterMetrics && computeClusterMetrics.length > 0 && (
+        <ComputeClusterMetricsCard
+          clusterMetrics={computeClusterMetrics}
+          averageVMVCPUs={averageVMVCPUs}
+          averageVMMemoryGB={averageVMMemoryGB}
+        />
+      )}
+
       <DetailedCostAnalysisCard 
         capitalCost={capitalCost}
         operationalCosts={operationalCosts}

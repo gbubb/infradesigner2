@@ -12,6 +12,10 @@ export interface ComputeClusterRequirement {
   availabilityZoneRedundancy: string;
   overcommitRatio: number;
   gpuEnabled: boolean;
+  // Number of AZs this cluster spans (optional, defaults to total AZs)
+  availabilityZoneCount?: number;
+  // Specific AZ IDs this cluster spans (optional)
+  availabilityZoneIds?: string[];
 }
 
 // Availability Zone definition

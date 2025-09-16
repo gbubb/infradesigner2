@@ -6,6 +6,7 @@ import { useComponentsByType } from './useComponentsByType';
 import { useCostAnalysis } from './useCostAnalysis';
 import { useDesignValidation } from './useDesignValidation';
 import { useResourceMetrics } from './useResourceMetrics';
+import { useComputeClusterMetrics } from './useComputeClusterMetrics';
 import { InfrastructureDesign } from '@/types/infrastructure';
 
 export const AVERAGE_VM_VCPU = 6;
@@ -92,6 +93,7 @@ export const useDesignCalculations = () => {
   // Use our safer wrapper versions instead of the original hooks
   const { storageClustersMetrics } = useStorageClustersWrapper();
   const { actualHardwareTotals } = useHardwareTotalsWrapper();
+  const computeClusterMetrics = useComputeClusterMetrics();
   
   // Get resource metrics with proper typing
   const resourceMetricsResult = useResourceMetrics();
@@ -279,6 +281,8 @@ export const useDesignCalculations = () => {
     totalAvailabilityZones,
     redundantVCPUs,
     redundantMemoryGB,
-    redundantNodes
+    redundantNodes,
+    // New per-cluster metrics
+    computeClusterMetrics
   };
 };

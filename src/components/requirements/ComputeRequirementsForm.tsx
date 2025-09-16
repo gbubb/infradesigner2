@@ -22,6 +22,7 @@ interface ComputeRequirements {
 
 export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
   const storageClusters = useStore((state) => state.requirements.storageRequirements.storageClusters);
+  const totalAvailabilityZones = useStore((state) => state.requirements.physicalConstraints?.totalAvailabilityZones || 3);
   
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -174,10 +175,11 @@ export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
       {requirements.computeClusters.map((cluster) => (
         <div key={cluster.id} className="relative">
           <ComputeClusterForm
-            clusters={[cluster]} 
+            clusters={[cluster]}
             onUpdate={(updatedClusters) => handleClusterUpdate(cluster.id, updatedClusters[0])}
             showHeader={false}
             storageClusters={storageClusters}
+            totalAvailabilityZones={totalAvailabilityZones}
           />
           <Button
             variant="ghost"

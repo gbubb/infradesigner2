@@ -15,6 +15,7 @@ interface ComputeClusterFormProps {
   onUpdate: (clusters: ComputeClusterRequirement[]) => void;
   showHeader?: boolean;
   storageClusters?: StorageClusterRequirement[];
+  totalAvailabilityZones?: number;
 }
 
 export const ComputeClusterForm: React.FC<ComputeClusterFormProps> = ({
@@ -22,6 +23,7 @@ export const ComputeClusterForm: React.FC<ComputeClusterFormProps> = ({
   onUpdate,
   showHeader = true,
   storageClusters = [],
+  totalAvailabilityZones = 3,
 }) => {
   // Check if a compute cluster is being used for hyper-converged storage
   const isHyperConverged = (clusterId: string) => {
@@ -158,6 +160,31 @@ export const ComputeClusterForm: React.FC<ComputeClusterFormProps> = ({
                     value={cluster.overcommitRatio || ''}
                     onChange={(e) => updateCluster(index, 'overcommitRatio', parseFloat(e.target.value) || undefined)}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor={`availabilityZoneCount-${index}`}>
+                    Availability Zones
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      (max: {totalAvailabilityZones})
+                    </span>
+                  </Label>
+                  <Input
+                    id={`availabilityZoneCount-${index}`}
+                    type="number"
+                    min="1"
+                    max={totalAvailabilityZones}
+                    placeholder={`Default: ${totalAvailabilityZones}`}
+                    value={cluster.availabilityZoneCount || ''}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      updateCluster(index, 'availabilityZoneCount',
+                        value && value > 0 && value <= totalAvailabilityZones ? value : undefined);
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Number of availability zones this cluster spans
+                  </p>
                 </div>
                 
                 <div className="flex items-center justify-between space-y-0 pt-4 col-span-2">
