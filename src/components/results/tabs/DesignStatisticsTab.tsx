@@ -24,7 +24,14 @@ export const DesignStatisticsTab: React.FC = () => {
     totalRackUnits,
     amortizedCostsByType,
     monthlyCostPerAverageVM,
-    quantityOfAverageVMs
+    quantityOfAverageVMs,
+    totalVCPUs,
+    totalMemoryGB,
+    usableVCPUs,
+    usableMemoryGB,
+    redundancyConfig,
+    totalComputeNodes,
+    totalAvailabilityZones
   } = useDesignCalculations();
   
   const { computeClustersMetrics } = useComputeClusters();
@@ -118,6 +125,11 @@ export const DesignStatisticsTab: React.FC = () => {
           storageAmortizedCost={amortizedCostsByType?.storage || 0}
           storageClusterCosts={storageClusterCosts}
           amortisationPeriodMonths={storageAmortisationMonths}
+          usableVCPUs={usableVCPUs}
+          usableMemoryTB={usableMemoryGB ? usableMemoryGB / 1024 : undefined}
+          redundancyConfig={redundancyConfig}
+          totalComputeNodes={totalComputeNodes}
+          totalAvailabilityZones={totalAvailabilityZones}
         />
       </div>
       

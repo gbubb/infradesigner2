@@ -12,6 +12,47 @@ export const AVERAGE_VM_VCPU = 6;
 export const AVERAGE_VM_MEM_GIB = 18;
 
 /**
+ * Calculate usable capacity after accounting for redundancy
+ * @param totalCapacity Total physical capacity
+ * @param redundancy Redundancy configuration (e.g., 'N+1', 'N+2', '1 Node', '2 Nodes')
+ * @param totalNodes Total number of nodes
+ * @param totalAZs Total number of availability zones
+ * @returns Usable capacity after redundancy
+ */
+const calculateUsableCapacity = (
+  totalCapacity: number,
+  redundancy: string | undefined,
+  totalNodes: number,
+  totalAZs: number
+): { usableCapacity: number; redundantCapacity: number } => {
+  if (!redundancy || redundancy === 'None') {
+    return { usableCapacity: totalCapacity, redundantCapacity: 0 };
+  }
+
+  let redundantNodes = 0;
+
+  if (redundancy === 'N+1') {
+    // N+1 means we can lose 1 AZ worth of nodes
+    redundantNodes = Math.ceil(totalNodes / totalAZs);
+  } else if (redundancy === 'N+2') {
+    // N+2 means we can lose 2 AZs worth of nodes
+    redundantNodes = Math.ceil((totalNodes / totalAZs) * 2);
+  } else if (redundancy === '1 Node') {
+    // 1 Node redundancy means we can lose 1 node
+    redundantNodes = 1;
+  } else if (redundancy === '2 Nodes') {
+    // 2 Nodes redundancy means we can lose 2 nodes
+    redundantNodes = 2;
+  }
+
+  const usableNodes = Math.max(0, totalNodes - redundantNodes);
+  const usableCapacity = (totalCapacity / totalNodes) * usableNodes;
+  const redundantCapacity = totalCapacity - usableCapacity;
+
+  return { usableCapacity, redundantCapacity };
+};
+
+/**
  * A completely rewritten version of useDesignCalculations that avoids React's useMemo
  * hook mechanism entirely, using useState/useEffect instead to prevent the
  * "Cannot read properties of undefined (reading 'length')" error.
@@ -99,13 +140,38 @@ export const useDesignCalculations = () => {
   const averageVMVCPUs = activeDesign?.requirements?.computeRequirements?.averageVMVCPUs || 4;
   const averageVMMemoryGB = activeDesign?.requirements?.computeRequirements?.averageVMMemoryGB || 8;
 
+  // Get compute cluster redundancy configuration
+  const computeClusters = activeDesign?.requirements?.computeRequirements?.computeClusters || [];
+  const computeNodes = componentsByType?.computeNode || [];
+  const totalComputeNodes = computeNodes.length;
+  const totalAvailabilityZones = activeDesign?.requirements?.physicalConstraints?.totalAvailabilityZones || 8;
+
+  // For simplicity, use the first cluster's redundancy configuration
+  // In a more complex scenario, we might need to handle multiple clusters differently
+  const redundancyConfig = computeClusters[0]?.availabilityZoneRedundancy || 'None';
+
   // Calculate total resources
   const totalVCPUs = actualHardwareTotals.totalVCPUs;
   const totalMemoryGB = actualHardwareTotals.totalComputeMemoryTB * 1024;
 
-  // Calculate maximum number of VMs based on CPU and memory constraints
-  const vmsByCPU = Math.floor(totalVCPUs / averageVMVCPUs);
-  const vmsByMemory = Math.floor(totalMemoryGB / averageVMMemoryGB);
+  // Calculate usable capacity after accounting for redundancy
+  const { usableCapacity: usableVCPUs } = calculateUsableCapacity(
+    totalVCPUs,
+    redundancyConfig,
+    totalComputeNodes,
+    totalAvailabilityZones
+  );
+
+  const { usableCapacity: usableMemoryGB } = calculateUsableCapacity(
+    totalMemoryGB,
+    redundancyConfig,
+    totalComputeNodes,
+    totalAvailabilityZones
+  );
+
+  // Calculate maximum number of VMs based on USABLE CPU and memory constraints
+  const vmsByCPU = Math.floor(usableVCPUs / averageVMVCPUs);
+  const vmsByMemory = Math.floor(usableMemoryGB / averageVMMemoryGB);
   const quantityOfAverageVMs = Math.min(vmsByCPU, vmsByMemory);
 
   // Calculate monthly cost per average VM (excluding storage capital costs)
@@ -160,6 +226,14 @@ export const useDesignCalculations = () => {
     amortizedCostsByType,
     amortisationPeriodMonths,
     monthlyCostPerAverageVM,
-    quantityOfAverageVMs
+    quantityOfAverageVMs,
+    // Additional data for VM calculation breakdown
+    totalVCPUs,
+    totalMemoryGB,
+    usableVCPUs,
+    usableMemoryGB,
+    redundancyConfig,
+    totalComputeNodes,
+    totalAvailabilityZones
   };
 };

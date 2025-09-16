@@ -199,7 +199,7 @@ export function getCableTemplate(
   
   if (cables) {
     // Filter by media type and length requirement
-    let matchingCables = cables.filter(cable => 
+    const matchingCables = cables.filter(cable => 
       cable.mediaType === mediaType &&
       (!requiredLengthMeters || (cable.length !== undefined && cable.length >= requiredLengthMeters))
     );
@@ -236,7 +236,7 @@ export function getAnyCopperCable(
     console.log(`[CableManager] getAnyCopperCable: Looking for copper cable with min length ${requiredLengthMeters}m`);
     console.log(`[CableManager] Available cables:`, cables.map(c => `${c.name} (${c.length}m, ${c.mediaType})`));
     
-    let copperCables = cables.filter(cable => 
+    const copperCables = cables.filter(cable => 
       (cable.mediaType === CableMediaType.CopperCat6a ||
        cable.mediaType === CableMediaType.CopperCat6 ||
        cable.mediaType === CableMediaType.CopperCat5e ||

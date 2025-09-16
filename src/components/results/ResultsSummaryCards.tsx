@@ -38,6 +38,11 @@ interface KeyMetricsProps {
     totalRawCapacityTB?: number;
   }>;
   amortisationPeriodMonths?: number;
+  usableVCPUs?: number;
+  usableMemoryTB?: number;
+  redundancyConfig?: string;
+  totalComputeNodes?: number;
+  totalAvailabilityZones?: number;
 }
 
 export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
@@ -111,7 +116,12 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
   quantityOfAverageVMs,
   storageAmortizedCost = 0,
   storageClusterCosts = [],
-  amortisationPeriodMonths = 36
+  amortisationPeriodMonths = 36,
+  usableVCPUs,
+  usableMemoryTB,
+  redundancyConfig,
+  totalComputeNodes,
+  totalAvailabilityZones
 }) => {
   return (
     <Card>
@@ -140,6 +150,11 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
                 quantityOfAverageVMs={quantityOfAverageVMs}
                 monthlyCostPerAverageVM={monthlyCostPerAverageVM}
                 storageAmortizedCost={storageAmortizedCost}
+                usableVCPUs={usableVCPUs}
+                usableMemoryTB={usableMemoryTB}
+                redundancyConfig={redundancyConfig}
+                totalComputeNodes={totalComputeNodes}
+                totalAvailabilityZones={totalAvailabilityZones}
               />
             </div>
           </div>
