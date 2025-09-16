@@ -83,16 +83,35 @@ export const useComputeClusterMetrics = () => {
   const activeDesign = store.activeDesign;
   const requirements = store.requirements;
   const componentTemplates = store.componentTemplates;
+  const componentRoles = store.componentRoles;
   const costAnalysisResult = useCostAnalysis();
 
   const metrics = useMemo(() => {
     if (!activeDesign?.components || !requirements?.computeRequirements?.computeClusters || !componentTemplates) {
+      console.log('[useComputeClusterMetrics] Missing required data:', {
+        hasComponents: !!activeDesign?.components,
+        hasComputeClusters: !!requirements?.computeRequirements?.computeClusters,
+        hasComponentTemplates: !!componentTemplates
+      });
       return [];
     }
 
     const computeClusters = requirements.computeRequirements.computeClusters;
     const components = activeDesign.components as InfrastructureComponent[];
     const totalAvailabilityZones = requirements.physicalConstraints?.totalAvailabilityZones || 3;
+
+    console.log('[useComputeClusterMetrics] Starting calculation:', {
+      computeClustersCount: computeClusters.length,
+      componentsCount: components.length,
+      totalAvailabilityZones,
+      computeClusters: computeClusters.map(c => ({ id: c.id, name: c.name, azCount: c.availabilityZoneCount })),
+      components: components.filter(c => c.role === 'computeNode' || c.role === 'hyperConvergedNode').map(c => ({
+        name: c.name,
+        role: c.role,
+        clusterInfo: c.clusterInfo,
+        clusterId: (c as any).clusterId
+      }))
+    });
 
     // Get average VM specs from requirements or use defaults
     const averageVMVCPUs = requirements.computeRequirements?.averageVMVCPUs || 6;
@@ -101,41 +120,55 @@ export const useComputeClusterMetrics = () => {
     const clusterMetrics: ComputeClusterMetrics[] = [];
 
     computeClusters.forEach((cluster: ComputeClusterRequirement) => {
-      // Find all nodes belonging to this cluster
-      const clusterNodes = components.filter(
-        c => c.role === 'computeNode' &&
-        c.clusterInfo?.clusterId === cluster.id
+      console.log(`[useComputeClusterMetrics] Processing cluster: ${cluster.name} (${cluster.id})`);
+
+      // Find component roles for this cluster
+      const clusterRoles = componentRoles?.filter(role => {
+        const isComputeRole = role.role === 'computeNode' || role.role === 'hyperConvergedNode' || role.role === 'gpuNode';
+        const belongsToCluster = role.clusterInfo?.clusterId === cluster.id;
+        return isComputeRole && belongsToCluster;
+      }) || [];
+
+      console.log(`[useComputeClusterMetrics] Found ${clusterRoles.length} roles for cluster ${cluster.id}:`,
+        clusterRoles.map(r => ({
+          role: r.role,
+          count: r.adjustedRequiredCount || r.requiredCount,
+          componentId: r.assignedComponentId
+        }))
       );
 
-      // Handle hyper-converged nodes
-      const hyperConvergedNodes = components.filter(
-        c => c.role === 'hyperConvergedNode' &&
-        c.clusterInfo?.clusterId === cluster.id
+      // Calculate total nodes from roles
+      const totalNodes = clusterRoles.reduce((sum, role) =>
+        sum + (role.adjustedRequiredCount || role.requiredCount || 0), 0
       );
 
-      const allNodes = [...clusterNodes, ...hyperConvergedNodes];
-      const totalNodes = allNodes.length;
+      console.log(`[useComputeClusterMetrics] Total nodes for cluster ${cluster.id}: ${totalNodes}`);
 
       // Calculate totals for this cluster
       let totalVCPUs = 0;
       let totalMemoryGB = 0;
       const nodeHardware: ComputeClusterMetrics['nodeHardware'] = [];
 
-      allNodes.forEach(node => {
-        const template = componentTemplates.find(t => t.id === node.componentId);
+      // Calculate resources from component roles
+      clusterRoles.forEach(role => {
+        const template = componentTemplates.find(t => t.id === role.assignedComponentId);
         if (template) {
           const vcpus = (template.cpuCores || 0) * (template.cpuSockets || 1);
           const memoryGB = (template.memoryCapacity || 0);
+          const nodeCount = role.adjustedRequiredCount || role.requiredCount || 0;
 
-          totalVCPUs += vcpus;
-          totalMemoryGB += memoryGB;
+          totalVCPUs += vcpus * nodeCount;
+          totalMemoryGB += memoryGB * nodeCount;
 
+          // Add one entry per role type to nodeHardware
           nodeHardware.push({
             cpuCores: vcpus,
             memoryGB,
             cost: template.cost || 0,
             model: template.model || ''
           });
+
+          console.log(`[useComputeClusterMetrics] Role ${role.role}: ${nodeCount} x ${template.model} (${vcpus} vCPUs, ${memoryGB} GB RAM)`);
         }
       });
 
@@ -171,11 +204,14 @@ export const useComputeClusterMetrics = () => {
         // This is based on the cluster's share of total compute resources
         const totalComputeCost = costAnalysisResult.amortizedCostsByType.compute || 0;
 
-        // Calculate this cluster's share based on node count (simple approach)
-        // Could be enhanced to consider actual hardware costs
-        const totalComputeNodes = components.filter(
-          c => c.role === 'computeNode' || c.role === 'hyperConvergedNode'
-        ).length;
+        // Calculate total compute nodes across all clusters from roles
+        const allComputeRoles = componentRoles?.filter(r =>
+          r.role === 'computeNode' || r.role === 'hyperConvergedNode' || r.role === 'gpuNode'
+        ) || [];
+
+        const totalComputeNodes = allComputeRoles.reduce((sum, role) =>
+          sum + (role.adjustedRequiredCount || role.requiredCount || 0), 0
+        );
 
         const clusterCostShare = totalNodes > 0 && totalComputeNodes > 0
           ? totalComputeCost * (totalNodes / totalComputeNodes)
@@ -190,7 +226,7 @@ export const useComputeClusterMetrics = () => {
         monthlyCostPerVM = (clusterCostShare + operationalCostShare) / maxAverageVMs;
       }
 
-      clusterMetrics.push({
+      const metrics = {
         clusterId: cluster.id,
         clusterName: cluster.name,
         totalNodes,
@@ -207,11 +243,15 @@ export const useComputeClusterMetrics = () => {
         availabilityZoneCount: clusterAZCount,
         availabilityZoneIds: cluster.availabilityZoneIds,
         nodeHardware
-      });
+      };
+
+      console.log(`[useComputeClusterMetrics] Metrics for cluster ${cluster.name}:`, metrics);
+
+      clusterMetrics.push(metrics);
     });
 
     return clusterMetrics;
-  }, [activeDesign, requirements, componentTemplates, costAnalysisResult]);
+  }, [activeDesign, requirements, componentTemplates, componentRoles, costAnalysisResult]);
 
   return metrics;
 };
