@@ -43,6 +43,9 @@ interface KeyMetricsProps {
   redundancyConfig?: string;
   totalComputeNodes?: number;
   totalAvailabilityZones?: number;
+  redundantVCPUs?: number;
+  redundantMemoryGB?: number;
+  redundantNodes?: number;
 }
 
 export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
@@ -121,7 +124,10 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
   usableMemoryTB,
   redundancyConfig,
   totalComputeNodes,
-  totalAvailabilityZones
+  totalAvailabilityZones,
+  redundantVCPUs,
+  redundantMemoryGB,
+  redundantNodes
 }) => {
   return (
     <Card>
@@ -155,6 +161,9 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
                 redundancyConfig={redundancyConfig}
                 totalComputeNodes={totalComputeNodes}
                 totalAvailabilityZones={totalAvailabilityZones}
+                redundantVCPUs={redundantVCPUs}
+                redundantMemoryGB={redundantMemoryGB}
+                redundantNodes={redundantNodes}
               />
             </div>
           </div>

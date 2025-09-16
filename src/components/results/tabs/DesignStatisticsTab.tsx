@@ -31,7 +31,10 @@ export const DesignStatisticsTab: React.FC = () => {
     usableMemoryGB,
     redundancyConfig,
     totalComputeNodes,
-    totalAvailabilityZones
+    totalAvailabilityZones,
+    redundantVCPUs,
+    redundantMemoryGB,
+    redundantNodes
   } = useDesignCalculations();
   
   const { computeClustersMetrics } = useComputeClusters();
@@ -130,6 +133,9 @@ export const DesignStatisticsTab: React.FC = () => {
           redundancyConfig={redundancyConfig}
           totalComputeNodes={totalComputeNodes}
           totalAvailabilityZones={totalAvailabilityZones}
+          redundantVCPUs={redundantVCPUs}
+          redundantMemoryGB={redundantMemoryGB}
+          redundantNodes={redundantNodes}
         />
       </div>
       

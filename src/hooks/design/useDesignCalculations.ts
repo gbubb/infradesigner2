@@ -24,32 +24,58 @@ const calculateUsableCapacity = (
   redundancy: string | undefined,
   totalNodes: number,
   totalAZs: number
-): { usableCapacity: number; redundantCapacity: number } => {
+): { usableCapacity: number; redundantCapacity: number; redundantNodes: number } => {
   if (!redundancy || redundancy === 'None') {
-    return { usableCapacity: totalCapacity, redundantCapacity: 0 };
+    return { usableCapacity: totalCapacity, redundantCapacity: 0, redundantNodes: 0 };
   }
 
   let redundantNodes = 0;
+  let usableCapacity = totalCapacity;
+  let redundantCapacity = 0;
 
-  if (redundancy === 'N+1') {
-    // N+1 means we can lose 1 AZ worth of nodes
-    redundantNodes = Math.ceil(totalNodes / totalAZs);
-  } else if (redundancy === 'N+2') {
-    // N+2 means we can lose 2 AZs worth of nodes
-    redundantNodes = Math.ceil((totalNodes / totalAZs) * 2);
-  } else if (redundancy === '1 Node') {
-    // 1 Node redundancy means we can lose 1 node
-    redundantNodes = 1;
-  } else if (redundancy === '2 Nodes') {
-    // 2 Nodes redundancy means we can lose 2 nodes
-    redundantNodes = 2;
+  // If we have valid node count, calculate based on nodes
+  if (totalNodes > 0) {
+    if (redundancy === 'N+1') {
+      // N+1 means we can lose 1 AZ worth of nodes
+      redundantNodes = Math.ceil(totalNodes / totalAZs);
+    } else if (redundancy === 'N+2') {
+      // N+2 means we can lose 2 AZs worth of nodes
+      redundantNodes = Math.ceil((totalNodes / totalAZs) * 2);
+    } else if (redundancy === '1 Node') {
+      // 1 Node redundancy means we can lose 1 node
+      redundantNodes = 1;
+    } else if (redundancy === '2 Nodes') {
+      // 2 Nodes redundancy means we can lose 2 nodes
+      redundantNodes = 2;
+    }
+
+    const usableNodes = Math.max(0, totalNodes - redundantNodes);
+    usableCapacity = totalNodes > 0 ? (totalCapacity / totalNodes) * usableNodes : totalCapacity;
+    redundantCapacity = totalCapacity - usableCapacity;
+  } else {
+    // Fallback: calculate redundancy as a proportion when node count is unknown
+    if (redundancy === 'N+1' && totalAZs > 0) {
+      // Reserve 1/N of capacity where N is number of AZs
+      const redundancyRatio = 1 / totalAZs;
+      redundantCapacity = totalCapacity * redundancyRatio;
+      usableCapacity = totalCapacity - redundantCapacity;
+    } else if (redundancy === 'N+2' && totalAZs > 0) {
+      // Reserve 2/N of capacity where N is number of AZs
+      const redundancyRatio = Math.min(2 / totalAZs, 1);
+      redundantCapacity = totalCapacity * redundancyRatio;
+      usableCapacity = totalCapacity - redundantCapacity;
+    } else if (redundancy === '1 Node' || redundancy === '2 Nodes') {
+      // Without node count, can't calculate node-level redundancy accurately
+      // Assume a reasonable cluster size (e.g., 10 nodes) for estimation
+      const estimatedNodes = 10;
+      redundantNodes = redundancy === '1 Node' ? 1 : 2;
+      const redundancyRatio = redundantNodes / estimatedNodes;
+      redundantCapacity = totalCapacity * redundancyRatio;
+      usableCapacity = totalCapacity - redundantCapacity;
+    }
   }
 
-  const usableNodes = Math.max(0, totalNodes - redundantNodes);
-  const usableCapacity = (totalCapacity / totalNodes) * usableNodes;
-  const redundantCapacity = totalCapacity - usableCapacity;
-
-  return { usableCapacity, redundantCapacity };
+  return { usableCapacity, redundantCapacity, redundantNodes };
 };
 
 /**
@@ -142,8 +168,24 @@ export const useDesignCalculations = () => {
 
   // Get compute cluster redundancy configuration
   const computeClusters = activeDesign?.requirements?.computeRequirements?.computeClusters || [];
-  const computeNodes = componentsByType?.computeNode || [];
+
+  // Count ALL compute-capable nodes (including hyperConverged and GPU nodes)
+  const computeNodes = [
+    ...(componentsByType?.computeNode || []),
+    ...(componentsByType?.hyperConvergedNode || []),
+    ...(componentsByType?.gpuNode || [])
+  ];
   const totalComputeNodes = computeNodes.length;
+
+  // If we still don't have node count, try counting from activeDesign.components
+  const fallbackNodeCount = totalComputeNodes > 0 ? totalComputeNodes :
+    (activeDesign?.components?.filter(c =>
+      c.role === 'computeNode' ||
+      c.role === 'hyperConvergedNode' ||
+      c.role === 'gpuNode'
+    )?.length || 0);
+
+  const actualTotalComputeNodes = fallbackNodeCount;
   const totalAvailabilityZones = activeDesign?.requirements?.physicalConstraints?.totalAvailabilityZones || 8;
 
   // For simplicity, use the first cluster's redundancy configuration
@@ -155,17 +197,17 @@ export const useDesignCalculations = () => {
   const totalMemoryGB = actualHardwareTotals.totalComputeMemoryTB * 1024;
 
   // Calculate usable capacity after accounting for redundancy
-  const { usableCapacity: usableVCPUs } = calculateUsableCapacity(
+  const { usableCapacity: usableVCPUs, redundantCapacity: redundantVCPUs, redundantNodes } = calculateUsableCapacity(
     totalVCPUs,
     redundancyConfig,
-    totalComputeNodes,
+    actualTotalComputeNodes,
     totalAvailabilityZones
   );
 
-  const { usableCapacity: usableMemoryGB } = calculateUsableCapacity(
+  const { usableCapacity: usableMemoryGB, redundantCapacity: redundantMemoryGB } = calculateUsableCapacity(
     totalMemoryGB,
     redundancyConfig,
-    totalComputeNodes,
+    actualTotalComputeNodes,
     totalAvailabilityZones
   );
 
@@ -233,7 +275,10 @@ export const useDesignCalculations = () => {
     usableVCPUs,
     usableMemoryGB,
     redundancyConfig,
-    totalComputeNodes,
-    totalAvailabilityZones
+    totalComputeNodes: actualTotalComputeNodes,
+    totalAvailabilityZones,
+    redundantVCPUs,
+    redundantMemoryGB,
+    redundantNodes
   };
 };

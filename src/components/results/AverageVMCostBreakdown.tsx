@@ -39,6 +39,9 @@ interface AverageVMCostBreakdownProps {
   redundancyConfig?: string;
   totalComputeNodes?: number;
   totalAvailabilityZones?: number;
+  redundantVCPUs?: number;
+  redundantMemoryGB?: number;
+  redundantNodes?: number;
 }
 
 export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
@@ -54,13 +57,16 @@ export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
   usableMemoryTB,
   redundancyConfig = 'None',
   totalComputeNodes = 0,
-  totalAvailabilityZones = 8
+  totalAvailabilityZones = 8,
+  redundantVCPUs = 0,
+  redundantMemoryGB = 0,
+  redundantNodes = 0
 }) => {
   const [open, setOpen] = React.useState(false);
 
   const totalMemoryGB = totalMemoryTB * 1024;
-  const actualUsableVCPUs = usableVCPUs || totalVCPUs;
-  const actualUsableMemoryGB = (usableMemoryTB || totalMemoryTB) * 1024;
+  const actualUsableVCPUs = usableVCPUs !== undefined ? usableVCPUs : totalVCPUs;
+  const actualUsableMemoryGB = usableMemoryTB !== undefined ? usableMemoryTB * 1024 : totalMemoryGB;
 
   const vmsByCPU = Math.floor(actualUsableVCPUs / averageVMVCPUs);
   const vmsByMemory = Math.floor(actualUsableMemoryGB / averageVMMemoryGB);
@@ -68,24 +74,28 @@ export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
 
   const computeOnlyCost = monthlyCost - storageAmortizedCost;
 
-  // Calculate redundant capacity
-  const redundantVCPUs = totalVCPUs - actualUsableVCPUs;
-  const redundantMemoryGB = totalMemoryGB - actualUsableMemoryGB;
-  const redundantNodes = calculateRedundantNodes(redundancyConfig, totalComputeNodes, totalAvailabilityZones);
+  // Use provided redundant values or calculate them
+  const actualRedundantVCPUs = redundantVCPUs || (totalVCPUs - actualUsableVCPUs);
+  const actualRedundantMemoryGB = redundantMemoryGB || (totalMemoryGB - actualUsableMemoryGB);
+  const actualRedundantNodes = redundantNodes || calculateRedundantNodes(redundancyConfig, totalComputeNodes, totalAvailabilityZones);
   
   const calculationSteps = [
     `Cluster Configuration:`,
-    `- Total Compute Nodes: ${totalComputeNodes} nodes`,
+    totalComputeNodes > 0 ?
+      `- Total Compute Nodes: ${totalComputeNodes} nodes` :
+      `- Total Compute Nodes: Not specified`,
     `- Availability Zones: ${totalAvailabilityZones} AZs`,
     `- Redundancy: ${redundancyConfig}`,
     ``,
     `Total Physical Resources:`,
     `- Total vCPUs: ${totalVCPUs.toLocaleString()} vCPUs`,
-    `- Total Memory: ${totalMemoryTB.toLocaleString()} TB (${totalMemoryGB.toLocaleString()} GB)`,
+    `- Total Memory: ${totalMemoryTB.toFixed(2)} TB (${totalMemoryGB.toLocaleString()} GB)`,
     ``,
     `Redundancy Impact:`,
     redundancyConfig !== 'None' ?
-      `- Reserved for Redundancy: ${redundantNodes} nodes (${redundantVCPUs.toLocaleString()} vCPUs, ${(redundantMemoryGB/1024).toFixed(2)} TB)` :
+      (actualRedundantNodes > 0 ?
+        `- Reserved for Redundancy: ${actualRedundantNodes} nodes (${actualRedundantVCPUs.toLocaleString()} vCPUs, ${(actualRedundantMemoryGB/1024).toFixed(2)} TB)` :
+        `- Reserved for Redundancy: ${actualRedundantVCPUs.toLocaleString()} vCPUs, ${(actualRedundantMemoryGB/1024).toFixed(2)} TB`) :
       `- No redundancy configured`,
     redundancyConfig === 'N+1' ?
       `  → Can tolerate failure of 1 availability zone` :
@@ -109,14 +119,18 @@ export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
     `- By Memory: ${actualUsableMemoryGB.toLocaleString()} GB ÷ ${averageVMMemoryGB} GB/VM = ${vmsByMemory.toLocaleString()} VMs`,
     ``,
     `Limiting Factor: ${limitingFactor}`,
-    `Maximum VMs Possible: ${quantityOfAverageVMs.toLocaleString()} VMs`,
+    `Maximum VMs Possible: ${isNaN(quantityOfAverageVMs) ? 'Unable to calculate' : quantityOfAverageVMs.toLocaleString() + ' VMs'}`,
     ``,
     `Monthly Cost Calculation:`,
     `- Total Monthly Cost: $${monthlyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
     `- Storage Amortized Cost: $${storageAmortizedCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
     `- Compute-Only Monthly Cost: $${computeOnlyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-    `- Cost per VM: $${computeOnlyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} ÷ ${quantityOfAverageVMs.toLocaleString()} VMs`,
-    `- Final Cost per VM: $${monthlyCostPerAverageVM.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+    !isNaN(quantityOfAverageVMs) && quantityOfAverageVMs > 0 ?
+      `- Cost per VM: $${computeOnlyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} ÷ ${quantityOfAverageVMs.toLocaleString()} VMs` :
+      `- Cost per VM: Unable to calculate (no VMs possible)`,
+    !isNaN(monthlyCostPerAverageVM) ?
+      `- Final Cost per VM: $${monthlyCostPerAverageVM.toLocaleString(undefined, { maximumFractionDigits: 2 })}` :
+      `- Final Cost per VM: Unable to calculate`
   ].filter(step => step !== '');
 
   return (
