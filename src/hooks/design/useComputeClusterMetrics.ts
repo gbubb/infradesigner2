@@ -192,8 +192,8 @@ export const useComputeClusterMetrics = () => {
       // Use cluster-specific AZ count or default to total AZs
       const clusterAZCount = cluster.availabilityZoneCount || totalAvailabilityZones;
 
-      // Calculate usable capacity
-      const { usableCapacity: usableVCPUs, redundantCapacity: redundantVCPUs, redundantNodes } =
+      // Calculate usable capacity after redundancy
+      const { usableCapacity: usablePhysicalCores, redundantCapacity: redundantPhysicalCores, redundantNodes } =
         calculateUsableCapacity(
           totalVCPUs,
           cluster.availabilityZoneRedundancy,
@@ -208,6 +208,20 @@ export const useComputeClusterMetrics = () => {
           totalNodes,
           clusterAZCount
         );
+
+      // Apply overcommit ratio to get vCPUs (physical cores * overcommit ratio)
+      const overcommitRatio = cluster.overcommitRatio || 1;
+      const usableVCPUs = usablePhysicalCores * overcommitRatio;
+      const redundantVCPUs = redundantPhysicalCores * overcommitRatio;
+
+      console.log(`[useComputeClusterMetrics] Cluster ${cluster.name} capacity:`, {
+        totalPhysicalCores: totalVCPUs,
+        usablePhysicalCores,
+        overcommitRatio,
+        usableVCPUs,
+        totalMemoryGB,
+        usableMemoryGB
+      });
 
       // Calculate maximum number of VMs
       const vmsByCPU = Math.floor(usableVCPUs / averageVMVCPUs);
