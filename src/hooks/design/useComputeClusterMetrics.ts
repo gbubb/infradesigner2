@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { InfrastructureComponent } from '@/types/infrastructure/component-types';
+import { InfrastructureComponent, ComponentType } from '@/types/infrastructure/component-types';
 import { ComputeClusterRequirement } from '@/types/infrastructure/requirements-types';
 import { useCostAnalysis } from './useCostAnalysis';
 
@@ -153,8 +153,17 @@ export const useComputeClusterMetrics = () => {
       clusterRoles.forEach(role => {
         const template = componentTemplates.find(t => t.id === role.assignedComponentId);
         if (template) {
-          const vcpus = (template.cpuCores || 0) * (template.cpuSockets || 1);
-          const memoryGB = (template.memoryCapacity || 0);
+          // Handle different CPU field names based on component type
+          let vcpus = 0;
+          if (template.type === ComponentType.Server || template.type === 'Server') {
+            // Servers use cpuCoresPerSocket and cpuSockets
+            vcpus = (template.cpuCoresPerSocket || template.coreCount || 0) * (template.cpuSockets || 1);
+          } else {
+            // Other components might use cpuCores
+            vcpus = (template.cpuCores || 0) * (template.cpuSockets || 1);
+          }
+
+          const memoryGB = template.memoryCapacity || template.memoryGB || 0;
           const nodeCount = role.adjustedRequiredCount || role.requiredCount || 0;
 
           totalVCPUs += vcpus * nodeCount;
@@ -168,7 +177,15 @@ export const useComputeClusterMetrics = () => {
             model: template.model || ''
           });
 
-          console.log(`[useComputeClusterMetrics] Role ${role.role}: ${nodeCount} x ${template.model} (${vcpus} vCPUs, ${memoryGB} GB RAM)`);
+          console.log(`[useComputeClusterMetrics] Role ${role.role}: ${nodeCount} x ${template.model} (${vcpus} vCPUs, ${memoryGB} GB RAM)`, {
+            template: {
+              type: template.type,
+              cpuCoresPerSocket: template.cpuCoresPerSocket,
+              cpuSockets: template.cpuSockets,
+              coreCount: template.coreCount,
+              memoryCapacity: template.memoryCapacity
+            }
+          });
         }
       });
 
