@@ -17,6 +17,7 @@ export interface InfrastructureDesign {
   components: (InfrastructureComponent | ComponentWithPlacement)[];
   componentRoles?: ComponentRole[];
   selectedDisksByRole?: Record<string, { diskId: string, quantity: number }[]>;
+  selectedDisksByStorageCluster?: Record<string, { diskId: string, quantity: number }[]>;
   selectedGPUsByRole?: Record<string, { gpuId: string, quantity: number }[]>;
   selectedCassettesByRole?: Record<string, { cassetteId: string, quantity: number }[]>;
   // User and sharing properties

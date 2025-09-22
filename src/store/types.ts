@@ -19,7 +19,15 @@ export interface StoreState {
   
   // Selected disks for storage nodes (key is roleId, value is array of disk configs)
   selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>;
-  
+
+  // Selected disks for storage clusters (key is storageClusterId, value is array of disk configs)
+  // Used for hyper-converged storage clusters to allow different disk configs per cluster
+  selectedDisksByStorageCluster: Record<string, { diskId: string, quantity: number }[]>;
+
+  // Selected disks for storage pools (key is storagePoolId, value is array of disk configs)
+  // Used for shared storage infrastructure supporting multiple logical clusters
+  selectedDisksByStoragePool: Record<string, { diskId: string, quantity: number }[]>;
+
   // Selected GPUs for compute nodes (key is roleId, value is array of GPU configs)
   selectedGPUsByRole: Record<string, { gpuId: string, quantity: number }[]>;
   

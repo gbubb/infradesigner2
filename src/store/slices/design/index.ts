@@ -102,6 +102,7 @@ export const createDesignSlice: StateCreator<
       const designWithSelections = {
         ...state.activeDesign,
         selectedDisksByRole: state.selectedDisksByRole,
+        selectedDisksByStorageCluster: state.selectedDisksByStorageCluster,
         selectedGPUsByRole: state.selectedGPUsByRole,
         componentRoles: state.componentRoles
       };
@@ -231,21 +232,48 @@ export const createDesignSlice: StateCreator<
       
       toast.success(`Switched to design: ${design.name}`);
       
+      // Migration logic for backward compatibility
+      const migratedDisksByStorageCluster = design.selectedDisksByStorageCluster || {};
+
+      // If design doesn't have selectedDisksByStorageCluster but has hyper-converged storage clusters
+      // with disks in selectedDisksByRole, migrate them
+      if (!design.selectedDisksByStorageCluster || Object.keys(design.selectedDisksByStorageCluster).length === 0) {
+        const storageClusters = design.requirements?.storageRequirements?.storageClusters || [];
+        const hyperConvergedRoles = (design.componentRoles || []).filter(r => r.role === 'hyperConvergedNode');
+
+        hyperConvergedRoles.forEach(role => {
+          if (design.selectedDisksByRole && design.selectedDisksByRole[role.id]) {
+            // Find storage clusters targeting this compute cluster
+            const targetingClusters = storageClusters.filter(
+              sc => sc.hyperConverged && sc.computeClusterId === role.clusterInfo?.clusterId
+            );
+
+            // If there's exactly one storage cluster, migrate the disks to it
+            if (targetingClusters.length === 1) {
+              migratedDisksByStorageCluster[targetingClusters[0].id] = design.selectedDisksByRole[role.id];
+              console.log('[Migration] Migrated disks from role', role.id, 'to storage cluster', targetingClusters[0].id);
+            }
+          }
+        });
+      }
+
       // Debug log to track disk configuration when loading
       console.log('[setActiveDesign] Loading disk configuration:', {
         selectedDisksByRole: design.selectedDisksByRole || {},
+        selectedDisksByStorageCluster: migratedDisksByStorageCluster,
         componentRoles: (design.componentRoles || []).filter(r => r.role === 'hyperConvergedNode').map(r => ({
           id: r.id,
           role: r.role,
           clusterId: r.clusterInfo?.clusterId
         }))
       });
-      
-      return { 
+
+      return {
         activeDesign: design,
         componentRoles: design.componentRoles || [],
         requirements: design.requirements || state.requirements,
         selectedDisksByRole: design.selectedDisksByRole || {},
+        selectedDisksByStorageCluster: migratedDisksByStorageCluster,
         selectedGPUsByRole: design.selectedGPUsByRole || {},
       };
     });
@@ -272,6 +300,7 @@ export const createDesignSlice: StateCreator<
       ...state.activeDesign,
       componentRoles: state.componentRoles,
       selectedDisksByRole: state.selectedDisksByRole,
+      selectedDisksByStorageCluster: state.selectedDisksByStorageCluster,
       selectedGPUsByRole: state.selectedGPUsByRole,
       requirements: state.requirements,
       updatedAt: new Date()
@@ -455,6 +484,7 @@ export const createDesignSlice: StateCreator<
               componentRoles: design.componentRoles || [],
               requirements: design.requirements || state.requirements,
               selectedDisksByRole: design.selectedDisksByRole || {},
+              selectedDisksByStorageCluster: design.selectedDisksByStorageCluster || {},
               selectedGPUsByRole: design.selectedGPUsByRole || {}
             };
           } else {
@@ -463,6 +493,7 @@ export const createDesignSlice: StateCreator<
               componentRoles: design.componentRoles || [],
               requirements: design.requirements || state.requirements,
               selectedDisksByRole: design.selectedDisksByRole || {},
+              selectedDisksByStorageCluster: design.selectedDisksByStorageCluster || {},
               selectedGPUsByRole: design.selectedGPUsByRole || {}
             };
           }

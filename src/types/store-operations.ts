@@ -96,6 +96,32 @@ export type RemoveDiskFromStorageNodeFn = (
   selectedDisksByRole: Record<string, DiskConfig[]>
 ) => Record<string, DiskConfig[]>;
 
+export type AddDiskToStorageClusterFn = (
+  storageClusterId: string,
+  diskId: string,
+  quantity: number,
+  selectedDisksByStorageCluster: Record<string, DiskConfig[]>
+) => Record<string, DiskConfig[]>;
+
+export type RemoveDiskFromStorageClusterFn = (
+  storageClusterId: string,
+  diskId: string,
+  selectedDisksByStorageCluster: Record<string, DiskConfig[]>
+) => Record<string, DiskConfig[]>;
+
+export type AddDiskToStoragePoolFn = (
+  storagePoolId: string,
+  diskId: string,
+  quantity: number,
+  selectedDisksByStoragePool: Record<string, DiskConfig[]>
+) => Record<string, DiskConfig[]>;
+
+export type RemoveDiskFromStoragePoolFn = (
+  storagePoolId: string,
+  diskId: string,
+  selectedDisksByStoragePool: Record<string, DiskConfig[]>
+) => Record<string, DiskConfig[]>;
+
 export type AddGPUToComputeNodeFn = (
   roleId: string,
   gpuId: string,

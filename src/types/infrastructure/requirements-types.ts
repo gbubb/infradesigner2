@@ -1,5 +1,5 @@
 import { NetworkTopology, ManagementNetworkType, IPMINetworkType } from './network-types';
-import { StorageClusterRequirement } from './storage-types';
+import { StorageClusterRequirement, StoragePool } from './storage-types';
 import { LicensingRequirements } from './licensing-types';
 import { PricingRequirements } from './pricing-types';
 
@@ -37,6 +37,7 @@ export interface DesignRequirements {
     averageVMMemoryGB?: number;
   };
   storageRequirements: {
+    storagePools?: StoragePool[];
     storageClusters: StorageClusterRequirement[];
     deviceLifespanYears?: number;
   };

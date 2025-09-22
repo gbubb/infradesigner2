@@ -1,9 +1,13 @@
 
-import { 
+import {
   AddDiskToStorageNodeFn,
   RemoveDiskFromStorageNodeFn,
+  AddDiskToStorageClusterFn,
+  RemoveDiskFromStorageClusterFn,
+  AddDiskToStoragePoolFn,
+  RemoveDiskFromStoragePoolFn,
   AddGPUToComputeNodeFn,
-  RemoveGPUFromComputeNodeFn 
+  RemoveGPUFromComputeNodeFn
 } from '@/types/store-operations';
 
 /**
@@ -42,10 +46,90 @@ export const removeDiskFromStorageNode: RemoveDiskFromStorageNodeFn = (
 ) => {
   const currentDisks = selectedDisksByRole[roleId] || [];
   const updatedDisks = currentDisks.filter(d => d.diskId !== diskId);
-  
+
   return {
     ...selectedDisksByRole,
     [roleId]: updatedDisks
+  };
+};
+
+export const addDiskToStorageCluster: AddDiskToStorageClusterFn = (
+  storageClusterId,
+  diskId,
+  quantity,
+  selectedDisksByStorageCluster
+) => {
+  const currentDisks = selectedDisksByStorageCluster[storageClusterId] || [];
+  const existingDiskIndex = currentDisks.findIndex(d => d.diskId === diskId);
+
+  let updatedDisks;
+  if (existingDiskIndex >= 0) {
+    updatedDisks = [...currentDisks];
+    updatedDisks[existingDiskIndex] = {
+      ...updatedDisks[existingDiskIndex],
+      quantity
+    };
+  } else {
+    updatedDisks = [...currentDisks, { diskId, quantity }];
+  }
+
+  return {
+    ...selectedDisksByStorageCluster,
+    [storageClusterId]: updatedDisks
+  };
+};
+
+export const removeDiskFromStorageCluster: RemoveDiskFromStorageClusterFn = (
+  storageClusterId,
+  diskId,
+  selectedDisksByStorageCluster
+) => {
+  const currentDisks = selectedDisksByStorageCluster[storageClusterId] || [];
+  const updatedDisks = currentDisks.filter(d => d.diskId !== diskId);
+
+  return {
+    ...selectedDisksByStorageCluster,
+    [storageClusterId]: updatedDisks
+  };
+};
+
+export const addDiskToStoragePool: AddDiskToStoragePoolFn = (
+  storagePoolId,
+  diskId,
+  quantity,
+  selectedDisksByStoragePool
+) => {
+  const currentDisks = selectedDisksByStoragePool[storagePoolId] || [];
+  const existingDiskIndex = currentDisks.findIndex(d => d.diskId === diskId);
+
+  let updatedDisks;
+  if (existingDiskIndex >= 0) {
+    updatedDisks = [...currentDisks];
+    updatedDisks[existingDiskIndex] = {
+      ...updatedDisks[existingDiskIndex],
+      quantity
+    };
+  } else {
+    updatedDisks = [...currentDisks, { diskId, quantity }];
+  }
+
+  return {
+    ...selectedDisksByStoragePool,
+    [storagePoolId]: updatedDisks
+  };
+};
+
+export const removeDiskFromStoragePool: RemoveDiskFromStoragePoolFn = (
+  storagePoolId,
+  diskId,
+  selectedDisksByStoragePool
+) => {
+  const currentDisks = selectedDisksByStoragePool[storagePoolId] || [];
+  const updatedDisks = currentDisks.filter(d => d.diskId !== diskId);
+
+  return {
+    ...selectedDisksByStoragePool,
+    [storagePoolId]: updatedDisks
   };
 };
 

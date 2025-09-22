@@ -5,6 +5,8 @@ export interface RequirementsState {
   requirements: DesignRequirements;
   componentRoles: ComponentRole[];
   selectedDisksByRole: Record<string, { diskId: string, quantity: number }[]>;
+  selectedDisksByStorageCluster: Record<string, { diskId: string, quantity: number }[]>;
+  selectedDisksByStoragePool: Record<string, { diskId: string, quantity: number }[]>;
   selectedGPUsByRole: Record<string, { gpuId: string, quantity: number }[]>;
   selectedCassettesByRole: Record<string, { cassetteId: string, quantity: number }[]>;
   calculationBreakdowns: Record<string, string[]>;
@@ -21,6 +23,10 @@ export interface RequirementsSlice extends RequirementsState {
   removeGPUFromComputeNode: (roleId: string, gpuId: string) => void;
   addCassetteToPanel: (roleId: string, cassetteId: string, quantity: number) => void;
   removeCassetteFromPanel: (roleId: string, cassetteId: string) => void;
+  addDiskToStorageCluster: (storageClusterId: string, diskId: string, quantity: number) => void;
+  removeDiskFromStorageCluster: (storageClusterId: string, diskId: string) => void;
+  addDiskToStoragePool: (storagePoolId: string, diskId: string, quantity: number) => void;
+  removeDiskFromStoragePool: (storagePoolId: string, diskId: string) => void;
   calculateStorageNodeCapacity: (roleId: string) => number;
   getCalculationBreakdown: (roleId: string) => string[];
 }
@@ -36,6 +42,7 @@ export const defaultRequirements: DesignRequirements = {
     averageVMMemoryGB: 8
   },
   storageRequirements: {
+    storagePools: [],
     storageClusters: []
   },
   networkRequirements: {

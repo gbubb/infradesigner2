@@ -157,13 +157,16 @@ export const BillOfMaterialsTab: React.FC = () => {
   // Build a lookup for Disk costs associated with specific clusters/configurations:
   const diskLineItems = useMemo(() => {
     const items: Record<string, DiskLineItem> = {};
-    
+
+    // Get storage clusters for name lookup
+    const storageClusters = useStore.getState().requirements.storageRequirements?.storageClusters || [];
+
     components.forEach(instance => {
       const key =
         (instance.role === 'storageNode' || instance.role === 'hyperConvergedNode')
           ? getStorageNodeGroupKey(instance)
           : getBomGroupKey(instance);
-      
+
       // If this is a storage node or hyper-converged node, also add disk line items with correct cluster assignment
       const extInstance = instance as ExtendedComponent;
       if ((instance.role === 'storageNode' || instance.role === 'hyperConvergedNode') && extInstance.attachedDisks) {
@@ -171,6 +174,19 @@ export const BillOfMaterialsTab: React.FC = () => {
         const attachedDisks = extInstance.attachedDisks || [];
         attachedDisks.forEach((disk: DiskComponent) => {
           if (!disk) return;
+
+          // For hyper-converged nodes, use storage cluster ID if disk is tagged
+          let diskClusterName = clusterInfo.clusterName || clusterInfo.clusterId || '-';
+          let diskClusterId = clusterInfo.clusterId || '-';
+
+          if (instance.role === 'hyperConvergedNode' && 'storageClusterId' in disk && disk.storageClusterId) {
+            const storageCluster = storageClusters.find(sc => sc.id === disk.storageClusterId);
+            if (storageCluster) {
+              diskClusterName = storageCluster.name;
+              diskClusterId = storageCluster.id;
+            }
+          }
+
           // Keyed by disk id+model+size+cluster
           const diskKey =
             'disk-' +
@@ -178,13 +194,13 @@ export const BillOfMaterialsTab: React.FC = () => {
             '-' +
             (disk.capacityTB || '') +
             '-' +
-            (clusterInfo.clusterId || '');
+            diskClusterId;
           if (!items[diskKey]) {
             items[diskKey] = {
               disk,
               summarizedQuantity: 0,
-              clusterName: clusterInfo.clusterName || clusterInfo.clusterId || '-',
-              clusterId: clusterInfo.clusterId || '-',
+              clusterName: diskClusterName,
+              clusterId: diskClusterId,
               configKey: key,
               totalDiskCost: 0,
             };
@@ -195,7 +211,7 @@ export const BillOfMaterialsTab: React.FC = () => {
         });
       }
     });
-    
+
     return items;
   }, [components]);
 

@@ -230,19 +230,20 @@ export const recalculateDesign = () => {
           // -- HYPER-CONVERGED NODE ROLES --
           if (role.role === 'hyperConvergedNode') {
             // Hyper-converged nodes need both compute resources AND storage disks
-            const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
             const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
             const instances: InfrastructureComponent[] = [];
-            
-            // Find the compute cluster to get disk configuration
-            const computeClusters = state.requirements.computeRequirements?.computeClusters || [];
-            const computeCluster = computeClusters.find(c => c.id === role.clusterInfo?.clusterId);
-            
+
+            // Find storage clusters that target this compute cluster
+            const storageClusters = state.requirements.storageRequirements?.storageClusters || [];
+            const targetingStorageClusters = storageClusters.filter(
+              sc => sc.hyperConverged && sc.computeClusterId === role.clusterInfo?.clusterId
+            );
+
             for (let i = 0; i < requiredQuantity; i++) {
               const templateIdForCount = componentTemplate.id;
               templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
               const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
-              
+
               const attachedDisks: InfrastructureComponent[] = [];
               const instanceComponent: InfrastructureComponent = {
                 ...componentTemplate,
@@ -253,9 +254,25 @@ export const recalculateDesign = () => {
                 role: role.role,
                 ruSize: componentTemplate.ruSize,
               };
-              
-              // For hyper-converged, use manually configured disks from the Design tab
-              if (roleDiskConfigs.length > 0) {
+
+              // If there are storage clusters targeting this compute cluster, use their disk configs
+              if (targetingStorageClusters.length > 0) {
+                targetingStorageClusters.forEach(storageCluster => {
+                  const clusterDiskConfigs = state.selectedDisksByStorageCluster[storageCluster.id] || [];
+                  clusterDiskConfigs.forEach(diskConfig => {
+                    const diskTemplate = state.componentTemplates.find(c => c.id === diskConfig.diskId);
+                    if (diskTemplate) {
+                      attachedDisks.push({
+                        ...diskTemplate,
+                        quantity: diskConfig.quantity,
+                        storageClusterId: storageCluster.id, // Tag disk with storage cluster ID
+                      });
+                    }
+                  });
+                });
+              } else {
+                // Fallback to role-based disk configuration for backward compatibility
+                const roleDiskConfigs = state.selectedDisksByRole[role.id] || [];
                 roleDiskConfigs.forEach(diskConfig => {
                   const diskTemplate = state.componentTemplates.find(c => c.id === diskConfig.diskId);
                   if (diskTemplate) {
@@ -266,7 +283,7 @@ export const recalculateDesign = () => {
                   }
                 });
               }
-              
+
               if (attachedDisks.length > 0) (instanceComponent as ComponentWithPlacement).attachedDisks = attachedDisks;
               if (role.clusterInfo) {
                 (instanceComponent as ComponentWithPlacement).clusterInfo = role.clusterInfo;

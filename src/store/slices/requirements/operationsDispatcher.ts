@@ -9,8 +9,16 @@ import { DesignRequirements } from '@/types/infrastructure';
 import { calculateComponentRoles } from './roleCalculator';
 import { calculateStorageNodeCapacity } from './calculationUtils';
 import { calculateRequiredQuantity } from './calculationManager';
-import { addDiskToStorageNode, removeDiskFromStorageNode } from './diskAndGPUOperations';
-import { addGPUToComputeNode, removeGPUFromComputeNode } from './diskAndGPUOperations';
+import {
+  addDiskToStorageNode,
+  removeDiskFromStorageNode,
+  addDiskToStorageCluster,
+  removeDiskFromStorageCluster,
+  addDiskToStoragePool,
+  removeDiskFromStoragePool,
+  addGPUToComputeNode,
+  removeGPUFromComputeNode
+} from './diskAndGPUOperations';
 import { assignComponentToRole, getRoleById, updateRoleRequiredCount } from './roleOperations';
 import { addCassetteToPanel, removeCassetteFromPanel } from './cassetteOperations';
 import { IntelligentDesignUpdater } from '../../calculations/intelligentDesignUpdater';
@@ -39,10 +47,12 @@ export const createRequirementsSliceOperations = (
     requirements: defaultRequirements,
     componentRoles: [],
     selectedDisksByRole: {},
+    selectedDisksByStorageCluster: {},
+    selectedDisksByStoragePool: {},
     selectedGPUsByRole: {},
     selectedCassettesByRole: {},
     calculationBreakdowns: {},
-    
+
     updateRequirements: (newRequirements) => {
       const currentState = get();
       const previousRequirements = { ...currentState.requirements };
@@ -388,6 +398,34 @@ export const createRequirementsSliceOperations = (
       set((state: StoreState) => {
         const updatedCassettes = removeCassetteFromPanel(roleId, cassetteId, state.selectedCassettesByRole);
         return { selectedCassettesByRole: updatedCassettes };
+      });
+    },
+
+    addDiskToStorageCluster: (storageClusterId: string, diskId: string, quantity: number) => {
+      set((state: StoreState) => {
+        const updatedSelectedDisks = addDiskToStorageCluster(storageClusterId, diskId, quantity, state.selectedDisksByStorageCluster);
+        return { selectedDisksByStorageCluster: updatedSelectedDisks };
+      });
+    },
+
+    removeDiskFromStorageCluster: (storageClusterId: string, diskId: string) => {
+      set((state: StoreState) => {
+        const updatedSelectedDisks = removeDiskFromStorageCluster(storageClusterId, diskId, state.selectedDisksByStorageCluster);
+        return { selectedDisksByStorageCluster: updatedSelectedDisks };
+      });
+    },
+
+    addDiskToStoragePool: (storagePoolId: string, diskId: string, quantity: number) => {
+      set((state: StoreState) => {
+        const updatedSelectedDisks = addDiskToStoragePool(storagePoolId, diskId, quantity, state.selectedDisksByStoragePool);
+        return { selectedDisksByStoragePool: updatedSelectedDisks };
+      });
+    },
+
+    removeDiskFromStoragePool: (storagePoolId: string, diskId: string) => {
+      set((state: StoreState) => {
+        const updatedSelectedDisks = removeDiskFromStoragePool(storagePoolId, diskId, state.selectedDisksByStoragePool);
+        return { selectedDisksByStoragePool: updatedSelectedDisks };
       });
     }
   };

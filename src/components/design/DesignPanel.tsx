@@ -26,7 +26,8 @@ export const DesignPanel: React.FC = () => {
     activeDesign,
     saveDesign,
     createNewDesign,
-    getDefaultComponent
+    getDefaultComponent,
+    requirements
   } = useDesignStore();
 
   const { findDefaultComponent } = useComponentsByType();
@@ -311,8 +312,29 @@ export const DesignPanel: React.FC = () => {
                           
                           <Separator />
                           
-                          {(role.role === 'storageNode' || role.role === 'hyperConvergedNode') && (
+                          {role.role === 'storageNode' && (
                             <DiskConfiguration roleId={role.id} />
+                          )}
+
+                          {role.role === 'hyperConvergedNode' && (
+                            <>
+                              {/* Show disk configuration for each storage cluster targeting this compute cluster */}
+                              {requirements.storageRequirements.storageClusters
+                                .filter(sc => sc.hyperConverged && sc.computeClusterId === role.clusterInfo?.clusterId)
+                                .map((storageCluster) => (
+                                  <DiskConfiguration
+                                    key={storageCluster.id}
+                                    storageClusterId={storageCluster.id}
+                                    storageClusterName={storageCluster.name}
+                                  />
+                                ))}
+                              {/* Show role-based config if no storage clusters target this compute cluster */}
+                              {requirements.storageRequirements.storageClusters
+                                .filter(sc => sc.hyperConverged && sc.computeClusterId === role.clusterInfo?.clusterId)
+                                .length === 0 && (
+                                <DiskConfiguration roleId={role.id} />
+                              )}
+                            </>
                           )}
                           
                           {role.role === 'gpuNode' && (

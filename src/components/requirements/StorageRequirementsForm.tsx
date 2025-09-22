@@ -8,11 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { StoragePoolEfficiencyFactors } from '@/types/infrastructure';
+import { StoragePoolEfficiencyFactors, StoragePool } from '@/types/infrastructure';
 import { useStore } from '@/store';
+import { Separator } from '@/components/ui/separator';
 
 export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
   const computeClusters = useStore((state) => state.requirements.computeRequirements.computeClusters);
+  const storagePools = requirements.storagePools || [];
   
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -20,6 +22,45 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
     onUpdate({
       ...requirements,
       [name]: isNaN(numericValue) ? undefined : numericValue
+    });
+  };
+
+  const handleAddPool = () => {
+    const newPool: StoragePool = {
+      id: uuidv4(),
+      name: `Storage Pool ${storagePools.length + 1}`,
+      type: 'dedicated',
+      availabilityZoneQuantity: 3,
+    };
+
+    onUpdate({
+      ...requirements,
+      storagePools: [...storagePools, newPool],
+    });
+  };
+
+  const handleRemovePool = (id: string) => {
+    // Remove pool and update any clusters using this pool
+    const updatedClusters = requirements.storageClusters.map(cluster => {
+      if (cluster.storagePoolId === id) {
+        return { ...cluster, storagePoolId: undefined };
+      }
+      return cluster;
+    });
+
+    onUpdate({
+      ...requirements,
+      storagePools: storagePools.filter((pool) => pool.id !== id),
+      storageClusters: updatedClusters,
+    });
+  };
+
+  const handlePoolUpdate = (id: string, field: string, value: any) => {
+    onUpdate({
+      ...requirements,
+      storagePools: storagePools.map((pool) =>
+        pool.id === id ? { ...pool, [field]: value } : pool
+      ),
     });
   };
 
@@ -79,6 +120,117 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Storage Pools Section */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">Storage Pools</h3>
+        <Button onClick={handleAddPool} variant="outline" size="sm">
+          <Plus className="h-4 w-4 mr-1" />
+          Add Pool
+        </Button>
+      </div>
+
+      {storagePools.map((pool) => (
+        <Card key={pool.id} className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-muted-foreground"
+            onClick={() => handleRemovePool(pool.id)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Input
+                className="font-semibold"
+                value={pool.name}
+                onChange={(e) => handlePoolUpdate(pool.id, 'name', e.target.value)}
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Pool Type</Label>
+                <Select
+                  value={pool.type}
+                  onValueChange={(value) => handlePoolUpdate(pool.id, 'type', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select pool type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dedicated">Dedicated Storage Nodes</SelectItem>
+                    <SelectItem value="hyperConverged">Hyper-Converged</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Availability Zones</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={pool.availabilityZoneQuantity}
+                  onChange={(e) =>
+                    handlePoolUpdate(pool.id, 'availabilityZoneQuantity', parseInt(e.target.value, 10) || 3)
+                  }
+                />
+              </div>
+            </div>
+
+            {pool.type === 'hyperConverged' && (
+              <div className="space-y-2">
+                <Label>Compute Cluster</Label>
+                <Select
+                  value={pool.computeClusterId || ''}
+                  onValueChange={(value) => handlePoolUpdate(pool.id, 'computeClusterId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select compute cluster" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {computeClusters.map((cluster) => (
+                      <SelectItem key={cluster.id} value={cluster.id}>
+                        {cluster.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {computeClusters.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No compute clusters available. Please define compute clusters first.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Display storage clusters using this pool */}
+            {requirements.storageClusters.filter(sc => sc.storagePoolId === pool.id).length > 0 && (
+              <div className="text-sm text-muted-foreground border-t pt-2">
+                <p className="font-medium">Storage clusters using this pool:</p>
+                <ul className="list-disc list-inside mt-1">
+                  {requirements.storageClusters
+                    .filter(sc => sc.storagePoolId === pool.id)
+                    .map(sc => (
+                      <li key={sc.id}>{sc.name} ({sc.poolType})</li>
+                    ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+
+      {storagePools.length === 0 && (
+        <div className="bg-muted/50 rounded-md p-4 text-center text-muted-foreground text-sm">
+          Optional: Define storage pools to share physical storage infrastructure across multiple logical storage clusters.
+        </div>
+      )}
+
+      <Separator className="my-6" />
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Storage Clusters</h3>
@@ -181,27 +333,74 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
             </div>
 
             <div className="mt-4 space-y-4 border-t pt-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Hyper-Converged</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Use compute nodes to also serve storage
-                  </p>
-                </div>
-                <Switch
-                  checked={cluster.hyperConverged || false}
-                  onCheckedChange={(checked) => 
-                    handleClusterUpdate(cluster.id, 'hyperConverged', checked)
+              <div className="space-y-2">
+                <Label>Storage Type</Label>
+                <Select
+                  value={
+                    cluster.storagePoolId ? 'pool' :
+                    cluster.hyperConverged ? 'hyperConverged' :
+                    'dedicated'
                   }
-                />
+                  onValueChange={(value) => {
+                    if (value === 'dedicated') {
+                      handleClusterUpdate(cluster.id, 'hyperConverged', false);
+                      handleClusterUpdate(cluster.id, 'computeClusterId', undefined);
+                      handleClusterUpdate(cluster.id, 'storagePoolId', undefined);
+                    } else if (value === 'hyperConverged') {
+                      handleClusterUpdate(cluster.id, 'hyperConverged', true);
+                      handleClusterUpdate(cluster.id, 'storagePoolId', undefined);
+                    } else if (value === 'pool') {
+                      handleClusterUpdate(cluster.id, 'hyperConverged', false);
+                      handleClusterUpdate(cluster.id, 'computeClusterId', undefined);
+                      // Will select pool below
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select storage type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dedicated">Dedicated Storage Nodes</SelectItem>
+                    <SelectItem value="pool">Use Storage Pool</SelectItem>
+                    <SelectItem value="hyperConverged">Hyper-Converged (Direct)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              {cluster.hyperConverged && (
+              {cluster.storagePoolId !== undefined && (
+                <div className="space-y-2">
+                  <Label>Storage Pool</Label>
+                  <Select
+                    value={cluster.storagePoolId || ''}
+                    onValueChange={(value) =>
+                      handleClusterUpdate(cluster.id, 'storagePoolId', value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select storage pool" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {storagePools.map((pool) => (
+                        <SelectItem key={pool.id} value={pool.id}>
+                          {pool.name} ({pool.type === 'hyperConverged' ? 'Hyper-Converged' : 'Dedicated'})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {storagePools.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No storage pools available. Please define storage pools above.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {cluster.hyperConverged && !cluster.storagePoolId && (
                 <div className="space-y-2">
                   <Label>Compute Cluster</Label>
                   <Select
                     value={cluster.computeClusterId || ''}
-                    onValueChange={(value) => 
+                    onValueChange={(value) =>
                       handleClusterUpdate(cluster.id, 'computeClusterId', value)
                     }
                   >

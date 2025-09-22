@@ -34,6 +34,15 @@ export const StoragePoolEfficiencyFactors: Record<string, number> = {
   'Erasure Coding 10+4': 0.71428
 };
 
+// Storage pool configuration for shared storage infrastructure
+export interface StoragePool {
+  id: string;
+  name: string;
+  type: 'dedicated' | 'hyperConverged';
+  computeClusterId?: string; // For hyper-converged pools
+  availabilityZoneQuantity: number;
+}
+
 // Storage cluster requirements
 export interface StorageClusterRequirement {
   id: string;
@@ -44,4 +53,5 @@ export interface StorageClusterRequirement {
   maxFillFactor: number;
   hyperConverged?: boolean;
   computeClusterId?: string;
+  storagePoolId?: string; // New field for targeting storage pools
 }

@@ -12,15 +12,20 @@ import { ComponentType } from '@/types/infrastructure';
 import { DiskComponent, DiskConfig } from '@/types/design';
 
 interface DiskConfigurationProps {
-  roleId: string;
+  roleId?: string;
+  storageClusterId?: string;
+  storageClusterName?: string;
 }
 
-export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) => {
-  const { 
-    componentTemplates, 
+export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId, storageClusterId, storageClusterName }) => {
+  const {
+    componentTemplates,
     selectedDisksByRole,
+    selectedDisksByStorageCluster,
     addDiskToStorageNode,
     removeDiskFromStorageNode,
+    addDiskToStorageCluster,
+    removeDiskFromStorageCluster,
     componentRoles,
   } = useDesignStore();
   
@@ -30,8 +35,10 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
       (c): c is DiskComponent => c.type === ComponentType.Disk
     ), [componentTemplates]);
   
-  // Get currently selected disks for this role
-  const selectedDisks: DiskConfig[] = selectedDisksByRole[roleId] || [];
+  // Get currently selected disks for this role or storage cluster
+  const selectedDisks: DiskConfig[] = storageClusterId
+    ? (selectedDisksByStorageCluster[storageClusterId] || [])
+    : (selectedDisksByRole[roleId!] || []);
   
 
   // Local state for new disk form
@@ -41,8 +48,13 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
   // Add a new disk to the configuration
   const handleAddDisk = () => {
     if (selectedDiskId && quantity > 0) {
-      console.log('[DiskConfiguration] Adding disk:', { roleId, selectedDiskId, quantity });
-      addDiskToStorageNode(roleId, selectedDiskId, quantity);
+      if (storageClusterId) {
+        console.log('[DiskConfiguration] Adding disk to storage cluster:', { storageClusterId, selectedDiskId, quantity });
+        addDiskToStorageCluster(storageClusterId, selectedDiskId, quantity);
+      } else if (roleId) {
+        console.log('[DiskConfiguration] Adding disk to role:', { roleId, selectedDiskId, quantity });
+        addDiskToStorageNode(roleId, selectedDiskId, quantity);
+      }
       setSelectedDiskId('');
       setQuantity(1);
     }
@@ -50,7 +62,11 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
   
   // Remove a disk from the configuration
   const handleRemoveDisk = (diskId: string) => {
-    removeDiskFromStorageNode(roleId, diskId);
+    if (storageClusterId) {
+      removeDiskFromStorageCluster(storageClusterId, diskId);
+    } else if (roleId) {
+      removeDiskFromStorageNode(roleId, diskId);
+    }
   };
 
   // Find disk component by ID
@@ -58,16 +74,21 @@ export const DiskConfiguration: React.FC<DiskConfigurationProps> = ({ roleId }) 
     return availableDisks.find(disk => disk.id === id);
   };
   
-  // Check if this is a hyper-converged node
-  const role = componentRoles.find(r => r.id === roleId);
-  const isHyperConverged = role?.role === 'hyperConvergedNode';
+  // Check if this is a hyper-converged node or storage cluster config
+  const role = roleId ? componentRoles.find(r => r.id === roleId) : null;
+  const isHyperConverged = role?.role === 'hyperConvergedNode' || !!storageClusterId;
   
   return (
     <Card className="mt-4">
       <CardHeader>
         <CardTitle className="text-base">
           Storage Configuration
-          {isHyperConverged && (
+          {storageClusterName && (
+            <span className="text-xs font-normal text-muted-foreground ml-2">
+              ({storageClusterName})
+            </span>
+          )}
+          {isHyperConverged && !storageClusterName && (
             <span className="text-xs font-normal text-muted-foreground ml-2">
               (Hyper-Converged)
             </span>

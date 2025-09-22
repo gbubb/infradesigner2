@@ -152,13 +152,55 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
     } as ComponentRole);
   });
   
-  // Add storage cluster nodes (skip hyper-converged ones)
+  // Storage Pools - Create roles for storage pools
+  const storagePools = requirements.storageRequirements?.storagePools || [];
+  const poolsWithClusters = new Set<string>();
+
+  // Find pools that have storage clusters targeting them
+  storageClusters.forEach((cluster) => {
+    if (cluster.storagePoolId) {
+      poolsWithClusters.add(cluster.storagePoolId);
+    }
+  });
+
+  // Create storage node roles for pools
+  storagePools.forEach((pool, index) => {
+    // Skip pools without any clusters targeting them
+    if (!poolsWithClusters.has(pool.id)) {
+      return;
+    }
+
+    // Skip hyper-converged pools (they use compute cluster nodes)
+    if (pool.type === 'hyperConverged' && pool.computeClusterId) {
+      return;
+    }
+
+    newRoles.push({
+      id: pool.id,
+      role: 'storageNode',
+      description: `Shared storage pool: ${pool.name}`,
+      requiredCount: pool.availabilityZoneQuantity || 3,
+      clusterInfo: {
+        clusterId: pool.id,
+        clusterName: pool.name,
+        clusterIndex: index,
+        isStoragePool: true,
+      }
+    } as ComponentRole);
+  });
+
+  // Add storage cluster nodes (skip hyper-converged ones and those using pools)
   storageClusters.forEach((cluster, index) => {
     // Skip hyper-converged storage clusters as they're handled by compute clusters
     if (cluster.hyperConverged && cluster.computeClusterId) {
       return;
     }
-    
+
+    // Skip if this cluster uses a storage pool
+    if (cluster.storagePoolId) {
+      return;
+    }
+
     newRoles.push({
       id: cluster.id || uuidv4(),
       role: 'storageNode',

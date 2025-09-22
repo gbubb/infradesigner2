@@ -47,13 +47,24 @@ export const useStorageClusters = () => {
           const disks = node.attachedDisks || [];
           let totalDisksInNode = 0;
           let diskCostForNode = 0;
-          
+
           disks.forEach((disk) => {
             if (disk && 'capacityTB' in disk) {
-              const diskQuantity = disk.quantity || 1;
-              totalRawCapacityTB += disk.capacityTB * diskQuantity * quantity;
-              totalDisksInNode += diskQuantity;
-              diskCostForNode += disk.cost * diskQuantity * quantity;
+              // For hyper-converged clusters, only count disks tagged for this storage cluster
+              if (cluster.hyperConverged) {
+                if ('storageClusterId' in disk && disk.storageClusterId === cluster.id) {
+                  const diskQuantity = disk.quantity || 1;
+                  totalRawCapacityTB += disk.capacityTB * diskQuantity * quantity;
+                  totalDisksInNode += diskQuantity;
+                  diskCostForNode += disk.cost * diskQuantity * quantity;
+                }
+              } else {
+                // For conventional storage nodes, count all disks
+                const diskQuantity = disk.quantity || 1;
+                totalRawCapacityTB += disk.capacityTB * diskQuantity * quantity;
+                totalDisksInNode += diskQuantity;
+                diskCostForNode += disk.cost * diskQuantity * quantity;
+              }
             }
           });
           
