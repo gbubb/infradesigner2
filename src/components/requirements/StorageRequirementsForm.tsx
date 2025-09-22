@@ -55,7 +55,7 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
     });
   };
 
-  const handlePoolUpdate = (id: string, field: string, value: any) => {
+  const handlePoolUpdate = (id: string, field: string, value: string | number | undefined) => {
     onUpdate({
       ...requirements,
       storagePools: storagePools.map((pool) =>
@@ -352,7 +352,7 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
                     } else if (value === 'pool') {
                       handleClusterUpdate(cluster.id, 'hyperConverged', false);
                       handleClusterUpdate(cluster.id, 'computeClusterId', undefined);
-                      // Will select pool below
+                      handleClusterUpdate(cluster.id, 'storagePoolId', ''); // Set empty string to show pool selector
                     }
                   }}
                 >
@@ -367,14 +367,22 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
                 </Select>
               </div>
 
-              {cluster.storagePoolId !== undefined && (
+              {(cluster.storagePoolId !== undefined && cluster.storagePoolId !== null) && (
                 <div className="space-y-2">
                   <Label>Storage Pool</Label>
                   <Select
                     value={cluster.storagePoolId || ''}
-                    onValueChange={(value) =>
-                      handleClusterUpdate(cluster.id, 'storagePoolId', value)
-                    }
+                    onValueChange={(value) => {
+                      handleClusterUpdate(cluster.id, 'storagePoolId', value || undefined);
+                      // If a hyper-converged pool is selected, update the cluster accordingly
+                      if (value) {
+                        const selectedPool = storagePools.find(p => p.id === value);
+                        if (selectedPool?.type === 'hyperConverged') {
+                          handleClusterUpdate(cluster.id, 'hyperConverged', true);
+                          handleClusterUpdate(cluster.id, 'computeClusterId', selectedPool.computeClusterId);
+                        }
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select storage pool" />
