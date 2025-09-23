@@ -97,58 +97,95 @@ export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
         } else if (role.role === 'hyperConvergedNode') {
           // For hyper-converged nodes, calculate based on BOTH compute and storage requirements
           const computeResult = calculateComputeNodeQuantity(role, component, cluster, totalAvailabilityZones);
-          
-          // Find the associated storage cluster
+
+          // Find ALL associated storage clusters
           const storageClusters = requirements.storageRequirements?.storageClusters || [];
-          const storageCluster = storageClusters.find(sc => 
+          const associatedStorageClusters = storageClusters.filter(sc =>
             sc.hyperConverged && sc.computeClusterId === cluster.id
           );
-          
-          if (storageCluster) {
-            // Calculate storage capacity per node based on disk configuration
-            let storageNodeCapacityTiB = 0;
-            
-            // First check for manually selected disks in the Design tab
-            const manualCapacity = calculateStorageNodeCapacity(
-              roleId, 
-              selectedDisksByRole, 
-              componentTemplates
-            );
-            
-            if (manualCapacity > 0) {
-              // Use manually configured disks
-              storageNodeCapacityTiB = manualCapacity;
+
+          if (associatedStorageClusters.length > 0) {
+            // Calculate storage requirements for each storage cluster
+            const storageResults = [];
+            let maxStorageRequirement = 0;
+
+            for (const storageCluster of associatedStorageClusters) {
+              // Check if there are disks configured specifically for this storage cluster
+              const storageClusterDisks = state.selectedDisksByStorageCluster?.[storageCluster.id];
+              let storageNodeCapacityTiB = 0;
+
+              if (storageClusterDisks && storageClusterDisks.length > 0) {
+                // Calculate capacity based on storage-cluster-specific disks
+                storageClusterDisks.forEach(diskConfig => {
+                  const disk = componentTemplates.find(c => c.id === diskConfig.diskId);
+                  if (disk && disk.type === 'Disk' && 'capacityTB' in disk) {
+                    const diskCapacityTiB = disk.capacityTB * 0.9095 * diskConfig.quantity;
+                    storageNodeCapacityTiB += diskCapacityTiB;
+                  }
+                });
+              } else {
+                // Fall back to role-based disk configuration
+                storageNodeCapacityTiB = calculateStorageNodeCapacity(
+                  roleId,
+                  selectedDisksByRole,
+                  componentTemplates
+                );
+              }
+
+              if (storageNodeCapacityTiB > 0) {
+                const storageResult = calculateStorageNodeQuantity(role, storageCluster, roleId, storageNodeCapacityTiB);
+                storageResults.push({
+                  clusterName: storageCluster.name,
+                  requiredNodes: storageResult.requiredQuantity,
+                  steps: storageResult.calculationSteps
+                });
+                maxStorageRequirement = Math.max(maxStorageRequirement, storageResult.requiredQuantity);
+              }
             }
-            
-            if (storageNodeCapacityTiB > 0) {
-              const storageResult = calculateStorageNodeQuantity(role, storageCluster, roleId, storageNodeCapacityTiB);
-              
-              // Use the maximum of compute-based or storage-based node count
-              if (storageResult.requiredQuantity > computeResult.requiredQuantity) {
-                requiredQuantity = storageResult.requiredQuantity;
+
+            // Use the maximum of compute-based or storage-based node count
+            if (maxStorageRequirement > 0) {
+              if (maxStorageRequirement > computeResult.requiredQuantity) {
+                requiredQuantity = maxStorageRequirement;
                 calculationSteps = [
                   `Hyper-Converged Node Calculation:`,
                   `Compute-based requirement: ${computeResult.requiredQuantity} nodes`,
-                  `Storage-based requirement: ${storageResult.requiredQuantity} nodes`,
-                  `Using maximum: ${requiredQuantity} nodes`,
-                  ``,
-                  `Compute calculation details:`,
-                  ...computeResult.calculationSteps,
-                  ``,
-                  `Storage calculation details:`,
-                  ...storageResult.calculationSteps
+                  `Storage-based requirements:`
                 ];
+
+                storageResults.forEach(sr => {
+                  calculationSteps.push(`  - ${sr.clusterName}: ${sr.requiredNodes} nodes`);
+                });
+
+                calculationSteps.push(`Using maximum requirement: ${requiredQuantity} nodes`);
+                calculationSteps.push(``);
+                calculationSteps.push(`Compute calculation details:`);
+                calculationSteps.push(...computeResult.calculationSteps);
+
+                if (storageResults.length > 0) {
+                  calculationSteps.push(``);
+                  calculationSteps.push(`Storage calculation details:`);
+                  storageResults.forEach(sr => {
+                    calculationSteps.push(`${sr.clusterName}:`);
+                    calculationSteps.push(...sr.steps.map(s => `  ${s}`));
+                  });
+                }
               } else {
                 requiredQuantity = computeResult.requiredQuantity;
                 calculationSteps = [
                   `Hyper-Converged Node Calculation:`,
                   `Compute-based requirement: ${computeResult.requiredQuantity} nodes`,
-                  `Storage-based requirement: ${storageResult.requiredQuantity} nodes`,
-                  `Using maximum: ${requiredQuantity} nodes`,
-                  ``,
-                  `Compute calculation details:`,
-                  ...computeResult.calculationSteps
+                  `Storage-based requirements:`
                 ];
+
+                storageResults.forEach(sr => {
+                  calculationSteps.push(`  - ${sr.clusterName}: ${sr.requiredNodes} nodes`);
+                });
+
+                calculationSteps.push(`Using compute requirement: ${requiredQuantity} nodes (sufficient for storage)`);
+                calculationSteps.push(``);
+                calculationSteps.push(`Compute calculation details:`);
+                calculationSteps.push(...computeResult.calculationSteps);
               }
             } else {
               // No storage capacity configured, use compute calculation only

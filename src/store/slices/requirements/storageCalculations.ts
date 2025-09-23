@@ -74,13 +74,21 @@ export const calculateStorageNodeQuantity: CalculateStorageNodeQuantityFn = (
     
     const requiredNodeCount = Math.ceil(totalRequiredCapacityTiB / effectiveCapacityPerNodeTiB);
     calculationSteps.push(`Minimum Nodes Needed: ${totalRequiredCapacityTiB.toFixed(2)} TiB ÷ ${effectiveCapacityPerNodeTiB.toFixed(2)} TiB = ${requiredNodeCount} nodes`);
-    
-    requiredQuantity = Math.max(requiredNodeCount, availabilityZoneQuantity);
-    
-    if (requiredQuantity > requiredNodeCount) {
+
+    // Ensure we meet minimum AZ requirement and maintain even distribution
+    const minNodesForAZs = availabilityZoneQuantity;
+    const baseRequirement = Math.max(requiredNodeCount, minNodesForAZs);
+
+    // Calculate nodes per AZ to ensure even distribution
+    const nodesPerAZ = Math.ceil(baseRequirement / availabilityZoneQuantity);
+    requiredQuantity = nodesPerAZ * availabilityZoneQuantity;
+
+    if (requiredQuantity > baseRequirement) {
+      calculationSteps.push(`Adjusting for AZ distribution: ${nodesPerAZ} nodes per AZ × ${availabilityZoneQuantity} AZs = ${requiredQuantity} nodes`);
+    } else if (requiredQuantity > requiredNodeCount) {
       calculationSteps.push(`Final Node Count: ${requiredQuantity} (increased from ${requiredNodeCount} to ensure minimum of ${availabilityZoneQuantity} nodes for AZ distribution)`);
     } else {
-      calculationSteps.push(`Final Node Count: ${requiredQuantity} nodes`);
+      calculationSteps.push(`Final Node Count: ${requiredQuantity} nodes (${nodesPerAZ} per AZ across ${availabilityZoneQuantity} AZs)`);
     }
     
     // Add a note about actual capacity

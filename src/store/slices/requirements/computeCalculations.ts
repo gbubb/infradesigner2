@@ -121,47 +121,65 @@ export const calculateComputeNodeQuantity: CalculateComputeNodeQuantityFn = (
   // Distribution across AZs
   let nodesPerAZ = Math.ceil(totalNodesNeeded / totalAvailabilityZones);
   nodesPerAZ = Math.max(1, nodesPerAZ);
-  
+
   calculationSteps.push(`Number of availability zones: ${totalAvailabilityZones}`);
   calculationSteps.push(`Minimum nodes per AZ: ${totalNodesNeeded} ÷ ${totalAvailabilityZones} = ${nodesPerAZ} nodes per AZ (rounded up)`);
-  
+
   const baseNodeCount = nodesPerAZ * totalAvailabilityZones;
-  
+
   // If we rounded up for the AZ calculation, we might have more nodes than originally needed
   if (baseNodeCount > totalNodesNeeded) {
     calculationSteps.push(`To ensure even distribution, adjusting to ${nodesPerAZ} nodes per AZ × ${totalAvailabilityZones} AZs = ${baseNodeCount} total nodes`);
   } else {
     calculationSteps.push(`Base node count: ${nodesPerAZ} × ${totalAvailabilityZones} = ${baseNodeCount} nodes`);
   }
-  
-  // Add redundancy
-  let additionalNodesCount = 0;
+
+  // Calculate redundancy and ensure AZ alignment
+  let totalWithRedundancy = baseNodeCount;
+
   if (availabilityZoneRedundancy === 'N+1') {
+    // For N+1, we need to handle failure of 1 AZ worth of nodes
     const redundancyNodesNeeded = nodesPerAZ;
-    additionalNodesCount = Math.ceil(redundancyNodesNeeded / totalAvailabilityZones) * totalAvailabilityZones;
+    const additionalPerAZ = Math.ceil(redundancyNodesNeeded / totalAvailabilityZones);
+    const finalPerAZ = nodesPerAZ + additionalPerAZ;
+    totalWithRedundancy = finalPerAZ * totalAvailabilityZones;
+
     calculationSteps.push(`N+1 redundancy: Need ${redundancyNodesNeeded} more nodes to handle 1 AZ failure`);
-    calculationSteps.push(`For even distribution: ${additionalNodesCount} additional nodes (${Math.ceil(redundancyNodesNeeded / totalAvailabilityZones)} extra nodes per AZ)`);
+    calculationSteps.push(`Adding ${additionalPerAZ} extra node(s) per AZ for redundancy`);
+    calculationSteps.push(`Final distribution: ${finalPerAZ} nodes per AZ × ${totalAvailabilityZones} AZs = ${totalWithRedundancy} total nodes`);
   } else if (availabilityZoneRedundancy === 'N+2') {
+    // For N+2, we need to handle failure of 2 AZ worth of nodes
     const redundancyNodesNeeded = nodesPerAZ * 2;
-    additionalNodesCount = Math.ceil(redundancyNodesNeeded / totalAvailabilityZones) * totalAvailabilityZones;
+    const additionalPerAZ = Math.ceil(redundancyNodesNeeded / totalAvailabilityZones);
+    const finalPerAZ = nodesPerAZ + additionalPerAZ;
+    totalWithRedundancy = finalPerAZ * totalAvailabilityZones;
+
     calculationSteps.push(`N+2 redundancy: Need ${redundancyNodesNeeded} more nodes to handle 2 AZ failures`);
-    calculationSteps.push(`For even distribution: ${additionalNodesCount} additional nodes (${Math.ceil(redundancyNodesNeeded / totalAvailabilityZones)} extra nodes per AZ)`);
+    calculationSteps.push(`Adding ${additionalPerAZ} extra node(s) per AZ for redundancy`);
+    calculationSteps.push(`Final distribution: ${finalPerAZ} nodes per AZ × ${totalAvailabilityZones} AZs = ${totalWithRedundancy} total nodes`);
   } else if (availabilityZoneRedundancy === '1 Node') {
-    // Node-level redundancy: Add 1 extra node to survive single node failure
-    additionalNodesCount = 1;
-    calculationSteps.push(`1 Node redundancy: Adding 1 extra node to survive single node failure`);
-    calculationSteps.push(`With ${baseNodeCount + 1} nodes, the cluster can maintain ${baseNodeCount} working nodes if any single node fails`);
+    // Node-level redundancy: Add nodes to ensure even distribution
+    // Add minimum nodes needed to maintain AZ balance (1 per AZ minimum)
+    const finalPerAZ = nodesPerAZ + 1;
+    totalWithRedundancy = finalPerAZ * totalAvailabilityZones;
+
+    calculationSteps.push(`1 Node redundancy: Adding 1 extra node per AZ for node-level redundancy`);
+    calculationSteps.push(`Final distribution: ${finalPerAZ} nodes per AZ × ${totalAvailabilityZones} AZs = ${totalWithRedundancy} total nodes`);
+    calculationSteps.push(`With ${totalWithRedundancy} nodes, the cluster can maintain operation if any single node fails`);
   } else if (availabilityZoneRedundancy === '2 Nodes') {
-    // Node-level redundancy: Add 2 extra nodes to survive dual node failure
-    additionalNodesCount = 2;
-    calculationSteps.push(`2 Nodes redundancy: Adding 2 extra nodes to survive dual node failure`);
-    calculationSteps.push(`With ${baseNodeCount + 2} nodes, the cluster can maintain ${baseNodeCount} working nodes if any two nodes fail`);
+    // Node-level redundancy: Add 2 nodes distributed across AZs
+    const additionalPerAZ = Math.ceil(2 / totalAvailabilityZones);
+    const finalPerAZ = nodesPerAZ + additionalPerAZ;
+    totalWithRedundancy = finalPerAZ * totalAvailabilityZones;
+
+    calculationSteps.push(`2 Nodes redundancy: Adding ${additionalPerAZ} extra node(s) per AZ for dual node redundancy`);
+    calculationSteps.push(`Final distribution: ${finalPerAZ} nodes per AZ × ${totalAvailabilityZones} AZs = ${totalWithRedundancy} total nodes`);
+    calculationSteps.push(`With ${totalWithRedundancy} nodes, the cluster can maintain operation if any two nodes fail`);
   } else {
-    calculationSteps.push(`No redundancy configured: Adding 0 additional nodes`);
+    calculationSteps.push(`No redundancy configured: ${nodesPerAZ} nodes per AZ × ${totalAvailabilityZones} AZs = ${totalWithRedundancy} total nodes`);
   }
-  
-  const requiredQuantity = baseNodeCount + additionalNodesCount;
-  calculationSteps.push(`Final node count: ${baseNodeCount} base nodes + ${additionalNodesCount} redundancy nodes = ${requiredQuantity} total nodes`);
+
+  const requiredQuantity = totalWithRedundancy;
   
   // Add a summary for GPU nodes if applicable
   if (role.role === 'gpuNode') {
