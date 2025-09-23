@@ -96,6 +96,15 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
     });
   };
 
+  const handleClusterBatchUpdate = (id, updates) => {
+    onUpdate({
+      ...requirements,
+      storageClusters: requirements.storageClusters.map((cluster) =>
+        cluster.id === id ? { ...cluster, ...updates } : cluster
+      ),
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -337,22 +346,29 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
                 <Label>Storage Type</Label>
                 <Select
                   value={
-                    cluster.storagePoolId ? 'pool' :
+                    (cluster.storagePoolId !== undefined && cluster.storagePoolId !== null) ? 'pool' :
                     cluster.hyperConverged ? 'hyperConverged' :
                     'dedicated'
                   }
                   onValueChange={(value) => {
                     if (value === 'dedicated') {
-                      handleClusterUpdate(cluster.id, 'hyperConverged', false);
-                      handleClusterUpdate(cluster.id, 'computeClusterId', undefined);
-                      handleClusterUpdate(cluster.id, 'storagePoolId', undefined);
+                      handleClusterBatchUpdate(cluster.id, {
+                        hyperConverged: false,
+                        computeClusterId: undefined,
+                        storagePoolId: undefined
+                      });
                     } else if (value === 'hyperConverged') {
-                      handleClusterUpdate(cluster.id, 'hyperConverged', true);
-                      handleClusterUpdate(cluster.id, 'storagePoolId', undefined);
+                      handleClusterBatchUpdate(cluster.id, {
+                        hyperConverged: true,
+                        storagePoolId: undefined,
+                        computeClusterId: undefined // Clear this initially, user will select it
+                      });
                     } else if (value === 'pool') {
-                      handleClusterUpdate(cluster.id, 'hyperConverged', false);
-                      handleClusterUpdate(cluster.id, 'computeClusterId', undefined);
-                      handleClusterUpdate(cluster.id, 'storagePoolId', ''); // Set empty string to show pool selector
+                      handleClusterBatchUpdate(cluster.id, {
+                        hyperConverged: false,
+                        computeClusterId: undefined,
+                        storagePoolId: '' // Set empty string to show pool selector
+                      });
                     }
                   }}
                 >
@@ -373,14 +389,28 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
                   <Select
                     value={cluster.storagePoolId || ''}
                     onValueChange={(value) => {
-                      handleClusterUpdate(cluster.id, 'storagePoolId', value || undefined);
-                      // If a hyper-converged pool is selected, update the cluster accordingly
                       if (value) {
+                        // A pool was selected
                         const selectedPool = storagePools.find(p => p.id === value);
                         if (selectedPool?.type === 'hyperConverged') {
-                          handleClusterUpdate(cluster.id, 'hyperConverged', true);
-                          handleClusterUpdate(cluster.id, 'computeClusterId', selectedPool.computeClusterId);
+                          // For hyper-converged pools, set the pool and computeClusterId
+                          handleClusterBatchUpdate(cluster.id, {
+                            storagePoolId: value,
+                            computeClusterId: selectedPool.computeClusterId
+                          });
+                        } else {
+                          // For dedicated pools, just set the pool
+                          handleClusterBatchUpdate(cluster.id, {
+                            storagePoolId: value,
+                            computeClusterId: undefined
+                          });
                         }
+                      } else {
+                        // Clear selection (shouldn't happen, but handle it)
+                        handleClusterBatchUpdate(cluster.id, {
+                          storagePoolId: undefined,
+                          computeClusterId: undefined
+                        });
                       }
                     }}
                   >
