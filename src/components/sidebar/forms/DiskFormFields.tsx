@@ -29,8 +29,9 @@ export const DiskFormFields: React.FC<DiskFormFieldsProps> = ({
             type="number"
             value={(formValues.capacityTB as number) || 0}
             onChange={onInputChange}
-            placeholder="e.g. 8"
+            placeholder="e.g. 15.3"
             min={0}
+            step={0.1}
           />
         </div>
         

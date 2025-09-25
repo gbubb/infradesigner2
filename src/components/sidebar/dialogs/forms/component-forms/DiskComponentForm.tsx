@@ -35,8 +35,9 @@ export const DiskComponentForm: React.FC<DiskComponentFormProps> = ({
                 <Input
                   {...field}
                   type="number"
-                  placeholder="e.g. 8"
+                  placeholder="e.g. 15.3"
                   min={0}
+                  step={0.1}
                   value={field.value || 0}
                   onChange={(e) => {
                     field.onChange(Number(e.target.value));
