@@ -24,6 +24,7 @@ interface CostPerTiBBreakdownProps {
   totalCpuCores?: number;
   storageCpuCores?: number;
   cpuCoresPerDisk?: number;
+  lifespanYears?: number;
   costBreakdown?: {
     nodes: Array<{
       name: string;
@@ -54,10 +55,14 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
   totalCpuCores,
   storageCpuCores,
   cpuCoresPerDisk,
+  lifespanYears = 3,
   costBreakdown
 }) => {
   // Get pool efficiency factor from constants
-  const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || 1/3;
+  // Use the actual efficiency that was used in calculations
+  const poolEfficiencyFactor = usableCapacityTB > 0 && totalRawCapacityTB > 0
+    ? usableCapacityTB / totalRawCapacityTB
+    : (StoragePoolEfficiencyFactors[poolType] || 1/3);
   const poolEfficiencyPercentage = (poolEfficiencyFactor * 100).toFixed(1);
   const costBasis = isHyperConverged && totalStorageCost ? totalStorageCost : totalNodeCost;
 
@@ -145,16 +150,16 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
             <div className="text-xs space-y-1">
               <div className="font-medium">2. Usable Capacity Calculation</div>
               <div className="pl-3 text-muted-foreground">
-                Pool Type: {poolType}
+                Storage Pool Type: {poolType}
               </div>
               <div className="pl-3 text-muted-foreground">
-                Pool Efficiency: {poolEfficiencyPercentage}%
+                Storage Efficiency: {poolEfficiencyPercentage}%
               </div>
               <div className="pl-3 text-muted-foreground">
-                Usable Capacity (TB): {totalRawCapacityTB.toFixed(2)} × {poolEfficiencyFactor.toFixed(3)} = {usableCapacityTB.toFixed(2)} TB
+                Calculation: {totalRawCapacityTB.toFixed(2)} TB (raw) × {poolEfficiencyPercentage}% = {usableCapacityTB.toFixed(2)} TB
               </div>
               <div className="pl-3 text-muted-foreground">
-                Usable Capacity (TiB): {usableCapacityTB.toFixed(2)} × {TB_TO_TIB_FACTOR} = {usableCapacityTiB.toFixed(2)} TiB
+                TB to TiB Conversion: {usableCapacityTB.toFixed(2)} TB × {TB_TO_TIB_FACTOR} = {usableCapacityTiB.toFixed(2)} TiB
               </div>
             </div>
 
@@ -244,15 +249,21 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
             <Separator className="my-2" />
 
             <div className="text-xs space-y-1">
-              <div className="font-medium">4. Cost per TiB</div>
+              <div className="font-medium">4. Monthly Cost per TiB Calculation</div>
               <div className="pl-3 text-muted-foreground">
-                Formula: Cost Basis ÷ Usable Capacity (TiB)
+                Device Lifespan: {lifespanYears} years ({lifespanYears * 12} months)
               </div>
               <div className="pl-3 text-muted-foreground">
-                Calculation: ${costBasis.toLocaleString()} ÷ {usableCapacityTiB.toFixed(2)} TiB
+                Capital Cost: ${costBasis.toLocaleString()}
+              </div>
+              <div className="pl-3 text-muted-foreground">
+                Monthly Amortization: ${costBasis.toLocaleString()} ÷ {lifespanYears * 12} months = ${(costBasis / (lifespanYears * 12)).toLocaleString(undefined, { maximumFractionDigits: 2 })}/month
+              </div>
+              <div className="pl-3 text-muted-foreground">
+                Cost per TiB: ${(costBasis / (lifespanYears * 12)).toLocaleString(undefined, { maximumFractionDigits: 2 })}/month ÷ {usableCapacityTiB.toFixed(2)} TiB
               </div>
               <div className="pl-3 font-medium text-primary">
-                Result: ${costPerTiB.toLocaleString(undefined, { maximumFractionDigits: 2 })} per TiB
+                Final Monthly Cost per TiB: ${costPerTiB.toLocaleString(undefined, { maximumFractionDigits: 2 })}/TiB
               </div>
             </div>
           </Card>

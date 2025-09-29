@@ -167,7 +167,7 @@ export const DesignStatisticsTab: React.FC = () => {
       
       <ComputeClustersTable clusters={computeClustersMetrics} />
       
-      <StorageClustersTable clusters={storageClustersMetrics} />
+      <StorageClustersTable clusters={storageClustersMetrics} lifespanYears={storageLifespanYears} />
       
       <InfrastructureSummaryCard
         totalServers={resourceMetrics.totalServers}

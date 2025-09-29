@@ -39,9 +39,10 @@ interface StorageClusterMetric {
 
 interface StorageClustersTableProps {
   clusters: StorageClusterMetric[];
+  lifespanYears?: number;
 }
 
-export const StorageClustersTable: React.FC<StorageClustersTableProps> = ({ clusters }) => {
+export const StorageClustersTable: React.FC<StorageClustersTableProps> = ({ clusters, lifespanYears = 3 }) => {
   if (clusters.length === 0) {
     return null;
   }
@@ -90,6 +91,7 @@ export const StorageClustersTable: React.FC<StorageClustersTableProps> = ({ clus
                     totalCpuCores={cluster.totalCpuCores}
                     storageCpuCores={cluster.storageCpuCores}
                     cpuCoresPerDisk={cluster.cpuCoresPerDisk}
+                    lifespanYears={lifespanYears}
                     costBreakdown={cluster.costBreakdown}
                   />
                 </TableCell>
