@@ -42,6 +42,12 @@ interface AverageVMCostBreakdownProps {
   redundantVCPUs?: number;
   redundantMemoryGB?: number;
   redundantNodes?: number;
+  // Cluster breakdown for weighted average calculation
+  clusterBreakdown?: Array<{
+    name: string;
+    maxVMs: number;
+    costPerVM: number;
+  }>;
 }
 
 export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
@@ -60,7 +66,8 @@ export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
   totalAvailabilityZones = 8,
   redundantVCPUs = 0,
   redundantMemoryGB = 0,
-  redundantNodes = 0
+  redundantNodes = 0,
+  clusterBreakdown
 }) => {
   const [open, setOpen] = React.useState(false);
 
@@ -78,8 +85,38 @@ export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
   const actualRedundantVCPUs = redundantVCPUs || (totalVCPUs - actualUsableVCPUs);
   const actualRedundantMemoryGB = redundantMemoryGB || (totalMemoryGB - actualUsableMemoryGB);
   const actualRedundantNodes = redundantNodes || calculateRedundantNodes(redundancyConfig, totalComputeNodes, totalAvailabilityZones);
-  
-  const calculationSteps = [
+
+  // Check if we have cluster breakdown data
+  const hasClusterBreakdown = clusterBreakdown && clusterBreakdown.length > 0;
+
+  const calculationSteps = hasClusterBreakdown ? [
+    `Weighted Average Calculation:`,
+    `This cost is calculated as a weighted average across all compute clusters.`,
+    ``,
+    ...clusterBreakdown.flatMap((cluster, index) => [
+      `Cluster ${index + 1}: ${cluster.name}`,
+      `- Maximum VMs: ${cluster.maxVMs.toLocaleString()} VMs`,
+      `- Cost per VM: $${cluster.costPerVM.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      `- Total Cost: $${(cluster.maxVMs * cluster.costPerVM).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      ``
+    ]),
+    `Total VMs Across All Clusters: ${clusterBreakdown.reduce((sum, c) => sum + c.maxVMs, 0).toLocaleString()} VMs`,
+    ``,
+    `Weighted Average Formula:`,
+    `(Cluster1_Cost × Cluster1_VMs + Cluster2_Cost × Cluster2_VMs + ...) / Total_VMs`,
+    ``,
+    `= ($${clusterBreakdown.map(c =>
+      `${c.maxVMs.toLocaleString()} × ${c.costPerVM.toFixed(2)}`
+    ).join(' + $')}) / ${clusterBreakdown.reduce((sum, c) => sum + c.maxVMs, 0).toLocaleString()}`,
+    ``,
+    `= $${clusterBreakdown.reduce((sum, c) => sum + (c.maxVMs * c.costPerVM), 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} / ${clusterBreakdown.reduce((sum, c) => sum + c.maxVMs, 0).toLocaleString()}`,
+    ``,
+    `= $${monthlyCostPerAverageVM.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per VM/month`,
+    ``,
+    `Note: This weighted average ensures consistency with per-cluster calculations.`,
+    `Each cluster may have different costs due to varying configurations, redundancy,`,
+    `and hyper-converged storage overhead.`
+  ] : [
     `Cluster Configuration:`,
     totalComputeNodes > 0 ?
       `- Total Compute Nodes: ${totalComputeNodes} nodes` :
@@ -153,23 +190,56 @@ export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
           </DialogHeader>
           
           <div className="space-y-3">
-            <Card className="p-3 bg-slate-50 max-h-[300px] overflow-y-auto">
-              <ol className="list-decimal list-inside space-y-1.5">
-                {calculationSteps.map((step, index) => (
-                  <li key={index} className="text-xs">
-                    {step}
-                  </li>
-                ))}
-              </ol>
+            <Card className="p-3 bg-slate-50 max-h-[400px] overflow-y-auto">
+              <div className="font-mono text-xs space-y-1.5">
+                {calculationSteps.map((step, index) => {
+                  // Empty lines for spacing
+                  if (step === '') {
+                    return <div key={index} className="h-1" />;
+                  }
+
+                  // Check if line starts with "Cluster" or is a section header
+                  const isHeader = step.startsWith('Cluster ') ||
+                                   step.endsWith('Calculation:') ||
+                                   step.includes('Formula:');
+                  const isIndented = step.startsWith('  ') || step.startsWith('- ');
+                  const isNote = step.startsWith('Note:');
+
+                  return (
+                    <div
+                      key={index}
+                      className={`${
+                        isHeader ? 'font-bold text-sm text-blue-700 mt-2' :
+                        isNote ? 'text-slate-600 italic mt-2' :
+                        isIndented ? 'ml-4 text-slate-600' :
+                        'text-slate-900'
+                      }`}
+                    >
+                      {step}
+                    </div>
+                  );
+                })}
+              </div>
             </Card>
 
             <div className="text-xs text-muted-foreground">
               <p className="font-semibold mb-1">Methodology:</p>
               <p>
-                This calculation determines the average cost to run a single VM based on the total
-                infrastructure operational costs (compute hardware amortization, facility costs, energy)
-                divided by the maximum number of VMs that can be supported. Storage costs are excluded
-                as they scale with capacity usage rather than VM count.
+                {hasClusterBreakdown ? (
+                  <>
+                    This average is calculated as a weighted average across all compute clusters,
+                    ensuring consistency with per-cluster calculations. Each cluster's cost contribution
+                    is proportional to its VM capacity. Clusters may have different costs due to varying
+                    configurations, redundancy levels, and hyper-converged storage overhead.
+                  </>
+                ) : (
+                  <>
+                    This calculation determines the average cost to run a single VM based on the total
+                    infrastructure operational costs (compute hardware amortization, facility costs, energy)
+                    divided by the maximum number of VMs that can be supported. Storage costs are excluded
+                    as they scale with capacity usage rather than VM count.
+                  </>
+                )}
               </p>
             </div>
           </div>

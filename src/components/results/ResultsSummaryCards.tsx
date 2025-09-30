@@ -46,6 +46,11 @@ interface KeyMetricsProps {
   redundantVCPUs?: number;
   redundantMemoryGB?: number;
   redundantNodes?: number;
+  clusterBreakdown?: Array<{
+    name: string;
+    maxVMs: number;
+    costPerVM: number;
+  }>;
 }
 
 export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
@@ -127,7 +132,8 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
   totalAvailabilityZones,
   redundantVCPUs,
   redundantMemoryGB,
-  redundantNodes
+  redundantNodes,
+  clusterBreakdown
 }) => {
   return (
     <Card>
@@ -164,6 +170,7 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
                 redundantVCPUs={redundantVCPUs}
                 redundantMemoryGB={redundantMemoryGB}
                 redundantNodes={redundantNodes}
+                clusterBreakdown={clusterBreakdown}
               />
             </div>
           </div>

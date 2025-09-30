@@ -220,34 +220,61 @@ export const useDesignCalculations = () => {
   const quantityOfAverageVMs = Math.min(vmsByCPU, vmsByMemory);
 
   // Calculate monthly cost per average VM
-  // Formula: (Total Operational Cost - Storage Amortization) / Quantity of VMs
-  // Storage costs are excluded because they scale with capacity usage, not VM count
-  // This gives the average compute infrastructure cost per VM (hardware, facility, energy)
+  // Now derived as a weighted average from per-cluster costs for consistency
+  // This ensures the global average matches the sum of cluster-specific calculations
   const monthlyCostPerAverageVM = useMemo(() => {
+    // If we have compute cluster metrics, calculate weighted average from them
+    if (computeClusterMetrics && computeClusterMetrics.length > 0) {
+      const totalVMs = computeClusterMetrics.reduce((sum, c) => sum + c.maxAverageVMs, 0);
+
+      if (totalVMs <= 0) {
+        console.log('[useDesignCalculations] No VMs available across clusters');
+        return 0;
+      }
+
+      // Weighted average: sum of (cluster cost × cluster VMs) / total VMs
+      const weightedCostSum = computeClusterMetrics.reduce(
+        (sum, c) => sum + (c.monthlyCostPerVM * c.maxAverageVMs),
+        0
+      );
+
+      const result = weightedCostSum / totalVMs;
+
+      console.log('[useDesignCalculations] Global VM cost (derived from clusters):', {
+        clusterCount: computeClusterMetrics.length,
+        totalVMs,
+        weightedCostSum,
+        monthlyCostPerAverageVM: result,
+        perClusterCosts: computeClusterMetrics.map(c => ({
+          name: c.clusterName,
+          vms: c.maxAverageVMs,
+          costPerVM: c.monthlyCostPerVM,
+          totalCost: c.monthlyCostPerVM * c.maxAverageVMs
+        }))
+      });
+
+      return result;
+    }
+
+    // Fallback: if no cluster metrics available, calculate directly
+    // This maintains backward compatibility but should rarely be used
     if (quantityOfAverageVMs <= 0 || !costAnalysisResult?.operationalCosts) return 0;
 
-    // Calculate monthly operational costs excluding storage amortization
     const operationalCosts = costAnalysisResult.operationalCosts;
     const amortizedCosts = costAnalysisResult.amortizedCostsByType;
-
-    // Total operational cost minus storage amortization = compute-focused operational cost
     const computeOperationalCost = operationalCosts.totalMonthly - (amortizedCosts?.storage || 0);
-
     const result = computeOperationalCost / quantityOfAverageVMs;
 
-    console.log('[useDesignCalculations] Global VM cost calculation:', {
+    console.log('[useDesignCalculations] Global VM cost (fallback calculation):', {
       totalOperationalCost: operationalCosts.totalMonthly,
       storageAmortizedCost: amortizedCosts?.storage || 0,
       computeOperationalCost,
       quantityOfAverageVMs,
-      monthlyCostPerAverageVM: result,
-      usableVCPUs,
-      usableMemoryGB: usableMemoryGB / 1024,
-      redundancyConfig
+      monthlyCostPerAverageVM: result
     });
 
     return result;
-  }, [quantityOfAverageVMs, costAnalysisResult?.operationalCosts, costAnalysisResult?.amortizedCostsByType, usableVCPUs, usableMemoryGB, redundancyConfig]);
+  }, [computeClusterMetrics, quantityOfAverageVMs, costAnalysisResult?.operationalCosts, costAnalysisResult?.amortizedCostsByType]);
 
   // Directly calculate values that don't need to be in state
   const components = useMemo(() => 

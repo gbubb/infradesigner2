@@ -138,6 +138,11 @@ export const DesignStatisticsTab: React.FC = () => {
           redundantVCPUs={redundantVCPUs}
           redundantMemoryGB={redundantMemoryGB}
           redundantNodes={redundantNodes}
+          clusterBreakdown={computeClusterMetrics?.map(c => ({
+            name: c.clusterName,
+            maxVMs: c.maxAverageVMs,
+            costPerVM: c.monthlyCostPerVM
+          }))}
         />
       </div>
 
