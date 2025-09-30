@@ -4,15 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, AlertCircle } from 'lucide-react';
+import { TrendingUp, AlertCircle, Loader2, XCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ComputeClusterMetrics } from '@/hooks/design/useComputeClusterMetrics';
 import {
-  useVMCostScaling,
+  useVMCostScalingAsync,
   getRecommendedScalingRange,
   VMCostScalingConfig
-} from '@/hooks/design/useVMCostScaling';
+} from '@/hooks/design/useVMCostScalingAsync';
 import { VMCostScalingChart } from './VMCostScalingChart';
+import { VMScalingProgress } from './VMScalingProgress';
 
 interface VMCostScalingDialogProps {
   clusterMetrics: ComputeClusterMetrics[];
@@ -66,11 +67,22 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
     };
   }, [selectedClusterId, minNodes, maxNodes, increment]);
 
-  // Get scaling data
-  const scalingData = useVMCostScaling(
-    scalingConfig || { clusterId: '', minNodes: 0, maxNodes: 0, increment: 1 },
-    selectedCluster || {} as ComputeClusterMetrics
-  );
+  // Use async scaling hook
+  const {
+    status,
+    progress,
+    currentNodeCount,
+    results,
+    error: simulationError,
+    estimatedTimeRemaining,
+    startSimulation,
+    cancelSimulation,
+    resetSimulation,
+    isRunning,
+    isCompleted,
+    hasError,
+    canStart
+  } = useVMCostScalingAsync();
 
   // Validation
   const validationErrors = useMemo(() => {
@@ -98,7 +110,24 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
     return errors;
   }, [selectedCluster, minNodes, maxNodes, increment]);
 
-  const canGenerate = validationErrors.length === 0 && scalingData.length > 0;
+  const canGenerate = validationErrors.length === 0 && !!scalingConfig;
+
+  // Handle Generate Analysis button click
+  const handleGenerateAnalysis = () => {
+    if (!scalingConfig || !selectedCluster) return;
+    startSimulation(scalingConfig, selectedCluster);
+  };
+
+  // Handle Retry button click
+  const handleRetry = () => {
+    resetSimulation();
+  };
+
+  // Calculate expected data points
+  const expectedDataPoints = useMemo(() => {
+    if (!scalingConfig) return 0;
+    return Math.floor((scalingConfig.maxNodes - scalingConfig.minNodes) / scalingConfig.increment) + 1;
+  }, [scalingConfig]);
 
   // Reset to recommended values
   const handleResetToRecommended = () => {
@@ -133,7 +162,7 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
             <div className="space-y-4">
               <div>
                 <Label htmlFor="cluster-select">Compute Cluster</Label>
-                <Select value={selectedClusterId} onValueChange={handleClusterChange}>
+                <Select value={selectedClusterId} onValueChange={handleClusterChange} disabled={isRunning}>
                   <SelectTrigger id="cluster-select">
                     <SelectValue placeholder="Select cluster" />
                   </SelectTrigger>
@@ -161,6 +190,7 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
                   min={selectedCluster?.redundantNodes || 1}
                   value={minNodes}
                   onChange={(e) => setMinNodes(parseInt(e.target.value) || 0)}
+                  disabled={isRunning}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Must maintain redundancy requirements
@@ -177,6 +207,7 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
                   min={minNodes + 1}
                   value={maxNodes}
                   onChange={(e) => setMaxNodes(parseInt(e.target.value) || 0)}
+                  disabled={isRunning}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Upper bound for analysis
@@ -192,6 +223,7 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
                   max={20}
                   value={increment}
                   onChange={(e) => setIncrement(parseInt(e.target.value) || 1)}
+                  disabled={isRunning}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Larger increments = faster generation, fewer data points
@@ -200,17 +232,48 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
             </div>
 
             <div className="col-span-full flex items-center justify-between">
-              <Button variant="ghost" size="sm" onClick={handleResetToRecommended}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetToRecommended}
+                disabled={isRunning}
+              >
                 Reset to Recommended
               </Button>
-              <p className="text-sm text-muted-foreground">
-                {scalingData.length > 0 ? `${scalingData.length} data points` : 'Configure to generate chart'}
-              </p>
+              <div className="flex items-center gap-4">
+                {!isRunning && !isCompleted && (
+                  <p className="text-sm text-muted-foreground">
+                    {expectedDataPoints > 0 ? `Will generate ${expectedDataPoints} data points` : 'Configure to generate'}
+                  </p>
+                )}
+                {isRunning ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelSimulation}
+                    className="gap-2"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Cancel
+                  </Button>
+                ) : (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleGenerateAnalysis}
+                    disabled={!canGenerate || !canStart}
+                    className="gap-2"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    Generate Analysis
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Validation Errors */}
-          {validationErrors.length > 0 && (
+          {validationErrors.length > 0 && !isRunning && !isCompleted && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
@@ -223,10 +286,36 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
             </Alert>
           )}
 
+          {/* Progress Indicator */}
+          {isRunning && (
+            <VMScalingProgress
+              progress={progress}
+              currentNodeCount={currentNodeCount}
+              estimatedTimeRemaining={estimatedTimeRemaining}
+              onCancel={cancelSimulation}
+            />
+          )}
+
+          {/* Error Display */}
+          {hasError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">Simulation Error</p>
+                  <p className="text-sm mt-1">{simulationError || 'Unknown error occurred'}</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleRetry}>
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Chart Display */}
-          {canGenerate && selectedCluster && (
+          {isCompleted && results.length > 0 && selectedCluster && (
             <VMCostScalingChart
-              data={scalingData}
+              data={results}
               currentNodeCount={selectedCluster.totalNodes}
               clusterName={selectedCluster.clusterName}
             />
@@ -237,16 +326,19 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
             <p className="text-sm font-semibold mb-2">About This Analysis:</p>
             <ul className="text-sm space-y-1 text-muted-foreground">
               <li>
-                • Shows how cost-per-VM changes as you add or remove compute nodes from the cluster
+                • Performs full design recalculation for each node count (not extrapolation)
+              </li>
+              <li>
+                • Results match what you would see if manually changing requirements
+              </li>
+              <li>
+                • Accounts for infrastructure scaling: racks, switches, power, and facility costs
               </li>
               <li>
                 • Maintains the same redundancy, overcommit, and configuration as your current design
               </li>
               <li>
-                • Accounts for fixed costs (network, racks, facilities) that don't scale linearly
-              </li>
-              <li>
-                • Does not account for physical constraints (rack space, power, ports) - validate separately
+                • Expected time: {expectedDataPoints > 0 ? `~${Math.ceil(expectedDataPoints * 0.5)}-${Math.ceil(expectedDataPoints * 1.5)} seconds` : 'varies by configuration'}
               </li>
             </ul>
           </div>

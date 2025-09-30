@@ -11,11 +11,11 @@ import {
   ReferenceLine
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { VMCostScalingDataPoint } from '@/hooks/design/useVMCostScaling';
+import { SimulationResult } from '@/services/designSimulationService';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 
 interface VMCostScalingChartProps {
-  data: VMCostScalingDataPoint[];
+  data: SimulationResult[];
   currentNodeCount: number;
   clusterName: string;
 }
@@ -50,13 +50,13 @@ export const VMCostScalingChart: React.FC<VMCostScalingChartProps> = ({
     : 0;
 
   // Custom tooltip
-  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: VMCostScalingDataPoint }> }) => {
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: SimulationResult }> }) => {
     if (active && payload && payload.length) {
-      const point = payload[0].payload as VMCostScalingDataPoint;
+      const point = payload[0].payload as SimulationResult;
       const isCurrent = point.nodeCount === currentNodeCount;
 
       return (
-        <div className="bg-background border rounded-lg p-3 shadow-lg">
+        <div className="bg-background border rounded-lg p-3 shadow-lg max-w-sm">
           <p className="font-semibold mb-2">
             {point.nodeCount} Nodes {isCurrent && '(Current)'}
           </p>
@@ -71,12 +71,20 @@ export const VMCostScalingChart: React.FC<VMCostScalingChartProps> = ({
               <span className="text-muted-foreground">VM Capacity:</span>{' '}
               <span className="font-medium text-green-600">{point.maxVMs} VMs</span>
             </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              {point.usableVCPUs.toLocaleString()} usable vCPUs
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Total: ${point.totalMonthlyCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}/month
-            </p>
+            <div className="border-t pt-1 mt-2 space-y-0.5">
+              <p className="text-xs text-muted-foreground">
+                {point.usableVCPUs.toLocaleString()} usable vCPUs
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {point.totalRacks} racks • {point.totalLeafSwitches + point.totalMgmtSwitches} switches
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {(point.totalPowerW / 1000).toFixed(1)}kW power consumption
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Total: ${point.monthlyOperationalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}/month
+              </p>
+            </div>
           </div>
         </div>
       );
@@ -229,6 +237,10 @@ export const VMCostScalingChart: React.FC<VMCostScalingChartProps> = ({
           <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
             <p className="text-sm font-semibold mb-2">Key Insights:</p>
             <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
+              <li>
+                Infrastructure scales with node count: racks ({data[0]?.totalRacks} → {data[data.length - 1]?.totalRacks}),
+                power ({(data[0]?.totalPowerW / 1000).toFixed(1)}kW → {(data[data.length - 1]?.totalPowerW / 1000).toFixed(1)}kW)
+              </li>
               <li>
                 Fixed costs (network, racks, facilities) are amortized across more VMs as you scale
               </li>
