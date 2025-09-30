@@ -8,8 +8,10 @@ interface ClusterVMCostBreakdownProps {
   clusterName: string;
   clusterId: string;
   totalNodes: number;
+  totalPhysicalCores: number;
   totalVCPUs: number;
   totalMemoryGB: number;
+  usablePhysicalCores: number;
   usableVCPUs: number;
   usableMemoryGB: number;
   redundantVCPUs: number;
@@ -21,6 +23,11 @@ interface ClusterVMCostBreakdownProps {
   averageVMMemoryGB: number;
   redundancyConfig: string;
   availabilityZoneCount: number;
+  overcommitRatio: number;
+  isHyperConverged: boolean;
+  storageOverheadCores?: number;
+  storageOverheadMemoryGB?: number;
+  totalDisksInCluster?: number;
   // Cost breakdown details
   totalComputeNodes: number;
   clusterCostShare: number;
@@ -33,8 +40,10 @@ interface ClusterVMCostBreakdownProps {
 export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
   clusterName,
   totalNodes,
+  totalPhysicalCores,
   totalVCPUs,
   totalMemoryGB,
+  usablePhysicalCores,
   usableVCPUs,
   usableMemoryGB,
   redundantVCPUs,
@@ -46,6 +55,11 @@ export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
   averageVMMemoryGB,
   redundancyConfig,
   availabilityZoneCount,
+  overcommitRatio,
+  isHyperConverged,
+  storageOverheadCores,
+  storageOverheadMemoryGB,
+  totalDisksInCluster,
   totalComputeNodes,
   clusterCostShare,
   operationalCostShare,
@@ -63,6 +77,10 @@ export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
   const computeOnlyCost = totalOperationalCost - storageAmortizedCost;
   const totalClusterMonthlyCost = clusterCostShare + operationalCostShare;
 
+  const computeAvailableCores = totalPhysicalCores - (storageOverheadCores || 0);
+  const computeAvailableMemoryGB = totalMemoryGB - (storageOverheadMemoryGB || 0);
+  const redundantPhysicalCores = totalPhysicalCores - usablePhysicalCores - (storageOverheadCores || 0);
+
   const calculationSteps = [
     `Cluster: ${clusterName}`,
     ``,
@@ -70,14 +88,29 @@ export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
     `Total Nodes in Cluster: ${totalNodes} nodes`,
     `Availability Zones: ${availabilityZoneCount} AZs`,
     `Redundancy: ${redundancyConfig}`,
+    `Cluster Type: ${isHyperConverged ? 'Hyper-Converged' : 'Compute-Only'}`,
+    `CPU Overcommit Ratio: ${overcommitRatio}:1`,
     ``,
     `=== PHYSICAL RESOURCES ===`,
-    `Total vCPUs: ${totalVCPUs.toLocaleString()} vCPUs`,
+    `Total Physical CPU Cores: ${totalPhysicalCores.toLocaleString()} cores`,
     `Total Memory: ${(totalMemoryGB / 1024).toFixed(2)} TB (${totalMemoryGB.toLocaleString()} GB)`,
     ``,
+    ...(isHyperConverged && storageOverheadCores ? [
+      `=== STORAGE OVERHEAD (HYPER-CONVERGED) ===`,
+      `Total Disks in Cluster: ${totalDisksInCluster} disks`,
+      `Storage Reserved CPU Cores: ${storageOverheadCores} cores (${totalDisksInCluster} disks × 4 cores/disk)`,
+      `Storage Reserved Memory: ${(storageOverheadMemoryGB! / 1024).toFixed(2)} TB (${storageOverheadMemoryGB} GB)`,
+      `→ Storage operations require dedicated CPU/memory per disk`,
+      ``,
+      `Compute-Available Physical Cores: ${computeAvailableCores.toLocaleString()} cores`,
+      `  (${totalPhysicalCores.toLocaleString()} total - ${storageOverheadCores} storage overhead)`,
+      `Compute-Available Memory: ${(computeAvailableMemoryGB / 1024).toFixed(2)} TB`,
+      `  (${(totalMemoryGB / 1024).toFixed(2)} TB total - ${(storageOverheadMemoryGB! / 1024).toFixed(2)} TB storage overhead)`,
+      ``
+    ] : []),
     `=== REDUNDANCY IMPACT ===`,
     redundancyConfig !== 'None' ?
-      `Reserved Capacity: ${redundantNodes} nodes (${redundantVCPUs.toLocaleString()} vCPUs, ${(redundantMemoryGB / 1024).toFixed(2)} TB)` :
+      `Reserved Capacity: ${redundantNodes} nodes (${redundantPhysicalCores.toLocaleString()} cores, ${(redundantMemoryGB / 1024).toFixed(2)} TB)` :
       `No redundancy configured`,
     redundancyConfig === 'N+1' ?
       `→ Can tolerate failure of 1 availability zone` :
@@ -88,9 +121,14 @@ export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
           redundancyConfig === '2 Nodes' ?
             `→ Can tolerate failure of 2 nodes` : '',
     ``,
-    `=== USABLE CAPACITY ===`,
-    `Usable vCPUs: ${usableVCPUs.toLocaleString()} vCPUs`,
+    `=== USABLE CAPACITY (AFTER REDUNDANCY) ===`,
+    `Usable Physical Cores: ${usablePhysicalCores.toLocaleString()} cores`,
     `Usable Memory: ${(usableMemoryGB / 1024).toFixed(2)} TB (${usableMemoryGB.toLocaleString()} GB)`,
+    ``,
+    `=== OVERCOMMIT APPLICATION ===`,
+    `Overcommit Ratio: ${overcommitRatio}:1`,
+    `Virtual CPUs (vCPUs): ${usablePhysicalCores.toLocaleString()} cores × ${overcommitRatio} = ${usableVCPUs.toLocaleString()} vCPUs`,
+    `→ ${overcommitRatio}x overcommit means each physical core supports ${overcommitRatio} vCPUs`,
     ``,
     `=== VM CAPACITY CALCULATION ===`,
     `Average VM Size: ${averageVMVCPUs} vCPUs, ${averageVMMemoryGB} GB RAM`,

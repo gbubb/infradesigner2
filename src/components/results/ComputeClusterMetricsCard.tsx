@@ -62,8 +62,10 @@ export const ComputeClusterMetricsCard: React.FC<ComputeClusterMetricsCardProps>
                       clusterName={cluster.clusterName}
                       clusterId={cluster.clusterId}
                       totalNodes={cluster.totalNodes}
+                      totalPhysicalCores={cluster.totalPhysicalCores}
                       totalVCPUs={cluster.totalVCPUs}
                       totalMemoryGB={cluster.totalMemoryGB}
+                      usablePhysicalCores={cluster.usablePhysicalCores}
                       usableVCPUs={cluster.usableVCPUs}
                       usableMemoryGB={cluster.usableMemoryGB}
                       redundantVCPUs={cluster.redundantVCPUs}
@@ -75,6 +77,11 @@ export const ComputeClusterMetricsCard: React.FC<ComputeClusterMetricsCardProps>
                       averageVMMemoryGB={averageVMMemoryGB}
                       redundancyConfig={cluster.redundancyConfig}
                       availabilityZoneCount={cluster.availabilityZoneCount}
+                      overcommitRatio={cluster.overcommitRatio}
+                      isHyperConverged={cluster.isHyperConverged}
+                      storageOverheadCores={cluster.storageOverheadCores}
+                      storageOverheadMemoryGB={cluster.storageOverheadMemoryGB}
+                      totalDisksInCluster={cluster.totalDisksInCluster}
                       totalComputeNodes={cluster.totalComputeNodes}
                       clusterCostShare={cluster.clusterCostShare}
                       operationalCostShare={cluster.operationalCostShare}

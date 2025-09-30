@@ -8,9 +8,11 @@ export interface ComputeClusterMetrics {
   clusterId: string;
   clusterName: string;
   totalNodes: number;
-  totalVCPUs: number;
+  totalPhysicalCores: number; // Physical CPU cores (before overcommit)
+  totalVCPUs: number; // Virtual CPUs (after overcommit)
   totalMemoryGB: number;
-  usableVCPUs: number;
+  usablePhysicalCores: number; // Usable physical cores (after redundancy, before overcommit)
+  usableVCPUs: number; // Usable vCPUs (after redundancy and overcommit)
   usableMemoryGB: number;
   redundantVCPUs: number;
   redundantMemoryGB: number;
@@ -20,6 +22,11 @@ export interface ComputeClusterMetrics {
   redundancyConfig: string;
   availabilityZoneCount: number;
   availabilityZoneIds?: string[];
+  overcommitRatio: number;
+  isHyperConverged: boolean;
+  storageOverheadCores?: number; // CPU cores reserved for storage (hyper-converged only)
+  storageOverheadMemoryGB?: number; // Memory reserved for storage (hyper-converged only)
+  totalDisksInCluster?: number; // Total disks in cluster (hyper-converged only)
   nodeHardware: {
     cpuCores: number;
     memoryGB: number;
@@ -151,9 +158,13 @@ export const useComputeClusterMetrics = () => {
 
       console.log(`[useComputeClusterMetrics] Total nodes for cluster ${cluster.id}: ${totalNodes}`);
 
+      // Check if this is a hyper-converged cluster
+      const isHyperConverged = clusterRoles.some(role => role.role === 'hyperConvergedNode');
+
       // Calculate totals for this cluster
-      let totalVCPUs = 0;
+      let totalPhysicalCores = 0;
       let totalMemoryGB = 0;
+      let totalDisksInCluster = 0;
       const nodeHardware: ComputeClusterMetrics['nodeHardware'] = [];
 
       // Calculate resources from component roles
@@ -161,30 +172,51 @@ export const useComputeClusterMetrics = () => {
         const template = componentTemplates.find(t => t.id === role.assignedComponentId);
         if (template) {
           // Handle different CPU field names based on component type
-          let vcpus = 0;
+          let physicalCores = 0;
           if (template.type === ComponentType.Server || template.type === 'Server') {
             // Servers use cpuCoresPerSocket and cpuSockets
-            vcpus = (template.cpuCoresPerSocket || template.coreCount || 0) * (template.cpuSockets || 1);
+            physicalCores = (template.cpuCoresPerSocket || template.coreCount || 0) * (template.cpuSockets || 1);
           } else {
             // Other components might use cpuCores
-            vcpus = (template.cpuCores || 0) * (template.cpuSockets || 1);
+            physicalCores = (template.cpuCores || 0) * (template.cpuSockets || 1);
           }
 
           const memoryGB = template.memoryCapacity || template.memoryGB || 0;
           const nodeCount = role.adjustedRequiredCount || role.requiredCount || 0;
 
-          totalVCPUs += vcpus * nodeCount;
+          totalPhysicalCores += physicalCores * nodeCount;
           totalMemoryGB += memoryGB * nodeCount;
+
+          // Count disks in hyper-converged nodes
+          if (isHyperConverged && role.role === 'hyperConvergedNode') {
+            // Find actual components to count disks
+            const clusterComponents = components.filter(c =>
+              c.role === 'hyperConvergedNode' &&
+              c.clusterInfo?.clusterId === cluster.id
+            );
+
+            clusterComponents.forEach(node => {
+              if ('attachedDisks' in node && node.attachedDisks) {
+                const disks = node.attachedDisks || [];
+                disks.forEach((disk: any) => {
+                  if (disk && 'capacityTB' in disk) {
+                    const diskQuantity = disk.quantity || 1;
+                    totalDisksInCluster += diskQuantity;
+                  }
+                });
+              }
+            });
+          }
 
           // Add one entry per role type to nodeHardware
           nodeHardware.push({
-            cpuCores: vcpus,
+            cpuCores: physicalCores,
             memoryGB,
             cost: template.cost || 0,
             model: template.model || ''
           });
 
-          console.log(`[useComputeClusterMetrics] Role ${role.role}: ${nodeCount} x ${template.model} (${vcpus} vCPUs, ${memoryGB} GB RAM)`, {
+          console.log(`[useComputeClusterMetrics] Role ${role.role}: ${nodeCount} x ${template.model} (${physicalCores} cores, ${memoryGB} GB RAM)`, {
             template: {
               type: template.type,
               cpuCoresPerSocket: template.cpuCoresPerSocket,
@@ -199,10 +231,28 @@ export const useComputeClusterMetrics = () => {
       // Use cluster-specific AZ count or default to total AZs
       const clusterAZCount = cluster.availabilityZoneCount || totalAvailabilityZones;
 
-      // Calculate usable capacity after redundancy
+      // Calculate storage overhead for hyper-converged clusters
+      // Storage requires 4 CPU cores per disk and memory overhead
+      const storageOverheadCores = isHyperConverged ? totalDisksInCluster * 4 : 0;
+      const storageOverheadMemoryGB = isHyperConverged ? totalDisksInCluster * 2 : 0; // Approximate 2GB per disk
+
+      // Subtract storage overhead from total capacity BEFORE redundancy calculation
+      const computeAvailablePhysicalCores = totalPhysicalCores - storageOverheadCores;
+      const computeAvailableMemoryGB = totalMemoryGB - storageOverheadMemoryGB;
+
+      console.log(`[useComputeClusterMetrics] Cluster ${cluster.name} - Storage overhead:`, {
+        isHyperConverged,
+        totalDisksInCluster,
+        storageOverheadCores,
+        storageOverheadMemoryGB,
+        totalPhysicalCores,
+        computeAvailablePhysicalCores
+      });
+
+      // Calculate usable capacity after redundancy (applied to compute-available resources)
       const { usableCapacity: usablePhysicalCores, redundantCapacity: redundantPhysicalCores, redundantNodes } =
         calculateUsableCapacity(
-          totalVCPUs,
+          computeAvailablePhysicalCores,
           cluster.availabilityZoneRedundancy,
           totalNodes,
           clusterAZCount
@@ -210,7 +260,7 @@ export const useComputeClusterMetrics = () => {
 
       const { usableCapacity: usableMemoryGB, redundantCapacity: redundantMemoryGB } =
         calculateUsableCapacity(
-          totalMemoryGB,
+          computeAvailableMemoryGB,
           cluster.availabilityZoneRedundancy,
           totalNodes,
           clusterAZCount
@@ -220,13 +270,17 @@ export const useComputeClusterMetrics = () => {
       const overcommitRatio = cluster.overcommitRatio || 1;
       const usableVCPUs = usablePhysicalCores * overcommitRatio;
       const redundantVCPUs = redundantPhysicalCores * overcommitRatio;
+      const totalVCPUs = computeAvailablePhysicalCores * overcommitRatio;
 
       console.log(`[useComputeClusterMetrics] Cluster ${cluster.name} capacity:`, {
-        totalPhysicalCores: totalVCPUs,
+        totalPhysicalCores,
+        computeAvailablePhysicalCores,
         usablePhysicalCores,
         overcommitRatio,
+        totalVCPUs,
         usableVCPUs,
         totalMemoryGB,
+        computeAvailableMemoryGB,
         usableMemoryGB
       });
 
@@ -300,8 +354,10 @@ export const useComputeClusterMetrics = () => {
         clusterId: cluster.id,
         clusterName: cluster.name,
         totalNodes,
+        totalPhysicalCores,
         totalVCPUs,
         totalMemoryGB,
+        usablePhysicalCores,
         usableVCPUs,
         usableMemoryGB,
         redundantVCPUs,
@@ -312,6 +368,11 @@ export const useComputeClusterMetrics = () => {
         redundancyConfig: cluster.availabilityZoneRedundancy || 'None',
         availabilityZoneCount: clusterAZCount,
         availabilityZoneIds: cluster.availabilityZoneIds,
+        overcommitRatio,
+        isHyperConverged,
+        storageOverheadCores: isHyperConverged ? storageOverheadCores : undefined,
+        storageOverheadMemoryGB: isHyperConverged ? storageOverheadMemoryGB : undefined,
+        totalDisksInCluster: isHyperConverged ? totalDisksInCluster : undefined,
         nodeHardware,
         // Cost breakdown details
         totalComputeNodes: componentRoles?.filter(r =>
