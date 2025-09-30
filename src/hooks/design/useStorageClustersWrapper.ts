@@ -210,8 +210,9 @@ export const useStorageClustersWrapper = () => {
       // Calculate cost per TiB using appropriate cost basis
       // For hyper-converged: use storage-attributed costs only
       // For non-converged: use total server + disk costs
+      // IMPORTANT: Use effective capacity (after max fill factor) for accurate cost per TiB
       const costBasis = cluster.hyperConverged ? totalStorageCost : (totalNodeCost + totalDiskCost);
-      const costPerTiB = usableCapacityTiB > 0 ? costBasis / usableCapacityTiB : 0;
+      const costPerTiB = effectiveCapacityTiB > 0 ? costBasis / effectiveCapacityTiB : 0;
       
       const result = {
         id: cluster.id,

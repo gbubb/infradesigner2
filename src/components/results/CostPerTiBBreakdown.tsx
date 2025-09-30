@@ -12,6 +12,8 @@ interface CostPerTiBBreakdownProps {
   totalRawCapacityTB: number;
   usableCapacityTB: number;
   usableCapacityTiB: number;
+  effectiveCapacityTiB?: number;
+  maxFillFactor?: number;
   totalNodeCost: number;
   costPerTiB: number;
   nodeCount: number;
@@ -43,6 +45,8 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
   totalRawCapacityTB,
   usableCapacityTB,
   usableCapacityTiB,
+  effectiveCapacityTiB,
+  maxFillFactor = 80,
   totalNodeCost,
   costPerTiB,
   nodeCount,
@@ -156,10 +160,16 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
                 Storage Efficiency: {poolEfficiencyPercentage}%
               </div>
               <div className="pl-3 text-muted-foreground">
-                Calculation: {totalRawCapacityTB.toFixed(2)} TB (raw) × {poolEfficiencyPercentage}% = {usableCapacityTB.toFixed(2)} TB
+                Usable Capacity: {totalRawCapacityTB.toFixed(2)} TB × {poolEfficiencyPercentage}% = {usableCapacityTB.toFixed(2)} TB
               </div>
               <div className="pl-3 text-muted-foreground">
                 TB to TiB Conversion: {usableCapacityTB.toFixed(2)} TB × {TB_TO_TIB_FACTOR} = {usableCapacityTiB.toFixed(2)} TiB
+              </div>
+              <div className="pl-3 text-muted-foreground">
+                Max Fill Factor: {maxFillFactor}%
+              </div>
+              <div className="pl-3 text-muted-foreground">
+                Effective Capacity: {usableCapacityTiB.toFixed(2)} TiB × {maxFillFactor}% = {effectiveCapacityTiB?.toFixed(2) || (usableCapacityTiB * maxFillFactor / 100).toFixed(2)} TiB
               </div>
             </div>
 
@@ -260,7 +270,10 @@ export const CostPerTiBBreakdown: React.FC<CostPerTiBBreakdownProps> = ({
                 Monthly Amortization: ${costBasis.toLocaleString()} ÷ {lifespanYears * 12} months = ${(costBasis / (lifespanYears * 12)).toLocaleString(undefined, { maximumFractionDigits: 2 })}/month
               </div>
               <div className="pl-3 text-muted-foreground">
-                Cost per TiB: ${(costBasis / (lifespanYears * 12)).toLocaleString(undefined, { maximumFractionDigits: 2 })}/month ÷ {usableCapacityTiB.toFixed(2)} TiB
+                Effective Capacity: {effectiveCapacityTiB?.toFixed(2) || (usableCapacityTiB * maxFillFactor / 100).toFixed(2)} TiB (with {maxFillFactor}% fill factor)
+              </div>
+              <div className="pl-3 text-muted-foreground">
+                Cost per TiB: ${(costBasis / (lifespanYears * 12)).toLocaleString(undefined, { maximumFractionDigits: 2 })}/month ÷ {effectiveCapacityTiB?.toFixed(2) || (usableCapacityTiB * maxFillFactor / 100).toFixed(2)} TiB
               </div>
               <div className="pl-3 font-medium text-primary">
                 Final Monthly Cost per TiB: ${costPerTiB.toLocaleString(undefined, { maximumFractionDigits: 2 })}/TiB

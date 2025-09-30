@@ -59,7 +59,7 @@ export const StorageClustersTable: React.FC<StorageClustersTableProps> = ({ clus
               <TableHead>Cluster Name</TableHead>
               <TableHead>Pool Type</TableHead>
               <TableHead>Raw Capacity</TableHead>
-              <TableHead>Usable Capacity</TableHead>
+              <TableHead>Effective Capacity</TableHead>
               <TableHead>Cost per TiB</TableHead>
               <TableHead>Nodes</TableHead>
             </TableRow>
@@ -70,7 +70,7 @@ export const StorageClustersTable: React.FC<StorageClustersTableProps> = ({ clus
                 <TableCell className="font-medium">{cluster.name}</TableCell>
                 <TableCell>{cluster.poolType}</TableCell>
                 <TableCell>{cluster.totalRawCapacityTB.toFixed(2)} TB</TableCell>
-                <TableCell>{cluster.usableCapacityTiB.toFixed(2)} TiB</TableCell>
+                <TableCell>{cluster.effectiveCapacityTiB.toFixed(2)} TiB</TableCell>
                 <TableCell>
                   ${cluster.costPerTiB.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                   <CostPerTiBBreakdown
@@ -79,6 +79,8 @@ export const StorageClustersTable: React.FC<StorageClustersTableProps> = ({ clus
                     totalRawCapacityTB={cluster.totalRawCapacityTB}
                     usableCapacityTB={cluster.usableCapacityTB}
                     usableCapacityTiB={cluster.usableCapacityTiB}
+                    effectiveCapacityTiB={cluster.effectiveCapacityTiB}
+                    maxFillFactor={cluster.maxFillFactor}
                     totalNodeCost={cluster.totalNodeCost}
                     costPerTiB={cluster.costPerTiB}
                     nodeCount={cluster.nodeCount}
