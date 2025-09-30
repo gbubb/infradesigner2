@@ -9,6 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { ClusterVMCostBreakdown } from './ClusterVMCostBreakdown';
 
 interface ComputeClusterMetricsCardProps {
   clusterMetrics: ComputeClusterMetrics[];
@@ -50,12 +51,38 @@ export const ComputeClusterMetricsCard: React.FC<ComputeClusterMetricsCardProps>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold">
-                    ${cluster.monthlyCostPerVM.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}
-                  </p>
+                  <div className="flex items-center gap-2 justify-end">
+                    <p className="text-2xl font-bold">
+                      ${cluster.monthlyCostPerVM.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      })}
+                    </p>
+                    <ClusterVMCostBreakdown
+                      clusterName={cluster.clusterName}
+                      clusterId={cluster.clusterId}
+                      totalNodes={cluster.totalNodes}
+                      totalVCPUs={cluster.totalVCPUs}
+                      totalMemoryGB={cluster.totalMemoryGB}
+                      usableVCPUs={cluster.usableVCPUs}
+                      usableMemoryGB={cluster.usableMemoryGB}
+                      redundantVCPUs={cluster.redundantVCPUs}
+                      redundantMemoryGB={cluster.redundantMemoryGB}
+                      redundantNodes={cluster.redundantNodes}
+                      maxAverageVMs={cluster.maxAverageVMs}
+                      monthlyCostPerVM={cluster.monthlyCostPerVM}
+                      averageVMVCPUs={averageVMVCPUs}
+                      averageVMMemoryGB={averageVMMemoryGB}
+                      redundancyConfig={cluster.redundancyConfig}
+                      availabilityZoneCount={cluster.availabilityZoneCount}
+                      totalComputeNodes={cluster.totalComputeNodes}
+                      clusterCostShare={cluster.clusterCostShare}
+                      operationalCostShare={cluster.operationalCostShare}
+                      totalOperationalCost={cluster.totalOperationalCost}
+                      computeAmortizedCost={cluster.computeAmortizedCost}
+                      storageAmortizedCost={cluster.storageAmortizedCost}
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground">per VM/month</p>
                 </div>
               </div>
@@ -109,7 +136,12 @@ export const ComputeClusterMetricsCard: React.FC<ComputeClusterMetricsCardProps>
           {clusterMetrics.length > 1 && (
             <div className="mt-4 pt-4 border-t">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Weighted Average Cost</p>
+                <div>
+                  <p className="text-sm font-medium">Weighted Average Cost</p>
+                  <p className="text-xs text-muted-foreground">
+                    Across all {clusterMetrics.reduce((sum, c) => sum + c.maxAverageVMs, 0)} VMs
+                  </p>
+                </div>
                 <p className="text-lg font-bold">
                   ${(
                     clusterMetrics.reduce((sum, c) => sum + c.monthlyCostPerVM * c.maxAverageVMs, 0) /
@@ -120,8 +152,14 @@ export const ComputeClusterMetricsCard: React.FC<ComputeClusterMetricsCardProps>
                   })}
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Single cluster note */}
+          {clusterMetrics.length === 1 && (
+            <div className="mt-4 pt-4 border-t">
               <p className="text-xs text-muted-foreground">
-                Across all {clusterMetrics.reduce((sum, c) => sum + c.maxAverageVMs, 0)} VMs
+                This is the only compute cluster. The per-cluster cost should match the global average VM cost shown in the Key Metrics card above.
               </p>
             </div>
           )}

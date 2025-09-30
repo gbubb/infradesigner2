@@ -214,23 +214,40 @@ export const useDesignCalculations = () => {
   );
 
   // Calculate maximum number of VMs based on USABLE CPU and memory constraints
+  // USABLE capacity = TOTAL capacity - REDUNDANT capacity (reserved for failover)
   const vmsByCPU = Math.floor(usableVCPUs / averageVMVCPUs);
   const vmsByMemory = Math.floor(usableMemoryGB / averageVMMemoryGB);
   const quantityOfAverageVMs = Math.min(vmsByCPU, vmsByMemory);
 
-  // Calculate monthly cost per average VM (excluding storage capital costs)
+  // Calculate monthly cost per average VM
+  // Formula: (Total Operational Cost - Storage Amortization) / Quantity of VMs
+  // Storage costs are excluded because they scale with capacity usage, not VM count
+  // This gives the average compute infrastructure cost per VM (hardware, facility, energy)
   const monthlyCostPerAverageVM = useMemo(() => {
     if (quantityOfAverageVMs <= 0 || !costAnalysisResult?.operationalCosts) return 0;
-    
+
     // Calculate monthly operational costs excluding storage amortization
     const operationalCosts = costAnalysisResult.operationalCosts;
     const amortizedCosts = costAnalysisResult.amortizedCostsByType;
-    
+
     // Total operational cost minus storage amortization = compute-focused operational cost
     const computeOperationalCost = operationalCosts.totalMonthly - (amortizedCosts?.storage || 0);
-    
-    return computeOperationalCost / quantityOfAverageVMs;
-  }, [quantityOfAverageVMs, costAnalysisResult?.operationalCosts, costAnalysisResult?.amortizedCostsByType]);
+
+    const result = computeOperationalCost / quantityOfAverageVMs;
+
+    console.log('[useDesignCalculations] Global VM cost calculation:', {
+      totalOperationalCost: operationalCosts.totalMonthly,
+      storageAmortizedCost: amortizedCosts?.storage || 0,
+      computeOperationalCost,
+      quantityOfAverageVMs,
+      monthlyCostPerAverageVM: result,
+      usableVCPUs,
+      usableMemoryGB: usableMemoryGB / 1024,
+      redundancyConfig
+    });
+
+    return result;
+  }, [quantityOfAverageVMs, costAnalysisResult?.operationalCosts, costAnalysisResult?.amortizedCostsByType, usableVCPUs, usableMemoryGB, redundancyConfig]);
 
   // Directly calculate values that don't need to be in state
   const components = useMemo(() => 

@@ -162,6 +162,16 @@ export const AverageVMCostBreakdown: React.FC<AverageVMCostBreakdownProps> = ({
                 ))}
               </ol>
             </Card>
+
+            <div className="text-xs text-muted-foreground">
+              <p className="font-semibold mb-1">Methodology:</p>
+              <p>
+                This calculation determines the average cost to run a single VM based on the total
+                infrastructure operational costs (compute hardware amortization, facility costs, energy)
+                divided by the maximum number of VMs that can be supported. Storage costs are excluded
+                as they scale with capacity usage rather than VM count.
+              </p>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

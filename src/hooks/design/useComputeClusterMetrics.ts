@@ -26,6 +26,13 @@ export interface ComputeClusterMetrics {
     cost: number;
     model: string;
   }[];
+  // Cost breakdown details for transparency
+  totalComputeNodes: number;
+  clusterCostShare: number;
+  operationalCostShare: number;
+  totalOperationalCost: number;
+  computeAmortizedCost: number;
+  storageAmortizedCost: number;
 }
 
 /**
@@ -109,7 +116,7 @@ export const useComputeClusterMetrics = () => {
         name: c.name,
         role: c.role,
         clusterInfo: c.clusterInfo,
-        clusterId: (c as any).clusterId
+        clusterId: 'clusterId' in c ? c.clusterId : undefined
       }))
     });
 
@@ -229,12 +236,22 @@ export const useComputeClusterMetrics = () => {
       const maxAverageVMs = Math.min(vmsByCPU, vmsByMemory);
 
       // Calculate monthly cost per VM for this cluster
+      //
+      // METHODOLOGY (aligned with global calculation in useDesignCalculations.ts):
+      // 1. Start with total operational costs (facility + energy + amortization)
+      // 2. Subtract storage amortization (storage costs scale with capacity, not VMs)
+      // 3. Calculate cluster's proportional share based on node count
+      // 4. Divide by cluster's VM capacity
+      //
+      // Formula: (Total Operational Cost - Storage Amortization) × (Cluster Nodes / Total Nodes) / Cluster VMs
       let monthlyCostPerVM = 0;
-      if (maxAverageVMs > 0 && costAnalysisResult?.operationalCosts && costAnalysisResult?.amortizedCostsByType) {
-        // Calculate the portion of operational costs attributable to this cluster
-        // This is based on the cluster's share of total compute resources
-        const totalComputeCost = costAnalysisResult.amortizedCostsByType.compute || 0;
+      let clusterCostShare = 0;
+      let operationalCostShare = 0;
+      let computeAmortizedCost = 0;
+      let storageAmortizedCost = 0;
+      let totalOperationalCost = 0;
 
+      if (maxAverageVMs > 0 && costAnalysisResult?.operationalCosts && costAnalysisResult?.amortizedCostsByType) {
         // Calculate total compute nodes across all clusters from roles
         const allComputeRoles = componentRoles?.filter(r =>
           r.role === 'computeNode' || r.role === 'hyperConvergedNode' || r.role === 'gpuNode'
@@ -244,17 +261,39 @@ export const useComputeClusterMetrics = () => {
           sum + (role.adjustedRequiredCount || role.requiredCount || 0), 0
         );
 
-        const clusterCostShare = totalNodes > 0 && totalComputeNodes > 0
-          ? totalComputeCost * (totalNodes / totalComputeNodes)
+        // Calculate cluster's share of total compute nodes
+        const clusterNodeRatio = totalNodes > 0 && totalComputeNodes > 0
+          ? totalNodes / totalComputeNodes
           : 0;
 
-        // Add proportional share of facility and other operational costs
-        const operationalCostShare = totalNodes > 0 && totalComputeNodes > 0
-          ? (costAnalysisResult.operationalCosts.totalMonthly - (costAnalysisResult.amortizedCostsByType?.storage || 0))
-            * (totalNodes / totalComputeNodes)
-          : 0;
+        // Get cost components
+        totalOperationalCost = costAnalysisResult.operationalCosts.totalMonthly;
+        computeAmortizedCost = costAnalysisResult.amortizedCostsByType.compute || 0;
+        storageAmortizedCost = costAnalysisResult.amortizedCostsByType.storage || 0;
 
-        monthlyCostPerVM = (clusterCostShare + operationalCostShare) / maxAverageVMs;
+        // Calculate compute-only operational cost (excluding storage amortization)
+        // This matches the global calculation in useDesignCalculations.ts:222-233
+        const computeOnlyOperationalCost = totalOperationalCost - storageAmortizedCost;
+
+        // Allocate this cluster's proportional share
+        clusterCostShare = computeAmortizedCost * clusterNodeRatio;
+        operationalCostShare = (computeOnlyOperationalCost - computeAmortizedCost) * clusterNodeRatio;
+
+        const totalClusterMonthlyCost = computeOnlyOperationalCost * clusterNodeRatio;
+
+        monthlyCostPerVM = totalClusterMonthlyCost / maxAverageVMs;
+
+        console.log(`[useComputeClusterMetrics] Cost calculation for ${cluster.name}:`, {
+          totalNodes,
+          totalComputeNodes,
+          clusterNodeRatio: clusterNodeRatio.toFixed(3),
+          totalOperationalCost,
+          storageAmortizedCost,
+          computeOnlyOperationalCost,
+          totalClusterMonthlyCost,
+          maxAverageVMs,
+          monthlyCostPerVM
+        });
       }
 
       const metrics = {
@@ -273,7 +312,16 @@ export const useComputeClusterMetrics = () => {
         redundancyConfig: cluster.availabilityZoneRedundancy || 'None',
         availabilityZoneCount: clusterAZCount,
         availabilityZoneIds: cluster.availabilityZoneIds,
-        nodeHardware
+        nodeHardware,
+        // Cost breakdown details
+        totalComputeNodes: componentRoles?.filter(r =>
+          r.role === 'computeNode' || r.role === 'hyperConvergedNode' || r.role === 'gpuNode'
+        ).reduce((sum, role) => sum + (role.adjustedRequiredCount || role.requiredCount || 0), 0) || 0,
+        clusterCostShare,
+        operationalCostShare,
+        totalOperationalCost,
+        computeAmortizedCost,
+        storageAmortizedCost
       };
 
       console.log(`[useComputeClusterMetrics] Metrics for cluster ${cluster.name}:`, metrics);
