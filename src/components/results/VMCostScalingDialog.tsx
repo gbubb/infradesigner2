@@ -89,20 +89,20 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
     const errors: string[] = [];
     if (!selectedCluster) return errors;
 
-    if (minScaleFactor <= 0 || minScaleFactor > 10) {
-      errors.push('Minimum scale factor must be between 0.1 and 10');
+    if (minScaleFactor <= 0 || minScaleFactor > 20) {
+      errors.push('Minimum scale factor must be between 0.1 and 20');
     }
 
-    if (maxScaleFactor <= 0 || maxScaleFactor > 10) {
-      errors.push('Maximum scale factor must be between 0.1 and 10');
+    if (maxScaleFactor <= 0 || maxScaleFactor > 20) {
+      errors.push('Maximum scale factor must be between 0.1 and 20');
     }
 
     if (minScaleFactor >= maxScaleFactor) {
       errors.push('Maximum scale factor must be greater than minimum');
     }
 
-    if (steps < 2 || steps > 50) {
-      errors.push('Steps must be between 2 and 50');
+    if (steps < 2 || steps > 200) {
+      errors.push('Steps must be between 2 and 200');
     }
 
     return errors;
@@ -205,13 +205,13 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
                   type="number"
                   step="0.1"
                   min={0.1}
-                  max={10}
+                  max={20}
                   value={maxScaleFactor}
                   onChange={(e) => setMaxScaleFactor(parseFloat(e.target.value) || 3.0)}
                   disabled={isRunning}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Multiplier for maximum vCPUs (e.g., 3.0 = triple current)
+                  Multiplier for maximum vCPUs (e.g., 10.0 = 10x current)
                 </p>
               </div>
 
@@ -221,13 +221,13 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
                   id="steps"
                   type="number"
                   min={2}
-                  max={50}
+                  max={200}
                   value={steps}
                   onChange={(e) => setSteps(parseInt(e.target.value) || 10)}
                   disabled={isRunning}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  More steps = more detailed chart, slower generation
+                  More steps = more complete chart (fast with deduplication)
                 </p>
               </div>
             </div>

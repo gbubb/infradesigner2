@@ -53,12 +53,13 @@ export interface VMCostScalingConfig {
  * Calculate recommended scaling range based on current cluster configuration
  */
 export const getRecommendedScalingRange = (clusterMetrics: ComputeClusterMetrics) => {
-  // Suggest scaling from 0.5x to 3x current vCPUs
-  // This typically gives a good range for cost analysis
+  // Suggest scaling from 0.5x to 10x current vCPUs
+  // With 50 steps, we'll capture every possible node count in the range
+  // Deduplication ensures fast execution even with many candidates
   return {
     minScaleFactor: 0.5,
-    maxScaleFactor: 3.0,
-    steps: 10  // 10 data points across the range
+    maxScaleFactor: 10.0,
+    steps: 50  // 50 unique data points for complete linear coverage
   };
 };
 
@@ -137,10 +138,11 @@ export const useVMCostScalingAsync = () => {
       const averageVMMemoryGB = requirements.computeRequirements?.averageVMMemoryGB || 18;
 
       // Generate array of scale factors
-      // We'll generate more candidate scale factors than requested, then filter to unique node counts
+      // We'll generate many more candidate scale factors than requested, then filter to unique node counts
+      // This ensures we capture every possible node count in the range
       const candidateScaleFactors: number[] = [];
       const scaleRange = config.maxScaleFactor - config.minScaleFactor;
-      const candidateSteps = config.steps * 3; // Generate 3x more candidates
+      const candidateSteps = config.steps * 10; // Generate 10x more candidates for complete coverage
       const stepSize = candidateSteps > 1 ? scaleRange / (candidateSteps - 1) : 0;
 
       for (let i = 0; i < candidateSteps; i++) {
