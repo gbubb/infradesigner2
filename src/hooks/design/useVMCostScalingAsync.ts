@@ -17,7 +17,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import {
   simulateDesignConfiguration,
-  cloneAndModifyRequirements,
+  cloneAndScaleRequirements,
   SimulationResult,
   RoleAssignmentMap
 } from '@/services/designSimulationService';
@@ -44,10 +44,23 @@ export interface SimulationState {
 
 export interface VMCostScalingConfig {
   clusterId: string;
-  minNodes: number;
-  maxNodes: number;
-  increment: number;
+  minScaleFactor: number;  // e.g., 0.5 for half current vCPUs
+  maxScaleFactor: number;  // e.g., 3.0 for triple current vCPUs
+  steps: number;           // number of data points to generate
 }
+
+/**
+ * Calculate recommended scaling range based on current cluster configuration
+ */
+export const getRecommendedScalingRange = (clusterMetrics: ComputeClusterMetrics) => {
+  // Suggest scaling from 0.5x to 3x current vCPUs
+  // This typically gives a good range for cost analysis
+  return {
+    minScaleFactor: 0.5,
+    maxScaleFactor: 3.0,
+    steps: 10  // 10 data points across the range
+  };
+};
 
 /**
  * Hook for managing asynchronous VM cost scaling simulations
@@ -123,17 +136,21 @@ export const useVMCostScalingAsync = () => {
       const averageVMVCPUs = requirements.computeRequirements?.averageVMVCPUs || 6;
       const averageVMMemoryGB = requirements.computeRequirements?.averageVMMemoryGB || 18;
 
-      // Generate array of target node counts
-      const targetNodeCounts: number[] = [];
-      for (let nodeCount = config.minNodes; nodeCount <= config.maxNodes; nodeCount += config.increment) {
-        targetNodeCounts.push(nodeCount);
+      // Generate array of scale factors
+      const scaleFactors: number[] = [];
+      const scaleRange = config.maxScaleFactor - config.minScaleFactor;
+      const stepSize = config.steps > 1 ? scaleRange / (config.steps - 1) : 0;
+
+      for (let i = 0; i < config.steps; i++) {
+        const scaleFactor = config.minScaleFactor + (stepSize * i);
+        scaleFactors.push(scaleFactor);
       }
 
       // Initialize state for running simulation
       const startTime = Date.now();
       setState({
         status: 'running',
-        progress: { current: 0, total: targetNodeCounts.length, percentage: 0 },
+        progress: { current: 0, total: scaleFactors.length, percentage: 0 },
         currentNodeCount: null,
         results: [],
         error: null,
@@ -144,7 +161,7 @@ export const useVMCostScalingAsync = () => {
       const results: SimulationResult[] = [];
 
       // Process simulations sequentially
-      for (let i = 0; i < targetNodeCounts.length; i++) {
+      for (let i = 0; i < scaleFactors.length; i++) {
         // Check for cancellation
         if (cancelledRef.current) {
           setState(prev => ({
@@ -156,31 +173,25 @@ export const useVMCostScalingAsync = () => {
           return;
         }
 
-        const targetNodeCount = targetNodeCounts[i];
+        const scaleFactor = scaleFactors[i];
 
         // Update progress state
         setState(prev => ({
           ...prev,
-          currentNodeCount: targetNodeCount,
+          currentNodeCount: null, // Will be determined by simulation
           progress: {
             current: i,
-            total: targetNodeCounts.length,
-            percentage: Math.round((i / targetNodeCounts.length) * 100)
+            total: scaleFactors.length,
+            percentage: Math.round((i / scaleFactors.length) * 100)
           }
         }));
 
         try {
-          // Extract cores per node from cluster metrics
-          const coresPerNode = clusterMetrics.nodeHardware && clusterMetrics.nodeHardware.length > 0
-            ? clusterMetrics.nodeHardware[0].cpuCores
-            : 1; // Fallback to 1 if not available
-
-          // Clone and modify requirements for this target node count
-          const modifiedRequirements = cloneAndModifyRequirements(
+          // Clone and scale requirements by this factor
+          const modifiedRequirements = cloneAndScaleRequirements(
             requirements,
             config.clusterId,
-            targetNodeCount,
-            coresPerNode
+            scaleFactor
           );
 
           // Run full simulation
@@ -194,10 +205,16 @@ export const useVMCostScalingAsync = () => {
 
           results.push(result);
 
+          // Update current node count from result
+          setState(prev => ({
+            ...prev,
+            currentNodeCount: result.nodeCount
+          }));
+
           // Calculate estimated time remaining
           const elapsedTime = Date.now() - startTime;
           const avgTimePerSim = elapsedTime / (i + 1);
-          const remainingSims = targetNodeCounts.length - (i + 1);
+          const remainingSims = scaleFactors.length - (i + 1);
           const estimatedTimeRemaining = Math.round((avgTimePerSim * remainingSims) / 1000); // in seconds
 
           // Update state with new result and time estimate
@@ -208,7 +225,7 @@ export const useVMCostScalingAsync = () => {
           }));
 
         } catch (error) {
-          console.error(`Simulation failed for ${targetNodeCount} nodes:`, error);
+          console.error(`Simulation failed for scale factor ${scaleFactor.toFixed(2)}:`, error);
           // Continue with next simulation - don't fail entire operation
           // Could optionally track failed simulations
         }
@@ -223,8 +240,8 @@ export const useVMCostScalingAsync = () => {
         status: 'completed',
         currentNodeCount: null,
         progress: {
-          current: targetNodeCounts.length,
-          total: targetNodeCounts.length,
+          current: scaleFactors.length,
+          total: scaleFactors.length,
           percentage: 100
         },
         estimatedTimeRemaining: 0
@@ -288,23 +305,3 @@ export const useVMCostScalingAsync = () => {
   };
 };
 
-/**
- * Calculate recommended scaling range based on cluster configuration
- */
-export const getRecommendedScalingRange = (
-  clusterMetrics: ComputeClusterMetrics
-): { minNodes: number; maxNodes: number; increment: number } => {
-  const currentNodes = clusterMetrics.totalNodes;
-  const redundantNodes = clusterMetrics.redundantNodes;
-
-  // Minimum: Must maintain redundancy requirements (can't go below redundant nodes + 1)
-  const minNodes = Math.max(redundantNodes + 1, Math.ceil(currentNodes * 0.5));
-
-  // Maximum: 200% of current, but reasonable upper bound
-  const maxNodes = Math.min(Math.ceil(currentNodes * 3), currentNodes + 100);
-
-  // Increment: Scale with cluster size
-  const increment = currentNodes <= 10 ? 1 : currentNodes <= 50 ? 2 : 5;
-
-  return { minNodes, maxNodes, increment };
-};

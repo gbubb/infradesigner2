@@ -22,9 +22,9 @@ interface VMCostScalingDialogProps {
 export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ clusterMetrics }) => {
   const [open, setOpen] = useState(false);
   const [selectedClusterId, setSelectedClusterId] = useState<string>('');
-  const [minNodes, setMinNodes] = useState<number>(0);
-  const [maxNodes, setMaxNodes] = useState<number>(0);
-  const [increment, setIncrement] = useState<number>(1);
+  const [minScaleFactor, setMinScaleFactor] = useState<number>(0.5);
+  const [maxScaleFactor, setMaxScaleFactor] = useState<number>(3.0);
+  const [steps, setSteps] = useState<number>(10);
 
   // Get the selected cluster
   const selectedCluster = useMemo(
@@ -38,9 +38,9 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
       const firstCluster = clusterMetrics[0];
       setSelectedClusterId(firstCluster.clusterId);
       const recommended = getRecommendedScalingRange(firstCluster);
-      setMinNodes(recommended.minNodes);
-      setMaxNodes(recommended.maxNodes);
-      setIncrement(recommended.increment);
+      setMinScaleFactor(recommended.minScaleFactor);
+      setMaxScaleFactor(recommended.maxScaleFactor);
+      setSteps(recommended.steps);
     }
   }, [open, clusterMetrics, selectedClusterId]);
 
@@ -50,22 +50,22 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
     const cluster = clusterMetrics.find(c => c.clusterId === clusterId);
     if (cluster) {
       const recommended = getRecommendedScalingRange(cluster);
-      setMinNodes(recommended.minNodes);
-      setMaxNodes(recommended.maxNodes);
-      setIncrement(recommended.increment);
+      setMinScaleFactor(recommended.minScaleFactor);
+      setMaxScaleFactor(recommended.maxScaleFactor);
+      setSteps(recommended.steps);
     }
   };
 
   // Create scaling config
   const scalingConfig: VMCostScalingConfig | null = useMemo(() => {
-    if (!selectedClusterId || minNodes <= 0 || maxNodes <= 0) return null;
+    if (!selectedClusterId || minScaleFactor <= 0 || maxScaleFactor <= 0) return null;
     return {
       clusterId: selectedClusterId,
-      minNodes,
-      maxNodes,
-      increment: Math.max(1, increment)
+      minScaleFactor,
+      maxScaleFactor,
+      steps: Math.max(2, steps)
     };
-  }, [selectedClusterId, minNodes, maxNodes, increment]);
+  }, [selectedClusterId, minScaleFactor, maxScaleFactor, steps]);
 
   // Use async scaling hook
   const {
@@ -89,26 +89,24 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
     const errors: string[] = [];
     if (!selectedCluster) return errors;
 
-    if (minNodes < selectedCluster.redundantNodes + 1) {
-      errors.push(
-        `Minimum nodes must be at least ${selectedCluster.redundantNodes + 1} to maintain ${selectedCluster.redundancyConfig} redundancy`
-      );
+    if (minScaleFactor <= 0 || minScaleFactor > 10) {
+      errors.push('Minimum scale factor must be between 0.1 and 10');
     }
 
-    if (minNodes >= maxNodes) {
-      errors.push('Maximum nodes must be greater than minimum nodes');
+    if (maxScaleFactor <= 0 || maxScaleFactor > 10) {
+      errors.push('Maximum scale factor must be between 0.1 and 10');
     }
 
-    if (increment < 1 || increment > 20) {
-      errors.push('Increment must be between 1 and 20 nodes');
+    if (minScaleFactor >= maxScaleFactor) {
+      errors.push('Maximum scale factor must be greater than minimum');
     }
 
-    if ((maxNodes - minNodes) / increment > 100) {
-      errors.push('Configuration would generate too many data points. Increase increment or reduce range.');
+    if (steps < 2 || steps > 50) {
+      errors.push('Steps must be between 2 and 50');
     }
 
     return errors;
-  }, [selectedCluster, minNodes, maxNodes, increment]);
+  }, [selectedCluster, minScaleFactor, maxScaleFactor, steps]);
 
   const canGenerate = validationErrors.length === 0 && !!scalingConfig;
 
@@ -125,17 +123,16 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
 
   // Calculate expected data points
   const expectedDataPoints = useMemo(() => {
-    if (!scalingConfig) return 0;
-    return Math.floor((scalingConfig.maxNodes - scalingConfig.minNodes) / scalingConfig.increment) + 1;
-  }, [scalingConfig]);
+    return steps;
+  }, [steps]);
 
   // Reset to recommended values
   const handleResetToRecommended = () => {
     if (selectedCluster) {
       const recommended = getRecommendedScalingRange(selectedCluster);
-      setMinNodes(recommended.minNodes);
-      setMaxNodes(recommended.maxNodes);
-      setIncrement(recommended.increment);
+      setMinScaleFactor(recommended.minScaleFactor);
+      setMaxScaleFactor(recommended.maxScaleFactor);
+      setSteps(recommended.steps);
     }
   };
 
@@ -183,50 +180,54 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
               </div>
 
               <div>
-                <Label htmlFor="min-nodes">Minimum Nodes</Label>
+                <Label htmlFor="min-scale">Minimum Scale Factor</Label>
                 <Input
-                  id="min-nodes"
+                  id="min-scale"
                   type="number"
-                  min={selectedCluster?.redundantNodes || 1}
-                  value={minNodes}
-                  onChange={(e) => setMinNodes(parseInt(e.target.value) || 0)}
+                  step="0.1"
+                  min={0.1}
+                  max={10}
+                  value={minScaleFactor}
+                  onChange={(e) => setMinScaleFactor(parseFloat(e.target.value) || 0.5)}
                   disabled={isRunning}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Must maintain redundancy requirements
+                  Multiplier for minimum vCPUs (e.g., 0.5 = half current)
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="max-nodes">Maximum Nodes</Label>
+                <Label htmlFor="max-scale">Maximum Scale Factor</Label>
                 <Input
-                  id="max-nodes"
+                  id="max-scale"
                   type="number"
-                  min={minNodes + 1}
-                  value={maxNodes}
-                  onChange={(e) => setMaxNodes(parseInt(e.target.value) || 0)}
+                  step="0.1"
+                  min={0.1}
+                  max={10}
+                  value={maxScaleFactor}
+                  onChange={(e) => setMaxScaleFactor(parseFloat(e.target.value) || 3.0)}
                   disabled={isRunning}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Upper bound for analysis
+                  Multiplier for maximum vCPUs (e.g., 3.0 = triple current)
                 </p>
               </div>
 
               <div>
-                <Label htmlFor="increment">Increment (nodes per step)</Label>
+                <Label htmlFor="steps">Number of Data Points</Label>
                 <Input
-                  id="increment"
+                  id="steps"
                   type="number"
-                  min={1}
-                  max={20}
-                  value={increment}
-                  onChange={(e) => setIncrement(parseInt(e.target.value) || 1)}
+                  min={2}
+                  max={50}
+                  value={steps}
+                  onChange={(e) => setSteps(parseInt(e.target.value) || 10)}
                   disabled={isRunning}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Larger increments = faster generation, fewer data points
+                  More steps = more detailed chart, slower generation
                 </p>
               </div>
             </div>

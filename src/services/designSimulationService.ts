@@ -60,77 +60,34 @@ export interface RoleAssignmentMap {
 }
 
 /**
- * Calculate what totalVCPUs requirement produces the target node count
+ * Calculate vCPU requirement as a multiple of the current requirement
  *
- * This "reverse engineers" the requirement by working backwards from the desired
- * node count to the vCPU requirement that would produce it.
+ * This provides a simple, accurate scaling by directly adjusting the vCPU
+ * requirement and letting the normal calculation pipeline determine node count.
  *
- * The role calculator does: vCPUs → nodes, we need to do: nodes → vCPUs
- *
- * @param targetNodes - Desired number of nodes (including redundancy)
- * @param redundancy - Redundancy configuration (e.g., 'N+1', 'N+2', '1 Node', '2 Nodes')
- * @param overcommit - Overcommit ratio (e.g., 2 for 2:1)
- * @param totalAZs - Number of availability zones
- * @param coresPerNode - Physical CPU cores per compute node
- * @returns Required totalVCPUs to achieve target node count
+ * @param currentVCPUs - Current totalVCPUs requirement
+ * @param scaleFactor - Multiplier for vCPU requirement (e.g., 2.0 for double)
+ * @returns Scaled totalVCPUs requirement
  */
-export const reverseEngineerVCPURequirement = (
-  targetNodes: number,
-  redundancy: string,
-  overcommit: number,
-  totalAZs: number,
-  coresPerNode: number
+export const scaleVCPURequirement = (
+  currentVCPUs: number,
+  scaleFactor: number
 ): number => {
-  // Calculate how many nodes are redundancy overhead
-  let redundantNodes = 0;
-
-  if (redundancy === 'N+1') {
-    // N+1 means one AZ worth of nodes is redundancy
-    redundantNodes = Math.ceil(targetNodes / totalAZs);
-  } else if (redundancy === 'N+2') {
-    // N+2 means two AZs worth of nodes is redundancy
-    redundantNodes = Math.ceil((targetNodes / totalAZs) * 2);
-  } else if (redundancy === '1 Node') {
-    redundantNodes = 1;
-  } else if (redundancy === '2 Nodes') {
-    redundantNodes = 2;
-  }
-  // 'None' or unknown -> redundantNodes = 0
-
-  // Work backwards: target nodes - redundancy = base nodes
-  // This is what the user specifies in requirements (before redundancy is added)
-  const baseNodeCount = targetNodes - redundantNodes;
-
-  // The role calculator distributes nodes across AZs
-  const nodesPerAZ = Math.ceil(baseNodeCount / totalAZs);
-
-  // Calculate total physical cores needed
-  // Role calculator: totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommit)
-  // Then: nodesPerAZ = Math.ceil(totalPhysicalCoresNeeded / totalAZs)
-  // So: totalPhysicalCoresNeeded = nodesPerAZ * totalAZs * coresPerNode
-  const totalPhysicalCoresNeeded = nodesPerAZ * totalAZs * coresPerNode;
-
-  // Convert physical cores to vCPUs (what the requirement specifies)
-  const requiredVCPUs = totalPhysicalCoresNeeded * overcommit;
-
-  return requiredVCPUs;
+  return Math.round(currentVCPUs * scaleFactor);
 };
 
 /**
- * Clone requirements and modify the target cluster's vCPU requirement
- * to achieve the desired node count
+ * Clone requirements and scale the target cluster's vCPU requirement
  *
  * @param baseRequirements - Current design requirements
  * @param clusterId - ID of the compute cluster to modify
- * @param targetNodeCount - Desired number of nodes
- * @param coresPerNode - Physical CPU cores per compute node
+ * @param scaleFactor - Multiplier for vCPU requirement (e.g., 2.0 for double)
  * @returns Cloned and modified requirements object
  */
-export const cloneAndModifyRequirements = (
+export const cloneAndScaleRequirements = (
   baseRequirements: DesignRequirements,
   clusterId: string,
-  targetNodeCount: number,
-  coresPerNode: number
+  scaleFactor: number
 ): DesignRequirements => {
   // Deep clone to avoid mutations
   const clonedRequirements: DesignRequirements = JSON.parse(JSON.stringify(baseRequirements));
@@ -143,32 +100,19 @@ export const cloneAndModifyRequirements = (
     throw new Error(`Cluster ${clusterId} not found in requirements`);
   }
 
-  // Get configuration for reverse engineering
-  const totalAZs = clonedRequirements.physicalConstraints?.totalAvailabilityZones || 3;
-  const overcommitRatio = targetCluster.overcommitRatio || 2;
-  const redundancy = targetCluster.availabilityZoneRedundancy || 'None';
-
-  // Calculate what vCPU requirement produces this node count
-  const requiredVCPUs = reverseEngineerVCPURequirement(
-    targetNodeCount,
-    redundancy,
-    overcommitRatio,
-    totalAZs,
-    coresPerNode
-  );
-
-  // Update the cluster's vCPU requirement
-  targetCluster.totalVCPUs = requiredVCPUs;
-
-  // Also ensure memory scales proportionally (maintain CPU:memory ratio)
-  // Get current ratio
+  // Get current vCPUs and memory
   const currentVCPUs = baseRequirements.computeRequirements?.computeClusters
     ?.find(c => c.id === clusterId)?.totalVCPUs || 5000;
   const currentMemoryTB = baseRequirements.computeRequirements?.computeClusters
     ?.find(c => c.id === clusterId)?.totalMemoryTB || 30;
 
+  // Scale vCPUs by the factor
+  const scaledVCPUs = scaleVCPURequirement(currentVCPUs, scaleFactor);
+  targetCluster.totalVCPUs = scaledVCPUs;
+
+  // Scale memory proportionally to maintain CPU:memory ratio
   const cpuMemoryRatio = currentMemoryTB / currentVCPUs;
-  targetCluster.totalMemoryTB = requiredVCPUs * cpuMemoryRatio;
+  targetCluster.totalMemoryTB = scaledVCPUs * cpuMemoryRatio;
 
   return clonedRequirements;
 };
