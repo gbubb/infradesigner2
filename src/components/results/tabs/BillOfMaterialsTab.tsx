@@ -159,7 +159,7 @@ export const BillOfMaterialsTab: React.FC = () => {
     const items: Record<string, DiskLineItem> = {};
 
     // Get storage clusters for name lookup
-    const storageClusters = useStore.getState().requirements.storageRequirements?.storageClusters || [];
+    const storageClusters = useDesignStore.getState().requirements.storageRequirements?.storageClusters || [];
 
     components.forEach(instance => {
       const key =
