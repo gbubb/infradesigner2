@@ -71,13 +71,15 @@ export interface RoleAssignmentMap {
  * @param redundancy - Redundancy configuration (e.g., 'N+1', 'N+2', '1 Node', '2 Nodes')
  * @param overcommit - Overcommit ratio (e.g., 2 for 2:1)
  * @param totalAZs - Number of availability zones
+ * @param coresPerNode - Physical CPU cores per compute node
  * @returns Required totalVCPUs to achieve target node count
  */
 export const reverseEngineerVCPURequirement = (
   targetNodes: number,
   redundancy: string,
   overcommit: number,
-  totalAZs: number
+  totalAZs: number,
+  coresPerNode: number
 ): number => {
   // Calculate how many nodes are redundancy overhead
   let redundantNodes = 0;
@@ -102,8 +104,11 @@ export const reverseEngineerVCPURequirement = (
   // The role calculator distributes nodes across AZs
   const nodesPerAZ = Math.ceil(baseNodeCount / totalAZs);
 
-  // Physical cores needed = nodes per AZ * number of AZs
-  const totalPhysicalCoresNeeded = nodesPerAZ * totalAZs;
+  // Calculate total physical cores needed
+  // Role calculator: totalPhysicalCoresNeeded = Math.ceil(totalVCPUs / overcommit)
+  // Then: nodesPerAZ = Math.ceil(totalPhysicalCoresNeeded / totalAZs)
+  // So: totalPhysicalCoresNeeded = nodesPerAZ * totalAZs * coresPerNode
+  const totalPhysicalCoresNeeded = nodesPerAZ * totalAZs * coresPerNode;
 
   // Convert physical cores to vCPUs (what the requirement specifies)
   const requiredVCPUs = totalPhysicalCoresNeeded * overcommit;
@@ -118,12 +123,14 @@ export const reverseEngineerVCPURequirement = (
  * @param baseRequirements - Current design requirements
  * @param clusterId - ID of the compute cluster to modify
  * @param targetNodeCount - Desired number of nodes
+ * @param coresPerNode - Physical CPU cores per compute node
  * @returns Cloned and modified requirements object
  */
 export const cloneAndModifyRequirements = (
   baseRequirements: DesignRequirements,
   clusterId: string,
-  targetNodeCount: number
+  targetNodeCount: number,
+  coresPerNode: number
 ): DesignRequirements => {
   // Deep clone to avoid mutations
   const clonedRequirements: DesignRequirements = JSON.parse(JSON.stringify(baseRequirements));
@@ -146,7 +153,8 @@ export const cloneAndModifyRequirements = (
     targetNodeCount,
     redundancy,
     overcommitRatio,
-    totalAZs
+    totalAZs,
+    coresPerNode
   );
 
   // Update the cluster's vCPU requirement

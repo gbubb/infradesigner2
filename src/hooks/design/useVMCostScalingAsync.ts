@@ -170,11 +170,17 @@ export const useVMCostScalingAsync = () => {
         }));
 
         try {
+          // Extract cores per node from cluster metrics
+          const coresPerNode = clusterMetrics.nodeHardware && clusterMetrics.nodeHardware.length > 0
+            ? clusterMetrics.nodeHardware[0].cpuCores
+            : 1; // Fallback to 1 if not available
+
           // Clone and modify requirements for this target node count
           const modifiedRequirements = cloneAndModifyRequirements(
             requirements,
             config.clusterId,
-            targetNodeCount
+            targetNodeCount,
+            coresPerNode
           );
 
           // Run full simulation
