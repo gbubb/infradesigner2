@@ -9,9 +9,18 @@
  * requirements and triggering a full recalculation.
  */
 
-import { DesignRequirements, ComputeClusterRequirement } from '@/types/infrastructure';
+import { DesignRequirements, ComputeClusterRequirement, InfrastructureComponent } from '@/types/infrastructure';
 import { calculateComponentRoles } from '@/store/slices/requirements/roleCalculator';
 import { ComponentRole } from '@/types/infrastructure';
+import { calculateRequiredQuantity } from '@/store/slices/requirements/calculationManager';
+import {
+  calculateCompleteCostAnalysis,
+  calculatePowerConsumption,
+  estimateRackQuantity,
+  countInfrastructure
+} from '@/lib/costCalculationHelpers';
+import { v4 as uuidv4 } from 'uuid';
+import { StoreState } from '@/store/types';
 
 export interface SimulationResult {
   // Configuration
@@ -177,18 +186,246 @@ export const cloneAndModifyRequirements = (
  */
 export const simulateDesignConfiguration = (
   requirements: DesignRequirements,
-  componentTemplates: any[],
+  componentTemplates: InfrastructureComponent[],
   existingAssignments: RoleAssignmentMap,
   averageVMVCPUs: number,
   averageVMMemoryGB: number
 ): SimulationResult => {
-  // TODO: This is a placeholder that will be fully implemented in subsequent commits
-  // The full implementation requires:
-  // - Component role calculation
-  // - Quantity calculation for each role
-  // - Infrastructure counting (racks, switches, power)
-  // - Cost calculation
-  // - VM capacity calculation
+  const calculationSteps: string[] = [];
 
-  throw new Error('simulateDesignConfiguration not yet implemented - see scalingplan.md');
+  try {
+    calculationSteps.push('Step 1: Calculate component roles from requirements');
+
+    // Step 1: Calculate component roles
+    const roles = calculateComponentRoles(requirements);
+    calculationSteps.push(`Generated ${roles.length} component roles`);
+
+    // Step 2: Apply existing component assignments to roles
+    calculationSteps.push('Step 2: Apply component assignments to roles');
+    const rolesWithAssignments = roles.map(role => {
+      const assignedComponentId = existingAssignments[role.role] || existingAssignments[`${role.role}-${role.clusterInfo?.clusterId}`];
+      if (assignedComponentId) {
+        calculationSteps.push(`Assigned ${assignedComponentId} to role ${role.role}`);
+        return { ...role, assignedComponentId };
+      }
+      return role;
+    });
+
+    // Step 3: Calculate quantities for each role
+    calculationSteps.push('Step 3: Calculate required quantities for each role');
+
+    // Build a mock state object for quantity calculations
+    const mockState = {
+      requirements,
+      componentRoles: rolesWithAssignments,
+      componentTemplates,
+      selectedDisksByRole: {}, // Simplified: no disk configurations in simulation
+      selectedGPUsByRole: {}, // Simplified: no GPU configurations in simulation
+      selectedDisksByStorageCluster: {}
+    } as unknown as StoreState;
+
+    const rolesWithQuantities = rolesWithAssignments.map(role => {
+      if (!role.assignedComponentId) {
+        return { ...role, adjustedRequiredCount: 0 };
+      }
+
+      const result = calculateRequiredQuantity(role.id, role.assignedComponentId, mockState);
+      calculationSteps.push(`Role ${role.role}: ${result.requiredQuantity} units`);
+
+      return {
+        ...role,
+        adjustedRequiredCount: result.requiredQuantity
+      };
+    });
+
+    // Step 4: Generate component instances (simplified - no disk/GPU attachments)
+    calculationSteps.push('Step 4: Generate component instances');
+
+    const components: InfrastructureComponent[] = [];
+    const templateInstanceCounts: { [key: string]: number } = {};
+
+    rolesWithQuantities.forEach(role => {
+      if (!role.assignedComponentId || !role.adjustedRequiredCount || role.adjustedRequiredCount === 0) {
+        return;
+      }
+
+      const componentTemplate = componentTemplates.find(c => c.id === role.assignedComponentId);
+      if (!componentTemplate) {
+        calculationSteps.push(`WARNING: Template ${role.assignedComponentId} not found for role ${role.role}`);
+        return;
+      }
+
+      // Create component instances
+      for (let i = 0; i < role.adjustedRequiredCount; i++) {
+        const templateIdForCount = componentTemplate.id;
+        templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
+        const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
+
+        const instanceComponent: InfrastructureComponent = {
+          ...componentTemplate,
+          id: uuidv4(),
+          name: instanceName,
+          templateId: componentTemplate.id,
+          quantity: 1,
+          role: role.role,
+          ruSize: componentTemplate.ruSize,
+          clusterInfo: role.clusterInfo
+        };
+
+        components.push(instanceComponent);
+      }
+    });
+
+    calculationSteps.push(`Generated ${components.length} component instances`);
+
+    // Step 5: Count infrastructure
+    calculationSteps.push('Step 5: Count infrastructure components');
+    const infrastructure = countInfrastructure(components);
+
+    // Step 6: Estimate rack quantity
+    calculationSteps.push('Step 6: Estimate rack requirements');
+    const rackEstimate = estimateRackQuantity(components, requirements);
+    calculationSteps.push(`Estimated ${rackEstimate.totalRacks} total racks (${rackEstimate.computeRacks} compute, ${rackEstimate.networkRacks} network)`);
+
+    // Step 7: Calculate power consumption
+    calculationSteps.push('Step 7: Calculate power consumption');
+    const operationalLoadPercentage = requirements.physicalConstraints?.operationalLoadPercentage ?? 50;
+    const powerConsumption = calculatePowerConsumption(components, operationalLoadPercentage);
+    calculationSteps.push(`Total power: ${powerConsumption.operationalPower}W`);
+
+    // Step 8: Calculate costs
+    calculationSteps.push('Step 8: Calculate costs');
+    const costAnalysis = calculateCompleteCostAnalysis(
+      components,
+      requirements,
+      rackEstimate.totalRacks,
+      null // No facility costs in simulation
+    );
+    calculationSteps.push(`Capital cost: $${costAnalysis.capitalCost.toFixed(2)}`);
+    calculationSteps.push(`Monthly operational cost: $${costAnalysis.monthlyOperationalCost.toFixed(2)}`);
+
+    // Step 9: Calculate VM capacity and cost per VM
+    calculationSteps.push('Step 9: Calculate VM capacity metrics');
+
+    // Find the target cluster to extract its details
+    const computeClusters = requirements.computeRequirements?.computeClusters || [];
+    const targetCluster = computeClusters.find(c => components.some(comp =>
+      comp.clusterInfo?.clusterId === c.id &&
+      (comp.role === 'computeNode' || comp.role === 'gpuNode' || comp.role === 'hyperConvergedNode')
+    ));
+
+    if (!targetCluster) {
+      throw new Error('No target compute cluster found in simulation');
+    }
+
+    // Calculate total vCPUs and memory from actual components
+    let totalVCPUs = 0;
+    let totalMemoryGB = 0;
+    let nodeCount = 0;
+    let redundantNodes = 0;
+
+    const computeNodes = components.filter(c =>
+      c.clusterInfo?.clusterId === targetCluster.id &&
+      (c.role === 'computeNode' || c.role === 'gpuNode' || c.role === 'hyperConvergedNode')
+    );
+
+    computeNodes.forEach(node => {
+      nodeCount++;
+
+      // Extract CPU cores
+      let coresPerNode = 0;
+      if ('cpuSockets' in node && 'cpuCoresPerSocket' in node) {
+        coresPerNode = (node.cpuSockets || 0) * (node.cpuCoresPerSocket || 0);
+      } else if ('coreCount' in node) {
+        coresPerNode = node.coreCount || 0;
+      } else if ('cores' in node) {
+        coresPerNode = node.cores || 0;
+      }
+
+      const overcommitRatio = targetCluster.overcommitRatio || 2;
+      const nodeVCPUs = coresPerNode * overcommitRatio;
+      totalVCPUs += nodeVCPUs;
+
+      // Extract memory
+      let nodeMemoryGB = 0;
+      if ('memoryCapacity' in node) {
+        nodeMemoryGB = node.memoryCapacity || 0;
+      } else if ('memoryGB' in node) {
+        nodeMemoryGB = node.memoryGB || 0;
+      } else if ('memoryTB' in node && node.memoryTB) {
+        nodeMemoryGB = node.memoryTB * 1024;
+      }
+      totalMemoryGB += nodeMemoryGB;
+    });
+
+    // Calculate redundancy overhead
+    const redundancy = targetCluster.availabilityZoneRedundancy || 'None';
+    const totalAZs = requirements.physicalConstraints?.totalAvailabilityZones || 3;
+
+    if (redundancy === 'N+1') {
+      redundantNodes = Math.ceil(nodeCount / totalAZs);
+    } else if (redundancy === 'N+2') {
+      redundantNodes = Math.ceil((nodeCount / totalAZs) * 2);
+    } else if (redundancy === '1 Node') {
+      redundantNodes = 1;
+    } else if (redundancy === '2 Nodes') {
+      redundantNodes = 2;
+    }
+
+    const usableNodes = nodeCount - redundantNodes;
+    const usableVCPUs = Math.round((totalVCPUs / nodeCount) * usableNodes);
+    const usableMemoryGB = Math.round((totalMemoryGB / nodeCount) * usableNodes);
+
+    // Calculate max VMs based on both vCPU and memory constraints
+    const maxVMsByVCPU = Math.floor(usableVCPUs / averageVMVCPUs);
+    const maxVMsByMemory = Math.floor(usableMemoryGB / averageVMMemoryGB);
+    const maxVMs = Math.min(maxVMsByVCPU, maxVMsByMemory);
+
+    // Calculate cost per VM
+    const costPerVM = maxVMs > 0 ? costAnalysis.monthlyOperationalCost / maxVMs : 0;
+
+    calculationSteps.push(`Total nodes: ${nodeCount}, Redundant nodes: ${redundantNodes}, Usable nodes: ${usableNodes}`);
+    calculationSteps.push(`Total vCPUs: ${totalVCPUs}, Usable vCPUs: ${usableVCPUs}`);
+    calculationSteps.push(`Max VMs: ${maxVMs} (limited by ${maxVMsByVCPU < maxVMsByMemory ? 'CPU' : 'memory'})`);
+    calculationSteps.push(`Cost per VM: $${costPerVM.toFixed(2)}/month`);
+
+    // Build and return the result
+    const result: SimulationResult = {
+      // Configuration
+      nodeCount,
+      clusterId: targetCluster.id,
+      clusterName: targetCluster.name,
+
+      // Capacity metrics
+      totalVCPUs,
+      usableVCPUs,
+      totalMemoryGB,
+      usableMemoryGB,
+      maxVMs,
+
+      // Infrastructure that scales
+      totalRacks: rackEstimate.totalRacks,
+      totalLeafSwitches: infrastructure.leafSwitches,
+      totalMgmtSwitches: infrastructure.managementSwitches,
+      totalStorageSwitches: 0, // Simplified: not tracking storage switches separately
+      totalPowerW: powerConsumption.operationalPower,
+
+      // Cost breakdown
+      capitalCost: costAnalysis.capitalCost,
+      monthlyOperationalCost: costAnalysis.monthlyOperationalCost,
+      monthlyFacilityCost: costAnalysis.monthlyFacilityCost,
+      monthlyEnergyCost: costAnalysis.monthlyEnergyCost,
+      monthlyAmortizedCost: costAnalysis.monthlyAmortizedCost,
+      costPerVM,
+
+      // Debug info
+      redundantNodes,
+      calculationSteps
+    };
+
+    return result;
+  } catch (error) {
+    console.error('Simulation error:', error);
+    throw new Error(`Design simulation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
