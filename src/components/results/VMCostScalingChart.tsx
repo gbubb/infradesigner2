@@ -11,20 +11,99 @@ import {
   ReferenceLine
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { SimulationResult } from '@/services/designSimulationService';
-import { TrendingDown, TrendingUp } from 'lucide-react';
+import { TrendingDown, TrendingUp, Download } from 'lucide-react';
+import { useDesignStore } from '@/store/designStore';
+import { ComputeClusterMetrics } from '@/hooks/design/useComputeClusterMetrics';
 
 interface VMCostScalingChartProps {
   data: SimulationResult[];
   currentNodeCount: number;
   clusterName: string;
+  clusterMetrics?: ComputeClusterMetrics;
 }
 
 export const VMCostScalingChart: React.FC<VMCostScalingChartProps> = ({
   data,
   currentNodeCount,
-  clusterName
+  clusterName,
+  clusterMetrics
 }) => {
+  const activeDesign = useDesignStore(state => state.activeDesign);
+  const designName = activeDesign?.name || 'Unnamed Design';
+
+  // CSV Export Function
+  const exportToCSV = () => {
+    if (!data || data.length === 0) return;
+
+    // Get the first data point to extract design info
+    const firstPoint = data[0];
+
+    // Get node component name(s) from cluster metrics
+    const nodeComponents = clusterMetrics?.nodeHardware
+      ?.map(hw => hw.model)
+      .filter((value, index, self) => self.indexOf(value) === index) // Remove duplicates
+      .join(', ') || 'N/A';
+
+    // Build CSV header with design metadata
+    const csvLines: string[] = [];
+    csvLines.push('# VM Cost Scaling Analysis');
+    csvLines.push(`# Design Name:,${designName}`);
+    csvLines.push(`# Cluster:,${clusterName}`);
+    csvLines.push(`# Node Component(s):,${nodeComponents}`);
+    csvLines.push(`# Current Node Count:,${currentNodeCount}`);
+    csvLines.push(`# Total Racks:,${firstPoint.totalRacks}`);
+    csvLines.push(`# Export Date:,${new Date().toISOString()}`);
+    csvLines.push('');
+
+    // Data headers
+    const headers = [
+      'Node Count',
+      'Cost per VM ($/month)',
+      'VM Capacity',
+      'Usable vCPUs',
+      'Usable Memory (GB)',
+      'Total Racks',
+      'Monthly Operational Cost ($)',
+      'Monthly Amortized Cost ($)',
+      'Total Power (W)',
+      'Capital Cost ($)'
+    ];
+    csvLines.push(headers.join(','));
+
+    // Data rows
+    data.forEach(point => {
+      const row = [
+        point.nodeCount,
+        point.costPerVM.toFixed(2),
+        point.maxVMs,
+        point.usableVCPUs,
+        Math.round(point.usableMemoryGB),
+        point.totalRacks,
+        point.monthlyOperationalCost.toFixed(2),
+        point.monthlyAmortizedCost.toFixed(2),
+        point.totalPowerW.toFixed(0),
+        point.capitalCost.toFixed(2)
+      ];
+      csvLines.push(row.join(','));
+    });
+
+    // Create and download file
+    const csvContent = csvLines.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    const fileName = `${designName.replace(/[^a-z0-9]/gi, '_')}_${clusterName.replace(/[^a-z0-9]/gi, '_')}_scaling_analysis.csv`;
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (!data || data.length === 0) {
     return (
       <Card>
@@ -98,22 +177,33 @@ export const VMCostScalingChart: React.FC<VMCostScalingChartProps> = ({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>VM Cost Scaling Analysis - {clusterName}</CardTitle>
-          {potentialSavings > 5 && (
-            <div className="flex items-center gap-2 text-sm">
-              {shouldScaleUp && (
-                <div className="flex items-center gap-1 text-green-600">
-                  <TrendingUp className="h-4 w-4" />
-                  <span>Scale up for {potentialSavings.toFixed(0)}% lower cost/VM</span>
-                </div>
-              )}
-              {shouldScaleDown && (
-                <div className="flex items-center gap-1 text-blue-600">
-                  <TrendingDown className="h-4 w-4" />
-                  <span>Scale down for {potentialSavings.toFixed(0)}% lower cost/VM</span>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {potentialSavings > 5 && (
+              <div className="flex items-center gap-2 text-sm">
+                {shouldScaleUp && (
+                  <div className="flex items-center gap-1 text-green-600">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>Scale up for {potentialSavings.toFixed(0)}% lower cost/VM</span>
+                  </div>
+                )}
+                {shouldScaleDown && (
+                  <div className="flex items-center gap-1 text-blue-600">
+                    <TrendingDown className="h-4 w-4" />
+                    <span>Scale down for {potentialSavings.toFixed(0)}% lower cost/VM</span>
+                  </div>
+                )}
+              </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportToCSV}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

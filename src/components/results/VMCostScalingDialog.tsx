@@ -319,6 +319,7 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
               data={results}
               currentNodeCount={selectedCluster.totalNodes}
               clusterName={selectedCluster.clusterName}
+              clusterMetrics={selectedCluster}
             />
           )}
 
