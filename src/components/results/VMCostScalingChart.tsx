@@ -73,16 +73,13 @@ export const VMCostScalingChart: React.FC<VMCostScalingChartProps> = ({
             </p>
             <div className="border-t pt-1 mt-2 space-y-0.5">
               <p className="text-xs text-muted-foreground">
-                {point.usableVCPUs.toLocaleString()} usable vCPUs
+                {point.usableVCPUs.toLocaleString()} usable vCPUs • {Math.round(point.usableMemoryGB).toLocaleString()} GB RAM
               </p>
               <p className="text-xs text-muted-foreground">
-                {point.totalRacks} racks • {point.totalLeafSwitches + point.totalMgmtSwitches} switches
+                Total monthly cost: ${point.monthlyOperationalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </p>
               <p className="text-xs text-muted-foreground">
-                {(point.totalPowerW / 1000).toFixed(1)}kW power consumption
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Total: ${point.monthlyOperationalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}/month
+                Amortized capital: ${point.monthlyAmortizedCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}/month
               </p>
             </div>
           </div>
@@ -238,30 +235,28 @@ export const VMCostScalingChart: React.FC<VMCostScalingChartProps> = ({
             <p className="text-sm font-semibold mb-2">Key Insights:</p>
             <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
               <li>
-                Infrastructure scales with node count: racks ({data[0]?.totalRacks} → {data[data.length - 1]?.totalRacks}),
-                power ({(data[0]?.totalPowerW / 1000).toFixed(1)}kW → {(data[data.length - 1]?.totalPowerW / 1000).toFixed(1)}kW)
+                Capacity scales from {data[0]?.maxVMs} VMs ({data[0]?.nodeCount} nodes) to{' '}
+                {data[data.length - 1]?.maxVMs} VMs ({data[data.length - 1]?.nodeCount} nodes)
               </li>
               <li>
-                Fixed costs (network, racks, facilities) are amortized across more VMs as you scale
+                Cost per VM decreases as fixed infrastructure costs are amortized across more VMs
               </li>
               {minCostPoint.nodeCount > currentNodeCount && (
                 <li className="text-green-600 font-medium">
-                  Scaling to {minCostPoint.nodeCount} nodes would reduce cost per VM by{' '}
-                  {potentialSavings.toFixed(1)}% while adding{' '}
-                  {minCostPoint.maxVMs - (currentPoint?.maxVMs || 0)} VMs capacity
+                  Scaling to {minCostPoint.nodeCount} nodes ({minCostPoint.maxVMs} VMs) would reduce cost per VM by{' '}
+                  {potentialSavings.toFixed(1)}% - savings of ${((currentPoint?.costPerVM || 0) - minCostPoint.costPerVM).toFixed(2)}/VM/month
                 </li>
               )}
               {minCostPoint.nodeCount < currentNodeCount && (
                 <li className="text-blue-600 font-medium">
-                  Right-sizing to {minCostPoint.nodeCount} nodes would optimize cost efficiency
+                  Right-sizing to {minCostPoint.nodeCount} nodes would optimize cost efficiency while maintaining{' '}
+                  {minCostPoint.maxVMs} VMs capacity
                 </li>
               )}
               <li>
-                Each additional node adds ~
-                {data.length > 1
-                  ? Math.floor((data[1].maxVMs - data[0].maxVMs) / (data[1].nodeCount - data[0].nodeCount))
-                  : 0}{' '}
-                VMs capacity
+                Cost efficiency improves by {((data[0]?.costPerVM / data[data.length - 1]?.costPerVM) - 1) * 100 > 0
+                  ? ((data[0]?.costPerVM / data[data.length - 1]?.costPerVM) - 1).toFixed(1)
+                  : '0'}% at maximum scale
               </li>
             </ul>
           </div>
