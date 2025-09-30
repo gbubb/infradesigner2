@@ -137,20 +137,22 @@ export const useVMCostScalingAsync = () => {
       const averageVMMemoryGB = requirements.computeRequirements?.averageVMMemoryGB || 18;
 
       // Generate array of scale factors
-      const scaleFactors: number[] = [];
+      // We'll generate more candidate scale factors than requested, then filter to unique node counts
+      const candidateScaleFactors: number[] = [];
       const scaleRange = config.maxScaleFactor - config.minScaleFactor;
-      const stepSize = config.steps > 1 ? scaleRange / (config.steps - 1) : 0;
+      const candidateSteps = config.steps * 3; // Generate 3x more candidates
+      const stepSize = candidateSteps > 1 ? scaleRange / (candidateSteps - 1) : 0;
 
-      for (let i = 0; i < config.steps; i++) {
+      for (let i = 0; i < candidateSteps; i++) {
         const scaleFactor = config.minScaleFactor + (stepSize * i);
-        scaleFactors.push(scaleFactor);
+        candidateScaleFactors.push(scaleFactor);
       }
 
       // Initialize state for running simulation
       const startTime = Date.now();
       setState({
         status: 'running',
-        progress: { current: 0, total: scaleFactors.length, percentage: 0 },
+        progress: { current: 0, total: candidateScaleFactors.length, percentage: 0 },
         currentNodeCount: null,
         results: [],
         error: null,
@@ -159,9 +161,10 @@ export const useVMCostScalingAsync = () => {
       });
 
       const results: SimulationResult[] = [];
+      let lastNodeCount: number | null = null;
 
       // Process simulations sequentially
-      for (let i = 0; i < scaleFactors.length; i++) {
+      for (let i = 0; i < candidateScaleFactors.length; i++) {
         // Check for cancellation
         if (cancelledRef.current) {
           setState(prev => ({
@@ -173,7 +176,7 @@ export const useVMCostScalingAsync = () => {
           return;
         }
 
-        const scaleFactor = scaleFactors[i];
+        const scaleFactor = candidateScaleFactors[i];
 
         // Update progress state
         setState(prev => ({
@@ -181,8 +184,8 @@ export const useVMCostScalingAsync = () => {
           currentNodeCount: null, // Will be determined by simulation
           progress: {
             current: i,
-            total: scaleFactors.length,
-            percentage: Math.round((i / scaleFactors.length) * 100)
+            total: candidateScaleFactors.length,
+            percentage: Math.round((i / candidateScaleFactors.length) * 100)
           }
         }));
 
@@ -203,24 +206,38 @@ export const useVMCostScalingAsync = () => {
             averageVMMemoryGB
           );
 
-          results.push(result);
+          // Only add result if node count changed from previous simulation
+          // This avoids duplicate data points when rounding causes same node count
+          if (lastNodeCount === null || result.nodeCount !== lastNodeCount) {
+            results.push(result);
+            lastNodeCount = result.nodeCount;
 
-          // Update current node count from result
-          setState(prev => ({
-            ...prev,
-            currentNodeCount: result.nodeCount
-          }));
+            // Update current node count from result
+            setState(prev => ({
+              ...prev,
+              currentNodeCount: result.nodeCount,
+              results: [...results]
+            }));
+          } else {
+            // Skip this data point, but update progress
+            console.log(`Skipping scale factor ${scaleFactor.toFixed(2)} - produces same node count (${result.nodeCount}) as previous simulation`);
+          }
 
           // Calculate estimated time remaining
           const elapsedTime = Date.now() - startTime;
           const avgTimePerSim = elapsedTime / (i + 1);
-          const remainingSims = scaleFactors.length - (i + 1);
+          const remainingSims = candidateScaleFactors.length - (i + 1);
           const estimatedTimeRemaining = Math.round((avgTimePerSim * remainingSims) / 1000); // in seconds
 
-          // Update state with new result and time estimate
+          // Stop early if we have enough unique data points
+          if (results.length >= config.steps) {
+            console.log(`Reached target of ${config.steps} unique data points, stopping early`);
+            break;
+          }
+
+          // Update time estimate
           setState(prev => ({
             ...prev,
-            results: [...results],
             estimatedTimeRemaining
           }));
 
@@ -240,12 +257,14 @@ export const useVMCostScalingAsync = () => {
         status: 'completed',
         currentNodeCount: null,
         progress: {
-          current: scaleFactors.length,
-          total: scaleFactors.length,
+          current: results.length,
+          total: results.length,
           percentage: 100
         },
         estimatedTimeRemaining: 0
       }));
+
+      console.log(`Simulation complete: Generated ${results.length} unique data points from ${candidateScaleFactors.length} candidates`);
 
     } catch (error) {
       console.error('Simulation error:', error);
