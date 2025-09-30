@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ComponentCostsByType, ChartTooltipPayload, TooltipPayloadEntry } from '@/types/compare';
 import { formatCompactCurrency } from '@/lib/formatters';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface CostBreakdownData {
   category: string;
@@ -25,6 +26,8 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({
   designACosts,
   designBCosts,
 }) => {
+  const currency = useCurrency();
+
   const data: CostBreakdownData[] = [
     {
       category: 'Compute',

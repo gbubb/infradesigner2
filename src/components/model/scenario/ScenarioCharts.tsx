@@ -103,7 +103,7 @@ export const ScenarioCharts: React.FC<ScenarioChartsProps> = ({
                   }}
                 />
                 <Tooltip 
-                  formatter={(value: number) => formatCurrency(value)}
+                  formatter={(value: number) => formatCurrency(value, currency)}
                   labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
                 />
                 <Legend wrapperStyle={{fontSize: '12px'}} />
@@ -173,7 +173,7 @@ export const ScenarioCharts: React.FC<ScenarioChartsProps> = ({
                     if (name.includes('Margin')) {
                       return `${Number(value).toFixed(1)}%`;
                     }
-                    return formatCurrency(value);
+                    return formatCurrency(value, currency);
                   }}
                   labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
                 />
@@ -234,7 +234,7 @@ export const ScenarioCharts: React.FC<ScenarioChartsProps> = ({
                   }}
                 />
                 <Tooltip 
-                  formatter={(value: number) => formatCurrency(value)}
+                  formatter={(value: number) => formatCurrency(value, currency)}
                   labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
                 />
                 <Legend wrapperStyle={{fontSize: '12px'}} />

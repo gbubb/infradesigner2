@@ -8,6 +8,7 @@ import { DollarSign, Server, Zap, TrendingUp } from 'lucide-react';
 import { useStore } from '@/store';
 import type { RackCostAllocation } from '@/types/infrastructure/datacenter-types';
 import { formatCurrency, formatNumber } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const COST_COLORS = {
   'real-estate': '#8884d8',
@@ -120,7 +121,7 @@ export function RackCostVisualization() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalMonthlyCost)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalMonthlyCost, currency)}</div>
             <p className="text-xs text-muted-foreground">
               Across {rackCosts.length} racks
             </p>
@@ -133,7 +134,7 @@ export function RackCostVisualization() {
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(avgCostPerRack)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(avgCostPerRack, currency)}</div>
             <p className="text-xs text-muted-foreground">
               Per month
             </p>
@@ -146,7 +147,7 @@ export function RackCostVisualization() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(avgCostPerU)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(avgCostPerU, currency)}</div>
             <p className="text-xs text-muted-foreground">
               Per rack unit per month
             </p>
@@ -159,7 +160,7 @@ export function RackCostVisualization() {
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(avgCostPerKw)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(avgCostPerKw, currency)}</div>
             <p className="text-xs text-muted-foreground">
               Per kilowatt per month
             </p>
@@ -192,7 +193,7 @@ export function RackCostVisualization() {
                     />
                     <YAxis />
                     <Tooltip 
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value: number) => formatCurrency(value, currency)}
                       labelFormatter={(label: string) => `Rack: ${label}`}
                     />
                     <Bar dataKey="cost" fill="#8884d8" />
@@ -232,7 +233,7 @@ export function RackCostVisualization() {
                           />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      <Tooltip formatter={(value: number) => formatCurrency(value, currency)} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -247,13 +248,13 @@ export function RackCostVisualization() {
                         />
                         <span className="text-sm">{item.name}</span>
                       </div>
-                      <span className="font-medium">{formatCurrency(item.value)}</span>
+                      <span className="font-medium">{formatCurrency(item.value, currency)}</span>
                     </div>
                   ))}
                   <div className="pt-3 border-t">
                     <div className="flex items-center justify-between font-medium">
                       <span>Total Monthly</span>
-                      <span>{formatCurrency(selectedRack?.costs.total.monthly || 0)}</span>
+                      <span>{formatCurrency(selectedRack?.costs.total.monthly || 0, currency)}</span>
                     </div>
                   </div>
                 </div>
@@ -288,7 +289,7 @@ export function RackCostVisualization() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-medium">{formatCurrency(rack.costs.total.monthly)}</div>
+                          <div className="font-medium">{formatCurrency(rack.costs.total.monthly, currency)}</div>
                           <div className="text-sm text-muted-foreground">per month</div>
                         </div>
                       </div>
@@ -336,23 +337,23 @@ export function RackCostVisualization() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Capital (Monthly)</span>
-                          <span className="font-medium">{formatCurrency(selectedRack.costs.capital.monthly)}</span>
+                          <span className="font-medium">{formatCurrency(selectedRack.costs.capital.monthly, currency)}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Operational (Monthly)</span>
-                          <span className="font-medium">{formatCurrency(selectedRack.costs.operational.monthly)}</span>
+                          <span className="font-medium">{formatCurrency(selectedRack.costs.operational.monthly, currency)}</span>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t">
                           <span className="text-sm font-medium">Total Monthly</span>
-                          <span className="font-bold">{formatCurrency(selectedRack.costs.total.monthly)}</span>
+                          <span className="font-bold">{formatCurrency(selectedRack.costs.total.monthly, currency)}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Per U</span>
-                          <span>{formatCurrency(selectedRack.costs.total.perU)}</span>
+                          <span>{formatCurrency(selectedRack.costs.total.perU, currency)}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Per kW</span>
-                          <span>{formatCurrency(selectedRack.costs.total.perKw)}</span>
+                          <span>{formatCurrency(selectedRack.costs.total.perKw, currency)}</span>
                         </div>
                       </div>
                     </div>

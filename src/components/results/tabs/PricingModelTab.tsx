@@ -8,6 +8,7 @@ import { useDesignStore } from '@/store';
 import { PricingModelService, PricingConfig, PricingModelResult } from '@/services/pricing/pricingModelService';
 import { ComputeCluster } from '@/types/placement';
 import { formatCurrency, formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Info, DollarSign, Cpu, MemoryStick, HardDrive, Download, FileText, Server } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -632,10 +633,10 @@ export const PricingModelTab: React.FC = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Base Price per vCPU</p>
                     <p className="text-2xl font-bold">
-                      {formatMonthlyCurrency(pricingResult.baseCostPerVCPU * 730)}/mo
+                      {formatMonthlyCurrency(pricingResult.baseCostPerVCPU * 730, currency)}/mo
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatPreciseCurrency(pricingResult.baseCostPerVCPU)}/hr
+                      {formatPreciseCurrency(pricingResult.baseCostPerVCPU, currency)}/hr
                     </p>
                   </div>
                   <Cpu className="h-8 w-8 text-muted-foreground" />
@@ -649,10 +650,10 @@ export const PricingModelTab: React.FC = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Base Price per GB RAM</p>
                     <p className="text-2xl font-bold">
-                      {formatMonthlyCurrency(pricingResult.baseCostPerGBMemory * 730)}/mo
+                      {formatMonthlyCurrency(pricingResult.baseCostPerGBMemory * 730, currency)}/mo
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatPreciseCurrency(pricingResult.baseCostPerGBMemory)}/hr
+                      {formatPreciseCurrency(pricingResult.baseCostPerGBMemory, currency)}/hr
                     </p>
                   </div>
                   <MemoryStick className="h-8 w-8 text-muted-foreground" />
@@ -709,7 +710,7 @@ export const PricingModelTab: React.FC = () => {
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Total Monthly Cost</p>
                   <p className="text-xl font-bold">
-                    {formatMonthlyCurrency(operationalCosts.totalMonthly)}
+                    {formatMonthlyCurrency(operationalCosts.totalMonthly, currency)}
                   </p>
                   <p className="text-xs text-muted-foreground">Infrastructure + operations</p>
                 </div>
@@ -750,7 +751,7 @@ export const PricingModelTab: React.FC = () => {
                     return (
                       <>
                         <p className={`text-xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatMonthlyCurrency(Math.round(monthlyProfit))}
+                          {formatMonthlyCurrency(Math.round(monthlyProfit, currency))}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {marginPercentage.toFixed(1)}% margin
@@ -768,42 +769,42 @@ export const PricingModelTab: React.FC = () => {
                   {operationalCosts.amortizedMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Hardware Amortization</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.amortizedMonthly)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.amortizedMonthly, currency)}</span>
                     </div>
                   )}
                   {operationalCosts.energyMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Energy Costs</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.energyMonthly)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.energyMonthly, currency)}</span>
                     </div>
                   )}
                   {operationalCosts.racksMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Rack Costs</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.racksMonthly)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.racksMonthly, currency)}</span>
                     </div>
                   )}
                   {operationalCosts.facilityMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Facility Costs</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.facilityMonthly)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.facilityMonthly, currency)}</span>
                     </div>
                   )}
                   {operationalCosts.licensingMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Licensing</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.licensingMonthly)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.licensingMonthly, currency)}</span>
                     </div>
                   )}
                   {operationalCosts.networkMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Network Operations</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.networkMonthly)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.networkMonthly, currency)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm font-medium pt-2 border-t">
                     <span>Total Monthly Cost</span>
-                    <span>{formatMonthlyCurrency(operationalCosts.totalMonthly)}</span>
+                    <span>{formatMonthlyCurrency(operationalCosts.totalMonthly, currency)}</span>
                   </div>
                 </div>
               </div>

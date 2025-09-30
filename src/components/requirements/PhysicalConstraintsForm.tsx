@@ -20,11 +20,13 @@ type PhysicalConstraints = {
   rackUnitsPerRack?: number;
   powerPerRackWatts?: number;
   useColoRacks?: boolean;
-  rackCostPerMonthEuros?: number;
+  rackCostPerMonth?: number;
+  rackCostPerMonthEuros?: number; // Deprecated: kept for backward compatibility
   electricityPricePerKwh?: number;
   operationalLoadPercentage?: number;
   facilityType?: 'none' | 'colocation' | 'owned';
   selectedFacilityId?: string;
+  currency?: string;
 };
 
 interface PhysicalConstraintsProps {
@@ -293,25 +295,49 @@ export const PhysicalConstraintsForm: React.FC<PhysicalConstraintsProps> = ({
           )}
           
           <div className="grid grid-cols-3 gap-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="currency">Currency</Label>
+              <Select
+                value={requirements.currency || 'USD'}
+                onValueChange={(value) => {
+                  const updated = { ...requirements, currency: value };
+                  onUpdate(updated);
+                }}
+              >
+                <SelectTrigger id="currency">
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="EUR">EUR (€)</SelectItem>
+                  <SelectItem value="GBP">GBP (£)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {requirements.facilityType === 'colocation' && (
               <div className="space-y-2">
-                <Label htmlFor="rackCostPerMonthEuros">Rack Cost per Month (€)</Label>
+                <Label htmlFor="rackCostPerMonth">Rack Cost per Month</Label>
                 <Input
-                  id="rackCostPerMonthEuros"
-                  name="rackCostPerMonthEuros"
+                  id="rackCostPerMonth"
+                  name="rackCostPerMonth"
                   type="number"
                   min="0"
                   step="100"
                   placeholder="2000"
-                  value={requirements.rackCostPerMonthEuros === undefined ? 2000 : requirements.rackCostPerMonthEuros}
-                  onChange={handleInputChange}
+                  value={requirements.rackCostPerMonth ?? requirements.rackCostPerMonthEuros ?? 2000}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 0;
+                    const updated = { ...requirements, rackCostPerMonth: value };
+                    onUpdate(updated);
+                  }}
                 />
               </div>
             )}
-            
+
             {requirements.facilityType !== 'owned' && (
               <div className="space-y-2">
-                <Label htmlFor="electricityPricePerKwh">Energy Price (€/kWh)</Label>
+                <Label htmlFor="electricityPricePerKwh">Energy Price per kWh</Label>
                 <Input
                   id="electricityPricePerKwh"
                   name="electricityPricePerKwh"

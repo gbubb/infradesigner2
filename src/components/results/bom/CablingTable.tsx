@@ -6,6 +6,8 @@ import { FileSpreadsheet, Cable as CableIcon } from 'lucide-react';
 import { ComponentType, InfrastructureComponent, FiberPatchPanel, CopperPatchPanel, Cassette, Cable } from '@/types/infrastructure';
 import { BomItemHoverCard } from './BomItemHoverCard';
 import { CableLineItem } from './networkBomUtils';
+import { useCurrency } from '@/hooks/useCurrency';
+import { formatCurrency } from '@/lib/formatters';
 
 interface CablingTableProps {
   summarizedComponentsByCategory: Record<string, (InfrastructureComponent & { summarizedQuantity: number })[]>;
@@ -22,6 +24,8 @@ const CablingTableComponent: React.FC<CablingTableProps> = ({
   onExport,
   componentTemplates = []
 }) => {
+  const currency = useCurrency();
+
   // Helper to find cable template
   const getCableTemplate = (cableTemplateId: string | undefined) => {
     if (!cableTemplateId) return null;
@@ -44,8 +48,8 @@ const CablingTableComponent: React.FC<CablingTableProps> = ({
           <TableHead>Model</TableHead>
           <TableHead>Details</TableHead>
           <TableHead className="text-right">Quantity</TableHead>
-          <TableHead className="text-right">Unit Cost (€)</TableHead>
-          <TableHead className="text-right">Total Cost (€)</TableHead>
+          <TableHead className="text-right">Unit Cost</TableHead>
+          <TableHead className="text-right">Total Cost</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -78,8 +82,8 @@ const CablingTableComponent: React.FC<CablingTableProps> = ({
                 <TableCell>{component.model}</TableCell>
                 <TableCell>{details}</TableCell>
                 <TableCell className="text-right">{quantity}</TableCell>
-                <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-                <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+                <TableCell className="text-right">{formatCurrency(component.cost, currency)}</TableCell>
+                <TableCell className="text-right">{formatCurrency(totalCost, currency)}</TableCell>
               </TableRow>
             </BomItemHoverCard>
           );
@@ -97,8 +101,8 @@ const CablingTableComponent: React.FC<CablingTableProps> = ({
               <TableCell>{item.model}</TableCell>
               <TableCell>{item.connectorTypes}, {item.lengthMeters}m</TableCell>
               <TableCell className="text-right">{item.count}</TableCell>
-              <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
-              <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
+              <TableCell className="text-right">{formatCurrency(item.costPer, currency)}</TableCell>
+              <TableCell className="text-right">{formatCurrency(item.total, currency)}</TableCell>
             </TableRow>
           );
           

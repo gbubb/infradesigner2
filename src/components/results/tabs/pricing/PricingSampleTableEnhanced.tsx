@@ -11,6 +11,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { VMPricing, PricingModelService } from '@/services/pricing/pricingModelService';
 import { formatCurrency, formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -127,7 +128,7 @@ const CostBreakdownPieChart: React.FC<{ pricing: VMPricing }> = ({ pricing }) =>
         <div className="bg-background border rounded-lg shadow-lg p-2">
           <p className="text-xs font-medium">{payload[0].name}</p>
           <p className="text-xs text-muted-foreground">
-            {formatPreciseCurrency(value)}/hr ({percentage}%)
+            {formatPreciseCurrency(value, currency)}/hr ({percentage}%)
           </p>
         </div>
       );
@@ -165,7 +166,7 @@ const CostBreakdownPieChart: React.FC<{ pricing: VMPricing }> = ({ pricing }) =>
               <span className="text-muted-foreground">{item.name}</span>
             </div>
             <span className="font-medium">
-              {formatPreciseCurrency(item.value)}/hr
+              {formatPreciseCurrency(item.value, currency)}/hr
             </span>
           </div>
         ))}
@@ -174,12 +175,12 @@ const CostBreakdownPieChart: React.FC<{ pricing: VMPricing }> = ({ pricing }) =>
       <div className="border-t pt-2 space-y-1 text-xs">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Total Hourly:</span>
-          <span className="font-bold">{formatPreciseCurrency(pricing.baseHourlyPrice)}/hr</span>
+          <span className="font-bold">{formatPreciseCurrency(pricing.baseHourlyPrice, currency)}/hr</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Total Monthly:</span>
           <span className="font-bold text-green-600">
-            {formatMonthlyCurrency(pricing.monthlyPrice)}/mo
+            {formatMonthlyCurrency(pricing.monthlyPrice, currency)}/mo
           </span>
         </div>
       </div>
@@ -256,10 +257,10 @@ export const PricingSampleTableEnhanced: React.FC<PricingSampleTableEnhancedProp
                   <TableCell className="text-center font-medium">{item.vCPU}</TableCell>
                   <TableCell className="text-center font-medium">{item.memoryGB}</TableCell>
                   <TableCell className="text-right">
-                    {formatPreciseCurrency(item.pricing.baseHourlyPrice)}
+                    {formatPreciseCurrency(item.pricing.baseHourlyPrice, currency)}
                   </TableCell>
                   <TableCell className="text-right font-bold">
-                    {formatMonthlyCurrency(item.pricing.monthlyPrice)}
+                    {formatMonthlyCurrency(item.pricing.monthlyPrice, currency)}
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex flex-col items-center gap-0.5">

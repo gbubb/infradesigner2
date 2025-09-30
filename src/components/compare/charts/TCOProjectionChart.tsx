@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartTooltipPayload, TooltipPayloadEntry } from '@/types/compare';
 import { formatCompactCurrency } from '@/lib/formatters';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface TCOProjectionChartProps {
   designAName: string;
@@ -23,6 +24,8 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
   designBOperationalCost,
   years = 5,
 }) => {
+  const currency = useCurrency();
+
   // Generate data points for each year
   const data = Array.from({ length: years + 1 }, (_, year) => ({
     year: `Year ${year}`,
@@ -41,12 +44,12 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
           <p className="font-semibold mb-2">{label}</p>
           {payload.map((entry: TooltipPayloadEntry) => (
             <p key={entry.dataKey} className="text-sm" style={{ color: entry.color }}>
-              {entry.name}: {formatCompactCurrency(entry.value)}
+              {entry.name}: {formatCompactCurrency(entry.value, currency)}
             </p>
           ))}
           {savings > 0 && (
             <p className="text-sm text-green-600 mt-2">
-              {designBName} saves: {formatCompactCurrency(savings)}
+              {designBName} saves: {formatCompactCurrency(savings, currency)}
             </p>
           )}
         </div>
@@ -115,7 +118,7 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
           <div className="p-4 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">Initial Investment Difference</p>
             <p className="text-lg font-semibold">
-              {formatCompactCurrency(Math.abs(designBCapitalCost - designACapitalCost))}
+              {formatCompactCurrency(Math.abs(designBCapitalCost - designACapitalCost, currency))}
             </p>
             <p className="text-sm text-muted-foreground">
               {designBCapitalCost > designACapitalCost ? `${designBName} costs more upfront` : `${designAName} costs more upfront`}
@@ -125,7 +128,7 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
           <div className="p-4 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">Monthly Operational Difference</p>
             <p className="text-lg font-semibold">
-              {formatCompactCurrency(Math.abs(designBOperationalCost - designAOperationalCost))}
+              {formatCompactCurrency(Math.abs(designBOperationalCost - designAOperationalCost, currency))}
             </p>
             <p className="text-sm text-muted-foreground">
               {designBOperationalCost > designAOperationalCost ? `${designBName} costs more monthly` : `${designAName} costs more monthly`}
@@ -135,7 +138,7 @@ export const TCOProjectionChart: React.FC<TCOProjectionChartProps> = ({
           <div className="p-4 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">{years}-Year TCO Difference</p>
             <p className="text-lg font-semibold">
-              {formatCompactCurrency(Math.abs(data[years].designB - data[years].designA))}
+              {formatCompactCurrency(Math.abs(data[years].designB - data[years].designA, currency))}
             </p>
             <p className="text-sm text-muted-foreground">
               {data[years].designB > data[years].designA ? `${designBName} costs more overall` : `${designAName} costs more overall`}

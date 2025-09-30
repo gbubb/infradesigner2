@@ -8,6 +8,8 @@ import { ComponentType, InfrastructureComponent, Switch, Router, Firewall, Trans
 import { ComponentWithPlacement } from '@/types/service-types';
 import { MediaType } from '@/types/infrastructure';
 import { BomItemHoverCard } from './BomItemHoverCard';
+import { useCurrency } from '@/hooks/useCurrency';
+import { formatCurrency } from '@/lib/formatters';
 
 interface TransceiverLineItem {
   transceiverTemplateId: string;
@@ -39,6 +41,8 @@ const NetworkTableComponent: React.FC<NetworkTableProps> = ({
   componentRoles,
   onExport
 }) => {
+  const currency = useCurrency();
+
   // Helper function to find roleId for a component
   const getComponentRoleId = (component: InfrastructureComponent & { summarizedQuantity: number }) => {
     if (!component.role) return null;
@@ -75,8 +79,8 @@ const NetworkTableComponent: React.FC<NetworkTableProps> = ({
           <TableHead>Port Count</TableHead>
           <TableHead>Port Speed</TableHead>
           <TableHead className="text-right">Quantity</TableHead>
-          <TableHead className="text-right">Unit Cost (€)</TableHead>
-          <TableHead className="text-right">Total Cost (€)</TableHead>
+          <TableHead className="text-right">Unit Cost</TableHead>
+          <TableHead className="text-right">Total Cost</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -100,8 +104,8 @@ const NetworkTableComponent: React.FC<NetworkTableProps> = ({
                     <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
                   )}
                 </TableCell>
-                <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-                <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+                <TableCell className="text-right">{formatCurrency(component.cost, currency)}</TableCell>
+                <TableCell className="text-right">{formatCurrency(totalCost, currency)}</TableCell>
               </TableRow>
             </BomItemHoverCard>
           );
@@ -116,8 +120,8 @@ const NetworkTableComponent: React.FC<NetworkTableProps> = ({
             <TableCell>-</TableCell>
             <TableCell>{item.mediaTypeSupported.join(', ')} ({item.maxDistance})</TableCell>
             <TableCell className="text-right">{item.count}</TableCell>
-            <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
-            <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
+            <TableCell className="text-right">{formatCurrency(item.costPer, currency)}</TableCell>
+            <TableCell className="text-right">{formatCurrency(item.total, currency)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

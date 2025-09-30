@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { PricingModelService } from '@/services/pricing/pricingModelService';
 import { formatCurrency, formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Calculator, Cpu, MemoryStick, HardDrive, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CostBreakdownChart } from './CostBreakdownChart';
@@ -137,12 +138,12 @@ export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingSer
                   <div className="flex justify-between items-center font-medium">
                     <span>Monthly Price:</span>
                     <span className="text-2xl text-green-600">
-                      {formatMonthlyCurrency(calculatedPrice.monthlyPrice)}
+                      {formatMonthlyCurrency(calculatedPrice.monthlyPrice, currency)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Hourly Price:</span>
-                    <span>{formatPreciseCurrency(calculatedPrice.baseHourlyPrice)}/hr</span>
+                    <span>{formatPreciseCurrency(calculatedPrice.baseHourlyPrice, currency)}/hr</span>
                   </div>
                 </div>
               </AlertDescription>
@@ -186,7 +187,7 @@ export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingSer
                 </div>
                 <div className="flex justify-between px-3 py-1.5 bg-muted/30 rounded">
                   <span className="text-muted-foreground">Licensing:</span>
-                  <span>{formatMonthlyCurrency(calculatedPrice.breakdown.licensingCost * 730)}/mo</span>
+                  <span>{formatMonthlyCurrency(calculatedPrice.breakdown.licensingCost * 730, currency)}/mo</span>
                 </div>
                 {isMarginApplied && (
                   <>
@@ -215,7 +216,7 @@ export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingSer
                       <div className="flex justify-between px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded">
                         <span className="font-medium">Selling Price:</span>
                         <span className="font-bold text-green-600">
-                          {formatMonthlyCurrency(calculatedPrice.monthlyPrice)}/mo
+                          {formatMonthlyCurrency(calculatedPrice.monthlyPrice, currency)}/mo
                         </span>
                       </div>
                     </div>

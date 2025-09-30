@@ -53,19 +53,19 @@ export const ScenarioSummary: React.FC<ScenarioSummaryProps> = ({
             <div>
               <p className="text-sm text-muted-foreground">Final Month Revenue</p>
               <p className="text-2xl font-bold">
-                {formatCurrency(finalData?.totalRevenue || 0)}
+                {formatCurrency(finalData?.totalRevenue || 0, currency)}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Revenue</p>
               <p className="text-2xl font-bold">
-                {formatCurrency(finalData?.cumulativeRevenue || 0)}
+                {formatCurrency(finalData?.cumulativeRevenue || 0, currency)}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Profit</p>
               <p className="text-2xl font-bold">
-                {formatCurrency(finalData?.cumulativeProfit || 0)}
+                {formatCurrency(finalData?.cumulativeProfit || 0, currency)}
               </p>
             </div>
             <div>
@@ -86,7 +86,7 @@ export const ScenarioSummary: React.FC<ScenarioSummaryProps> = ({
             <div>
               <p className="text-sm text-muted-foreground">Annual Run Rate</p>
               <p className="text-lg font-semibold">
-                {formatCurrency((finalData?.totalRevenue || 0) * 12)}
+                {formatCurrency((finalData?.totalRevenue || 0, currency) * 12)}
               </p>
               <p className="text-xs text-muted-foreground">Based on final month</p>
             </div>
@@ -117,7 +117,7 @@ export const ScenarioSummary: React.FC<ScenarioSummaryProps> = ({
             <div>
               <p className="text-sm text-muted-foreground">Total Contract Value</p>
               <p className="text-lg font-semibold">
-                {formatCurrency(finalData?.cumulativeRevenue || 0)}
+                {formatCurrency(finalData?.cumulativeRevenue || 0, currency)}
               </p>
               <p className="text-xs text-muted-foreground">{scenarioMonths} month period</p>
             </div>
@@ -148,7 +148,7 @@ export const ScenarioSummary: React.FC<ScenarioSummaryProps> = ({
                     });
                     const finalRevenue = finalData?.totalRevenue || 0;
                     const computeRevenue = finalRevenue * (computePricing.length / (computePricing.length + storagePricing.length));
-                    return totalVMs > 0 ? formatCurrency(computeRevenue / totalVMs) : 'N/A';
+                    return totalVMs > 0 ? formatCurrency(computeRevenue / totalVMs, currency) : 'N/A';
                   })()}
                 </p>
                 <p className="text-xs text-muted-foreground">Per month</p>
@@ -171,7 +171,7 @@ export const ScenarioSummary: React.FC<ScenarioSummaryProps> = ({
                     });
                     const finalRevenue = finalData?.totalRevenue || 0;
                     const storageRevenue = finalRevenue * (storagePricing.length / (computePricing.length + storagePricing.length));
-                    return totalTiB > 0 ? formatCurrency(storageRevenue / totalTiB) : 'N/A';
+                    return totalTiB > 0 ? formatCurrency(storageRevenue / totalTiB, currency) : 'N/A';
                   })()}
                 </p>
                 <p className="text-xs text-muted-foreground">Per month</p>

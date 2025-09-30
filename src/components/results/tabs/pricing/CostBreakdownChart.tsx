@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { formatCurrency, formatPreciseCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { VMPricing } from '@/services/pricing/pricingModelService';
 import { Info } from 'lucide-react';
 
@@ -64,7 +65,7 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ pricing 
         <div className="bg-background border rounded-lg shadow-lg p-3">
           <p className="font-medium">{payload[0].name}</p>
           <p className="text-sm text-muted-foreground">
-            {formatPreciseCurrency(value)}/hr
+            {formatPreciseCurrency(value, currency)}/hr
           </p>
           <p className="text-sm text-muted-foreground">
             {percentage}% of total
@@ -143,11 +144,11 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ pricing 
           <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
             <div>
               <p className="text-sm text-muted-foreground">Base Resource Cost</p>
-              <p className="text-lg font-bold">{formatPreciseCurrency(totalBaseCost)}/hr</p>
+              <p className="text-lg font-bold">{formatPreciseCurrency(totalBaseCost, currency)}/hr</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">With Premiums</p>
-              <p className="text-lg font-bold">{formatPreciseCurrency(pricing.baseHourlyPrice)}/hr</p>
+              <p className="text-lg font-bold">{formatPreciseCurrency(pricing.baseHourlyPrice, currency)}/hr</p>
             </div>
           </div>
 
@@ -165,7 +166,7 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ pricing 
                     <span className="text-muted-foreground">{item.name}:</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span>{formatPreciseCurrency(item.value)}/hr</span>
+                    <span>{formatPreciseCurrency(item.value, currency)}/hr</span>
                     <span className="text-muted-foreground">
                       ({((item.value / pricing.baseHourlyPrice) * 100).toFixed(1)}%)
                     </span>

@@ -7,6 +7,8 @@ import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
 import { ComponentType, InfrastructureComponent, Server } from '@/types/infrastructure';
 import { ComponentWithPlacement } from '@/types/service-types';
 import { BomItemHoverCard } from './BomItemHoverCard';
+import { useCurrency } from '@/hooks/useCurrency';
+import { formatCurrency } from '@/lib/formatters';
 
 interface DiskLineItem {
   disk: InfrastructureComponent & { 
@@ -37,6 +39,8 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
   componentRoles,
   onExport
 }) => {
+  const currency = useCurrency();
+
   // Helper function to find roleId for a component
   const getComponentRoleId = (component: InfrastructureComponent & { summarizedQuantity: number }) => {
     if (!component.role) return null;
@@ -75,8 +79,8 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
           <TableHead className="text-right">Memory (GB)</TableHead>
           <TableHead className="text-right">Disks</TableHead>
           <TableHead className="text-right">Quantity</TableHead>
-          <TableHead className="text-right">Unit Cost (€)</TableHead>
-          <TableHead className="text-right">Total Cost (€)</TableHead>
+          <TableHead className="text-right">Unit Cost</TableHead>
+          <TableHead className="text-right">Total Cost</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -110,8 +114,8 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
                     <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
                   )}
                 </TableCell>
-                <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-                <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+                <TableCell className="text-right">{formatCurrency(component.cost, currency)}</TableCell>
+                <TableCell className="text-right">{formatCurrency(totalCost, currency)}</TableCell>
               </TableRow>
             </BomItemHoverCard>
           );
@@ -152,8 +156,8 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
                     <CalculationBreakdownDialog roleId={roleId} roleName={server.role || ''} />
                   )}
                 </TableCell>
-                <TableCell className="text-right">€{server.cost.toLocaleString()}</TableCell>
-                <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+                <TableCell className="text-right">{formatCurrency(server.cost, currency)}</TableCell>
+                <TableCell className="text-right">{formatCurrency(totalCost, currency)}</TableCell>
               </TableRow>
             </BomItemHoverCard>
           );
@@ -174,8 +178,8 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
               <TableCell className="text-right">{disk.capacityTB} TB</TableCell>
               <TableCell className="text-right">-</TableCell>
               <TableCell className="text-right">{quantity}</TableCell>
-              <TableCell className="text-right">€{(disk.cost ?? 0).toLocaleString()}</TableCell>
-              <TableCell className="text-right">€{(totalCost ?? 0).toLocaleString()}</TableCell>
+              <TableCell className="text-right">{formatCurrency(disk.cost ?? 0, currency)}</TableCell>
+              <TableCell className="text-right">{formatCurrency(totalCost ?? 0, currency)}</TableCell>
             </TableRow>
           );
         })}
@@ -201,8 +205,8 @@ const ComputeStorageTableComponent: React.FC<ComputeStorageTableProps> = ({
                     <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
                   )}
                 </TableCell>
-                <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-                <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+                <TableCell className="text-right">{formatCurrency(component.cost, currency)}</TableCell>
+                <TableCell className="text-right">{formatCurrency(totalCost, currency)}</TableCell>
               </TableRow>
             </BomItemHoverCard>
           );

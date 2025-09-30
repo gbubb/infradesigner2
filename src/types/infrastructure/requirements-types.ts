@@ -64,13 +64,16 @@ export interface DesignRequirements {
     rackUnitsPerRack?: number;
     powerPerRackWatts?: number;
     useColoRacks?: boolean;
-    rackCostPerMonthEuros?: number;
+    rackCostPerMonth?: number; // Renamed from rackCostPerMonthEuros
+    rackCostPerMonthEuros?: number; // Deprecated: kept for backward compatibility
     electricityPricePerKwh?: number;
     operationalLoadPercentage?: number;
     networkCoreRackQuantity?: number;
     // Datacenter facility configuration
     facilityType?: 'none' | 'colocation' | 'owned';
     selectedFacilityId?: string;
+    // Currency configuration
+    currency?: string; // Currency code (USD, EUR, GBP, etc.), defaults to USD
   };
   licensingRequirements?: LicensingRequirements;
   pricingRequirements?: PricingRequirements;

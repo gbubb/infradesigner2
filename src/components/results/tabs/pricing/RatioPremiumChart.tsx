@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { PricingModelService } from '@/services/pricing/pricingModelService';
 import { formatMonthlyCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Activity } from 'lucide-react';
 
 interface RatioPremiumChartProps {
@@ -77,7 +78,7 @@ export const RatioPremiumChart: React.FC<RatioPremiumChartProps> = ({
             Deviation: {data.deviationPercent > 0 ? '+' : ''}{data.deviationPercent.toFixed(0)}%
           </p>
           <p className="text-sm text-muted-foreground">
-            Monthly: {formatMonthlyCurrency(data.monthlyPrice)}
+            Monthly: {formatMonthlyCurrency(data.monthlyPrice, currency)}
           </p>
           <p className="text-sm text-muted-foreground">
             Ratio Premium: +{data.ratioPremium.toFixed(1)}%

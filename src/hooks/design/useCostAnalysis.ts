@@ -39,13 +39,16 @@ export const useCostAnalysis = () => {
   // Get rack cost per month (colocation or facility-based)
   const rackCostPerMonth = useMemo(() => {
     if (facilityType === 'colocation') {
-      return activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros || 2000;
+      // Support both new and legacy field names for backward compatibility
+      const constraints = activeDesign?.requirements?.physicalConstraints;
+      return constraints?.rackCostPerMonth ?? constraints?.rackCostPerMonthEuros ?? 2000;
     } else if (facilityType === 'owned' && facilityCosts) {
       return facilityCosts.costPerRack;
     }
     return 0;
   }, [
     facilityType,
+    activeDesign?.requirements?.physicalConstraints?.rackCostPerMonth,
     activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros,
     facilityCosts
   ]);

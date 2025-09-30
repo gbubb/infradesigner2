@@ -62,7 +62,7 @@ export const VirtualComponentsTable: React.FC<VirtualComponentsTableProps> = ({
     },
     {
       header: 'Cost',
-      accessor: (item) => formatCurrency(item.cost),
+      accessor: (item) => formatCurrency(item.cost, currency),
       className: 'text-right',
       headerClassName: 'text-right',
     },

@@ -14,6 +14,8 @@ import ComputeStorageTable from '../bom/ComputeStorageTable';
 import NetworkTable from '../bom/NetworkTable';
 import CablingTable from '../bom/CablingTable';
 import { ComponentWithPlacement } from '@/types/service-types';
+import { useCurrency } from '@/hooks/useCurrency';
+import { formatCurrency } from '@/lib/formatters';
 
 // Extended interface for components with additional properties
 interface ExtendedComponent extends InfrastructureComponent {
@@ -141,6 +143,7 @@ const getStorageNodeGroupKey = (component: InfrastructureComponent): string => {
 };
 
 export const BillOfMaterialsTab: React.FC = () => {
+  const currency = useCurrency();
   const activeDesign = useDesignStore(state => state.activeDesign);
   const componentTemplates = useDesignStore(state => state.componentTemplates);
   const componentRoles = useDesignStore(state => state.componentRoles);
@@ -438,8 +441,8 @@ export const BillOfMaterialsTab: React.FC = () => {
                     <TableHead>Manufacturer</TableHead>
                     <TableHead>Model</TableHead>
                     <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Unit Cost (€)</TableHead>
-                    <TableHead className="text-right">Total Cost (€)</TableHead>
+                    <TableHead className="text-right">Unit Cost</TableHead>
+                    <TableHead className="text-right">Total Cost</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -467,8 +470,8 @@ export const BillOfMaterialsTab: React.FC = () => {
                                 <CalculationBreakdownDialog roleId={roleId} roleName={component.role || ''} />
                               )}
                             </TableCell>
-                            <TableCell className="text-right">€{component.cost.toLocaleString()}</TableCell>
-                            <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(component.cost, currency)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(totalCost, currency)}</TableCell>
                           </TableRow>
                         );
                       })}
@@ -476,7 +479,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                         <TableCell colSpan={6} className="text-right font-medium">Category Subtotal:</TableCell>
                         <TableCell></TableCell>
                         <TableCell className="text-right font-medium">
-                          €{categoryComponents.reduce((sum, comp) => sum + (comp.cost * comp.summarizedQuantity), 0).toLocaleString()}
+                          {formatCurrency(categoryComponents.reduce((sum, comp) => sum + (comp.cost * comp.summarizedQuantity), 0), currency)}
                         </TableCell>
                       </TableRow>
                     </React.Fragment>
@@ -495,15 +498,15 @@ export const BillOfMaterialsTab: React.FC = () => {
                       <TableCell>-</TableCell>
                       <TableCell>{item.model}</TableCell>
                       <TableCell className="text-right">{item.count}</TableCell>
-                      <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.costPer, currency)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.total, currency)}</TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="border-t">
                     <TableCell colSpan={6} className="text-right font-medium">Cables Subtotal:</TableCell>
                     <TableCell></TableCell>
                     <TableCell className="text-right font-medium">
-                      €{Object.values(cableLineItems).reduce((sum, item) => sum + item.total, 0).toLocaleString()}
+                      {formatCurrency(Object.values(cableLineItems).reduce((sum, item) => sum + item.total, 0), currency)}
                     </TableCell>
                   </TableRow>
                   
@@ -521,22 +524,22 @@ export const BillOfMaterialsTab: React.FC = () => {
                       <TableCell>-</TableCell>
                       <TableCell>{item.model}</TableCell>
                       <TableCell className="text-right">{item.count}</TableCell>
-                      <TableCell className="text-right">€{item.costPer.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">€{item.total.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.costPer, currency)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.total, currency)}</TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="border-t">
                     <TableCell colSpan={6} className="text-right font-medium">Transceivers Subtotal:</TableCell>
                     <TableCell></TableCell>
                     <TableCell className="text-right font-medium">
-                      €{Object.values(transceiverLineItems).reduce((sum, item) => sum + item.total, 0).toLocaleString()}
+                      {formatCurrency(Object.values(transceiverLineItems).reduce((sum, item) => sum + item.total, 0), currency)}
                     </TableCell>
                   </TableRow>
                   
                   <TableRow className="bg-muted font-medium">
                     <TableCell colSpan={6} className="text-right">Grand Total:</TableCell>
                     <TableCell></TableCell>
-                    <TableCell className="text-right">€{grandTotalCost.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(grandTotalCost, currency)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -551,7 +554,7 @@ export const BillOfMaterialsTab: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                     <p>Detailed cost summary and TCO analysis would go here, leveraging data from <code>useCostAnalysis</code>.</p>
-                    <p className="font-bold mt-4">Grand Total (from BOM): €{grandTotalCost.toLocaleString()}</p>
+                    <p className="font-bold mt-4">Grand Total (from BOM): {formatCurrency(grandTotalCost, currency)}</p>
             </CardContent>
           </Card>
         </TabsContent>

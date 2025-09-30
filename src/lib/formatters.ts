@@ -3,6 +3,20 @@
  */
 
 /**
+ * Get currency symbol for a given currency code
+ */
+export function getCurrencySymbol(currency: string = 'USD'): string {
+  const symbols: Record<string, string> = {
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'JPY': '¥',
+    'CNY': '¥',
+  };
+  return symbols[currency] || '$';
+}
+
+/**
  * Format bytes into human-readable units (KB, MB, GB, TB, PB)
  */
 export function formatBytes(bytes: number, decimals: number = 2): string {
@@ -73,20 +87,24 @@ export function formatCurrency(value: number, currency: string = 'USD', showDeci
 /**
  * Format currency in compact notation (e.g., $1.2K, $3.4M)
  */
-export function formatCompactCurrency(value: number, decimals: number = 1): string {
-  if (!value || isNaN(value) || !isFinite(value)) return '$0';
-  
+export function formatCompactCurrency(value: number, decimals: number = 1, currency: string = 'USD'): string {
+  if (!value || isNaN(value) || !isFinite(value)) {
+    const symbol = getCurrencySymbol(currency);
+    return `${symbol}0`;
+  }
+
   const absValue = Math.abs(value);
   const sign = value < 0 ? '-' : '';
-  
+  const symbol = getCurrencySymbol(currency);
+
   if (absValue < 1000) {
-    return `${sign}$${absValue.toFixed(0)}`;
+    return `${sign}${symbol}${absValue.toFixed(0)}`;
   } else if (absValue < 1000000) {
-    return `${sign}$${(absValue / 1000).toFixed(decimals)}K`;
+    return `${sign}${symbol}${(absValue / 1000).toFixed(decimals)}K`;
   } else if (absValue < 1000000000) {
-    return `${sign}$${(absValue / 1000000).toFixed(decimals)}M`;
+    return `${sign}${symbol}${(absValue / 1000000).toFixed(decimals)}M`;
   } else {
-    return `${sign}$${(absValue / 1000000000).toFixed(decimals)}B`;
+    return `${sign}${symbol}${(absValue / 1000000000).toFixed(decimals)}B`;
   }
 }
 
@@ -203,8 +221,8 @@ export function formatEfficiency(value: number, decimals: number = 2): string {
 /**
  * Format cost per unit (e.g., $/GB, $/core)
  */
-export function formatCostPerUnit(cost: number, unit: string, decimals: number = 2): string {
-  return `${formatCurrency(cost, 'USD', true)}/${unit}`;
+export function formatCostPerUnit(cost: number, unit: string, decimals: number = 2, currency: string = 'USD'): string {
+  return `${formatCurrency(cost, currency, true)}/${unit}`;
 }
 
 /**

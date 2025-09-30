@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { PricingModelService } from '@/services/pricing/pricingModelService';
 import { formatMonthlyCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { TrendingUp } from 'lucide-react';
 
 interface PricingCurveChartProps {
@@ -62,7 +63,7 @@ export const PricingCurveChart: React.FC<PricingCurveChartProps> = ({
         <div className="bg-background border rounded-lg shadow-lg p-3">
           <p className="font-medium">{data.size} vCPUs / {(data.size * naturalRatio).toFixed(0)} GB RAM</p>
           <p className="text-sm text-muted-foreground">
-            Monthly: {formatMonthlyCurrency(data.monthlyPrice)}
+            Monthly: {formatMonthlyCurrency(data.monthlyPrice, currency)}
           </p>
           <p className="text-sm text-muted-foreground">
             Size Premium: +{data.sizePremium.toFixed(1)}%

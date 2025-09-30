@@ -4,12 +4,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { useDesignStore } from '@/store/designStore';
 import { CalculationBreakdownDialog } from './CalculationBreakdownDialog';
+import { useCurrency } from '@/hooks/useCurrency';
+import { formatCurrency } from '@/lib/formatters';
 
 interface ComponentsTableProps {
   components: InfrastructureComponent[];
 }
 
 export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) => {
+  const currency = useCurrency();
   const componentRoles = useDesignStore(state => state.componentRoles);
 
   // Find the corresponding role ID for a component by matching on role name
@@ -54,8 +57,8 @@ export const ComponentsTable: React.FC<ComponentsTableProps> = ({ components }) 
                   )}
                 </TableCell>
                 <TableCell className="text-right">{quantity}</TableCell>
-                <TableCell className="text-right">€{component.cost?.toLocaleString()}</TableCell>
-                <TableCell className="text-right">€{totalCost.toLocaleString()}</TableCell>
+                <TableCell className="text-right">{formatCurrency(component.cost, currency)}</TableCell>
+                <TableCell className="text-right">{formatCurrency(totalCost, currency)}</TableCell>
                 <TableCell className="text-right">{powerValue}</TableCell>
                 <TableCell className="text-right">{totalPower}</TableCell>
               </TableRow>

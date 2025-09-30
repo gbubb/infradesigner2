@@ -2,6 +2,8 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { DesignMetrics, SignificantDifferences, FormatType, BetterDirection } from '@/types/compare';
+import { useCurrency } from '@/hooks/useCurrency';
+import { formatCurrency } from '@/lib/formatters';
 
 interface ComparePowerMetricsProps {
   designAName: string;
@@ -18,6 +20,8 @@ export const ComparePowerMetrics: React.FC<ComparePowerMetricsProps> = ({
   metricsB,
   significantDifferences
 }) => {
+  const currency = useCurrency();
+
   // Helper to calculate percentage difference
   const getPercentDifference = (valueA: number, valueB: number) => {
     if (valueA === 0) return valueB === 0 ? 0 : 100;
@@ -33,7 +37,7 @@ export const ComparePowerMetrics: React.FC<ComparePowerMetricsProps> = ({
     if (format === 'decimal') {
       formattedValue = valueB.toLocaleString(undefined, { maximumFractionDigits: 2 });
     } else if (format === 'currency') {
-      formattedValue = `€${valueB.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+      formattedValue = `{formatCurrency(valueB, currency, true)}`;
     } else if (format === 'power') {
       formattedValue = `${valueB.toLocaleString()} W`;
     } else {
@@ -90,7 +94,7 @@ export const ComparePowerMetrics: React.FC<ComparePowerMetricsProps> = ({
           <span>Monthly Energy Cost</span>
         </div>
         <div className="text-center">
-          €{metricsA.energyCostMonthly.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          {formatCurrency(metricsA.energyCostMonthly, currency, true)}
         </div>
         <div className="text-center">
           {formatWithChange(metricsA.energyCostMonthly, metricsB.energyCostMonthly, 'currency', 'lower')}

@@ -5,7 +5,8 @@ import { PowerUsage } from '@/types/infrastructure';
 import { useResourceUtilization } from '@/hooks/design/useResourceUtilization';
 import { PowerConsumptionTable } from './PowerConsumptionTable';
 import { ComponentWithPlacement } from '@/types/service-types';
-import { formatPower } from '@/lib/formatters';
+import { formatPower, formatCurrency } from '@/lib/formatters';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface PowerEnergySectionProps {
   powerUsage: PowerUsage;
@@ -32,7 +33,7 @@ interface PowerEnergySectionProps {
   components?: ComponentWithPlacement[];
 }
 
-export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({ 
+export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
   powerUsage,
   energyCosts,
   hasDedicatedNetworkRacks,
@@ -41,6 +42,7 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
 }) => {
   const { minimumPower, operationalPower, maximumPower, totalAvailablePower } = powerUsage || {};
   const resourceUtilization = useResourceUtilization();
+  const currency = useCurrency();
   
   // Get the total available power either from the usage object or fallback to resource metrics
   const availablePower = totalAvailablePower || 
@@ -188,21 +190,21 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Daily Energy Cost</h4>
-              <div className="text-2xl font-bold">€{energyCosts?.dailyEnergyCost.toFixed(2)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(energyCosts?.dailyEnergyCost ?? 0, currency, true)}</div>
             </div>
-            
+
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Monthly Energy Cost</h4>
-              <div className="text-2xl font-bold">€{energyCosts?.monthlyEnergyCost.toFixed(2)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(energyCosts?.monthlyEnergyCost ?? 0, currency, true)}</div>
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Annual Energy Cost</h4>
-            <div className="text-xl font-bold">€{energyCosts?.yearlyEnergyCost.toFixed(2)}</div>
+            <div className="text-xl font-bold">{formatCurrency(energyCosts?.yearlyEnergyCost ?? 0, currency, true)}</div>
             <p className="text-xs text-muted-foreground">
-              Based on operational power of {operationalPower ? (operationalPower >= 10000 ? 
-                `${(operationalPower / 1000).toFixed(1)} kW` : 
+              Based on operational power of {operationalPower ? (operationalPower >= 10000 ?
+                `${(operationalPower / 1000).toFixed(1)} kW` :
                 `${Math.round(operationalPower)} W`) : '0 W'}
             </p>
           </div>

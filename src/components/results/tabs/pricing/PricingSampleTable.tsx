@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table';
 import { VMPricing } from '@/services/pricing/pricingModelService';
 import { formatCurrency, formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
@@ -89,8 +90,8 @@ export const PricingSampleTable: React.FC<PricingSampleTableProps> = ({ prices }
                   </TableCell>
                   <TableCell className="text-center font-medium">{price.vCPU}</TableCell>
                   <TableCell className="text-center font-medium">{price.memoryGB}</TableCell>
-                  <TableCell className="text-right">{formatPreciseCurrency(price.baseHourlyPrice)}</TableCell>
-                  <TableCell className="text-right font-bold">{formatMonthlyCurrency(price.monthlyPrice)}</TableCell>
+                  <TableCell className="text-right">{formatPreciseCurrency(price.baseHourlyPrice, currency)}</TableCell>
+                  <TableCell className="text-right font-bold">{formatMonthlyCurrency(price.monthlyPrice, currency)}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex flex-col items-center gap-0.5">
                       <span className={`text-xs ${price.breakdown.ratioPenalty > 0.1 ? 'text-orange-600' : 'text-muted-foreground'}`}>
@@ -114,15 +115,15 @@ export const PricingSampleTable: React.FC<PricingSampleTableProps> = ({ prices }
                             <div className="font-medium mb-2">Cost Components</div>
                             <div className="flex justify-between">
                               <span>Compute:</span>
-                              <span>{formatPreciseCurrency(price.breakdown.computeCost)}/hr</span>
+                              <span>{formatPreciseCurrency(price.breakdown.computeCost, currency)}/hr</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Memory:</span>
-                              <span>{formatPreciseCurrency(price.breakdown.networkCost)}/hr</span>
+                              <span>{formatPreciseCurrency(price.breakdown.networkCost, currency)}/hr</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Licensing:</span>
-                              <span>{formatPreciseCurrency(price.breakdown.licensingCost)}/hr</span>
+                              <span>{formatPreciseCurrency(price.breakdown.licensingCost, currency)}/hr</span>
                             </div>
                             <div className="flex justify-between border-t pt-2">
                               <span>HA Overhead:</span>
