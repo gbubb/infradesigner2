@@ -10,6 +10,7 @@ import { ComputeClustersTable } from '../ComputeClustersTable';
 import { InfrastructureSummaryCard } from '../InfrastructureSummaryCard';
 import { ComponentTypeSummaryTable } from '../ComponentTypeSummaryTable';
 import { ComputeClusterMetricsCard } from '../ComputeClusterMetricsCard';
+import { VMCostScalingDialog } from '../VMCostScalingDialog';
 
 export const DesignStatisticsTab: React.FC = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
@@ -148,11 +149,22 @@ export const DesignStatisticsTab: React.FC = () => {
 
       {/* New per-cluster VM cost metrics */}
       {computeClusterMetrics && computeClusterMetrics.length > 0 && (
-        <ComputeClusterMetricsCard
-          clusterMetrics={computeClusterMetrics}
-          averageVMVCPUs={averageVMVCPUs}
-          averageVMMemoryGB={averageVMMemoryGB}
-        />
+        <>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Compute Cluster Analysis</h3>
+              <p className="text-sm text-muted-foreground">
+                Per-cluster VM costs and scaling analysis
+              </p>
+            </div>
+            <VMCostScalingDialog clusterMetrics={computeClusterMetrics} />
+          </div>
+          <ComputeClusterMetricsCard
+            clusterMetrics={computeClusterMetrics}
+            averageVMVCPUs={averageVMVCPUs}
+            averageVMMemoryGB={averageVMMemoryGB}
+          />
+        </>
       )}
 
       <DetailedCostAnalysisCard 
