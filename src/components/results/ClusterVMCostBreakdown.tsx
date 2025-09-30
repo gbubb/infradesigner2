@@ -141,13 +141,13 @@ export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Cluster VM Cost Calculation - {clusterName}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-3">
-            <Card className="p-4 bg-slate-50 max-h-[500px] overflow-y-auto">
+          <div className="space-y-3 overflow-y-auto flex-1 pr-2">
+            <Card className="p-4 bg-slate-50">
               <div className="space-y-1.5 font-mono text-xs">
                 {calculationSteps.map((step, index) => {
                   // Check if this is a section header
