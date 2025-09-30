@@ -82,6 +82,8 @@ export const ComputeClusterMetricsCard: React.FC<ComputeClusterMetricsCardProps>
                       storageOverheadCores={cluster.storageOverheadCores}
                       storageOverheadMemoryGB={cluster.storageOverheadMemoryGB}
                       totalDisksInCluster={cluster.totalDisksInCluster}
+                      cpuCoresPerDisk={cluster.cpuCoresPerDisk}
+                      memoryGBPerDisk={cluster.memoryGBPerDisk}
                       totalComputeNodes={cluster.totalComputeNodes}
                       clusterCostShare={cluster.clusterCostShare}
                       operationalCostShare={cluster.operationalCostShare}

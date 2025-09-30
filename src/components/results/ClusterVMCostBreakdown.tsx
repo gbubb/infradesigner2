@@ -28,6 +28,8 @@ interface ClusterVMCostBreakdownProps {
   storageOverheadCores?: number;
   storageOverheadMemoryGB?: number;
   totalDisksInCluster?: number;
+  cpuCoresPerDisk?: number;
+  memoryGBPerDisk?: number;
   // Cost breakdown details
   totalComputeNodes: number;
   clusterCostShare: number;
@@ -60,6 +62,8 @@ export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
   storageOverheadCores,
   storageOverheadMemoryGB,
   totalDisksInCluster,
+  cpuCoresPerDisk,
+  memoryGBPerDisk,
   totalComputeNodes,
   clusterCostShare,
   operationalCostShare,
@@ -98,7 +102,11 @@ export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
     ...(isHyperConverged && storageOverheadCores ? [
       `=== STORAGE OVERHEAD (HYPER-CONVERGED) ===`,
       `Total Disks in Cluster: ${totalDisksInCluster} disks`,
-      `Storage Reserved CPU Cores: ${storageOverheadCores} cores (${totalDisksInCluster} disks × 4 cores/disk)`,
+      `Configured Resources per Disk:`,
+      `  - CPU Cores: ${cpuCoresPerDisk || 4} cores/disk`,
+      `  - Memory: ${memoryGBPerDisk || 2} GB/disk`,
+      ``,
+      `Storage Reserved CPU Cores: ${storageOverheadCores} cores (${totalDisksInCluster} disks × ${cpuCoresPerDisk || 4} cores/disk)`,
       `Storage Reserved Memory: ${(storageOverheadMemoryGB! / 1024).toFixed(2)} TB (${storageOverheadMemoryGB} GB)`,
       `→ Storage operations require dedicated CPU/memory per disk`,
       ``,

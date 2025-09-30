@@ -54,4 +54,7 @@ export interface StorageClusterRequirement {
   hyperConverged?: boolean;
   computeClusterId?: string;
   storagePoolId?: string; // New field for targeting storage pools
+  // Resource allocation per disk (hyper-converged only)
+  cpuCoresPerDisk?: number; // CPU cores reserved per disk, defaults to 4
+  memoryGBPerDisk?: number; // Memory GB reserved per disk, defaults to 2
 }

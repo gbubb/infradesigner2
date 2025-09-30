@@ -434,31 +434,80 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
               )}
 
               {cluster.hyperConverged && !cluster.storagePoolId && (
-                <div className="space-y-2">
-                  <Label>Compute Cluster</Label>
-                  <Select
-                    value={cluster.computeClusterId || ''}
-                    onValueChange={(value) =>
-                      handleClusterUpdate(cluster.id, 'computeClusterId', value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select compute cluster" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {computeClusters.map((computeCluster) => (
-                        <SelectItem key={computeCluster.id} value={computeCluster.id}>
-                          {computeCluster.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {computeClusters.length === 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      No compute clusters available. Please define compute clusters first.
-                    </p>
-                  )}
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label>Compute Cluster</Label>
+                    <Select
+                      value={cluster.computeClusterId || ''}
+                      onValueChange={(value) =>
+                        handleClusterUpdate(cluster.id, 'computeClusterId', value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select compute cluster" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {computeClusters.map((computeCluster) => (
+                          <SelectItem key={computeCluster.id} value={computeCluster.id}>
+                            {computeCluster.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {computeClusters.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        No compute clusters available. Please define compute clusters first.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="border-t pt-4 mt-4">
+                    <h4 className="text-sm font-medium mb-3">Resource Allocation Per Disk</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>CPU Cores per Disk</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="16"
+                          placeholder="4"
+                          value={cluster.cpuCoresPerDisk === undefined ? 4 : cluster.cpuCoresPerDisk}
+                          onChange={(e) =>
+                            handleClusterUpdate(
+                              cluster.id,
+                              'cpuCoresPerDisk',
+                              parseInt(e.target.value, 10) || 4
+                            )
+                          }
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          CPU cores reserved for storage operations per disk
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Memory (GB) per Disk</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="32"
+                          placeholder="2"
+                          value={cluster.memoryGBPerDisk === undefined ? 2 : cluster.memoryGBPerDisk}
+                          onChange={(e) =>
+                            handleClusterUpdate(
+                              cluster.id,
+                              'memoryGBPerDisk',
+                              parseInt(e.target.value, 10) || 2
+                            )
+                          }
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Memory reserved for storage operations per disk
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </CardContent>

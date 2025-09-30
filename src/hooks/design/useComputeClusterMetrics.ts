@@ -27,6 +27,8 @@ export interface ComputeClusterMetrics {
   storageOverheadCores?: number; // CPU cores reserved for storage (hyper-converged only)
   storageOverheadMemoryGB?: number; // Memory reserved for storage (hyper-converged only)
   totalDisksInCluster?: number; // Total disks in cluster (hyper-converged only)
+  cpuCoresPerDisk?: number; // Configured CPU cores per disk (hyper-converged only)
+  memoryGBPerDisk?: number; // Configured memory GB per disk (hyper-converged only)
   nodeHardware: {
     cpuCores: number;
     memoryGB: number;
@@ -232,9 +234,24 @@ export const useComputeClusterMetrics = () => {
       const clusterAZCount = cluster.availabilityZoneCount || totalAvailabilityZones;
 
       // Calculate storage overhead for hyper-converged clusters
-      // Storage requires 4 CPU cores per disk and memory overhead
-      const storageOverheadCores = isHyperConverged ? totalDisksInCluster * 4 : 0;
-      const storageOverheadMemoryGB = isHyperConverged ? totalDisksInCluster * 2 : 0; // Approximate 2GB per disk
+      // Get per-disk resource allocation from storage cluster configuration
+      let cpuCoresPerDisk = 4; // default
+      let memoryGBPerDisk = 2; // default
+
+      if (isHyperConverged) {
+        // Find the storage cluster configuration for this compute cluster
+        const storageCluster = requirements.storageRequirements?.storageClusters?.find(
+          sc => sc.hyperConverged && sc.computeClusterId === cluster.id
+        );
+
+        if (storageCluster) {
+          cpuCoresPerDisk = storageCluster.cpuCoresPerDisk ?? 4;
+          memoryGBPerDisk = storageCluster.memoryGBPerDisk ?? 2;
+        }
+      }
+
+      const storageOverheadCores = isHyperConverged ? totalDisksInCluster * cpuCoresPerDisk : 0;
+      const storageOverheadMemoryGB = isHyperConverged ? totalDisksInCluster * memoryGBPerDisk : 0;
 
       // Subtract storage overhead from total capacity BEFORE redundancy calculation
       const computeAvailablePhysicalCores = totalPhysicalCores - storageOverheadCores;
@@ -373,6 +390,8 @@ export const useComputeClusterMetrics = () => {
         storageOverheadCores: isHyperConverged ? storageOverheadCores : undefined,
         storageOverheadMemoryGB: isHyperConverged ? storageOverheadMemoryGB : undefined,
         totalDisksInCluster: isHyperConverged ? totalDisksInCluster : undefined,
+        cpuCoresPerDisk: isHyperConverged ? cpuCoresPerDisk : undefined,
+        memoryGBPerDisk: isHyperConverged ? memoryGBPerDisk : undefined,
         nodeHardware,
         // Cost breakdown details
         totalComputeNodes: componentRoles?.filter(r =>
