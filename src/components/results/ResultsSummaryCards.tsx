@@ -2,6 +2,13 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AverageVMCostBreakdown } from './AverageVMCostBreakdown';
 import { StorageCostBreakdown } from './StorageCostBreakdown';
+import { InfoIcon } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ResourceSummaryProps {
   totalVCPUs: number;
@@ -51,6 +58,9 @@ interface KeyMetricsProps {
     maxVMs: number;
     costPerVM: number;
   }>;
+  costToConnect?: number;
+  networkInfrastructureCost?: number;
+  connectedDeviceCount?: number;
 }
 
 export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
@@ -133,7 +143,10 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
   redundantVCPUs,
   redundantMemoryGB,
   redundantNodes,
-  clusterBreakdown
+  clusterBreakdown,
+  costToConnect,
+  networkInfrastructureCost,
+  connectedDeviceCount
 }) => {
   return (
     <Card>
@@ -175,6 +188,60 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
             </div>
           </div>
           
+          {/* Cost to Connect metric */}
+          {costToConnect !== undefined && costToConnect > 0 && (
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <div>
+                    <p className="text-sm font-medium">Cost to Connect</p>
+                    <p className="text-xs text-muted-foreground">
+                      Network infrastructure cost per connected device
+                    </p>
+                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="space-y-1 text-sm">
+                          <p className="font-medium">Calculation:</p>
+                          <p>Total Network Infrastructure Cost ÷ Connected Devices</p>
+                          {networkInfrastructureCost !== undefined && connectedDeviceCount !== undefined && (
+                            <>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                ${networkInfrastructureCost.toLocaleString()} ÷ {connectedDeviceCount} devices
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                = ${costToConnect.toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2
+                                })} per device
+                              </p>
+                            </>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-2 border-t pt-1">
+                            Network infrastructure includes: switches, routers, firewalls, cables, patch panels, cassettes, and transceivers
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Connected devices: all servers (compute, storage, hyper-converged, infrastructure)
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <span className="text-lg font-bold">
+                  ${costToConnect.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Storage cluster cost metrics */}
           {storageClusterCosts && storageClusterCosts.length > 0 && (
             <>
@@ -193,9 +260,9 @@ export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold">
-                          ${cluster.monthlyStorageCostPerTiB.toLocaleString(undefined, { 
+                          ${cluster.monthlyStorageCostPerTiB.toLocaleString(undefined, {
                             minimumFractionDigits: 2,
-                            maximumFractionDigits: 2 
+                            maximumFractionDigits: 2
                           })}/TiB
                         </span>
                         <StorageCostBreakdown

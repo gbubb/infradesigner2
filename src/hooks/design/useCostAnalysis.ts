@@ -230,9 +230,9 @@ export const useCostAnalysis = () => {
     const storageAmortized = storageTotal / (storageLifespan * monthsInYear);
     const networkAmortized = networkTotal / (networkLifespan * monthsInYear);
     const totalAmortized = computeAmortized + storageAmortized + networkAmortized;
-    
+
     return { compute: computeAmortized, storage: storageAmortized, network: networkAmortized, total: totalAmortized };
-  }, [activeDesign?.components, activeDesign?.requirements, storageClustersMetrics]);
+  }, [activeDesign?.components, activeDesign?.requirements]);
   
   // Compute operational costs (including licensing)
   const operationalCosts = useMemo(() => {
@@ -305,6 +305,39 @@ export const useCostAnalysis = () => {
     return storageCapitalCost / actualHardwareTotals.totalStorageTB;
   }, [actualHardwareTotals.totalStorageTB, activeDesign?.components]);
 
+  // Calculate Cost to Connect: network infrastructure cost / connected devices
+  const costToConnectData = useMemo(() => {
+    if (!activeDesign?.components || activeDesign.components.length === 0) {
+      return { costToConnect: 0, networkInfrastructureCost: 0, connectedDeviceCount: 0 };
+    }
+
+    // Calculate total network infrastructure cost (switches, routers, firewalls, cables, optics)
+    let networkInfrastructureCost = 0;
+    activeDesign.components.forEach(component => {
+      if (
+        component.type === ComponentType.Switch ||
+        component.type === ComponentType.Router ||
+        component.type === ComponentType.Firewall ||
+        component.type === ComponentType.Cable ||
+        component.type === ComponentType.FiberPatchPanel ||
+        component.type === ComponentType.CopperPatchPanel ||
+        component.type === ComponentType.Cassette ||
+        component.type === ComponentType.Transceiver
+      ) {
+        networkInfrastructureCost += component.cost;
+      }
+    });
+
+    // Count all connected devices (all servers: compute, storage, hyper-converged, infrastructure, controllers)
+    const connectedDeviceCount = activeDesign.components.filter(
+      component => component.type === ComponentType.Server
+    ).length;
+
+    const costToConnect = connectedDeviceCount > 0 ? networkInfrastructureCost / connectedDeviceCount : 0;
+
+    return { costToConnect, networkInfrastructureCost, connectedDeviceCount };
+  }, [activeDesign?.components]);
+
   return {
     capitalCost,
     operationalCosts,
@@ -315,6 +348,9 @@ export const useCostAnalysis = () => {
     licensingCosts,
     facilityCosts,
     facilityType,
-    amortisationPeriodMonths
+    amortisationPeriodMonths,
+    costToConnect: costToConnectData.costToConnect,
+    networkInfrastructureCost: costToConnectData.networkInfrastructureCost,
+    connectedDeviceCount: costToConnectData.connectedDeviceCount
   };
 };

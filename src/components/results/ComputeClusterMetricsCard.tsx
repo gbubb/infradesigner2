@@ -117,7 +117,7 @@ export const ComputeClusterMetricsCard: React.FC<ComputeClusterMetricsCardProps>
                   </div>
                   <p className="text-sm">{cluster.maxAverageVMs} VMs max</p>
                   <p className="text-xs text-muted-foreground">
-                    {cluster.usableVCPUs} usable vCPUs
+                    {Math.round(cluster.usableVCPUs)} usable vCPUs
                   </p>
                 </div>
 

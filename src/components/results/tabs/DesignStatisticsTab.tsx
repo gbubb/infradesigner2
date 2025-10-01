@@ -49,7 +49,7 @@ export const DesignStatisticsTab: React.FC = () => {
   const averageVMMemoryGB = activeDesign?.requirements?.computeRequirements?.averageVMMemoryGB || 8;
 
   // Use the cost analysis hook for proper licensing calculations
-  const { capitalCost, operationalCosts, licensingCosts, totalCostOfOwnership, facilityCosts, facilityType, amortisationPeriodMonths } = useCostAnalysis();
+  const { capitalCost, operationalCosts, licensingCosts, totalCostOfOwnership, facilityCosts, facilityType, amortisationPeriodMonths, costToConnect, networkInfrastructureCost, connectedDeviceCount } = useCostAnalysis();
 
   // Calculate power per rack
   const powerPerRack = resourceMetrics?.totalRackQuantity 
@@ -144,6 +144,9 @@ export const DesignStatisticsTab: React.FC = () => {
             maxVMs: c.maxAverageVMs,
             costPerVM: c.monthlyCostPerVM
           }))}
+          costToConnect={costToConnect}
+          networkInfrastructureCost={networkInfrastructureCost}
+          connectedDeviceCount={connectedDeviceCount}
         />
       </div>
 
