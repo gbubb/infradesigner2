@@ -24,26 +24,21 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
     const designs = (data?.map(design => {
       if ('createdat' in design && 'name' in design) {
         try {
-          const parsedComponents = design.components ? JSON.parse(String(design.components) || '[]') : [];
-          const parsedRequirements = design.requirements ? JSON.parse(String(design.requirements) || '{}') : {};
-          const parsedComponentRoles = design.component_roles ? JSON.parse(String(design.component_roles) || '[]') : [];
-          const parsedDisksByRole = design.selected_disks_by_role ? JSON.parse(String(design.selected_disks_by_role) || '{}') : {};
-          const parsedDisksByStorageCluster = design.selected_disks_by_storage_cluster
-            ? (typeof design.selected_disks_by_storage_cluster === 'string'
-              ? JSON.parse(design.selected_disks_by_storage_cluster)
-              : design.selected_disks_by_storage_cluster)
-            : {};
-          const parsedGPUsByRole = design.selected_gpus_by_role ? JSON.parse(String(design.selected_gpus_by_role) || '{}') : {};
-          // Fix: Use bracket notation and default to []
-          const parsedConnectionRules = ('connection_rules' in design && design['connection_rules'])
-            ? JSON.parse(String(design['connection_rules']) || '[]')
-            : [];
-          const parsedPlacementRules = ('placement_rules' in design && design['placement_rules'])
-            ? JSON.parse(String(design['placement_rules']) || '[]')
-            : [];
-          const parsedRowLayout = ('row_layout' in design && design['row_layout'])
-            ? JSON.parse(String(design['row_layout']) || 'null')
-            : null;
+          // Helper function to handle JSONB fields (already parsed objects from Supabase)
+          const parseJsonField = (field: any, defaultValue: any) => {
+            if (!field) return defaultValue;
+            return typeof field === 'string' ? JSON.parse(field) : field;
+          };
+
+          const parsedComponents = parseJsonField(design.components, []);
+          const parsedRequirements = parseJsonField(design.requirements, {});
+          const parsedComponentRoles = parseJsonField(design.component_roles, []);
+          const parsedDisksByRole = parseJsonField(design.selected_disks_by_role, {});
+          const parsedDisksByStorageCluster = parseJsonField(design.selected_disks_by_storage_cluster, {});
+          const parsedGPUsByRole = parseJsonField(design.selected_gpus_by_role, {});
+          const parsedConnectionRules = parseJsonField(design.connection_rules, []);
+          const parsedPlacementRules = parseJsonField(design.placement_rules, []);
+          const parsedRowLayout = parseJsonField(design.row_layout, null);
 
           return {
             id: design.id,
@@ -106,26 +101,21 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
     }
     
     try {
-      const parsedComponents = data.components ? JSON.parse(String(data.components) || '[]') : [];
-      const parsedRequirements = data.requirements ? JSON.parse(String(data.requirements) || '{}') : {};
-      const parsedComponentRoles = data.component_roles ? JSON.parse(String(data.component_roles) || '[]') : [];
-      const parsedDisksByRole = data.selected_disks_by_role ? JSON.parse(String(data.selected_disks_by_role) || '{}') : {};
-      const parsedDisksByStorageCluster = data.selected_disks_by_storage_cluster
-        ? (typeof data.selected_disks_by_storage_cluster === 'string'
-          ? JSON.parse(data.selected_disks_by_storage_cluster)
-          : data.selected_disks_by_storage_cluster)
-        : {};
-      const parsedGPUsByRole = data.selected_gpus_by_role ? JSON.parse(String(data.selected_gpus_by_role) || '{}') : {};
-      // Fix: Use bracket notation and default to []
-      const parsedConnectionRules = ('connection_rules' in data && data['connection_rules'])
-        ? JSON.parse(String(data['connection_rules']) || '[]')
-        : [];
-      const parsedPlacementRules = ('placement_rules' in data && data['placement_rules'])
-        ? JSON.parse(String(data['placement_rules']) || '[]')
-        : [];
-      const parsedRowLayout = ('row_layout' in data && data['row_layout'])
-        ? JSON.parse(String(data['row_layout']) || 'null')
-        : null;
+      // Helper function to handle JSONB fields (already parsed objects from Supabase)
+      const parseJsonField = (field: any, defaultValue: any) => {
+        if (!field) return defaultValue;
+        return typeof field === 'string' ? JSON.parse(field) : field;
+      };
+
+      const parsedComponents = parseJsonField(data.components, []);
+      const parsedRequirements = parseJsonField(data.requirements, {});
+      const parsedComponentRoles = parseJsonField(data.component_roles, []);
+      const parsedDisksByRole = parseJsonField(data.selected_disks_by_role, {});
+      const parsedDisksByStorageCluster = parseJsonField(data.selected_disks_by_storage_cluster, {});
+      const parsedGPUsByRole = parseJsonField(data.selected_gpus_by_role, {});
+      const parsedConnectionRules = parseJsonField(data.connection_rules, []);
+      const parsedPlacementRules = parseJsonField(data.placement_rules, []);
+      const parsedRowLayout = parseJsonField(data.row_layout, null);
 
       return {
         id: data.id,
