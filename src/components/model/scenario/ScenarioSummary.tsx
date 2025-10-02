@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ClusterAnalysisData, ClusterParams, ScenarioDataPoint } from './types';
 import { calculateUtilization } from './growthCalculations';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface ScenarioSummaryProps {
   cumulativeData: ScenarioDataPoint[];
@@ -38,6 +39,7 @@ export const ScenarioSummary: React.FC<ScenarioSummaryProps> = ({
   storageClustersMetrics,
   formatCurrency
 }) => {
+  const { currency } = useCurrency();
   const finalData = cumulativeData[cumulativeData.length - 1];
   
   return (

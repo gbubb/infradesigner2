@@ -33,6 +33,7 @@ export const PricingModelTab: React.FC = () => {
   const [sizePremiumChartOpen, setSizePremiumChartOpen] = useState(false);
   const [ratioPremiumChartOpen, setRatioPremiumChartOpen] = useState(false);
   const { operationalCosts } = useCostAnalysis();
+  const { currency } = useCurrency();
   
   const [config, setConfig] = useState<PricingConfig>({
     operatingModel: 'costPlus',
