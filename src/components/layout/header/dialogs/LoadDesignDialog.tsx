@@ -17,6 +17,13 @@ export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOp
   const [editingDesign, setEditingDesign] = useState<string | null>(null);
   const [editedName, setEditedName] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
+
+  // Sort designs by updatedAt (most recent first)
+  const sortedDesigns = [...savedDesigns].sort((a, b) => {
+    const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return dateB - dateA;
+  });
   
   const handleCloneDesign = (design: InfrastructureDesign) => {
     // Create a dialog to get the new name
@@ -74,24 +81,24 @@ export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOp
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-3xl max-h-[85vh]">
         <DialogHeader>
           <DialogTitle>Load Design</DialogTitle>
           <DialogDescription>Select a design to load, clone, rename or delete</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 max-h-[400px] overflow-y-auto">
-          {savedDesigns.length === 0 ? (
+        <div className="space-y-3 overflow-y-auto flex-1 pr-2" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+          {sortedDesigns.length === 0 ? (
             <div className="text-center p-4 text-muted-foreground">
               No saved designs found
             </div>
           ) : (
-            savedDesigns.map((design) => (
-              <div 
-                key={design.id} 
-                className="flex flex-col p-3 border rounded-lg"
+            sortedDesigns.map((design) => (
+              <div
+                key={design.id}
+                className="p-3 border rounded-lg"
               >
                 {editingDesign === design.id ? (
-                  <div className="space-y-2 mb-2">
+                  <div className="space-y-2">
                     <Input
                       value={editedName}
                       onChange={(e) => setEditedName(e.target.value)}
@@ -105,15 +112,15 @@ export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOp
                       className="w-full"
                     />
                     <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => setEditingDesign(null)}
                       >
                         Cancel
                       </Button>
-                      <Button 
-                        variant="default" 
+                      <Button
+                        variant="default"
                         size="sm"
                         onClick={() => saveRenamedDesign(design.id)}
                       >
@@ -122,40 +129,40 @@ export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOp
                     </div>
                   </div>
                 ) : (
-                  <div className="mb-2">
-                    <div className="font-medium">{design.name}</div>
-                    {design.description && (
-                      <div className="text-sm text-muted-foreground">{design.description}</div>
-                    )}
-                  </div>
-                )}
-                
-                <div className="flex justify-end gap-2 mt-auto">
-                  {editingDesign !== design.id && (
-                    <>
-                      <Button 
-                        variant="outline" 
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{design.name}</div>
+                      {design.description && (
+                        <div className="text-sm text-muted-foreground line-clamp-2">{design.description}</div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => handleDeleteDesign(design.id, design.name)}
+                        title="Delete"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => startRenameDesign(design)}
+                        title="Edit"
                       >
                         <PencilIcon className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => handleCloneDesign(design)}
+                        title="Copy"
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="default" 
+                      <Button
+                        variant="default"
                         size="sm"
                         onClick={() => {
                           setActiveDesign(design.id);
@@ -164,9 +171,9 @@ export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOp
                       >
                         Load
                       </Button>
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}
