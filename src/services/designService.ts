@@ -28,6 +28,7 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
           const parsedRequirements = design.requirements ? JSON.parse(String(design.requirements) || '{}') : {};
           const parsedComponentRoles = design.component_roles ? JSON.parse(String(design.component_roles) || '[]') : [];
           const parsedDisksByRole = design.selected_disks_by_role ? JSON.parse(String(design.selected_disks_by_role) || '{}') : {};
+          const parsedDisksByStorageCluster = ('selected_disks_by_storage_cluster' in design && design['selected_disks_by_storage_cluster']) ? JSON.parse(String(design['selected_disks_by_storage_cluster']) || '{}') : {};
           const parsedGPUsByRole = design.selected_gpus_by_role ? JSON.parse(String(design.selected_gpus_by_role) || '{}') : {};
           // Fix: Use bracket notation and default to []
           const parsedConnectionRules = ('connection_rules' in design && design['connection_rules'])
@@ -48,6 +49,7 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
             requirements: parsedRequirements,
             componentRoles: parsedComponentRoles,
             selectedDisksByRole: parsedDisksByRole,
+            selectedDisksByStorageCluster: parsedDisksByStorageCluster,
             selectedGPUsByRole: parsedGPUsByRole,
             connectionRules: parsedConnectionRules,
             placementRules: parsedPlacementRules,
@@ -99,6 +101,7 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
       const parsedRequirements = data.requirements ? JSON.parse(String(data.requirements) || '{}') : {};
       const parsedComponentRoles = data.component_roles ? JSON.parse(String(data.component_roles) || '[]') : [];
       const parsedDisksByRole = data.selected_disks_by_role ? JSON.parse(String(data.selected_disks_by_role) || '{}') : {};
+      const parsedDisksByStorageCluster = ('selected_disks_by_storage_cluster' in data && data['selected_disks_by_storage_cluster']) ? JSON.parse(String(data['selected_disks_by_storage_cluster']) || '{}') : {};
       const parsedGPUsByRole = data.selected_gpus_by_role ? JSON.parse(String(data.selected_gpus_by_role) || '{}') : {};
       // Fix: Use bracket notation and default to []
       const parsedConnectionRules = ('connection_rules' in data && data['connection_rules'])
@@ -119,6 +122,7 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
         requirements: parsedRequirements,
         componentRoles: parsedComponentRoles,
         selectedDisksByRole: parsedDisksByRole,
+        selectedDisksByStorageCluster: parsedDisksByStorageCluster,
         selectedGPUsByRole: parsedGPUsByRole,
         connectionRules: parsedConnectionRules,
         placementRules: parsedPlacementRules,
@@ -151,6 +155,7 @@ export const saveDesign = async (design: InfrastructureDesign, userId?: string):
       components: JSON.stringify(design.components || []),
       component_roles: JSON.stringify(design.componentRoles || []),
       selected_disks_by_role: JSON.stringify(design.selectedDisksByRole || {}),
+      selected_disks_by_storage_cluster: JSON.stringify(design.selectedDisksByStorageCluster || {}),
       selected_gpus_by_role: JSON.stringify(design.selectedGPUsByRole || {}),
       connection_rules: JSON.stringify(design.connectionRules || []),
       createdat: design.createdAt.toISOString(),
@@ -289,6 +294,7 @@ export const importDesign = async (file: File): Promise<InfrastructureDesign | n
           if (!importedDesign.components) importedDesign.components = [];
           if (!importedDesign.componentRoles) importedDesign.componentRoles = [];
           if (!importedDesign.selectedDisksByRole) importedDesign.selectedDisksByRole = {};
+          if (!importedDesign.selectedDisksByStorageCluster) importedDesign.selectedDisksByStorageCluster = {};
           if (!importedDesign.selectedGPUsByRole) importedDesign.selectedGPUsByRole = {};
           if (!importedDesign.connectionRules) importedDesign.connectionRules = [];
           importedDesign.createdAt = new Date(importedDesign.createdAt);

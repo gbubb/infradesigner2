@@ -53,6 +53,7 @@ export const saveDesignOptimized = async (
       components: 'components',
       componentRoles: 'component_roles',
       selectedDisksByRole: 'selected_disks_by_role',
+      selectedDisksByStorageCluster: 'selected_disks_by_storage_cluster',
       selectedGPUsByRole: 'selected_gpus_by_role',
       connectionRules: 'connection_rules',
       placementRules: 'placement_rules',
@@ -107,13 +108,14 @@ const saveFullDesign = async (
       components: JSON.stringify(design.components || []),
       component_roles: JSON.stringify(design.componentRoles || []),
       selected_disks_by_role: JSON.stringify(design.selectedDisksByRole || {}),
+      selected_disks_by_storage_cluster: JSON.stringify(design.selectedDisksByStorageCluster || {}),
       selected_gpus_by_role: JSON.stringify(design.selectedGPUsByRole || {}),
       connection_rules: JSON.stringify(design.connectionRules || []),
-      placement_rules: design.placementRules?.length > 0 
-        ? JSON.stringify(design.placementRules) 
+      placement_rules: design.placementRules?.length > 0
+        ? JSON.stringify(design.placementRules)
         : null,
-      row_layout: design.rowLayout 
-        ? JSON.stringify(design.rowLayout) 
+      row_layout: design.rowLayout
+        ? JSON.stringify(design.rowLayout)
         : null,
       createdat: design.createdAt.toISOString(),
       updatedat: new Date().toISOString(),

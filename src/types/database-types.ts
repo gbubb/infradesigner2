@@ -8,6 +8,7 @@ export interface DesignDatabaseRow {
   components: string;
   component_roles: string;
   selected_disks_by_role: string;
+  selected_disks_by_storage_cluster?: string;
   selected_gpus_by_role: string;
   connection_rules: string;
   placement_rules?: string;

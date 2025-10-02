@@ -339,8 +339,8 @@ export const createDesignSlice: StateCreator<
           if (prevDesign) {
             // Track which fields have changed
             const fieldsToCheck: (keyof InfrastructureDesign)[] = [
-              'name', 'description', 'requirements', 'components', 
-              'componentRoles', 'selectedDisksByRole', 'selectedGPUsByRole',
+              'name', 'description', 'requirements', 'components',
+              'componentRoles', 'selectedDisksByRole', 'selectedDisksByStorageCluster', 'selectedGPUsByRole',
               'connectionRules', 'placementRules', 'rowLayout'
             ];
             
