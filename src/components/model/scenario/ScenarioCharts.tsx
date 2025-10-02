@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { ScenarioDataPoint } from './types';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface ScenarioChartsProps {
   cumulativeData: ScenarioDataPoint[];
@@ -24,6 +25,8 @@ export const ScenarioCharts: React.FC<ScenarioChartsProps> = ({
   storagePricing,
   formatCurrency
 }) => {
+  const { currency } = useCurrency();
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Utilization Growth Chart */}
