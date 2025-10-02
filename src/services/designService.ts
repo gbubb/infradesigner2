@@ -28,7 +28,11 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
           const parsedRequirements = design.requirements ? JSON.parse(String(design.requirements) || '{}') : {};
           const parsedComponentRoles = design.component_roles ? JSON.parse(String(design.component_roles) || '[]') : [];
           const parsedDisksByRole = design.selected_disks_by_role ? JSON.parse(String(design.selected_disks_by_role) || '{}') : {};
-          const parsedDisksByStorageCluster = (design.selected_disks_by_storage_cluster && design.selected_disks_by_storage_cluster !== 'null') ? JSON.parse(String(design.selected_disks_by_storage_cluster)) : {};
+          const parsedDisksByStorageCluster = design.selected_disks_by_storage_cluster
+            ? (typeof design.selected_disks_by_storage_cluster === 'string'
+              ? JSON.parse(design.selected_disks_by_storage_cluster)
+              : design.selected_disks_by_storage_cluster)
+            : {};
           const parsedGPUsByRole = design.selected_gpus_by_role ? JSON.parse(String(design.selected_gpus_by_role) || '{}') : {};
           // Fix: Use bracket notation and default to []
           const parsedConnectionRules = ('connection_rules' in design && design['connection_rules'])
@@ -61,7 +65,12 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
             sharing_id: design.sharing_id || null
           };
         } catch (parseErr) {
-          console.error('Error parsing design data:', parseErr, design);
+          console.error('Error parsing design data:', parseErr);
+          console.error('Failed design:', {
+            id: design.id,
+            name: design.name,
+            selected_disks_by_storage_cluster: design.selected_disks_by_storage_cluster
+          });
           return null;
         }
       }
@@ -101,7 +110,11 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
       const parsedRequirements = data.requirements ? JSON.parse(String(data.requirements) || '{}') : {};
       const parsedComponentRoles = data.component_roles ? JSON.parse(String(data.component_roles) || '[]') : [];
       const parsedDisksByRole = data.selected_disks_by_role ? JSON.parse(String(data.selected_disks_by_role) || '{}') : {};
-      const parsedDisksByStorageCluster = (data.selected_disks_by_storage_cluster && data.selected_disks_by_storage_cluster !== 'null') ? JSON.parse(String(data.selected_disks_by_storage_cluster)) : {};
+      const parsedDisksByStorageCluster = data.selected_disks_by_storage_cluster
+        ? (typeof data.selected_disks_by_storage_cluster === 'string'
+          ? JSON.parse(data.selected_disks_by_storage_cluster)
+          : data.selected_disks_by_storage_cluster)
+        : {};
       const parsedGPUsByRole = data.selected_gpus_by_role ? JSON.parse(String(data.selected_gpus_by_role) || '{}') : {};
       // Fix: Use bracket notation and default to []
       const parsedConnectionRules = ('connection_rules' in data && data['connection_rules'])
