@@ -1,7 +1,7 @@
 
 import { toast } from 'sonner';
-import { 
-  saveDesign as saveDesignToDb, 
+import {
+  saveDesign as saveDesignToDb,
   deleteDesign as deleteDesignFromDb,
   loadDesigns,
   exportDesign as exportDesignToFileFromService,
@@ -11,6 +11,7 @@ import {
   loadDesignBySharing
 } from '@/services/designService';
 import { InfrastructureDesign } from '@/types/infrastructure';
+import { migrateStorageRequirements } from '@/utils/storageMigration';
 
 export const saveDesignToDB = async (design: InfrastructureDesign, userId?: string): Promise<boolean> => {
   return await saveDesignToDb(design, userId);
@@ -23,7 +24,12 @@ export const deleteDesignFromDB = async (id: string): Promise<boolean> => {
 export const loadDesignsFromDB = async (userId?: string): Promise<InfrastructureDesign[]> => {
   try {
     const designs = await loadDesigns(userId);
-    return designs || [];
+    // Apply migration to each design's requirements
+    const migratedDesigns = (designs || []).map(design => ({
+      ...design,
+      requirements: migrateStorageRequirements(design.requirements)
+    }));
+    return migratedDesigns;
   } catch (error) {
     console.error("Error loading designs from database:", error);
     toast.error("Failed to load designs");
@@ -34,6 +40,13 @@ export const loadDesignsFromDB = async (userId?: string): Promise<Infrastructure
 export const loadSharedDesignFromDB = async (sharingId: string): Promise<InfrastructureDesign | null> => {
   try {
     const design = await loadDesignBySharing(sharingId);
+    if (design) {
+      // Apply migration to design's requirements
+      return {
+        ...design,
+        requirements: migrateStorageRequirements(design.requirements)
+      };
+    }
     return design;
   } catch (error) {
     console.error("Error loading shared design from database:", error);

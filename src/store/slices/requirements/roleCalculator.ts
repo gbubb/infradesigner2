@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType, DesignRequirements, StorageClusterRequirement } from '@/types/infrastructure';
+import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType, DesignRequirements, StorageCluster } from '@/types/infrastructure';
 
 /**
  * Calculates component roles based on requirements
@@ -22,7 +22,8 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
   const infrastructureNodeCount = getValue(requirements, 'computeRequirements.infrastructureNodeCount', 3);
   
   const computeClusters = getValue(requirements, 'computeRequirements.computeClusters', []);
-  const storageClusters = getValue(requirements, 'storageRequirements.storageClusters', []);
+  const storageClusters = getValue(requirements, 'storageRequirements.storageClusters', []); // Physical infrastructure
+  const storagePools = getValue(requirements, 'storageRequirements.storagePools', []); // Logical capacity tiers
   
   const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', "Spine-Leaf") as NetworkTopology;
   const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false);
@@ -85,9 +86,9 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
   }
   
   // Build a map of compute clusters that are used for hyper-converged storage
-  const hyperConvergedComputeClusters = new Map<string, StorageClusterRequirement>();
+  const hyperConvergedComputeClusters = new Map<string, StorageCluster>();
   storageClusters.forEach(storageCluster => {
-    if (storageCluster.hyperConverged && storageCluster.computeClusterId) {
+    if (storageCluster.type === 'hyperConverged' && storageCluster.computeClusterId) {
       hyperConvergedComputeClusters.set(storageCluster.computeClusterId, storageCluster);
     }
   });
@@ -152,64 +153,25 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
     } as ComponentRole);
   });
   
-  // Storage Pools - Create roles for storage pools
-  const storagePools = requirements.storageRequirements?.storagePools || [];
-  const poolsWithClusters = new Set<string>();
-
-  // Find pools that have storage clusters targeting them
-  storageClusters.forEach((cluster) => {
-    if (cluster.storagePoolId) {
-      poolsWithClusters.add(cluster.storagePoolId);
-    }
-  });
-
-  // Create storage node roles for pools
-  storagePools.forEach((pool, index) => {
-    // Skip pools without any clusters targeting them
-    if (!poolsWithClusters.has(pool.id)) {
-      return;
-    }
-
-    // Skip hyper-converged pools (they use compute cluster nodes)
-    if (pool.type === 'hyperConverged' && pool.computeClusterId) {
-      return;
-    }
-
-    newRoles.push({
-      id: pool.id,
-      role: 'storageNode',
-      description: `Shared storage pool: ${pool.name}`,
-      requiredCount: pool.availabilityZoneQuantity || 3,
-      clusterInfo: {
-        clusterId: pool.id,
-        clusterName: pool.name,
-        clusterIndex: index,
-        isStoragePool: true,
-      }
-    } as ComponentRole);
-  });
-
-  // Add storage cluster nodes (skip hyper-converged ones and those using pools)
+  // Storage Clusters - Create roles for physical storage infrastructure
+  // Note: Pools are logical tiers and don't create hardware roles
   storageClusters.forEach((cluster, index) => {
-    // Skip hyper-converged storage clusters as they're handled by compute clusters
-    if (cluster.hyperConverged && cluster.computeClusterId) {
+    // Skip hyper-converged storage clusters as they're handled by compute clusters above
+    if (cluster.type === 'hyperConverged' && cluster.computeClusterId) {
       return;
     }
 
-    // Skip if this cluster uses a storage pool
-    if (cluster.storagePoolId) {
-      return;
-    }
-
+    // Create dedicated storage node roles for this physical cluster
     newRoles.push({
       id: cluster.id || uuidv4(),
       role: 'storageNode',
-      description: `Provides storage resources for ${cluster.name}`,
+      description: `Physical storage cluster: ${cluster.name}`,
       requiredCount: cluster.availabilityZoneQuantity || 3,
       clusterInfo: {
         clusterId: cluster.id || '',
         clusterName: cluster.name || '',
-        clusterIndex: index
+        clusterIndex: index,
+        isStorageCluster: true,
       }
     } as ComponentRole);
   });
@@ -280,22 +242,26 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
     });
 
     if (dedicatedStorageNetwork) {
-      // Calculate storage switches: we need 2 switches per AZ for each storage cluster
+      // Calculate storage switches: we need 2 switches per AZ for each physical storage cluster
       let totalStorageSwitches = 0;
 
-      // Sum up the number of AZs used by all storage clusters
+      // Sum up the number of AZs used by all physical storage clusters
       for (const cluster of storageClusters) {
+        // Skip hyper-converged clusters (they use leaf switches for storage traffic)
+        if (cluster.type === 'hyperConverged') {
+          continue;
+        }
         const azCount = cluster.availabilityZoneQuantity || 3;
         // Each AZ needs 2 switches for redundancy
         totalStorageSwitches += azCount * 2;
       }
 
-      // Only add storage switches if we actually have storage clusters
-      if (storageClusters.length > 0) {
+      // Only add storage switches if we actually have dedicated storage clusters
+      if (totalStorageSwitches > 0) {
         newRoles.push({
           id: uuidv4(),
           role: 'storageSwitch',
-          description: 'Provides network connectivity for storage nodes',
+          description: 'Provides network connectivity for dedicated storage nodes',
           requiredCount: totalStorageSwitches
         });
       }

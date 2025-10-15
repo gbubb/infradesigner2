@@ -34,27 +34,31 @@ export const StoragePoolEfficiencyFactors: Record<string, number> = {
   'Erasure Coding 10+4': 0.71428
 };
 
-// Storage pool configuration for shared storage infrastructure
-export interface StoragePool {
+// Storage cluster - Physical storage infrastructure
+export interface StorageCluster {
   id: string;
   name: string;
   type: 'dedicated' | 'hyperConverged';
-  computeClusterId?: string; // For hyper-converged pools
+  computeClusterId?: string; // For hyper-converged clusters
   availabilityZoneQuantity: number;
-}
-
-// Storage cluster requirements
-export interface StorageClusterRequirement {
-  id: string;
-  name: string;
-  totalCapacityTB: number;
-  availabilityZoneQuantity: number;
-  poolType: string;
-  maxFillFactor: number;
-  hyperConverged?: boolean;
-  computeClusterId?: string;
-  storagePoolId?: string; // New field for targeting storage pools
   // Resource allocation per disk (hyper-converged only)
   cpuCoresPerDisk?: number; // CPU cores reserved per disk, defaults to 4
   memoryGBPerDisk?: number; // Memory GB reserved per disk, defaults to 2
 }
+
+// Storage pool - Logical capacity tier with data protection scheme
+export interface StoragePool {
+  id: string;
+  name: string;
+  totalCapacityTB: number;
+  poolType: string; // Data protection: '3 Replica', 'Erasure Coding 4+2', etc.
+  maxFillFactor: number;
+  storageClusterId?: string; // Targets a physical storage cluster
+  // Legacy fields for backward compatibility
+  availabilityZoneQuantity?: number;
+  hyperConverged?: boolean;
+  computeClusterId?: string;
+}
+
+// DEPRECATED: Legacy type alias for backward compatibility
+export type StorageClusterRequirement = StoragePool;

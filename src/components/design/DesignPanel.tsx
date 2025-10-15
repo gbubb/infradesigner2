@@ -318,9 +318,9 @@ export const DesignPanel: React.FC = () => {
 
                           {role.role === 'hyperConvergedNode' && (
                             <>
-                              {/* Show disk configuration for each storage cluster targeting this compute cluster */}
+                              {/* Show disk configuration for each physical storage cluster targeting this compute cluster */}
                               {requirements.storageRequirements.storageClusters
-                                .filter(sc => sc.hyperConverged && sc.computeClusterId === role.clusterInfo?.clusterId)
+                                .filter(sc => sc.type === 'hyperConverged' && sc.computeClusterId === role.clusterInfo?.clusterId)
                                 .map((storageCluster) => (
                                   <DiskConfiguration
                                     key={storageCluster.id}
@@ -328,9 +328,9 @@ export const DesignPanel: React.FC = () => {
                                     storageClusterName={storageCluster.name}
                                   />
                                 ))}
-                              {/* Show role-based config if no storage clusters target this compute cluster */}
+                              {/* Show role-based config if no physical storage clusters target this compute cluster */}
                               {requirements.storageRequirements.storageClusters
-                                .filter(sc => sc.hyperConverged && sc.computeClusterId === role.clusterInfo?.clusterId)
+                                .filter(sc => sc.type === 'hyperConverged' && sc.computeClusterId === role.clusterInfo?.clusterId)
                                 .length === 0 && (
                                 <DiskConfiguration roleId={role.id} />
                               )}
