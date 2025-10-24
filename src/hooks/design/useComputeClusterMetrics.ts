@@ -42,6 +42,11 @@ export interface ComputeClusterMetrics {
   totalOperationalCost: number;
   computeAmortizedCost: number;
   storageAmortizedCost: number;
+  networkAmortizedCost: number;
+  licensingCost: number;
+  racksCost: number;
+  facilityCost: number;
+  energyCost: number;
 }
 
 /**
@@ -321,6 +326,11 @@ export const useComputeClusterMetrics = () => {
       let computeAmortizedCost = 0;
       let storageAmortizedCost = 0;
       let totalOperationalCost = 0;
+      let networkAmortizedCost = 0;
+      let licensingCost = 0;
+      let racksCost = 0;
+      let facilityCost = 0;
+      let energyCost = 0;
 
       if (maxAverageVMs > 0 && costAnalysisResult?.operationalCosts && costAnalysisResult?.amortizedCostsByType) {
         // Calculate total compute nodes across all clusters from roles
@@ -341,6 +351,11 @@ export const useComputeClusterMetrics = () => {
         totalOperationalCost = costAnalysisResult.operationalCosts.totalMonthly;
         computeAmortizedCost = costAnalysisResult.amortizedCostsByType.compute || 0;
         storageAmortizedCost = costAnalysisResult.amortizedCostsByType.storage || 0;
+        networkAmortizedCost = costAnalysisResult.amortizedCostsByType.network || 0;
+        licensingCost = costAnalysisResult.operationalCosts.licensingMonthly || 0;
+        racksCost = costAnalysisResult.operationalCosts.racksMonthly || 0;
+        facilityCost = costAnalysisResult.operationalCosts.facilityMonthly || 0;
+        energyCost = costAnalysisResult.operationalCosts.energyMonthly || 0;
 
         // Calculate compute-only operational cost (excluding storage amortization)
         // This matches the global calculation in useDesignCalculations.ts:222-233
@@ -401,7 +416,12 @@ export const useComputeClusterMetrics = () => {
         operationalCostShare,
         totalOperationalCost,
         computeAmortizedCost,
-        storageAmortizedCost
+        storageAmortizedCost,
+        networkAmortizedCost,
+        licensingCost,
+        racksCost,
+        facilityCost,
+        energyCost
       };
 
       console.log(`[useComputeClusterMetrics] Metrics for cluster ${cluster.name}:`, metrics);

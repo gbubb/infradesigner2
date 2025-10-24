@@ -90,6 +90,11 @@ export const ComputeClusterMetricsCard: React.FC<ComputeClusterMetricsCardProps>
                       totalOperationalCost={cluster.totalOperationalCost}
                       computeAmortizedCost={cluster.computeAmortizedCost}
                       storageAmortizedCost={cluster.storageAmortizedCost}
+                      networkAmortizedCost={cluster.networkAmortizedCost}
+                      licensingCost={cluster.licensingCost}
+                      racksCost={cluster.racksCost}
+                      facilityCost={cluster.facilityCost}
+                      energyCost={cluster.energyCost}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">per VM/month</p>

@@ -37,6 +37,12 @@ interface ClusterVMCostBreakdownProps {
   totalOperationalCost: number;
   computeAmortizedCost: number;
   storageAmortizedCost: number;
+  // Granular cost breakdown
+  networkAmortizedCost?: number;
+  licensingCost?: number;
+  racksCost?: number;
+  facilityCost?: number;
+  energyCost?: number;
 }
 
 export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
@@ -69,7 +75,12 @@ export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
   operationalCostShare,
   totalOperationalCost,
   computeAmortizedCost,
-  storageAmortizedCost
+  storageAmortizedCost,
+  networkAmortizedCost = 0,
+  licensingCost = 0,
+  racksCost = 0,
+  facilityCost = 0,
+  energyCost = 0
 }) => {
   const [open, setOpen] = React.useState(false);
 
@@ -154,7 +165,11 @@ export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
     `Total Operational Cost: $${totalOperationalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
     `  - Compute Amortization: $${computeAmortizedCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
     `  - Storage Amortization: $${storageAmortizedCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} (excluded)`,
-    `  - Facility & Energy: $${(totalOperationalCost - computeAmortizedCost - storageAmortizedCost).toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    `  - Network Hardware Amortization: $${networkAmortizedCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    ...(licensingCost > 0 ? [`  - Licensing & Support: $${licensingCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`] : []),
+    ...(racksCost > 0 ? [`  - Rack Colocation: $${racksCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`] : []),
+    ...(facilityCost > 0 ? [`  - Datacenter Facility: $${facilityCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`] : []),
+    ...(energyCost > 0 ? [`  - Energy Consumption: $${energyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`] : []),
     ``,
     `Compute-Only Operational Cost: $${computeOnlyCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
     `  (Total - Storage Amortization)`,
