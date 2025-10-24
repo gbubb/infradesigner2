@@ -108,14 +108,24 @@ export function useClusterAnalysis({
       const computeAmortizedCost = computeHardwareCost / (computeLifespan * 12);
       
       const totalClusterCost = computeAmortizedCost + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
-      
-      // Calculate revenue based on VM consumption
+
+      // Calculate revenue based on VM consumption for THIS cluster
       const averageVMVCPUs = requirements.computeRequirements?.averageVMVCPUs || 4;
       const averageVMMemoryGB = requirements.computeRequirements?.averageVMMemoryGB || 8;
-      const totalVCPUs = actualHardwareTotals.totalVCPUs / computePricing.length;
-      const totalMemoryGB = (actualHardwareTotals.totalComputeMemoryTB * 1024) / computePricing.length;
-      const vmsByCPU = Math.floor(totalVCPUs / averageVMVCPUs);
-      const vmsByMemory = Math.floor(totalMemoryGB / averageVMMemoryGB);
+
+      // Calculate actual vCPUs and memory for this specific cluster
+      const clusterVCPUs = computeDevices.reduce((total, device) => {
+        const vCPUsPerDevice = (device.specifications?.['CPU Cores'] || 0) * (device.quantity || 1);
+        return total + vCPUsPerDevice;
+      }, 0);
+
+      const clusterMemoryGB = computeDevices.reduce((total, device) => {
+        const memoryGB = (device.specifications?.['Memory (GB)'] || 0) * (device.quantity || 1);
+        return total + memoryGB;
+      }, 0);
+
+      const vmsByCPU = clusterVCPUs > 0 ? Math.floor(clusterVCPUs / averageVMVCPUs) : 0;
+      const vmsByMemory = clusterMemoryGB > 0 ? Math.floor(clusterMemoryGB / averageVMMemoryGB) : 0;
       const maxVMs = Math.min(vmsByCPU, vmsByMemory);
       const currentVMs = Math.floor(consumption * maxVMs / 100);
       const revenue = cluster.pricePerMonth * currentVMs;
@@ -273,7 +283,7 @@ export function useClusterAnalysis({
     });
     
     return analysis;
-  }, [clusterConsumption, clusterDeviceCounts, computePricing, storagePricing, operationalCosts, requirements, actualHardwareTotals, storageClustersMetrics, storageOverallocationRatios, activeDesign?.components, activeDesign?.requirements?.computeRequirements?.deviceLifespanYears, activeDesign?.requirements?.storageRequirements?.deviceLifespanYears]);
+  }, [clusterConsumption, clusterDeviceCounts, computePricing, storagePricing, operationalCosts, requirements, storageClustersMetrics, storageOverallocationRatios, activeDesign?.components, activeDesign?.requirements?.computeRequirements?.deviceLifespanYears, activeDesign?.requirements?.storageRequirements?.deviceLifespanYears]);
 
   // Calculate overall totals
   const overallAnalysis = useMemo(() => {

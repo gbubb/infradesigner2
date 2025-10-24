@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { ComponentType } from '@/types/infrastructure';
 import { DesignRequirements } from '@/types/infrastructure/requirements-types';
+import { ComponentWithPlacement } from '@/types/service-types';
 
 /**
  * Custom hook for calculating device counts per cluster for network cost apportionment
@@ -13,35 +14,36 @@ export function useClusterDeviceCounts(requirements: DesignRequirements) {
     if (!activeDesign?.components) return {};
 
     const deviceCounts: Record<string, number> = {};
-    
+
     // Get compute cluster requirements to map device counts
     const computeClusters = requirements.computeRequirements?.computeClusters || [];
     const storageClusters = requirements.storageRequirements?.storageClusters || [];
 
-    // Count servers per cluster based on requirements
+    // Count servers per cluster based on actual cluster assignments
     computeClusters.forEach(cluster => {
-      // Calculate nodes needed for this cluster based on vCPU and memory requirements
-      const servers = activeDesign.components.filter(
-        component => component.type === ComponentType.Server && 
-        component.role === 'computeNode'
+      // Count compute nodes that are actually assigned to this cluster
+      const clusterNodes = activeDesign.components.filter(
+        component => component.type === ComponentType.Server &&
+        component.role === 'computeNode' &&
+        (component as ComponentWithPlacement).clusterInfo?.clusterId === cluster.id
       );
-      
-      // For simplicity, distribute compute nodes evenly across compute clusters
-      // In a real implementation, this would be based on actual cluster assignments
-      const totalComputeNodes = servers.reduce((sum, server) => sum + (server.quantity || 1), 0);
-      deviceCounts[cluster.id] = Math.ceil(totalComputeNodes / computeClusters.length);
+
+      const nodeCount = clusterNodes.reduce((sum, server) => sum + (server.quantity || 1), 0);
+      deviceCounts[cluster.id] = nodeCount;
     });
 
     storageClusters.forEach(cluster => {
-      // Count storage nodes for each storage cluster
-      const storageNodes = activeDesign.components.filter(
-        component => component.type === ComponentType.Server && 
-        component.role === 'storageNode'
+      // Count storage nodes and disks that are actually assigned to this cluster
+      const clusterStorageComponents = activeDesign.components.filter(
+        component => (
+          (component.type === ComponentType.Server && component.role === 'storageNode') ||
+          component.type === ComponentType.Disk
+        ) &&
+        (component as ComponentWithPlacement).clusterInfo?.clusterId === cluster.id
       );
-      
-      // For simplicity, distribute storage nodes evenly across storage clusters
-      const totalStorageNodes = storageNodes.reduce((sum, server) => sum + (server.quantity || 1), 0);
-      deviceCounts[cluster.id] = Math.ceil(totalStorageNodes / storageClusters.length);
+
+      const deviceCount = clusterStorageComponents.reduce((sum, device) => sum + (device.quantity || 1), 0);
+      deviceCounts[cluster.id] = deviceCount;
     });
 
     return deviceCounts;
