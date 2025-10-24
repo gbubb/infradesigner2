@@ -252,18 +252,22 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
                   <div className="space-y-2">
                     <Label>Linked Compute Cluster</Label>
                     <Select
-                      value={cluster.computeClusterId || ''}
-                      onValueChange={(value) => handleClusterUpdate(cluster.id, 'computeClusterId', value)}
+                      value={cluster.computeClusterId || 'none'}
+                      onValueChange={(value) => handleClusterUpdate(cluster.id, 'computeClusterId', value === 'none' ? undefined : value)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select compute cluster" />
                       </SelectTrigger>
                       <SelectContent>
-                        {computeClusters.map((computeCluster) => (
-                          <SelectItem key={computeCluster.id} value={computeCluster.id}>
-                            {computeCluster.name}
-                          </SelectItem>
-                        ))}
+                        {computeClusters.length > 0 ? (
+                          computeClusters.map((computeCluster) => (
+                            <SelectItem key={computeCluster.id} value={computeCluster.id}>
+                              {computeCluster.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none" disabled>No compute clusters available</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     {computeClusters.length === 0 && (
@@ -400,14 +404,14 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
               <div className="space-y-2">
                 <Label>Target Storage Cluster</Label>
                 <Select
-                  value={pool.storageClusterId || ''}
-                  onValueChange={(value) => handlePoolUpdate(pool.id, 'storageClusterId', value || undefined)}
+                  value={pool.storageClusterId || 'none'}
+                  onValueChange={(value) => handlePoolUpdate(pool.id, 'storageClusterId', value === 'none' ? undefined : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select target cluster" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None (no target)</SelectItem>
+                    <SelectItem value="none">None (no target)</SelectItem>
                     {storageClusters.map((cluster) => (
                       <SelectItem key={cluster.id} value={cluster.id}>
                         {cluster.type === 'hyperConverged' && <Zap className="h-3 w-3 inline mr-1" />}
