@@ -254,7 +254,8 @@ export const useCostAnalysis = () => {
     const amortizedMonthly = amortizedCostsByType.total;
     const licensingMonthly = licensingCosts.monthly;
     const networkMonthly = amortizedCostsByType.network;
-    const totalMonthly = rackMonthly + facilityMonthly + energyMonthly + amortizedMonthly + licensingMonthly + networkMonthly;
+    // Note: networkMonthly is already included in amortizedMonthly (which = compute + storage + network)
+    const totalMonthly = rackMonthly + facilityMonthly + energyMonthly + amortizedMonthly + licensingMonthly;
     
     return { 
       racksMonthly: rackMonthly,
