@@ -236,7 +236,7 @@ export const recalculateDesign = () => {
             // Find storage clusters that target this compute cluster
             const storageClusters = state.requirements.storageRequirements?.storageClusters || [];
             const targetingStorageClusters = storageClusters.filter(
-              sc => sc.hyperConverged && sc.computeClusterId === role.clusterInfo?.clusterId
+              sc => sc.type === 'hyperConverged' && sc.computeClusterId === role.clusterInfo?.clusterId
             );
 
             for (let i = 0; i < requiredQuantity; i++) {
