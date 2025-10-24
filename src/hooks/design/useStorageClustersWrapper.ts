@@ -234,13 +234,20 @@ export const useStorageClustersWrapper = () => {
       const usableCapacityTB = totalRawCapacityTB * poolEfficiencyFactor;
       const usableCapacityTiB = usableCapacityTB * TB_TO_TIB_FACTOR;
       const effectiveCapacityTiB = usableCapacityTiB * maxFillFactor;
-      
+
       // Calculate cost per TiB using appropriate cost basis
       // For hyper-converged: use storage-attributed costs only
       // For non-converged: use total server + disk costs
       // IMPORTANT: Use effective capacity (after max fill factor) for accurate cost per TiB
       const costBasis = targetCluster?.type === 'hyperConverged' ? totalStorageCost : (totalNodeCost + totalDiskCost);
-      const costPerTiB = effectiveCapacityTiB > 0 ? costBasis / effectiveCapacityTiB : 0;
+
+      // Amortize capital cost over device lifespan to get monthly cost
+      const lifespanYears = requirements.storageRequirements?.deviceLifespanYears || 3;
+      const lifespanMonths = lifespanYears * 12;
+      const monthlyAmortizedCost = costBasis / lifespanMonths;
+
+      // Calculate monthly cost per TiB
+      const costPerTiB = effectiveCapacityTiB > 0 ? monthlyAmortizedCost / effectiveCapacityTiB : 0;
 
       const result = {
         id: pool.id,
@@ -264,6 +271,7 @@ export const useStorageClustersWrapper = () => {
         totalCpuCores: targetCluster?.type === 'hyperConverged' ? totalCpuCores : undefined,
         storageCpuCores: targetCluster?.type === 'hyperConverged' ? storageCpuCores : undefined,
         cpuCoresPerDisk: targetCluster?.type === 'hyperConverged' ? cpuCoresPerDisk : undefined,
+        lifespanYears,
         costBreakdown
       };
       
