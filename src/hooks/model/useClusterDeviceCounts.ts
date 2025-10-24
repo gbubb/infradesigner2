@@ -8,9 +8,11 @@ import { ComponentWithPlacement } from '@/types/service-types';
  * Custom hook for calculating device counts per cluster for network cost apportionment
  */
 export function useClusterDeviceCounts(requirements: DesignRequirements) {
+  // Subscribe to activeDesign from store to get reactive updates
+  const activeDesign = useDesignStore(state => state.activeDesign);
+
   // Calculate device counts per cluster for network cost apportionment
   const clusterDeviceCounts = useMemo(() => {
-    const { activeDesign } = useDesignStore.getState();
     if (!activeDesign?.components) return {};
 
     const deviceCounts: Record<string, number> = {};
@@ -47,7 +49,7 @@ export function useClusterDeviceCounts(requirements: DesignRequirements) {
     });
 
     return deviceCounts;
-  }, [requirements]);
+  }, [activeDesign?.components, requirements]);
 
   // Calculate total device count for proportional network cost allocation
   const totalDeviceCount = useMemo(() => {
