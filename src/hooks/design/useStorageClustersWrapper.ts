@@ -221,7 +221,7 @@ export const useStorageClustersWrapper = () => {
         
         // Debug logging
         console.log('[StorageCluster] Node breakdown added:', {
-          clusterName: cluster.name,
+          poolName: pool.name,
           nodeBreakdown,
           totalNodesInBreakdown: costBreakdown.nodes.length
         });
