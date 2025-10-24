@@ -12,31 +12,36 @@ export const useStorageClustersWrapper = () => {
   
   // Calculate storage clusters metrics
   const storageClustersMetrics = useMemo(() => {
-    if (!activeDesign?.components || !requirements.storageRequirements.storageClusters) {
+    if (!activeDesign?.components || !requirements.storageRequirements.storagePools) {
       console.log('[useStorageClustersWrapper] Missing data:', {
         hasComponents: !!activeDesign?.components,
         componentsLength: activeDesign?.components?.length || 0,
-        hasStorageClusters: !!requirements.storageRequirements.storageClusters,
-        storageClustersLength: requirements.storageRequirements.storageClusters?.length || 0
+        hasStoragePools: !!requirements.storageRequirements.storagePools,
+        storagePoolsLength: requirements.storageRequirements.storagePools?.length || 0
       });
       return [];
     }
 
-    return requirements.storageRequirements.storageClusters.map(cluster => {
+    return requirements.storageRequirements.storagePools.map(pool => {
+      // Find the physical storage cluster this pool targets
+      const targetCluster = requirements.storageRequirements.storageClusters.find(
+        sc => sc.id === pool.storageClusterId
+      );
+
       let clusterNodes = [];
-      
-      // Check if this is a hyper-converged storage cluster
-      if (cluster.hyperConverged && cluster.computeClusterId) {
+
+      // Check if this pool targets a hyper-converged physical cluster
+      if (targetCluster?.type === 'hyperConverged' && targetCluster.computeClusterId) {
         // Find hyper-converged nodes from the compute cluster
         clusterNodes = activeDesign.components.filter(
-          component => component.role === 'hyperConvergedNode' && 
-          component.clusterInfo?.clusterId === cluster.computeClusterId
+          component => component.role === 'hyperConvergedNode' &&
+          component.clusterInfo?.clusterId === targetCluster.computeClusterId
         );
-      } else {
-        // Find regular storage nodes for this cluster
+      } else if (targetCluster) {
+        // Find regular storage nodes for this physical cluster
         clusterNodes = activeDesign.components.filter(
-          component => component.role === 'storageNode' && 
-          component.clusterInfo?.clusterId === cluster.id
+          component => component.role === 'storageNode' &&
+          component.clusterInfo?.clusterId === targetCluster.id
         );
       }
       
@@ -83,22 +88,45 @@ export const useStorageClustersWrapper = () => {
           
           disks.forEach((disk) => {
             if (disk && 'capacityTB' in disk) {
-              const diskQuantity = disk.quantity || 1;
-              const diskUnitCost = disk.cost || 0;
-              const diskTotalCost = diskUnitCost * diskQuantity * quantity;
-              
-              totalRawCapacityTB += disk.capacityTB * diskQuantity * quantity;
-              totalDisksInNode += diskQuantity;
-              diskCostForNode += diskTotalCost;
-              totalDiskCost += diskTotalCost;
-              totalDisks += diskQuantity * quantity;
-              
-              nodeDisks.push({
-                name: disk.name || `${disk.capacityTB}TB Disk`,
-                capacityTB: disk.capacityTB,
-                quantity: diskQuantity,
-                cost: diskUnitCost
-              });
+              // For hyper-converged clusters, only count disks tagged for this physical storage cluster
+              if (targetCluster?.type === 'hyperConverged') {
+                if ('storageClusterId' in disk && disk.storageClusterId === targetCluster.id) {
+                  const diskQuantity = disk.quantity || 1;
+                  const diskUnitCost = disk.cost || 0;
+                  const diskTotalCost = diskUnitCost * diskQuantity * quantity;
+
+                  totalRawCapacityTB += disk.capacityTB * diskQuantity * quantity;
+                  totalDisksInNode += diskQuantity;
+                  diskCostForNode += diskTotalCost;
+                  totalDiskCost += diskTotalCost;
+                  totalDisks += diskQuantity * quantity;
+
+                  nodeDisks.push({
+                    name: disk.name || `${disk.capacityTB}TB Disk`,
+                    capacityTB: disk.capacityTB,
+                    quantity: diskQuantity,
+                    cost: diskUnitCost
+                  });
+                }
+              } else {
+                // For conventional storage nodes, count all disks
+                const diskQuantity = disk.quantity || 1;
+                const diskUnitCost = disk.cost || 0;
+                const diskTotalCost = diskUnitCost * diskQuantity * quantity;
+
+                totalRawCapacityTB += disk.capacityTB * diskQuantity * quantity;
+                totalDisksInNode += diskQuantity;
+                diskCostForNode += diskTotalCost;
+                totalDiskCost += diskTotalCost;
+                totalDisks += diskQuantity * quantity;
+
+                nodeDisks.push({
+                  name: disk.name || `${disk.capacityTB}TB Disk`,
+                  capacityTB: disk.capacityTB,
+                  quantity: diskQuantity,
+                  cost: diskUnitCost
+                });
+              }
             }
           });
           
@@ -106,9 +134,9 @@ export const useStorageClustersWrapper = () => {
           nodeDiskCount = totalDisksInNode;
           
           // For hyper-converged nodes, calculate storage-specific cost
-          // This provides a more accurate Cost per TiB by only including the 
+          // This provides a more accurate Cost per TiB by only including the
           // portion of server cost attributable to storage operations
-          if (cluster.hyperConverged && cluster.computeClusterId) {
+          if (targetCluster?.type === 'hyperConverged' && targetCluster.computeClusterId) {
             // Try to get CPU info from the node itself first (if it's a Server type)
             let cores = 0;
             
@@ -200,8 +228,8 @@ export const useStorageClustersWrapper = () => {
       });
       
       // Calculate usable capacity based on pool type
-      const poolEfficiencyFactor = StoragePoolEfficiencyFactors[cluster.poolType || '3 Replica'] || (1/3);
-      const maxFillFactor = (cluster.maxFillFactor || 80) / 100;
+      const poolEfficiencyFactor = StoragePoolEfficiencyFactors[pool.poolType || '3 Replica'] || (1/3);
+      const maxFillFactor = (pool.maxFillFactor || 80) / 100;
       
       const usableCapacityTB = totalRawCapacityTB * poolEfficiencyFactor;
       const usableCapacityTiB = usableCapacityTB * TB_TO_TIB_FACTOR;
@@ -211,37 +239,37 @@ export const useStorageClustersWrapper = () => {
       // For hyper-converged: use storage-attributed costs only
       // For non-converged: use total server + disk costs
       // IMPORTANT: Use effective capacity (after max fill factor) for accurate cost per TiB
-      const costBasis = cluster.hyperConverged ? totalStorageCost : (totalNodeCost + totalDiskCost);
+      const costBasis = targetCluster?.type === 'hyperConverged' ? totalStorageCost : (totalNodeCost + totalDiskCost);
       const costPerTiB = effectiveCapacityTiB > 0 ? costBasis / effectiveCapacityTiB : 0;
-      
+
       const result = {
-        id: cluster.id,
-        name: cluster.name,
-        poolType: cluster.poolType,
-        maxFillFactor: cluster.maxFillFactor,
+        id: pool.id,
+        name: pool.name,
+        poolType: pool.poolType,
+        maxFillFactor: pool.maxFillFactor,
         totalRawCapacityTB,
         usableCapacityTB,
         usableCapacityTiB,
         effectiveCapacityTiB,
-        totalNodeCost: cluster.hyperConverged ? totalNodeCost : (totalNodeCost + totalDiskCost),
+        totalNodeCost: targetCluster?.type === 'hyperConverged' ? totalNodeCost : (totalNodeCost + totalDiskCost),
         costPerTiB,
         nodeCount: clusterNodes.reduce((sum, node) => sum + (node.quantity || 1), 0),
-        isHyperConverged: cluster.hyperConverged || false,
-        totalStorageCost: cluster.hyperConverged ? totalStorageCost : undefined,
+        isHyperConverged: targetCluster?.type === 'hyperConverged' || false,
+        totalStorageCost: targetCluster?.type === 'hyperConverged' ? totalStorageCost : undefined,
         // Additional detailed breakdown
         totalDiskCost,
         totalServerCost,
         totalDisks,
-        storageAttributedServerCost: cluster.hyperConverged ? storageAttributedServerCost : undefined,
-        totalCpuCores: cluster.hyperConverged ? totalCpuCores : undefined,
-        storageCpuCores: cluster.hyperConverged ? storageCpuCores : undefined,
-        cpuCoresPerDisk: cluster.hyperConverged ? cpuCoresPerDisk : undefined,
+        storageAttributedServerCost: targetCluster?.type === 'hyperConverged' ? storageAttributedServerCost : undefined,
+        totalCpuCores: targetCluster?.type === 'hyperConverged' ? totalCpuCores : undefined,
+        storageCpuCores: targetCluster?.type === 'hyperConverged' ? storageCpuCores : undefined,
+        cpuCoresPerDisk: targetCluster?.type === 'hyperConverged' ? cpuCoresPerDisk : undefined,
         costBreakdown
       };
       
       console.log('[StorageCluster] Final cluster metrics:', {
-        clusterName: cluster.name,
-        isHyperConverged: cluster.hyperConverged,
+        clusterName: pool.name,
+        isHyperConverged: targetCluster?.type === 'hyperConverged',
         nodesFound: clusterNodes.length,
         costBreakdownNodes: costBreakdown.nodes.length,
         totalCpuCores,
