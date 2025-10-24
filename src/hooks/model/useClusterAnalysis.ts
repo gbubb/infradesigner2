@@ -93,9 +93,10 @@ export function useClusterAnalysis({
         : 0;
       
       // Calculate compute-specific hardware costs for this cluster
+      // Include computeNode, gpuNode, and hyperConvergedNode roles
       const computeDevices = activeDesign?.components.filter(
-        component => component.type === ComponentType.Server && 
-        component.role === 'computeNode' &&
+        component => component.type === ComponentType.Server &&
+        (component.role === 'computeNode' || component.role === 'gpuNode' || component.role === 'hyperConvergedNode') &&
         (component as ComponentWithPlacement).clusterInfo?.clusterId === cluster.clusterId
       ) || [];
       

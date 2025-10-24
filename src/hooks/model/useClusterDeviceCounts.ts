@@ -24,14 +24,28 @@ export function useClusterDeviceCounts(requirements: DesignRequirements) {
     // Count servers per cluster based on actual cluster assignments
     computeClusters.forEach(cluster => {
       // Count compute nodes that are actually assigned to this cluster
+      // Include computeNode, gpuNode, and hyperConvergedNode roles
       const clusterNodes = activeDesign.components.filter(
         component => component.type === ComponentType.Server &&
-        component.role === 'computeNode' &&
+        (component.role === 'computeNode' || component.role === 'gpuNode' || component.role === 'hyperConvergedNode') &&
         (component as ComponentWithPlacement).clusterInfo?.clusterId === cluster.id
       );
 
       const nodeCount = clusterNodes.reduce((sum, server) => sum + (server.quantity || 1), 0);
       deviceCounts[cluster.id] = nodeCount;
+
+      // Debug logging
+      if (nodeCount === 0) {
+        const allComputeNodes = activeDesign.components.filter(
+          component => component.type === ComponentType.Server &&
+          (component.role === 'computeNode' || component.role === 'gpuNode' || component.role === 'hyperConvergedNode')
+        );
+        console.log(`[useClusterDeviceCounts] No nodes found for cluster "${cluster.name}" (${cluster.id})`);
+        console.log(`[useClusterDeviceCounts] Total compute nodes in design:`, allComputeNodes.length);
+        if (allComputeNodes.length > 0) {
+          console.log(`[useClusterDeviceCounts] Sample compute node clusterInfo:`, (allComputeNodes[0] as ComponentWithPlacement).clusterInfo);
+        }
+      }
     });
 
     storageClusters.forEach(cluster => {
@@ -46,6 +60,19 @@ export function useClusterDeviceCounts(requirements: DesignRequirements) {
 
       const deviceCount = clusterStorageComponents.reduce((sum, device) => sum + (device.quantity || 1), 0);
       deviceCounts[cluster.id] = deviceCount;
+
+      // Debug logging
+      if (deviceCount === 0) {
+        const allStorageComponents = activeDesign.components.filter(
+          component => (component.type === ComponentType.Server && component.role === 'storageNode') ||
+          component.type === ComponentType.Disk
+        );
+        console.log(`[useClusterDeviceCounts] No storage devices found for cluster "${cluster.name}" (${cluster.id})`);
+        console.log(`[useClusterDeviceCounts] Total storage components in design:`, allStorageComponents.length);
+        if (allStorageComponents.length > 0) {
+          console.log(`[useClusterDeviceCounts] Sample storage component clusterInfo:`, (allStorageComponents[0] as ComponentWithPlacement).clusterInfo);
+        }
+      }
     });
 
     return deviceCounts;
