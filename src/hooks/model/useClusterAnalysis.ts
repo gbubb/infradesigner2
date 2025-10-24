@@ -72,15 +72,25 @@ export function useClusterAnalysis({
       const deviceCount = clusterDeviceCounts[cluster.clusterId] || 0;
       const clusterRU = deviceCount * (cluster.rackUnits || 1);
       const clusterPower = deviceCount * (cluster.powerWatts || 500);
-      
-      // Calculate proportional costs
-      const networkCostShare = operationalCosts.networkMonthly * (deviceCount / totalDeviceCount);
-      const rackCostShare = operationalCosts.racksMonthly * (clusterRU / totalRU);
-      const energyCostShare = operationalCosts.energyMonthly * (clusterPower / totalPower);
-      const licensingCostShare = operationalCosts.licensingMonthly * (deviceCount / totalDeviceCount);
+
+      // Calculate proportional costs with safe division
+      const networkCostShare = totalDeviceCount > 0
+        ? operationalCosts.networkMonthly * (deviceCount / totalDeviceCount)
+        : 0;
+      const rackCostShare = totalRU > 0
+        ? operationalCosts.racksMonthly * (clusterRU / totalRU)
+        : 0;
+      const energyCostShare = totalPower > 0
+        ? operationalCosts.energyMonthly * (clusterPower / totalPower)
+        : 0;
+      const licensingCostShare = totalDeviceCount > 0
+        ? operationalCosts.licensingMonthly * (deviceCount / totalDeviceCount)
+        : 0;
       
       // Get the full amortized cost for this specific cluster
-      const clusterAmortizedCost = operationalCosts.amortizedMonthly * (deviceCount / totalDeviceCount);
+      const clusterAmortizedCost = totalDeviceCount > 0
+        ? operationalCosts.amortizedMonthly * (deviceCount / totalDeviceCount)
+        : 0;
       
       // Calculate compute-specific hardware costs for this cluster
       const computeDevices = activeDesign?.components.filter(
@@ -184,11 +194,19 @@ export function useClusterAnalysis({
       const clusterRU = actualDeviceCount * (cluster.rackUnits || 1);
       const clusterPower = actualDeviceCount * (cluster.powerWatts || 500);
       
-      // Calculate proportional costs for shared infrastructure using actual device count
-      const networkCostShare = operationalCosts.networkMonthly * (actualDeviceCount / totalDeviceCount);
-      const rackCostShare = operationalCosts.racksMonthly * (clusterRU / totalRU);
-      const energyCostShare = operationalCosts.energyMonthly * (clusterPower / totalPower);
-      const licensingCostShare = operationalCosts.licensingMonthly * (actualDeviceCount / totalDeviceCount);
+      // Calculate proportional costs for shared infrastructure using actual device count with safe division
+      const networkCostShare = totalDeviceCount > 0
+        ? operationalCosts.networkMonthly * (actualDeviceCount / totalDeviceCount)
+        : 0;
+      const rackCostShare = totalRU > 0
+        ? operationalCosts.racksMonthly * (clusterRU / totalRU)
+        : 0;
+      const energyCostShare = totalPower > 0
+        ? operationalCosts.energyMonthly * (clusterPower / totalPower)
+        : 0;
+      const licensingCostShare = totalDeviceCount > 0
+        ? operationalCosts.licensingMonthly * (actualDeviceCount / totalDeviceCount)
+        : 0;
       
       // Calculate monthly amortized storage hardware cost
       const storageLifespan = activeDesign?.requirements?.storageRequirements?.deviceLifespanYears || 3;

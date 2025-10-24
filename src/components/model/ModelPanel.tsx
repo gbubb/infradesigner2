@@ -11,6 +11,7 @@ import { useClusterAnalysis } from '@/hooks/model/useClusterAnalysis';
 import { ClusterConsumptionControls } from './ClusterConsumptionControls';
 import { ClusterAnalysisCard } from './ClusterAnalysisCard';
 import { OperationalCostAlignmentCard, OverallSummaryCard } from './ModelSummaryCards';
+import { UtilizationAnalysisChart } from './UtilizationAnalysisChart';
 import { ScenarioTab } from './ScenarioTab';
 import { PowerPredictionTab } from './power/PowerPredictionTab';
 import { DatacenterAnalyticsTab } from './datacenter/DatacenterAnalyticsTab';
@@ -153,6 +154,20 @@ export const ModelPanel: React.FC = () => {
                 profitMargin={overallAnalysis.profitMargin}
               />
             </div>
+          </div>
+
+          {/* Utilization Analysis Chart - Full width below */}
+          <div className="mt-6">
+            <UtilizationAnalysisChart
+              clusterAnalysis={clusterAnalysis}
+              computePricing={computePricing}
+              storagePricing={storagePricing}
+              operationalCosts={operationalCosts}
+              requirements={requirements}
+              actualHardwareTotals={actualHardwareTotals}
+              storageClustersMetrics={storageClustersMetrics}
+              clusterDeviceCounts={clusterDeviceCounts}
+            />
           </div>
         </TabsContent>
         
