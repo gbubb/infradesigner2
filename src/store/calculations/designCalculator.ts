@@ -42,7 +42,7 @@ export const recalculateDesign = () => {
       if (state.componentRoles && state.componentRoles.length > 0) {
         state.componentRoles.forEach(role => {
           if (role.assignedComponentId) {
-            const clusterKey = role.role === 'storageNode' && (role.clusterInfo?.clusterId)
+            const clusterKey = (role.role === 'storageNode' || role.role === 'hyperConvergedNode') && (role.clusterInfo?.clusterId)
               ? `${role.role}-${role.clusterInfo.clusterId}`
               : role.role;
             existingAssignments[clusterKey] = role.assignedComponentId;
@@ -53,7 +53,7 @@ export const recalculateDesign = () => {
       if (state.activeDesign.componentRoles && state.activeDesign.componentRoles.length > 0) {
         state.activeDesign.componentRoles.forEach(role => {
           if (role.assignedComponentId) {
-            const clusterKey = role.role === 'storageNode' && (role.clusterInfo?.clusterId)
+            const clusterKey = (role.role === 'storageNode' || role.role === 'hyperConvergedNode') && (role.clusterInfo?.clusterId)
               ? `${role.role}-${role.clusterInfo.clusterId}`
               : role.role;
             existingAssignments[clusterKey] = role.assignedComponentId;
@@ -65,8 +65,8 @@ export const recalculateDesign = () => {
 
       // --- When restoring, match using combined key so clusters stay independent
       const updatedRoles = state.componentRoles.map(role => {
-        if (role.role === 'storageNode' && role.clusterInfo?.clusterId) {
-          const clusterKey = `storageNode-${role.clusterInfo.clusterId}`;
+        if ((role.role === 'storageNode' || role.role === 'hyperConvergedNode') && role.clusterInfo?.clusterId) {
+          const clusterKey = `${role.role}-${role.clusterInfo.clusterId}`;
           if (existingAssignments[clusterKey]) {
             // console.log(`Restoring assignment for ${clusterKey}: ${existingAssignments[clusterKey]}`);
             return {
@@ -159,6 +159,9 @@ export const recalculateDesign = () => {
         }
       });
       
+      // Keep a count for each template+cluster to generate unique names
+      const templateInstanceCounts: { [key: string]: number } = {};
+
       const updatedComponentsArray = updatedRoles
         .filter(role =>
           role.assignedComponentId &&
@@ -171,9 +174,6 @@ export const recalculateDesign = () => {
           );
           if (!componentTemplate) return [];
 
-          // Keep a count for each template to generate unique names
-          const templateInstanceCounts: { [key: string]: number } = {};
-
           // -- STORAGE NODE ROLES --
           if (role.role === 'storageNode') {
             // Gather disks assigned to this cluster's storage role
@@ -181,9 +181,16 @@ export const recalculateDesign = () => {
             const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
             const instances: InfrastructureComponent[] = [];
             for (let i = 0; i < requiredQuantity; i++) {
-              const templateIdForCount = componentTemplate.id;
-              templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
-              const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
+              // Create cluster-aware counter key
+              const counterKey = role.clusterInfo?.clusterId
+                ? `${componentTemplate.id}-${role.clusterInfo.clusterId}`
+                : componentTemplate.id;
+              templateInstanceCounts[counterKey] = (templateInstanceCounts[counterKey] || 0) + 1;
+
+              // Generate cluster-aware name
+              const instanceName = role.clusterInfo?.clusterName
+                ? `${role.clusterInfo.clusterName}-node-${templateInstanceCounts[counterKey]}`
+                : `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[counterKey]}`;
               
               const attachedDisks: InfrastructureComponent[] = [];
               const instanceComponent: InfrastructureComponent = {
@@ -240,9 +247,16 @@ export const recalculateDesign = () => {
             );
 
             for (let i = 0; i < requiredQuantity; i++) {
-              const templateIdForCount = componentTemplate.id;
-              templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
-              const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
+              // Create cluster-aware counter key
+              const counterKey = role.clusterInfo?.clusterId
+                ? `${componentTemplate.id}-${role.clusterInfo.clusterId}`
+                : componentTemplate.id;
+              templateInstanceCounts[counterKey] = (templateInstanceCounts[counterKey] || 0) + 1;
+
+              // Generate cluster-aware name
+              const instanceName = role.clusterInfo?.clusterName
+                ? `${role.clusterInfo.clusterName}-node-${templateInstanceCounts[counterKey]}`
+                : `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[counterKey]}`;
 
               const attachedDisks: InfrastructureComponent[] = [];
               const instanceComponent: InfrastructureComponent = {
@@ -301,9 +315,16 @@ export const recalculateDesign = () => {
             const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
             const instances: InfrastructureComponent[] = [];
             for (let i = 0; i < requiredQuantity; i++) {
-              const templateIdForCount = componentTemplate.id;
-              templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
-              const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
+              // Create cluster-aware counter key
+              const counterKey = role.clusterInfo?.clusterId
+                ? `${componentTemplate.id}-${role.clusterInfo.clusterId}`
+                : componentTemplate.id;
+              templateInstanceCounts[counterKey] = (templateInstanceCounts[counterKey] || 0) + 1;
+
+              // Generate cluster-aware name
+              const instanceName = role.clusterInfo?.clusterName
+                ? `${role.clusterInfo.clusterName}-node-${templateInstanceCounts[counterKey]}`
+                : `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[counterKey]}`;
               
               const instanceComponent: InfrastructureComponent = {
                 ...componentTemplate,
@@ -347,13 +368,19 @@ export const recalculateDesign = () => {
           }
 
           // -- ALL OTHER NODE ROLES --
-          // no change; preserve logic
           const requiredQuantity = role.adjustedRequiredCount || role.requiredCount || 0;
           const instances: InfrastructureComponent[] = [];
           for (let i = 0; i < requiredQuantity; i++) {
-            const templateIdForCount = componentTemplate.id;
-            templateInstanceCounts[templateIdForCount] = (templateInstanceCounts[templateIdForCount] || 0) + 1;
-            const instanceName = `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[templateIdForCount]}`;
+            // Create cluster-aware counter key
+            const counterKey = role.clusterInfo?.clusterId
+              ? `${componentTemplate.id}-${role.clusterInfo.clusterId}`
+              : componentTemplate.id;
+            templateInstanceCounts[counterKey] = (templateInstanceCounts[counterKey] || 0) + 1;
+
+            // Generate cluster-aware name
+            const instanceName = role.clusterInfo?.clusterName
+              ? `${role.clusterInfo.clusterName}-node-${templateInstanceCounts[counterKey]}`
+              : `${componentTemplate.namingPrefix || componentTemplate.name}-${templateInstanceCounts[counterKey]}`;
 
             const instanceComponent: InfrastructureComponent = {
               ...componentTemplate,

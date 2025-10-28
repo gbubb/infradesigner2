@@ -138,8 +138,8 @@ export const DesignPanel: React.FC = () => {
       if (design.componentRoles && design.componentRoles.length > 0) {
         design.componentRoles.forEach((savedRole: SavedComponentRole) => {
           if (savedRole.assignedComponentId) {
-            // For storage nodes, use cluster-specific key
-            const roleKey = savedRole.role === 'storageNode' && savedRole.clusterInfo?.clusterId
+            // For storage and hyper-converged nodes, use cluster-specific key
+            const roleKey = (savedRole.role === 'storageNode' || savedRole.role === 'hyperConvergedNode') && savedRole.clusterInfo?.clusterId
               ? `${savedRole.role}-${savedRole.clusterInfo.clusterId}`
               : savedRole.role;
             existingAssignments[roleKey] = savedRole.assignedComponentId;
@@ -149,10 +149,10 @@ export const DesignPanel: React.FC = () => {
 
       componentRoles.forEach(role => {
         // Check for existing assignment in activeDesign first
-        const roleKey = role.role === 'storageNode' && role.clusterInfo?.clusterId
+        const roleKey = (role.role === 'storageNode' || role.role === 'hyperConvergedNode') && role.clusterInfo?.clusterId
           ? `${role.role}-${role.clusterInfo.clusterId}`
           : role.role;
-        
+
         if (!role.assignedComponentId && existingAssignments[roleKey]) {
           // Restore assignment from activeDesign
           // console.log(`Restoring assignment for ${roleKey} from activeDesign: ${existingAssignments[roleKey]}`);

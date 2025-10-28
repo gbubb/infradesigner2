@@ -130,7 +130,7 @@ export const createRequirementsSliceOperations = (
       // Get assignments from current componentRoles
       existingRoles.forEach(role => {
         if (role.assignedComponentId) {
-          const roleKey = role.role === 'storageNode' && role.clusterInfo?.clusterId
+          const roleKey = (role.role === 'storageNode' || role.role === 'hyperConvergedNode') && role.clusterInfo?.clusterId
             ? `${role.role}-${role.clusterInfo.clusterId}`
             : role.role;
           existingAssignments[roleKey] = {
