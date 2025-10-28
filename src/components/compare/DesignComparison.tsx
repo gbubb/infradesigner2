@@ -113,7 +113,9 @@ function calculateDesignMetrics(design: InfrastructureDesign): DesignMetrics {
   
   // Calculate rack cost
   const useColoRacks = design.requirements?.physicalConstraints?.useColoRacks ?? false;
-  const rackCostPerMonth = useColoRacks ? (design.requirements?.physicalConstraints?.rackCostPerMonthEuros ?? 2000) : 0;
+  const rackCostPerMonth = useColoRacks
+    ? (design.requirements?.physicalConstraints?.rackCostPerMonth ?? design.requirements?.physicalConstraints?.rackCostPerMonthEuros ?? 2000)
+    : 0;
   const rackQuantity = design.requirements?.physicalConstraints?.computeStorageRackQuantity ?? 1;
   metrics.rackCostMonthly = rackCostPerMonth * rackQuantity;
   

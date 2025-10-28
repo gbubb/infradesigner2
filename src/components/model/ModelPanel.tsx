@@ -25,8 +25,8 @@ export const ModelPanel: React.FC = () => {
     actualHardwareTotals 
   } = useDesignCalculations();
 
-  // Get operational costs from cost analysis to ensure alignment with Results
-  const { operationalCosts } = useCostAnalysis();
+  // Get operational costs and amortized costs by type from cost analysis to ensure alignment with Results
+  const { operationalCosts, amortizedCostsByType } = useCostAnalysis();
 
   // Get pricing data from requirements
   const computePricing = useMemo(() => requirements.pricingRequirements?.computePricing || [], [requirements.pricingRequirements?.computePricing]);
@@ -69,6 +69,7 @@ export const ModelPanel: React.FC = () => {
     computePricing,
     storagePricing,
     operationalCosts,
+    amortizedCostsByType,
     requirements,
     actualHardwareTotals,
     storageClustersMetrics,

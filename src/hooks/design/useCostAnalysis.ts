@@ -243,7 +243,9 @@ export const useCostAnalysis = () => {
     let facilityMonthly = 0;
     
     if (facilityType === 'colocation') {
-      const rackCostPerMonthValue = activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros || 2000;
+      // Support both new and legacy field names for backward compatibility
+      const constraints = activeDesign?.requirements?.physicalConstraints;
+      const rackCostPerMonthValue = constraints?.rackCostPerMonth ?? constraints?.rackCostPerMonthEuros ?? 2000;
       rackMonthly = rackCostPerMonthValue * totalRackQuantityValue;
     } else if (facilityType === 'owned' && facilityCosts) {
       // For owned facilities, use the total monthly facility cost
@@ -267,10 +269,13 @@ export const useCostAnalysis = () => {
       totalMonthly 
     };
   }, [
-    energyCosts.monthlyEnergyCost, 
-    amortizedCostsByType, 
-    licensingCosts.monthly, 
-    activeDesign?.requirements,
+    energyCosts.monthlyEnergyCost,
+    amortizedCostsByType,
+    licensingCosts.monthly,
+    activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity,
+    activeDesign?.requirements?.physicalConstraints?.rackCostPerMonth,
+    activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros,
+    activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks,
     facilityType,
     facilityCosts
   ]);

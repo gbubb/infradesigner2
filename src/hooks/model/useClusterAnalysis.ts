@@ -20,6 +20,12 @@ interface UseClusterAnalysisProps {
     licensingMonthly: number;
     totalMonthly: number;
   };
+  amortizedCostsByType: {
+    compute: number;
+    storage: number;
+    network: number;
+    total: number;
+  };
   requirements: DesignRequirements;
   actualHardwareTotals: {
     totalVCPUs: number;
@@ -38,6 +44,7 @@ export function useClusterAnalysis({
   computePricing,
   storagePricing,
   operationalCosts,
+  amortizedCostsByType,
   requirements,
   actualHardwareTotals,
   storageClustersMetrics,
@@ -60,12 +67,17 @@ export function useClusterAnalysis({
       return sum + (count * (cluster?.powerWatts || 500)); // Default to 500W if not specified
     }, 0);
 
-    // Calculate total storage devices for proportional cost allocation
+    // Calculate total compute and storage devices for proportional cost allocation
+    const totalComputeDevices = activeDesign?.components.filter(
+      component => component.type === ComponentType.Server &&
+        (component.role === 'computeNode' || component.role === 'gpuNode' || component.role === 'hyperConvergedNode')
+    ).reduce((sum, component) => sum + (component.quantity || 1), 0) || 0;
+
     const totalStorageDevices = activeDesign?.components.filter(
-      component => (component.type === ComponentType.Disk || 
+      component => (component.type === ComponentType.Disk ||
         (component.type === ComponentType.Server && component.role === 'storageNode'))
     ).reduce((sum, component) => sum + (component.quantity || 1), 0) || 0;
-    
+
     // Analyze compute clusters
     computePricing.forEach(cluster => {
       const consumption = clusterConsumption[cluster.clusterId] || 50;
@@ -86,28 +98,27 @@ export function useClusterAnalysis({
       const licensingCostShare = totalDeviceCount > 0
         ? operationalCosts.licensingMonthly * (deviceCount / totalDeviceCount)
         : 0;
-      
-      // Get the full amortized cost for this specific cluster
-      const clusterAmortizedCost = totalDeviceCount > 0
-        ? operationalCosts.amortizedMonthly * (deviceCount / totalDeviceCount)
-        : 0;
-      
-      // Calculate compute-specific hardware costs for this cluster
-      // Include computeNode, gpuNode, and hyperConvergedNode roles
+
+      // Get compute devices for this cluster (for VM calculation and cost breakdown)
       const computeDevices = activeDesign?.components.filter(
         component => component.type === ComponentType.Server &&
         (component.role === 'computeNode' || component.role === 'gpuNode' || component.role === 'hyperConvergedNode') &&
         (component as ComponentWithPlacement).clusterInfo?.clusterId === cluster.clusterId
       ) || [];
-      
+
+      const clusterComputeDeviceCount = computeDevices.reduce((sum, device) => sum + (device.quantity || 1), 0);
+
+      // Use proportional share of compute amortized costs from Results page calculation
+      const computeAmortizedCost = totalComputeDevices > 0
+        ? amortizedCostsByType.compute * (clusterComputeDeviceCount / totalComputeDevices)
+        : 0;
+
+      // For cost breakdown, calculate the hardware cost for reference
       const computeHardwareCost = computeDevices.reduce((total, device) => {
         return total + (device.cost * (device.quantity || 1));
       }, 0);
-      
-      // Calculate monthly amortized compute hardware cost
       const computeLifespan = activeDesign?.requirements?.computeRequirements?.deviceLifespanYears || 3;
-      const computeAmortizedCost = computeHardwareCost / (computeLifespan * 12);
-      
+
       const totalClusterCost = computeAmortizedCost + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
 
       // Calculate revenue based on VM consumption for THIS cluster
@@ -207,24 +218,20 @@ export function useClusterAnalysis({
       const consumption = clusterConsumption[cluster.clusterId] || 50;
       const overallocationRatio = storageOverallocationRatios[cluster.clusterId] || 1.0;
       
-      // Calculate storage-specific hardware costs for this cluster
+      // Get storage devices for this cluster
       const storageDevices = activeDesign?.components.filter(
-        component => (component.type === ComponentType.Disk || 
+        component => (component.type === ComponentType.Disk ||
           (component.type === ComponentType.Server && component.role === 'storageNode')) &&
           (component as ComponentWithPlacement).clusterInfo?.clusterId === cluster.clusterId
       ) || [];
-      
-      const storageHardwareCost = storageDevices.reduce((total, device) => {
-        return total + (device.cost * (device.quantity || 1));
-      }, 0);
-      
+
       // Calculate actual device count for this cluster
       const actualDeviceCount = storageDevices.reduce((sum, device) => sum + (device.quantity || 1), 0);
-      
+
       // Calculate RU and power based on actual devices
       const clusterRU = actualDeviceCount * (cluster.rackUnits || 1);
       const clusterPower = actualDeviceCount * (cluster.powerWatts || 500);
-      
+
       // Calculate proportional costs for shared infrastructure using actual device count with safe division
       const networkCostShare = totalDeviceCount > 0
         ? operationalCosts.networkMonthly * (actualDeviceCount / totalDeviceCount)
@@ -238,11 +245,18 @@ export function useClusterAnalysis({
       const licensingCostShare = totalDeviceCount > 0
         ? operationalCosts.licensingMonthly * (actualDeviceCount / totalDeviceCount)
         : 0;
-      
-      // Calculate monthly amortized storage hardware cost
+
+      // Use proportional share of storage amortized costs from Results page calculation
+      const storageAmortizedCost = totalStorageDevices > 0
+        ? amortizedCostsByType.storage * (actualDeviceCount / totalStorageDevices)
+        : 0;
+
+      // For cost breakdown, calculate the hardware cost for reference
+      const storageHardwareCost = storageDevices.reduce((total, device) => {
+        return total + (device.cost * (device.quantity || 1));
+      }, 0);
       const storageLifespan = activeDesign?.requirements?.storageRequirements?.deviceLifespanYears || 3;
-      const storageAmortizedCost = storageHardwareCost / (storageLifespan * 12);
-      
+
       const totalClusterCost = storageAmortizedCost + networkCostShare + rackCostShare + energyCostShare + licensingCostShare;
       
       // Calculate revenue based on storage consumption with overallocation
@@ -304,7 +318,7 @@ export function useClusterAnalysis({
     });
     
     return analysis;
-  }, [clusterConsumption, clusterDeviceCounts, computePricing, storagePricing, operationalCosts, requirements, storageClustersMetrics, storageOverallocationRatios, activeDesign?.components, activeDesign?.requirements?.computeRequirements?.deviceLifespanYears, activeDesign?.requirements?.storageRequirements?.deviceLifespanYears]);
+  }, [clusterConsumption, clusterDeviceCounts, computePricing, storagePricing, operationalCosts, amortizedCostsByType, requirements, storageClustersMetrics, storageOverallocationRatios, activeDesign?.components, activeDesign?.requirements?.computeRequirements?.deviceLifespanYears, activeDesign?.requirements?.storageRequirements?.deviceLifespanYears]);
 
   // Calculate overall totals
   const overallAnalysis = useMemo(() => {

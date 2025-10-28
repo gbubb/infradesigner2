@@ -339,8 +339,8 @@ export const calculateOperationalCosts = (
 } => {
   const facilityType = requirements.physicalConstraints?.facilityType || 'none';
   const electricityPrice = requirements.physicalConstraints?.electricityPricePerKwh ?? 0.25;
-  const rackCostPerMonth = requirements.physicalConstraints?.rackCostPerMonthEuros
-    ?? requirements.physicalConstraints?.rackCostPerMonth
+  const rackCostPerMonth = requirements.physicalConstraints?.rackCostPerMonth
+    ?? requirements.physicalConstraints?.rackCostPerMonthEuros
     ?? 2000;
 
   // Calculate rack costs
