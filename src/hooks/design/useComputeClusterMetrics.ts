@@ -246,7 +246,7 @@ export const useComputeClusterMetrics = () => {
       if (isHyperConverged) {
         // Find the storage cluster configuration for this compute cluster
         const storageCluster = requirements.storageRequirements?.storageClusters?.find(
-          sc => sc.hyperConverged && sc.computeClusterId === cluster.id
+          sc => sc.type === 'hyperConverged' && sc.computeClusterId === cluster.id
         );
 
         if (storageCluster) {

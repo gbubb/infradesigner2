@@ -110,14 +110,14 @@ export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
     `Total Physical CPU Cores: ${totalPhysicalCores.toLocaleString()} cores`,
     `Total Memory: ${(totalMemoryGB / 1024).toFixed(2)} TB (${totalMemoryGB.toLocaleString()} GB)`,
     ``,
-    ...(isHyperConverged && storageOverheadCores ? [
+    ...(isHyperConverged && storageOverheadCores !== undefined ? [
       `=== STORAGE OVERHEAD (HYPER-CONVERGED) ===`,
       `Total Disks in Cluster: ${totalDisksInCluster} disks`,
       `Configured Resources per Disk:`,
-      `  - CPU Cores: ${cpuCoresPerDisk || 4} cores/disk`,
-      `  - Memory: ${memoryGBPerDisk || 2} GB/disk`,
+      `  - CPU Cores: ${cpuCoresPerDisk ?? 4} cores/disk`,
+      `  - Memory: ${memoryGBPerDisk ?? 2} GB/disk`,
       ``,
-      `Storage Reserved CPU Cores: ${storageOverheadCores} cores (${totalDisksInCluster} disks × ${cpuCoresPerDisk || 4} cores/disk)`,
+      `Storage Reserved CPU Cores: ${storageOverheadCores} cores (${totalDisksInCluster} disks × ${cpuCoresPerDisk ?? 4} cores/disk)`,
       `Storage Reserved Memory: ${(storageOverheadMemoryGB! / 1024).toFixed(2)} TB (${storageOverheadMemoryGB} GB)`,
       `→ Storage operations require dedicated CPU/memory per disk`,
       ``,
