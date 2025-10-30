@@ -15,6 +15,7 @@ interface VMPriceCalculatorProps {
 }
 
 export const VMPriceCalculator: React.FC<VMPriceCalculatorProps> = ({ pricingService }) => {
+  const currency = useCurrency();
   const [vmSpec, setVmSpec] = useState({
     vCPU: 4,
     memoryGB: 16,

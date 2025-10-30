@@ -11,6 +11,8 @@ interface CostBreakdownChartProps {
 }
 
 export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({ pricing }) => {
+  const currency = useCurrency();
+
   // Prepare data for pie chart
   const data = [
     {

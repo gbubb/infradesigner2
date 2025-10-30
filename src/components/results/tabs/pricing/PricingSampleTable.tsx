@@ -20,6 +20,8 @@ interface PricingSampleTableProps {
 }
 
 export const PricingSampleTable: React.FC<PricingSampleTableProps> = ({ prices }) => {
+  const currency = useCurrency();
+
   const getVMSizeName = (vCPU: number, memory: number) => {
     const sizeMap: { [key: string]: string } = {
       '1-2': 'Micro',

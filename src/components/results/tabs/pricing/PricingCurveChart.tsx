@@ -15,10 +15,12 @@ interface PricingCurveChartProps {
   };
 }
 
-export const PricingCurveChart: React.FC<PricingCurveChartProps> = ({ 
+export const PricingCurveChart: React.FC<PricingCurveChartProps> = ({
   pricingService,
-  config 
+  config
 }) => {
+  const currency = useCurrency();
+
   // Get the natural ratio from the cluster capacity
   const naturalRatio = useMemo(() => {
     const capacity = pricingService['calculateClusterCapacity']();

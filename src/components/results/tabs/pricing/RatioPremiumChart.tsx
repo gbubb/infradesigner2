@@ -14,10 +14,12 @@ interface RatioPremiumChartProps {
   };
 }
 
-export const RatioPremiumChart: React.FC<RatioPremiumChartProps> = ({ 
+export const RatioPremiumChart: React.FC<RatioPremiumChartProps> = ({
   pricingService,
-  config 
+  config
 }) => {
+  const currency = useCurrency();
+
   // Get the natural ratio from the cluster capacity
   const naturalRatio = useMemo(() => {
     const capacity = pricingService['calculateClusterCapacity']();
