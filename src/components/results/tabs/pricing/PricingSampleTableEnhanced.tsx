@@ -75,7 +75,7 @@ const flavorConfigs: Record<FlavorType, FlavorConfig> = {
   }
 };
 
-const CostBreakdownPieChart: React.FC<{ pricing: VMPricing }> = ({ pricing }) => {
+const CostBreakdownPieChart: React.FC<{ pricing: VMPricing; currency: string }> = ({ pricing, currency }) => {
   const data = [
     {
       name: 'Compute',
@@ -188,10 +188,11 @@ const CostBreakdownPieChart: React.FC<{ pricing: VMPricing }> = ({ pricing }) =>
   );
 };
 
-export const PricingSampleTableEnhanced: React.FC<PricingSampleTableEnhancedProps> = ({ 
-  pricingService 
+export const PricingSampleTableEnhanced: React.FC<PricingSampleTableEnhancedProps> = ({
+  pricingService
 }) => {
   const [selectedFlavor, setSelectedFlavor] = useState<FlavorType>('balanced');
+  const currency = useCurrency();
   
   const calculatedPrices = useMemo(() => {
     const config = flavorConfigs[selectedFlavor];
@@ -292,7 +293,7 @@ export const PricingSampleTableEnhanced: React.FC<PricingSampleTableEnhancedProp
                           <h4 className="font-medium text-sm">
                             Cost Breakdown - {item.name}
                           </h4>
-                          <CostBreakdownPieChart pricing={item.pricing} />
+                          <CostBreakdownPieChart pricing={item.pricing} currency={currency} />
                         </div>
                       </PopoverContent>
                     </Popover>
