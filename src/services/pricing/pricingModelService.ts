@@ -305,26 +305,61 @@ export class PricingModelService {
     let storageOverheadCores = 0;
     let storageOverheadMemoryGB = 0;
 
-    if (isHyperConverged) {
-      // Find the storage cluster configuration for this compute cluster
-      const clusterConfig = this.design?.requirements?.computeRequirements?.computeClusters?.find(
-        cluster => cluster.id === this.selectedClusterId || cluster.name === this.selectedClusterId
-      );
+    if (isHyperConverged && totalDisksInCluster > 0) {
+      // Find storage cluster configuration(s) for hyper-converged clusters
+      const storageClusters = this.design?.requirements?.storageRequirements?.storageClusters?.filter(
+        sc => sc.type === 'hyperConverged'
+      ) || [];
 
-      if (clusterConfig) {
-        const storageCluster = this.design?.requirements?.storageRequirements?.storageClusters?.find(
-          sc => sc.type === 'hyperConverged' && sc.computeClusterId === clusterConfig.id
+      if (this.selectedClusterId && this.selectedClusterId !== 'all') {
+        // For a specific cluster, find its storage configuration
+        const clusterConfig = this.design?.requirements?.computeRequirements?.computeClusters?.find(
+          cluster => cluster.id === this.selectedClusterId || cluster.name === this.selectedClusterId
         );
 
-        if (storageCluster) {
-          cpuCoresPerDisk = storageCluster.cpuCoresPerDisk ?? 4;
-          memoryGBPerDisk = storageCluster.memoryGBPerDisk ?? 2;
+        if (clusterConfig) {
+          const storageCluster = storageClusters.find(
+            sc => sc.computeClusterId === clusterConfig.id
+          );
+
+          if (storageCluster) {
+            cpuCoresPerDisk = storageCluster.cpuCoresPerDisk ?? 4;
+            memoryGBPerDisk = storageCluster.memoryGBPerDisk ?? 2;
+          }
+        }
+      } else {
+        // For "all clusters", calculate weighted average based on cluster sizes
+        if (storageClusters.length > 0) {
+          let totalCpuCores = 0;
+          let totalMemoryGB = 0;
+          let totalClusters = 0;
+
+          storageClusters.forEach(sc => {
+            totalCpuCores += sc.cpuCoresPerDisk ?? 4;
+            totalMemoryGB += sc.memoryGBPerDisk ?? 2;
+            totalClusters++;
+          });
+
+          if (totalClusters > 0) {
+            cpuCoresPerDisk = totalCpuCores / totalClusters;
+            memoryGBPerDisk = totalMemoryGB / totalClusters;
+          }
         }
       }
 
       // Calculate total storage overhead
       storageOverheadCores = totalDisksInCluster * cpuCoresPerDisk;
       storageOverheadMemoryGB = totalDisksInCluster * memoryGBPerDisk;
+
+      console.log('[PricingModelService] Storage overhead calculated:', {
+        isHyperConverged,
+        totalDisksInCluster,
+        cpuCoresPerDisk,
+        memoryGBPerDisk,
+        storageOverheadCores,
+        storageOverheadMemoryGB,
+        selectedClusterId: this.selectedClusterId
+      });
     }
 
     // Subtract storage overhead from total capacity BEFORE applying other factors

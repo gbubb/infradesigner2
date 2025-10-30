@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -84,13 +84,22 @@ export const PricingModelTab: React.FC = () => {
     return clusterMetrics.find(c => c.clusterId === selectedClusterId) || null;
   }, [selectedClusterId, clusterMetrics]);
 
+  // Ref to store previous costs to prevent unnecessary recalculations
+  const previousCostsRef = useRef<string>('');
+  const cachedCostsRef = useRef<typeof operationalCosts | null>(null);
+
   // Calculate proportional operational costs based on cluster selection
   // Use actual cluster-level costs from useComputeClusterMetrics, which properly accounts for
   // node costs, GPUs, and other expensive equipment, not just CPU cores
   const proportionalOperationalCosts = useMemo(() => {
     if (!selectedClusterMetrics) {
       // All clusters or no cluster found - use full costs
-      return operationalCosts;
+      const costsKey = JSON.stringify(operationalCosts);
+      if (previousCostsRef.current !== costsKey) {
+        previousCostsRef.current = costsKey;
+        cachedCostsRef.current = operationalCosts;
+      }
+      return cachedCostsRef.current!;
     }
 
     // Use the cluster's proportionally allocated costs from useComputeClusterMetrics
@@ -100,15 +109,32 @@ export const PricingModelTab: React.FC = () => {
       ? selectedClusterMetrics.totalNodes / selectedClusterMetrics.totalComputeNodes
       : 0;
 
-    return {
-      racksMonthly: selectedClusterMetrics.racksCost * clusterNodeRatio,
-      facilityMonthly: selectedClusterMetrics.facilityCost * clusterNodeRatio,
-      energyMonthly: selectedClusterMetrics.energyCost * clusterNodeRatio,
-      amortizedMonthly: selectedClusterMetrics.computeAmortizedCost,
-      licensingMonthly: selectedClusterMetrics.licensingCost * clusterNodeRatio,
-      networkMonthly: selectedClusterMetrics.networkAmortizedCost,
-      totalMonthly: selectedClusterMetrics.clusterCostShare + selectedClusterMetrics.operationalCostShare
+    // Round values to avoid floating-point precision issues
+    const racksMonthly = Math.round((selectedClusterMetrics.racksCost * clusterNodeRatio) * 100) / 100;
+    const facilityMonthly = Math.round((selectedClusterMetrics.facilityCost * clusterNodeRatio) * 100) / 100;
+    const energyMonthly = Math.round((selectedClusterMetrics.energyCost * clusterNodeRatio) * 100) / 100;
+    const amortizedMonthly = Math.round(selectedClusterMetrics.computeAmortizedCost * 100) / 100;
+    const licensingMonthly = Math.round((selectedClusterMetrics.licensingCost * clusterNodeRatio) * 100) / 100;
+    const networkMonthly = Math.round(selectedClusterMetrics.networkAmortizedCost * 100) / 100;
+    const totalMonthly = Math.round((selectedClusterMetrics.clusterCostShare + selectedClusterMetrics.operationalCostShare) * 100) / 100;
+
+    const newCosts = {
+      racksMonthly,
+      facilityMonthly,
+      energyMonthly,
+      amortizedMonthly,
+      licensingMonthly,
+      networkMonthly,
+      totalMonthly
     };
+
+    // Only return new object if values have changed
+    const costsKey = JSON.stringify(newCosts);
+    if (previousCostsRef.current !== costsKey) {
+      previousCostsRef.current = costsKey;
+      cachedCostsRef.current = newCosts;
+    }
+    return cachedCostsRef.current!;
   }, [selectedClusterMetrics, operationalCosts]);
 
   // Create pricing service with proportional costs so VM Price Calculator uses correct cluster costs
