@@ -33,9 +33,28 @@ export const PricingModelTab: React.FC = () => {
   const [vmPremiumsOpen, setVmPremiumsOpen] = useState(false);
   const [sizePremiumChartOpen, setSizePremiumChartOpen] = useState(false);
   const [ratioPremiumChartOpen, setRatioPremiumChartOpen] = useState(false);
-  const { operationalCosts } = useCostAnalysis();
+  const { operationalCosts: rawOperationalCosts } = useCostAnalysis();
   const { currency } = useCurrency();
   const clusterMetrics = useComputeClusterMetrics();
+
+  // Stabilize operationalCosts reference to prevent unnecessary re-renders
+  const operationalCosts = useMemo(() => ({
+    totalMonthly: rawOperationalCosts.totalMonthly,
+    amortizedMonthly: rawOperationalCosts.amortizedMonthly,
+    energyMonthly: rawOperationalCosts.energyMonthly,
+    racksMonthly: rawOperationalCosts.racksMonthly,
+    facilityMonthly: rawOperationalCosts.facilityMonthly,
+    licensingMonthly: rawOperationalCosts.licensingMonthly,
+    networkMonthly: rawOperationalCosts.networkMonthly
+  }), [
+    rawOperationalCosts.totalMonthly,
+    rawOperationalCosts.amortizedMonthly,
+    rawOperationalCosts.energyMonthly,
+    rawOperationalCosts.racksMonthly,
+    rawOperationalCosts.facilityMonthly,
+    rawOperationalCosts.licensingMonthly,
+    rawOperationalCosts.networkMonthly
+  ]);
   
   const [config, setConfig] = useState<PricingConfig>({
     operatingModel: 'costPlus',
@@ -57,19 +76,20 @@ export const PricingModelTab: React.FC = () => {
 
   const [pricingResult, setPricingResult] = useState<PricingModelResult | null>(null);
 
-  // Calculate proportional operational costs based on cluster selection FIRST
+  // Extract just the selected cluster metrics to avoid re-renders from array changes
+  const selectedClusterMetrics = useMemo(() => {
+    if (selectedClusterId === 'all') {
+      return null;
+    }
+    return clusterMetrics.find(c => c.clusterId === selectedClusterId) || null;
+  }, [selectedClusterId, clusterMetrics]);
+
+  // Calculate proportional operational costs based on cluster selection
   // Use actual cluster-level costs from useComputeClusterMetrics, which properly accounts for
   // node costs, GPUs, and other expensive equipment, not just CPU cores
   const proportionalOperationalCosts = useMemo(() => {
-    if (selectedClusterId === 'all') {
-      return operationalCosts;
-    }
-
-    // Find the selected cluster's metrics which already have accurate cost allocation
-    const selectedClusterMetrics = clusterMetrics.find(c => c.clusterId === selectedClusterId);
-
     if (!selectedClusterMetrics) {
-      // If no cluster metrics found, fall back to full costs
+      // All clusters or no cluster found - use full costs
       return operationalCosts;
     }
 
@@ -89,7 +109,7 @@ export const PricingModelTab: React.FC = () => {
       networkMonthly: selectedClusterMetrics.networkAmortizedCost,
       totalMonthly: selectedClusterMetrics.clusterCostShare + selectedClusterMetrics.operationalCostShare
     };
-  }, [selectedClusterId, operationalCosts, clusterMetrics]);
+  }, [selectedClusterMetrics, operationalCosts]);
 
   // Create pricing service with proportional costs so VM Price Calculator uses correct cluster costs
   const pricingService = useMemo(() => {
