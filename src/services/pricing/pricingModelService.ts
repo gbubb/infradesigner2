@@ -287,17 +287,45 @@ export class PricingModelService {
 
       totalPhysicalCores += cores * qty;
       totalPhysicalMemoryGB += memory * qty;
-
-      // Count disks for hyper-converged clusters
-      if (isHyperConverged && 'attachedDisks' in component && component.attachedDisks) {
-        const disks = component.attachedDisks || [];
-        disks.forEach((disk) => {
-          if (disk && typeof disk === 'object' && 'quantity' in disk) {
-            totalDisksInCluster += ((disk as { quantity?: number }).quantity || 1) * qty;
-          }
-        });
-      }
     });
+
+    // Count disks for hyper-converged clusters from actual design components
+    if (isHyperConverged && this.design.components) {
+      const designComponents = this.design.components as InfrastructureComponent[];
+
+      // Filter to hyper-converged nodes in the selected cluster(s)
+      const hyperConvergedNodes = designComponents.filter(c => {
+        if (c.role !== 'hyperConvergedNode') return false;
+
+        // If a specific cluster is selected, filter to that cluster
+        if (this.selectedClusterId && this.selectedClusterId !== 'all') {
+          const componentClusterId = c.clusterInfo?.clusterId;
+          return componentClusterId === this.selectedClusterId;
+        }
+
+        return true;
+      });
+
+      hyperConvergedNodes.forEach(node => {
+        if ('attachedDisks' in node && node.attachedDisks) {
+          const disks = node.attachedDisks || [];
+          const nodeQty = node.quantity || 1;
+          disks.forEach((disk) => {
+            if (disk && typeof disk === 'object' && 'quantity' in disk) {
+              const diskQty = (disk as { quantity?: number }).quantity || 1;
+              totalDisksInCluster += diskQty * nodeQty;
+            }
+          });
+        }
+      });
+
+      console.log('[PricingModelService] Disk counting:', {
+        isHyperConverged,
+        hyperConvergedNodesFound: hyperConvergedNodes.length,
+        totalDisksInCluster,
+        selectedClusterId: this.selectedClusterId
+      });
+    }
 
     // Calculate storage overhead for hyper-converged clusters
     let cpuCoresPerDisk = 4; // default
@@ -422,7 +450,7 @@ export class PricingModelService {
     const sellingvCPUs = usablevCPUs * this.config.targetUtilization;
     const sellingMemoryGB = usableMemoryGB * this.config.targetUtilization;
 
-    return {
+    const result = {
       totalPhysicalCores,
       totalPhysicalMemoryGB,
       totalPhysicalNodes,
@@ -442,6 +470,17 @@ export class PricingModelService {
       cpuCoresPerDisk: isHyperConverged ? cpuCoresPerDisk : undefined,
       memoryGBPerDisk: isHyperConverged ? memoryGBPerDisk : undefined
     };
+
+    console.log('[PricingModelService] ClusterCapacity result:', {
+      isHyperConverged: result.isHyperConverged,
+      storageOverheadCores: result.storageOverheadCores,
+      storageOverheadMemoryGB: result.storageOverheadMemoryGB,
+      totalDisksInCluster: result.totalDisksInCluster,
+      cpuCoresPerDisk: result.cpuCoresPerDisk,
+      memoryGBPerDisk: result.memoryGBPerDisk
+    });
+
+    return result;
   }
 
   private calculateHAReservation(computeComponents: PlacedComponent[]): number {

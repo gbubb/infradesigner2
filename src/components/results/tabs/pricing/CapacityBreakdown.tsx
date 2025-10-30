@@ -15,7 +15,17 @@ interface CapacityBreakdownProps {
 export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }) => {
   const [haDetailsOpen, setHaDetailsOpen] = useState(false);
   const activeDesign = useDesignStore((state) => state.activeDesign);
-  
+
+  // Debug logging
+  console.log('[CapacityBreakdown] Received capacity:', {
+    isHyperConverged: capacity.isHyperConverged,
+    storageOverheadCores: capacity.storageOverheadCores,
+    storageOverheadMemoryGB: capacity.storageOverheadMemoryGB,
+    totalDisksInCluster: capacity.totalDisksInCluster,
+    cpuCoresPerDisk: capacity.cpuCoresPerDisk,
+    memoryGBPerDisk: capacity.memoryGBPerDisk
+  });
+
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(num);
   };
