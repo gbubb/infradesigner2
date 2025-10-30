@@ -287,46 +287,49 @@ export const PricingModelTab: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Export Buttons */}
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={exportPricingCSV}
-          disabled={!pricingResult}
-        >
-          <FileText className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={exportPricingReport}
-          disabled={!pricingResult}
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Export Report
-        </Button>
-      </div>
-
       {/* Configuration Panel */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Pricing Model Configuration</CardTitle>
-          <CardDescription className="text-sm">
-            Configure the pricing model for virtual workloads based on infrastructure costs
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Pricing Model Configuration</CardTitle>
+              <CardDescription className="text-sm">
+                Configure the pricing model for virtual workloads based on infrastructure costs
+              </CardDescription>
+            </div>
+            {/* Export Buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportPricingCSV}
+                disabled={!pricingResult}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportPricingReport}
+                disabled={!pricingResult}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export Report
+              </Button>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {/* Operating Model and Profit Margin in same row */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Operating Model Selection */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Operating Model</Label>
-              <RadioGroup 
-                value={config.operatingModel} 
+              <RadioGroup
+                value={config.operatingModel}
                 onValueChange={(value) => handleConfigChange('operatingModel', value)}
-                className="space-y-1"
+                className="flex gap-4"
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="costPlus" id="costPlus" />
@@ -378,124 +381,62 @@ export const PricingModelTab: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-2">
-                <div className="flex items-center gap-2">
-                  <Cpu className="h-3 w-3" />
-                  <Label htmlFor="cpuPrice" className="text-sm min-w-[80px]">vCPU</Label>
-                  <Input
-                    id="cpuPrice"
-                    type="number"
-                    step="0.001"
-                    value={config.fixedCpuPrice}
-                    onChange={(e) => handleConfigChange('fixedCpuPrice', parseFloat(e.target.value))}
-                    className="flex-1"
-                  />
-                  <span className="text-xs text-muted-foreground">$/hr</span>
+              <div className="lg:col-span-2 grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="cpuPrice" className="text-sm flex items-center gap-1">
+                    <Cpu className="h-3 w-3" />
+                    vCPU
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="cpuPrice"
+                      type="number"
+                      step="0.001"
+                      value={config.fixedCpuPrice}
+                      onChange={(e) => handleConfigChange('fixedCpuPrice', parseFloat(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">$/hr</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MemoryStick className="h-3 w-3" />
-                  <Label htmlFor="memPrice" className="text-sm min-w-[80px]">Memory</Label>
-                  <Input
-                    id="memPrice"
-                    type="number"
-                    step="0.001"
-                    value={config.fixedMemoryPrice}
-                    onChange={(e) => handleConfigChange('fixedMemoryPrice', parseFloat(e.target.value))}
-                    className="flex-1"
-                  />
-                  <span className="text-xs text-muted-foreground">$/GB/hr</span>
+                <div className="space-y-2">
+                  <Label htmlFor="memPrice" className="text-sm flex items-center gap-1">
+                    <MemoryStick className="h-3 w-3" />
+                    Memory
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="memPrice"
+                      type="number"
+                      step="0.001"
+                      value={config.fixedMemoryPrice}
+                      onChange={(e) => handleConfigChange('fixedMemoryPrice', parseFloat(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">$/GB/hr</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <HardDrive className="h-3 w-3" />
-                  <Label htmlFor="storagePrice" className="text-sm min-w-[80px]">Storage</Label>
-                  <Input
-                    id="storagePrice"
-                    type="number"
-                    step="0.001"
-                    value={config.fixedStoragePrice}
-                    onChange={(e) => handleConfigChange('fixedStoragePrice', parseFloat(e.target.value))}
-                    className="flex-1"
-                  />
-                  <span className="text-xs text-muted-foreground">$/GB/mo</span>
+                <div className="space-y-2">
+                  <Label htmlFor="storagePrice" className="text-sm flex items-center gap-1">
+                    <HardDrive className="h-3 w-3" />
+                    Storage
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="storagePrice"
+                      type="number"
+                      step="0.001"
+                      value={config.fixedStoragePrice}
+                      onChange={(e) => handleConfigChange('fixedStoragePrice', parseFloat(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">$/GB/mo</span>
+                  </div>
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Virtualization Overhead and Target Utilization in same row */}
-          <div className="grid grid-cols-2 gap-6">
-            {/* Virtualization Overhead */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Virtualization Overhead</Label>
-              <RadioGroup 
-                value={config.virtualizationOverheadType} 
-                onValueChange={(value) => handleConfigChange('virtualizationOverheadType', value)}
-                className="space-y-1"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="percentage" id="percentage" />
-                  <Label htmlFor="percentage" className="font-normal cursor-pointer text-sm">
-                    Percentage
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="fixed" id="fixed" />
-                  <Label htmlFor="fixed" className="font-normal cursor-pointer text-sm">
-                    Fixed
-                  </Label>
-                </div>
-              </RadioGroup>
-
-              {config.virtualizationOverheadType === 'percentage' ? (
-                <div className="mt-2">
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      id="virtOverhead"
-                      type="number"
-                      step="1"
-                      min="0"
-                      max="20"
-                      value={(config.virtualizationOverhead * 100).toFixed(0)}
-                      onChange={(e) => {
-                        const percentage = parseFloat(e.target.value) || 0;
-                        handleConfigChange('virtualizationOverhead', percentage / 100);
-                      }}
-                      className="w-full"
-                    />
-                    <span className="text-sm text-muted-foreground">%</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-2 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="fixedCpuOverhead"
-                      type="number"
-                      step="1"
-                      min="0"
-                      value={config.virtualizationOverhead}
-                      onChange={(e) => handleConfigChange('virtualizationOverhead', parseFloat(e.target.value) || 0)}
-                      className="flex-1"
-                    />
-                    <span className="text-xs text-muted-foreground">vCPUs</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="fixedMemOverhead"
-                      type="number"
-                      step="1"
-                      min="0"
-                      value={config.virtualizationOverheadMemory || config.virtualizationOverhead}
-                      onChange={(e) => handleConfigChange('virtualizationOverheadMemory', parseFloat(e.target.value) || 0)}
-                      className="flex-1"
-                    />
-                    <span className="text-xs text-muted-foreground">GB</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Target Utilization */}
+            {/* Target Utilization - moved to same row */}
             <div className="space-y-2">
               <div className="flex items-center space-x-1">
                 <Label htmlFor="targetUtil" className="text-sm font-medium">Target Utilization</Label>
@@ -526,6 +467,77 @@ export const PricingModelTab: React.FC = () => {
                 />
                 <span className="text-sm text-muted-foreground">%</span>
               </div>
+            </div>
+          </div>
+
+          {/* Virtualization Overhead */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Virtualization Overhead</Label>
+            <div className="flex items-center gap-4">
+              <RadioGroup
+                value={config.virtualizationOverheadType}
+                onValueChange={(value) => handleConfigChange('virtualizationOverheadType', value)}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="percentage" id="percentage" />
+                  <Label htmlFor="percentage" className="font-normal cursor-pointer text-sm">
+                    Percentage
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="fixed" id="fixed" />
+                  <Label htmlFor="fixed" className="font-normal cursor-pointer text-sm">
+                    Fixed
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              {config.virtualizationOverheadType === 'percentage' ? (
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="virtOverhead"
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="20"
+                    value={(config.virtualizationOverhead * 100).toFixed(0)}
+                    onChange={(e) => {
+                      const percentage = parseFloat(e.target.value) || 0;
+                      handleConfigChange('virtualizationOverhead', percentage / 100);
+                    }}
+                    className="w-28"
+                  />
+                  <span className="text-sm text-muted-foreground">%</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="fixedCpuOverhead"
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={config.virtualizationOverhead}
+                      onChange={(e) => handleConfigChange('virtualizationOverhead', parseFloat(e.target.value) || 0)}
+                      className="w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">vCPUs</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="fixedMemOverhead"
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={config.virtualizationOverheadMemory || config.virtualizationOverhead}
+                      onChange={(e) => handleConfigChange('virtualizationOverheadMemory', parseFloat(e.target.value) || 0)}
+                      className="w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">GB</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -789,125 +801,150 @@ export const PricingModelTab: React.FC = () => {
             </Card>
           </div>
 
-          {/* Cost vs Price Analysis */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Cost & Profit Analysis</CardTitle>
-              <CardDescription>
-                Infrastructure costs vs sellable capacity pricing
-                {selectedClusterId !== 'all' && (
-                  <span className="block mt-1 text-xs">
-                    Showing cluster-specific costs based on actual node composition and equipment costs
-                  </span>
-                )}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {/* Total Infrastructure Cost */}
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Total Monthly Cost</p>
-                  <p className="text-xl font-bold">
-                    {formatMonthlyCurrency(proportionalOperationalCosts.totalMonthly, currency)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Infrastructure + operations</p>
-                </div>
-
-                {/* Sellable Capacity */}
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Sellable Capacity</p>
-                  <div className="text-xl font-bold">
-                    <div className="text-sm">{Math.round(pricingResult.clusterCapacity.sellingvCPUs)} vCPUs</div>
-                    <div className="text-sm">{Math.round(pricingResult.clusterCapacity.sellingMemoryGB)} GB RAM</div>
+          {/* Cost vs Price Analysis - Split into two cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Financial Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Financial Summary</CardTitle>
+                <CardDescription>
+                  Revenue and profit projections
+                  {selectedClusterId !== 'all' && (
+                    <span className="block mt-1 text-xs">
+                      Cluster-specific analysis
+                    </span>
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  {/* Total Infrastructure Cost */}
+                  <div className="flex justify-between items-start p-3 bg-muted/30 rounded-lg">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Monthly Cost</p>
+                      <p className="text-2xl font-bold">
+                        {formatMonthlyCurrency(proportionalOperationalCosts.totalMonthly, currency)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Infrastructure + operations</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    At {(config.targetUtilization * 100).toFixed(0)}% utilization
-                  </p>
-                </div>
 
-                {/* Total Revenue Potential */}
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Monthly Revenue</p>
-                  <p className="text-xl font-bold text-blue-600">
-                    {formatMonthlyCurrency(
-                      (pricingResult.clusterCapacity.sellingvCPUs * pricingResult.baseCostPerVCPU * 730) +
-                      (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730)
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">At target utilization</p>
-                </div>
+                  {/* Sellable Capacity */}
+                  <div className="flex justify-between items-start p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">Sellable Capacity</p>
+                      <div className="flex gap-4 mt-1">
+                        <div>
+                          <p className="text-lg font-bold">{Math.round(pricingResult.clusterCapacity.sellingvCPUs)}</p>
+                          <p className="text-xs text-muted-foreground">vCPUs</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold">{Math.round(pricingResult.clusterCapacity.sellingMemoryGB)}</p>
+                          <p className="text-xs text-muted-foreground">GB RAM</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        At {(config.targetUtilization * 100).toFixed(0)}% utilization
+                      </p>
+                    </div>
+                  </div>
 
-                {/* Monthly Profit */}
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Monthly Profit</p>
-                  {(() => {
-                    const monthlyProfit =
-                      ((pricingResult.clusterCapacity.sellingvCPUs * pricingResult.baseCostPerVCPU * 730) +
-                       (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730)) -
-                      proportionalOperationalCosts.totalMonthly;
-                    const isPositive = monthlyProfit >= 0;
-                    return (
-                      <>
-                        <p className={`text-xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatMonthlyCurrency(Math.round(monthlyProfit, currency))}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {marginPercentage.toFixed(1)}% margin
-                        </p>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
+                  {/* Total Revenue Potential */}
+                  <div className="flex justify-between items-start p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Monthly Revenue</p>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {formatMonthlyCurrency(
+                          (pricingResult.clusterCapacity.sellingvCPUs * pricingResult.baseCostPerVCPU * 730) +
+                          (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730),
+                          currency
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground">At target utilization</p>
+                    </div>
+                  </div>
 
-              {/* Cost Breakdown */}
-              <div className="pt-4 border-t">
-                <h5 className="text-sm font-medium mb-3">Monthly Cost Breakdown</h5>
-                <div className="space-y-2">
+                  {/* Monthly Profit */}
+                  <div className="flex justify-between items-start p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Monthly Profit</p>
+                      {(() => {
+                        const monthlyProfit =
+                          ((pricingResult.clusterCapacity.sellingvCPUs * pricingResult.baseCostPerVCPU * 730) +
+                           (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730)) -
+                          proportionalOperationalCosts.totalMonthly;
+                        const isPositive = monthlyProfit >= 0;
+                        return (
+                          <>
+                            <p className={`text-2xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                              {formatMonthlyCurrency(Math.round(monthlyProfit), currency)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {marginPercentage.toFixed(1)}% margin
+                            </p>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cost Breakdown */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Monthly Cost Breakdown</CardTitle>
+                <CardDescription>
+                  Detailed infrastructure and operational costs
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2.5">
                   {proportionalOperationalCosts.amortizedMonthly > 0 && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm p-2 hover:bg-muted/30 rounded">
                       <span className="text-muted-foreground">Hardware Amortization</span>
                       <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.amortizedMonthly, currency)}</span>
                     </div>
                   )}
                   {proportionalOperationalCosts.energyMonthly > 0 && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm p-2 hover:bg-muted/30 rounded">
                       <span className="text-muted-foreground">Energy Costs</span>
                       <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.energyMonthly, currency)}</span>
                     </div>
                   )}
                   {proportionalOperationalCosts.racksMonthly > 0 && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm p-2 hover:bg-muted/30 rounded">
                       <span className="text-muted-foreground">Rack Costs</span>
                       <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.racksMonthly, currency)}</span>
                     </div>
                   )}
                   {proportionalOperationalCosts.facilityMonthly > 0 && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm p-2 hover:bg-muted/30 rounded">
                       <span className="text-muted-foreground">Facility Costs</span>
                       <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.facilityMonthly, currency)}</span>
                     </div>
                   )}
                   {proportionalOperationalCosts.licensingMonthly > 0 && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm p-2 hover:bg-muted/30 rounded">
                       <span className="text-muted-foreground">Licensing</span>
                       <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.licensingMonthly, currency)}</span>
                     </div>
                   )}
                   {proportionalOperationalCosts.networkMonthly > 0 && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm p-2 hover:bg-muted/30 rounded">
                       <span className="text-muted-foreground">Network Operations</span>
                       <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.networkMonthly, currency)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm font-medium pt-2 border-t">
+                  <div className="flex justify-between text-sm font-medium pt-3 mt-3 border-t p-2 bg-muted/50 rounded">
                     <span>Total Monthly Cost</span>
                     <span>{formatMonthlyCurrency(proportionalOperationalCosts.totalMonthly, currency)}</span>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Capacity Breakdown */}
           <CapacityBreakdown capacity={pricingResult.clusterCapacity} />
