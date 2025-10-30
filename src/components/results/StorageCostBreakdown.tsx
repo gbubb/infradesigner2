@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Card } from '@/components/ui/card';
 import { Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StoragePoolEfficiencyFactors } from '@/store/slices/requirements/constants';
 
 interface StorageCostBreakdownProps {
   clusterName: string;
@@ -34,21 +35,12 @@ export const StorageCostBreakdown: React.FC<StorageCostBreakdownProps> = ({
   // Determine which cost basis to use
   const costBasis = isHyperConverged ? totalStorageCost : totalNodeCost;
   const monthlyStorageCost = costBasis / amortisationPeriodMonths;
-  
-  // Calculate efficiency factor based on pool type
-  const getEfficiencyFactor = (poolType: string) => {
-    const efficiencyMap: Record<string, number> = {
-      '3 Replica': 1/3,
-      '2 Replica': 1/2,
-      'EC 8+3p': 8/11,
-      'EC 4+2p': 4/6,
-      'RAID-5 (4+1)': 4/5,
-      'RAID-6 (4+2)': 4/6
-    };
-    return efficiencyMap[poolType] || 1/3;
-  };
-  
-  const efficiencyFactor = getEfficiencyFactor(poolType);
+
+  // Calculate efficiency factor from actual data or use default from constants
+  // If we have actual capacity data, calculate the real efficiency
+  const efficiencyFactor = totalRawCapacityTB > 0 && usableCapacityTiB > 0
+    ? (usableCapacityTiB / 0.909495) / totalRawCapacityTB  // Convert TiB back to TB for comparison
+    : (StoragePoolEfficiencyFactors[poolType] || (1/3));
   const efficiencyPercentage = (efficiencyFactor * 100).toFixed(1);
   
   const calculationSteps = [

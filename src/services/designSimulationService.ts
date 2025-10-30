@@ -333,8 +333,44 @@ export const simulateDesignConfiguration = (
     const maxVMsByMemory = Math.floor(usableMemoryGB / averageVMMemoryGB);
     const maxVMs = Math.min(maxVMsByVCPU, maxVMsByMemory);
 
-    // Calculate cost per VM
-    const costPerVM = maxVMs > 0 ? costAnalysis.monthlyOperationalCost / maxVMs : 0;
+    // Calculate cost per VM using proportional allocation
+    // This ensures consistency with the real design calculation when multiple clusters exist
+    //
+    // METHODOLOGY (aligned with useComputeClusterMetrics.ts):
+    // 1. Calculate total compute nodes across all clusters
+    // 2. Determine target cluster's share of total compute nodes
+    // 3. Subtract storage amortization (storage costs scale with capacity, not VMs)
+    // 4. Allocate proportional share of compute-only operational cost
+    // 5. Divide by cluster's VM capacity
+    let costPerVM = 0;
+
+    // Count total compute nodes across all clusters in the simulation
+    const allComputeNodes = components.filter(c =>
+      c.role === 'computeNode' || c.role === 'gpuNode' || c.role === 'hyperConvergedNode'
+    );
+    const totalComputeNodes = allComputeNodes.length;
+
+    if (maxVMs > 0 && totalComputeNodes > 0) {
+      // Calculate cluster's share of total compute nodes
+      const clusterNodeRatio = nodeCount / totalComputeNodes;
+
+      // Subtract storage amortization from total operational cost
+      // Storage costs scale with capacity usage, not VM count
+      const storageAmortizedCost = costAnalysis.amortizedCostsByType?.storage || 0;
+      const computeOnlyOperationalCost = costAnalysis.monthlyOperationalCost - storageAmortizedCost;
+
+      // Allocate this cluster's proportional share
+      const clusterMonthlyCost = computeOnlyOperationalCost * clusterNodeRatio;
+
+      // Calculate cost per VM for this cluster
+      costPerVM = clusterMonthlyCost / maxVMs;
+
+      calculationSteps.push(`Total compute nodes across all clusters: ${totalComputeNodes}`);
+      calculationSteps.push(`Target cluster node ratio: ${(clusterNodeRatio * 100).toFixed(1)}%`);
+      calculationSteps.push(`Storage amortized cost (excluded): $${storageAmortizedCost.toFixed(2)}`);
+      calculationSteps.push(`Compute-only operational cost: $${computeOnlyOperationalCost.toFixed(2)}`);
+      calculationSteps.push(`Cluster monthly cost share: $${clusterMonthlyCost.toFixed(2)}`);
+    }
 
     calculationSteps.push(`Total nodes: ${nodeCount}, Redundant nodes: ${redundantNodes}, Usable nodes: ${usableNodes}`);
     calculationSteps.push(`Total vCPUs: ${totalVCPUs}, Usable vCPUs: ${usableVCPUs}`);
