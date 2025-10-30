@@ -56,9 +56,9 @@ export const PricingModelTab: React.FC = () => {
     rawOperationalCosts.licensingMonthly,
     rawOperationalCosts.networkMonthly
   ]);
-  
-  // Default pricing config
-  const defaultConfig: PricingConfig = {
+
+  // Default pricing config - memoized to prevent recreating on every render
+  const defaultConfig: PricingConfig = useMemo(() => ({
     operatingModel: 'costPlus',
     profitMargin: 1.3, // 30% margin default
     fixedCpuPrice: 0.01,
@@ -74,10 +74,13 @@ export const PricingModelTab: React.FC = () => {
     vmSizeCurveExponent: 2, // Quadratic curve by default
     vmSizeThreshold: 4, // Start applying premium at 4 vCPUs
     vmSizeAcceleration: 0.5 // Moderate acceleration
-  };
+  }), []);
 
-  // Use design-specific config or default
-  const config = activeDesign?.pricingConfig || defaultConfig;
+  // Use design-specific config or default - memoized to stabilize reference
+  const config = useMemo(() =>
+    activeDesign?.pricingConfig || defaultConfig,
+    [activeDesign?.pricingConfig, defaultConfig]
+  );
 
   const [pricingResult, setPricingResult] = useState<PricingModelResult | null>(null);
 
