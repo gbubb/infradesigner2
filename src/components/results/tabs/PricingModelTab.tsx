@@ -23,6 +23,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useCostAnalysis } from '@/hooks/design/useCostAnalysis';
+import { useComputeClusterMetrics } from '@/hooks/design/useComputeClusterMetrics';
 
 export const PricingModelTab: React.FC = () => {
   const activeDesign = useDesignStore((state) => state.activeDesign);
@@ -34,6 +35,7 @@ export const PricingModelTab: React.FC = () => {
   const [ratioPremiumChartOpen, setRatioPremiumChartOpen] = useState(false);
   const { operationalCosts } = useCostAnalysis();
   const { currency } = useCurrency();
+  const clusterMetrics = useComputeClusterMetrics();
   
   const [config, setConfig] = useState<PricingConfig>({
     operatingModel: 'costPlus',
@@ -71,35 +73,38 @@ export const PricingModelTab: React.FC = () => {
   }, [pricingService]);
 
   // Calculate proportional operational costs based on cluster selection
+  // Use actual cluster-level costs from useComputeClusterMetrics, which properly accounts for
+  // node costs, GPUs, and other expensive equipment, not just CPU cores
   const proportionalOperationalCosts = useMemo(() => {
-    if (selectedClusterId === 'all' || !pricingResult) {
+    if (selectedClusterId === 'all') {
       return operationalCosts;
     }
 
-    // Calculate the proportion of compute capacity this cluster represents
-    // We'll use physical cores as the basis for allocation since most costs scale with compute
-    const selectedClusterCapacity = pricingResult.clusterCapacity;
+    // Find the selected cluster's metrics which already have accurate cost allocation
+    const selectedClusterMetrics = clusterMetrics.find(c => c.clusterId === selectedClusterId);
 
-    // Get total design capacity by creating a pricing service with no cluster filter
-    const totalPricingService = new PricingModelService(activeDesign, config, componentTemplates, undefined, operationalCosts);
-    const totalCapacity = totalPricingService.calculateClusterCapacity();
+    if (!selectedClusterMetrics) {
+      // If no cluster metrics found, fall back to full costs
+      return operationalCosts;
+    }
 
-    // Calculate proportion based on physical cores (most fair allocation)
-    const proportion = totalCapacity.totalPhysicalCores > 0
-      ? selectedClusterCapacity.totalPhysicalCores / totalCapacity.totalPhysicalCores
+    // Use the cluster's proportionally allocated costs from useComputeClusterMetrics
+    // This calculation is based on node count and actual component costs, accounting for
+    // GPUs, storage, and other expensive equipment in the cluster
+    const clusterNodeRatio = selectedClusterMetrics.totalComputeNodes > 0
+      ? selectedClusterMetrics.totalNodes / selectedClusterMetrics.totalComputeNodes
       : 0;
 
-    // Apply proportion to all cost components
     return {
-      racksMonthly: operationalCosts.racksMonthly * proportion,
-      facilityMonthly: operationalCosts.facilityMonthly * proportion,
-      energyMonthly: operationalCosts.energyMonthly * proportion,
-      amortizedMonthly: operationalCosts.amortizedMonthly * proportion,
-      licensingMonthly: operationalCosts.licensingMonthly * proportion,
-      networkMonthly: operationalCosts.networkMonthly * proportion,
-      totalMonthly: operationalCosts.totalMonthly * proportion
+      racksMonthly: selectedClusterMetrics.racksCost * clusterNodeRatio,
+      facilityMonthly: selectedClusterMetrics.facilityCost * clusterNodeRatio,
+      energyMonthly: selectedClusterMetrics.energyCost * clusterNodeRatio,
+      amortizedMonthly: selectedClusterMetrics.computeAmortizedCost,
+      licensingMonthly: selectedClusterMetrics.licensingCost * clusterNodeRatio,
+      networkMonthly: selectedClusterMetrics.networkAmortizedCost,
+      totalMonthly: selectedClusterMetrics.clusterCostShare + selectedClusterMetrics.operationalCostShare
     };
-  }, [selectedClusterId, operationalCosts, pricingResult, activeDesign, config, componentTemplates]);
+  }, [selectedClusterId, operationalCosts, clusterMetrics]);
 
   const handleConfigChange = (key: keyof PricingConfig, value: string | number) => {
     setConfig(prev => ({ ...prev, [key]: value }));
@@ -736,7 +741,7 @@ export const PricingModelTab: React.FC = () => {
                 Infrastructure costs vs sellable capacity pricing
                 {selectedClusterId !== 'all' && (
                   <span className="block mt-1 text-xs">
-                    Showing proportional costs for selected cluster
+                    Showing cluster-specific costs based on actual node composition and equipment costs
                   </span>
                 )}
               </CardDescription>
