@@ -6,7 +6,7 @@ export interface PricingConfig {
   profitMargin: number; // Multiplier for cost plus model (e.g., 1.3 = 30% margin)
   fixedCpuPrice?: number; // $/vCPU/hour for fixed price model
   fixedMemoryPrice?: number; // $/GB/hour for fixed price model
-  fixedStoragePrice?: number; // $/GB/hour for fixed price model
+  fixedStoragePrice?: number; // $/GB/month for fixed price model
   targetUtilization: number; // Target cluster utilization (0-1)
   virtualizationOverhead: number; // Overhead percentage (0-1) or fixed vCPUs
   virtualizationOverheadType: 'percentage' | 'fixed'; // New field
@@ -702,10 +702,14 @@ export class PricingModelService {
     const hoursPerMonth = 730; // Average hours per month
 
     if (this.config.operatingModel === 'fixedPrice') {
+      // Convert storage price from $/GB/month to $/GB/hour
+      const storageMonthlyPrice = this.config.fixedStoragePrice || 0.036;
+      const storageCostPerGBHour = storageMonthlyPrice / hoursPerMonth;
+
       return {
         cpuCost: this.config.fixedCpuPrice || 0.01,
         memoryCost: this.config.fixedMemoryPrice || 0.003,
-        storageCost: this.config.fixedStoragePrice || 0.0001
+        storageCost: storageCostPerGBHour
       };
     }
 
@@ -764,8 +768,9 @@ export class PricingModelService {
       const sellableStorageGB = sellableStorageTB * 1024;
       storageCostPerGBHour = storageMonthlyCost / sellableStorageGB / hoursPerMonth;
     } else {
-      // Default storage cost if no storage infrastructure
-      storageCostPerGBHour = 0.00005; // ~$0.036/GB/month
+      // Default storage cost if no storage infrastructure (convert from monthly to hourly)
+      const defaultStorageMonthly = 0.036; // $0.036/GB/month
+      storageCostPerGBHour = defaultStorageMonthly / hoursPerMonth;
     }
     
     // Apply profit margin for cost plus model

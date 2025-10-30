@@ -1,5 +1,6 @@
 
 import { InfrastructureComponent, InfrastructureDesign, ClusterAZAssignment } from '@/types/infrastructure';
+import { PricingConfig } from '@/services/pricing/pricingModelService';
 import { StoreState } from '../../types';
 
 export interface DesignSlice {
@@ -18,4 +19,5 @@ export interface DesignSlice {
   togglePublicAccess: (id: string) => Promise<void>;
   purgeAllDesigns: () => Promise<void>;
   updatePlacementRules: (rules: ClusterAZAssignment[]) => Promise<void>;
+  updatePricingConfig: (config: PricingConfig) => Promise<void>;
 }

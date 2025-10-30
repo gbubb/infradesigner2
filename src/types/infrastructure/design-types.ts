@@ -5,6 +5,7 @@ import { RackProfile, ClusterAZAssignment, RowLayoutConfiguration } from './rack
 import { ConnectionRule } from './connection-rule-types';
 import { NetworkConnection } from './connection-types';
 import { ComponentWithPlacement } from '../service-types';
+import { PricingConfig } from '@/services/pricing/pricingModelService';
 
 // Infrastructure Design interface
 export interface InfrastructureDesign {
@@ -36,6 +37,8 @@ export interface InfrastructureDesign {
   placementRules?: ClusterAZAssignment[];
   // Row layout configuration for physical positioning
   rowLayout?: RowLayoutConfiguration;
+  // Pricing model configuration
+  pricingConfig?: PricingConfig;
 }
 
 // Workspace types for component positioning

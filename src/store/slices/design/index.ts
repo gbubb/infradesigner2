@@ -341,7 +341,7 @@ export const createDesignSlice: StateCreator<
             const fieldsToCheck: (keyof InfrastructureDesign)[] = [
               'name', 'description', 'requirements', 'components',
               'componentRoles', 'selectedDisksByRole', 'selectedDisksByStorageCluster', 'selectedGPUsByRole',
-              'connectionRules', 'placementRules', 'rowLayout'
+              'connectionRules', 'placementRules', 'rowLayout', 'pricingConfig'
             ];
             
             fieldsToCheck.forEach(field => {
@@ -368,9 +368,9 @@ export const createDesignSlice: StateCreator<
           const prevDesign = get().savedDesigns.find(d => d.id === updatedDesign.id);
           if (prevDesign) {
             const fieldsToCheck: (keyof InfrastructureDesign)[] = [
-              'name', 'description', 'requirements', 'components', 
+              'name', 'description', 'requirements', 'components',
               'componentRoles', 'selectedDisksByRole', 'selectedGPUsByRole',
-              'connectionRules', 'placementRules', 'rowLayout'
+              'connectionRules', 'placementRules', 'rowLayout', 'pricingConfig'
             ];
             
             fieldsToCheck.forEach(field => {
@@ -568,32 +568,32 @@ export const createDesignSlice: StateCreator<
   
   updatePlacementRules: async (rules: ClusterAZAssignment[]) => {
     const state = get();
-    
+
     if (!state.activeDesign) {
       toast.error("No active design to update");
       return;
     }
-    
+
     const updatedDesign = {
       ...state.activeDesign,
       placementRules: rules,
       updatedAt: new Date()
     };
-    
-    const updatedDesigns = state.savedDesigns.map(design => 
+
+    const updatedDesigns = state.savedDesigns.map(design =>
       design.id === updatedDesign.id ? updatedDesign : design
     );
-    
+
     set({
       savedDesigns: updatedDesigns,
       activeDesign: updatedDesign
     });
-    
+
     // Get the current user's ID
     try {
       const { data } = await supabase.auth.getUser();
       const userId = data?.user?.id;
-      
+
       // Save with user ID if available
       const success = await saveDesignToDB(updatedDesign, userId);
       if (!success) {
@@ -602,6 +602,47 @@ export const createDesignSlice: StateCreator<
     } catch (error) {
       console.error("Error saving placement rules:", error);
       toast.error("Failed to save placement rules");
+    }
+  },
+
+  updatePricingConfig: async (config) => {
+    const state = get();
+
+    if (!state.activeDesign) {
+      toast.error("No active design to update");
+      return;
+    }
+
+    const updatedDesign = {
+      ...state.activeDesign,
+      pricingConfig: config,
+      updatedAt: new Date()
+    };
+
+    const updatedDesigns = state.savedDesigns.map(design =>
+      design.id === updatedDesign.id ? updatedDesign : design
+    );
+
+    set({
+      savedDesigns: updatedDesigns,
+      activeDesign: updatedDesign
+    });
+
+    // Get the current user's ID
+    try {
+      const { data } = await supabase.auth.getUser();
+      const userId = data?.user?.id;
+
+      // Track the pricing config change
+      trackDesignChange(updatedDesign.id, 'pricingConfig', config);
+
+      // Use debounced save for pricing config changes
+      debouncedSaveToDatabase(updatedDesign, userId, false);
+    } catch (error) {
+      console.error("Error saving pricing config:", error);
+      // Still try to save without user ID if auth fails
+      trackDesignChange(updatedDesign.id, 'pricingConfig', config);
+      debouncedSaveToDatabase(updatedDesign, undefined, false);
     }
   }
 });

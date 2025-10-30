@@ -28,6 +28,7 @@ import { useComputeClusterMetrics } from '@/hooks/design/useComputeClusterMetric
 export const PricingModelTab: React.FC = () => {
   const activeDesign = useDesignStore((state) => state.activeDesign);
   const componentTemplates = useDesignStore((state) => state.componentTemplates);
+  const updatePricingConfig = useDesignStore((state) => state.updatePricingConfig);
   const [selectedClusterId, setSelectedClusterId] = useState<string>('all');
   const [availableClusters, setAvailableClusters] = useState<ComputeCluster[]>([]);
   const [vmPremiumsOpen, setVmPremiumsOpen] = useState(false);
@@ -56,12 +57,13 @@ export const PricingModelTab: React.FC = () => {
     rawOperationalCosts.networkMonthly
   ]);
   
-  const [config, setConfig] = useState<PricingConfig>({
+  // Default pricing config
+  const defaultConfig: PricingConfig = {
     operatingModel: 'costPlus',
     profitMargin: 1.3, // 30% margin default
     fixedCpuPrice: 0.01,
     fixedMemoryPrice: 0.003,
-    fixedStoragePrice: 0.00005, // per GB per hour
+    fixedStoragePrice: 0.036, // per GB per month (~$36/TB/month)
     targetUtilization: 0.8, // 80% target utilization
     virtualizationOverhead: 0.05, // 5% overhead default
     virtualizationOverheadType: 'percentage', // Default to percentage
@@ -72,7 +74,10 @@ export const PricingModelTab: React.FC = () => {
     vmSizeCurveExponent: 2, // Quadratic curve by default
     vmSizeThreshold: 4, // Start applying premium at 4 vCPUs
     vmSizeAcceleration: 0.5 // Moderate acceleration
-  });
+  };
+
+  // Use design-specific config or default
+  const config = activeDesign?.pricingConfig || defaultConfig;
 
   const [pricingResult, setPricingResult] = useState<PricingModelResult | null>(null);
 
@@ -154,7 +159,8 @@ export const PricingModelTab: React.FC = () => {
   }, [pricingService]);
 
   const handleConfigChange = (key: keyof PricingConfig, value: string | number) => {
-    setConfig(prev => ({ ...prev, [key]: value }));
+    const updatedConfig = { ...config, [key]: value };
+    updatePricingConfig(updatedConfig);
   };
 
   const marginPercentage = config.operatingModel === 'costPlus' 
@@ -402,12 +408,12 @@ export const PricingModelTab: React.FC = () => {
                   <Input
                     id="storagePrice"
                     type="number"
-                    step="0.00001"
+                    step="0.001"
                     value={config.fixedStoragePrice}
                     onChange={(e) => handleConfigChange('fixedStoragePrice', parseFloat(e.target.value))}
                     className="flex-1"
                   />
-                  <span className="text-xs text-muted-foreground">$/GB/hr</span>
+                  <span className="text-xs text-muted-foreground">$/GB/mo</span>
                 </div>
               </div>
             )}
