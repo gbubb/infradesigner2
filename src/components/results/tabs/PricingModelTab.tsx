@@ -57,22 +57,7 @@ export const PricingModelTab: React.FC = () => {
 
   const [pricingResult, setPricingResult] = useState<PricingModelResult | null>(null);
 
-  const pricingService = useMemo(() => {
-    const clusterId = selectedClusterId === 'all' ? undefined : selectedClusterId;
-    return new PricingModelService(activeDesign, config, componentTemplates, clusterId, operationalCosts);
-  }, [activeDesign, config, componentTemplates, selectedClusterId, operationalCosts]);
-
-  useEffect(() => {
-    // Get available clusters
-    const clusters = pricingService.getAvailableClusters();
-    setAvailableClusters(clusters);
-
-    // Calculate pricing
-    const result = pricingService.calculatePricing();
-    setPricingResult(result);
-  }, [pricingService]);
-
-  // Calculate proportional operational costs based on cluster selection
+  // Calculate proportional operational costs based on cluster selection FIRST
   // Use actual cluster-level costs from useComputeClusterMetrics, which properly accounts for
   // node costs, GPUs, and other expensive equipment, not just CPU cores
   const proportionalOperationalCosts = useMemo(() => {
@@ -105,6 +90,22 @@ export const PricingModelTab: React.FC = () => {
       totalMonthly: selectedClusterMetrics.clusterCostShare + selectedClusterMetrics.operationalCostShare
     };
   }, [selectedClusterId, operationalCosts, clusterMetrics]);
+
+  // Create pricing service with proportional costs so VM Price Calculator uses correct cluster costs
+  const pricingService = useMemo(() => {
+    const clusterId = selectedClusterId === 'all' ? undefined : selectedClusterId;
+    return new PricingModelService(activeDesign, config, componentTemplates, clusterId, proportionalOperationalCosts);
+  }, [activeDesign, config, componentTemplates, selectedClusterId, proportionalOperationalCosts]);
+
+  useEffect(() => {
+    // Get available clusters
+    const clusters = pricingService.getAvailableClusters();
+    setAvailableClusters(clusters);
+
+    // Calculate pricing
+    const result = pricingService.calculatePricing();
+    setPricingResult(result);
+  }, [pricingService]);
 
   const handleConfigChange = (key: keyof PricingConfig, value: string | number) => {
     setConfig(prev => ({ ...prev, [key]: value }));
