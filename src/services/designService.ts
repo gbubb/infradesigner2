@@ -25,7 +25,7 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
       if ('createdat' in design && 'name' in design) {
         try {
           // Helper function to handle JSONB fields (already parsed objects from Supabase)
-          const parseJsonField = (field: any, defaultValue: any) => {
+          const parseJsonField = <T>(field: unknown, defaultValue: T): T => {
             if (!field) return defaultValue;
             return typeof field === 'string' ? JSON.parse(field) : field;
           };
@@ -102,7 +102,7 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
     
     try {
       // Helper function to handle JSONB fields (already parsed objects from Supabase)
-      const parseJsonField = (field: any, defaultValue: any) => {
+      const parseJsonField = <T>(field: unknown, defaultValue: T): T => {
         if (!field) return defaultValue;
         return typeof field === 'string' ? JSON.parse(field) : field;
       };

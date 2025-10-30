@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
 import { ClusterAnalysis } from '@/types/model-types';
 import { ComponentWithPlacement } from '@/types/service-types';
 import { ComputePricingModel, StoragePricingModel } from '@/types/pricing-types';
@@ -126,7 +126,7 @@ export function useClusterAnalysis({
       const averageVMMemoryGB = requirements.computeRequirements?.averageVMMemoryGB || 8;
 
       // Calculate actual vCPUs and memory for this specific cluster
-      const clusterVCPUs = computeDevices.reduce((total, device: any) => {
+      const clusterVCPUs = computeDevices.reduce((total, device: InfrastructureComponent) => {
         // CPU calculation: cpuSockets * cpuCoresPerSocket
         const cpuSockets = device.cpuSockets || 0;
         const cpuCoresPerSocket = device.cpuCoresPerSocket || 0;
@@ -134,7 +134,7 @@ export function useClusterAnalysis({
         return total + vCPUsPerDevice;
       }, 0);
 
-      const clusterMemoryGB = computeDevices.reduce((total, device: any) => {
+      const clusterMemoryGB = computeDevices.reduce((total, device: InfrastructureComponent) => {
         // Memory is stored in memoryCapacity field (in GB)
         const memoryGB = (device.memoryCapacity || 0) * (device.quantity || 1);
         return total + memoryGB;

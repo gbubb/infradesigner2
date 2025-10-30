@@ -48,8 +48,7 @@ export const useCostAnalysis = () => {
     return 0;
   }, [
     facilityType,
-    activeDesign?.requirements?.physicalConstraints?.rackCostPerMonth,
-    activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros,
+    activeDesign?.requirements?.physicalConstraints,
     facilityCosts
   ]);
 
@@ -259,22 +258,20 @@ export const useCostAnalysis = () => {
     // Note: networkMonthly is already included in amortizedMonthly (which = compute + storage + network)
     const totalMonthly = rackMonthly + facilityMonthly + energyMonthly + amortizedMonthly + licensingMonthly;
     
-    return { 
+    return {
       racksMonthly: rackMonthly,
       facilityMonthly: facilityMonthly,
-      energyMonthly, 
-      amortizedMonthly, 
+      energyMonthly,
+      amortizedMonthly,
       licensingMonthly,
       networkMonthly,
-      totalMonthly 
+      totalMonthly
     };
   }, [
     energyCosts.monthlyEnergyCost,
     amortizedCostsByType,
     licensingCosts.monthly,
-    activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity,
-    activeDesign?.requirements?.physicalConstraints?.rackCostPerMonth,
-    activeDesign?.requirements?.physicalConstraints?.rackCostPerMonthEuros,
+    activeDesign?.requirements?.physicalConstraints,
     activeDesign?.requirements?.networkRequirements?.dedicatedNetworkCoreRacks,
     facilityType,
     facilityCosts

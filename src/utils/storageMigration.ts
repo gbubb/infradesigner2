@@ -1,4 +1,5 @@
 import { DesignRequirements } from '@/types/infrastructure';
+import { StorageCluster, StoragePool } from '@/types/infrastructure/storage-types';
 
 /**
  * Migration utility to handle legacy designs with swapped storage nomenclature.
@@ -26,8 +27,8 @@ export function migrateStorageRequirements(requirements: DesignRequirements): De
   const hasLegacyStructure =
     Array.isArray(storageRequirements.storagePools) &&
     storageRequirements.storagePools.length > 0 &&
-    storageRequirements.storagePools.some((item: any) =>
-      'type' in item && ('hyperConverged' in item || 'computeClusterId' in item)
+    storageRequirements.storagePools.some((item: unknown) =>
+      typeof item === 'object' && item !== null && 'type' in item && ('hyperConverged' in item || 'computeClusterId' in item)
     );
 
   // If not legacy, return as-is
@@ -42,7 +43,7 @@ export function migrateStorageRequirements(requirements: DesignRequirements): De
   const legacyClusters = storageRequirements.storageClusters || [];
 
   // Legacy pools (physical) → New clusters (physical)
-  const newClusters = legacyPools.map((legacyPool: any) => ({
+  const newClusters = legacyPools.map((legacyPool: Partial<StorageCluster & { hyperConverged?: boolean }>) => ({
     id: legacyPool.id,
     name: legacyPool.name,
     type: legacyPool.type || 'dedicated',
@@ -53,7 +54,7 @@ export function migrateStorageRequirements(requirements: DesignRequirements): De
   }));
 
   // Legacy clusters (logical) → New pools (logical)
-  const newPools = legacyClusters.map((legacyCluster: any) => ({
+  const newPools = legacyClusters.map((legacyCluster: Partial<StoragePool>) => ({
     id: legacyCluster.id,
     name: legacyCluster.name,
     totalCapacityTB: legacyCluster.totalCapacityTB || 0,

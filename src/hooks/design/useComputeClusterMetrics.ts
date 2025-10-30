@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure/component-types';
 import { ComputeClusterRequirement } from '@/types/infrastructure/requirements-types';
+import { DiskConfig } from '@/types/design';
 import { useCostAnalysis } from './useCostAnalysis';
 
 export interface ComputeClusterMetrics {
@@ -205,8 +206,8 @@ export const useComputeClusterMetrics = () => {
             clusterComponents.forEach(node => {
               if ('attachedDisks' in node && node.attachedDisks) {
                 const disks = node.attachedDisks || [];
-                disks.forEach((disk: any) => {
-                  if (disk && 'capacityTB' in disk) {
+                disks.forEach((disk: DiskConfig) => {
+                  if (disk && 'quantity' in disk) {
                     const diskQuantity = disk.quantity || 1;
                     totalDisksInCluster += diskQuantity;
                   }
