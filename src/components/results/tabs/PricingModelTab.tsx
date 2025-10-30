@@ -9,7 +9,7 @@ import { PricingModelService, PricingConfig, PricingModelResult } from '@/servic
 import { ComputeCluster } from '@/types/placement';
 import { formatCurrency, formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
-import { Info, DollarSign, Cpu, MemoryStick, HardDrive, Download, FileText, Server } from 'lucide-react';
+import { Info, DollarSign, Cpu, MemoryStick, HardDrive, Download, FileText, Server, TrendingUp } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -166,9 +166,30 @@ export const PricingModelTab: React.FC = () => {
     updatePricingConfig(updatedConfig);
   };
 
-  const marginPercentage = config.operatingModel === 'costPlus' 
-    ? (config.profitMargin - 1) * 100 
+  const marginPercentage = config.operatingModel === 'costPlus'
+    ? (config.profitMargin - 1) * 100
     : (pricingResult?.effectiveMargin || 0) * 100;
+
+  // Calculate breakeven utilization for fixed price mode
+  const breakevenUtilization = useMemo(() => {
+    if (config.operatingModel !== 'fixedPrice' || !pricingResult) return null;
+
+    const totalMonthlyCosts = proportionalOperationalCosts.totalMonthly;
+    const usablevCPUs = pricingResult.clusterCapacity.usablevCPUs;
+    const usableMemoryGB = pricingResult.clusterCapacity.usableMemoryGB;
+
+    // Revenue at 100% utilization
+    const maxMonthlyRevenue =
+      (usablevCPUs * config.fixedCpuPrice * 730) +
+      (usableMemoryGB * config.fixedMemoryPrice * 730);
+
+    if (maxMonthlyRevenue === 0) return null;
+
+    // Breakeven utilization = costs / max revenue
+    const breakeven = (totalMonthlyCosts / maxMonthlyRevenue) * 100;
+
+    return breakeven;
+  }, [config.operatingModel, config.fixedCpuPrice, config.fixedMemoryPrice, pricingResult, proportionalOperationalCosts.totalMonthly]);
 
   const exportPricingReport = () => {
     if (!pricingResult) return;
@@ -731,7 +752,7 @@ export const PricingModelTab: React.FC = () => {
       {/* Key Metrics */}
       {pricingResult && (
         <>
-          <div className="grid grid-cols-4 gap-4">
+          <div className={`grid gap-4 ${config.operatingModel === 'fixedPrice' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -799,6 +820,30 @@ export const PricingModelTab: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Breakeven Utilization - Only for Fixed Price Mode */}
+            {config.operatingModel === 'fixedPrice' && breakevenUtilization !== null && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Breakeven Utilization</p>
+                      <p className={`text-2xl font-bold ${breakevenUtilization > 100 ? 'text-red-600' : breakevenUtilization > 80 ? 'text-orange-600' : 'text-green-600'}`}>
+                        {breakevenUtilization.toFixed(1)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {breakevenUtilization > 100
+                          ? 'Cannot break even at current prices'
+                          : breakevenUtilization > config.targetUtilization * 100
+                          ? 'Above target utilization'
+                          : 'Margin positive at target'}
+                      </p>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Cost vs Price Analysis - Split into two cards */}
