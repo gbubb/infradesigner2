@@ -70,19 +70,29 @@ export interface PricingModelResult {
   samplePrices: VMPricing[];
 }
 
+export interface ExternalOperationalCosts {
+  totalMonthly: number;
+  licensingMonthly?: number;
+  amortizedMonthly?: number;
+  energyMonthly?: number;
+  racksMonthly?: number;
+  facilityMonthly?: number;
+  networkMonthly?: number;
+}
+
 export class PricingModelService {
   private design: InfrastructureDesign | null;
   private config: PricingConfig;
   private selectedClusterId?: string;
   private componentTemplates: InfrastructureComponent[];
-  private externalOperationalCosts?: { totalMonthly: number };
+  private externalOperationalCosts?: ExternalOperationalCosts;
 
   constructor(
-    design: InfrastructureDesign | null, 
-    config: PricingConfig, 
+    design: InfrastructureDesign | null,
+    config: PricingConfig,
     componentTemplates: InfrastructureComponent[] = [],
     selectedClusterId?: string,
-    externalOperationalCosts?: { totalMonthly: number }
+    externalOperationalCosts?: ExternalOperationalCosts
   ) {
     this.design = design;
     this.config = config;
@@ -899,7 +909,20 @@ export class PricingModelService {
     const infrastructureCosts = this.calculateInfrastructureCosts();
     const cpuMemoryRatio = this.calculateCpuMemoryWeightRatio(capacity);
     const baseCosts = this.calculateBaseCosts(infrastructureCosts, capacity, cpuMemoryRatio);
-    
+
+    // Calculate licensing cost per vCPU per hour
+    // Use external costs if provided, otherwise calculate from infrastructure
+    const hoursPerMonth = 730;
+    let licensingCostPerVCPUHour = 0;
+
+    if (this.externalOperationalCosts?.licensingMonthly) {
+      const licensingMonthly = this.externalOperationalCosts.licensingMonthly;
+      if (licensingMonthly > 0 && capacity.sellingvCPUs > 0) {
+        // Allocate licensing cost per vCPU
+        licensingCostPerVCPUHour = licensingMonthly / capacity.sellingvCPUs / hoursPerMonth;
+      }
+    }
+
     // Calculate natural ratio for the infrastructure
     const naturalRatio = capacity.totalMemoryGB / capacity.totalvCPUs; // e.g., 4 for 1:4 ratio
     
@@ -987,6 +1010,9 @@ export class PricingModelService {
     const ratioEffectPercent = totalBaseCost > 0 ? 
       ((ratioAmplification - 1) * (cpuBasePremium * baseLinearCpuCost + memBasePremium * baseLinearMemCost) + ratioSurcharge) / totalBaseCost : 0;
     
+    // Calculate VM-specific licensing cost
+    const vmLicensingCost = licensingCostPerVCPUHour * vCPUs;
+
     // Detailed cost breakdown
     return {
       vCPU: vCPUs,
@@ -998,7 +1024,7 @@ export class PricingModelService {
         computeCost: cpuCostWithPremium,  // Total CPU cost including premiums
         networkCost: memCostWithPremium,  // Total memory cost including premiums (labeled as network for legacy)
         storageCost: baseStorageCost,
-        licensingCost: 0,  // Can be added based on requirements
+        licensingCost: vmLicensingCost,  // Licensing cost based on vCPU allocation
         haOverheadMultiplier: 1, // HA overhead is already accounted for in capacity reduction
         sizePenalty: effectiveTotalPremium,  // Total effective premium
         ratioPenalty: ratioEffectPercent,  // Ratio effects (amplification + surcharge)
