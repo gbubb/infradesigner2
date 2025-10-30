@@ -52,6 +52,13 @@ export interface ClusterCapacity {
   haReservation: number;
   virtualizationOverhead: number;
   targetUtilization: number;
+  // Hyper-converged storage overhead
+  isHyperConverged?: boolean;
+  storageOverheadCores?: number;
+  storageOverheadMemoryGB?: number;
+  totalDisksInCluster?: number;
+  cpuCoresPerDisk?: number;
+  memoryGBPerDisk?: number;
 }
 
 export interface PricingModelResult {
@@ -217,7 +224,7 @@ export class PricingModelService {
   public calculateClusterCapacity(): ClusterCapacity {
     // Get components based on selected cluster or all compute components
     const computeComponents = this.getClusterComponents();
-    
+
     if (computeComponents.length === 0) {
       return {
         totalPhysicalCores: 0,
@@ -231,7 +238,8 @@ export class PricingModelService {
         sellingMemoryGB: 0,
         haReservation: 0,
         virtualizationOverhead: this.config.virtualizationOverhead,
-        targetUtilization: this.config.targetUtilization
+        targetUtilization: this.config.targetUtilization,
+        isHyperConverged: false
       };
     }
 
@@ -240,12 +248,19 @@ export class PricingModelService {
     let totalPhysicalCores = 0;
     let totalPhysicalMemoryGB = 0;
     let totalPhysicalNodes = 0;
+    let totalDisksInCluster = 0;
+    let isHyperConverged = false;
 
     computeComponents.forEach(comp => {
       const qty = comp.quantity || 1;
       const component = comp.component;
       totalPhysicalNodes += qty;  // Count the actual nodes
-      
+
+      // Check if this is a hyper-converged node
+      if (comp.metadata?.role === 'hyperConvergedNode') {
+        isHyperConverged = true;
+      }
+
       // Get cores - check for socket-based calculation first
       let cores = 0;
       if (component.cpuSockets && component.cpuCoresPerSocket) {
@@ -263,33 +278,75 @@ export class PricingModelService {
       } else if (component.totalCores) {
         cores = component.totalCores;
       }
-      
+
       // Get memory
-      const memory = component.memoryCapacity || 
-                    component.specifications?.memory?.capacity || 
-                    component.memory?.capacity || 
+      const memory = component.memoryCapacity ||
+                    component.specifications?.memory?.capacity ||
+                    component.memory?.capacity ||
                     component.memoryGB || 0;
-      
+
       totalPhysicalCores += cores * qty;
       totalPhysicalMemoryGB += memory * qty;
+
+      // Count disks for hyper-converged clusters
+      if (isHyperConverged && 'attachedDisks' in component && component.attachedDisks) {
+        const disks = component.attachedDisks || [];
+        disks.forEach((disk) => {
+          if (disk && typeof disk === 'object' && 'quantity' in disk) {
+            totalDisksInCluster += ((disk as { quantity?: number }).quantity || 1) * qty;
+          }
+        });
+      }
     });
+
+    // Calculate storage overhead for hyper-converged clusters
+    let cpuCoresPerDisk = 4; // default
+    let memoryGBPerDisk = 2; // default
+    let storageOverheadCores = 0;
+    let storageOverheadMemoryGB = 0;
+
+    if (isHyperConverged) {
+      // Find the storage cluster configuration for this compute cluster
+      const clusterConfig = this.design?.requirements?.computeRequirements?.computeClusters?.find(
+        cluster => cluster.id === this.selectedClusterId || cluster.name === this.selectedClusterId
+      );
+
+      if (clusterConfig) {
+        const storageCluster = this.design?.requirements?.storageRequirements?.storageClusters?.find(
+          sc => sc.type === 'hyperConverged' && sc.computeClusterId === clusterConfig.id
+        );
+
+        if (storageCluster) {
+          cpuCoresPerDisk = storageCluster.cpuCoresPerDisk ?? 4;
+          memoryGBPerDisk = storageCluster.memoryGBPerDisk ?? 2;
+        }
+      }
+
+      // Calculate total storage overhead
+      storageOverheadCores = totalDisksInCluster * cpuCoresPerDisk;
+      storageOverheadMemoryGB = totalDisksInCluster * memoryGBPerDisk;
+    }
+
+    // Subtract storage overhead from total capacity BEFORE applying other factors
+    const computeAvailableCores = totalPhysicalCores - storageOverheadCores;
+    const computeAvailableMemoryGB = totalPhysicalMemoryGB - storageOverheadMemoryGB;
 
     // Apply oversubscription ratios from requirements
     // First check if a specific cluster is selected and get its overcommit ratio
     let cpuOversubscription = 4; // Default
     let memoryOversubscription = 1; // Default
-    
+
     if (this.selectedClusterId && this.selectedClusterId !== 'all') {
       // Find the specific cluster configuration
       const clusterConfig = this.design?.requirements?.computeRequirements?.computeClusters?.find(
         cluster => cluster.id === this.selectedClusterId || cluster.name === this.selectedClusterId
       );
-      
+
       if (clusterConfig?.overcommitRatio) {
         cpuOversubscription = clusterConfig.overcommitRatio;
       }
     }
-    
+
     // Fall back to global compute requirements if no cluster-specific ratio
     if (!this.selectedClusterId || this.selectedClusterId === 'all') {
       // Use the highest overcommit ratio from all clusters when analyzing all
@@ -298,13 +355,13 @@ export class PricingModelService {
         cpuOversubscription = Math.max(...clusters.map(c => c.overcommitRatio || 4));
       }
     }
-    
+
     // Check for memory overcommit ratio in global requirements
-    memoryOversubscription = this.design?.requirements?.compute?.memory?.oversubscriptionRatio || 
+    memoryOversubscription = this.design?.requirements?.compute?.memory?.oversubscriptionRatio ||
                             this.design?.requirements?.computeRequirements?.memory?.oversubscriptionRatio || 1;
 
-    const totalvCPUs = totalPhysicalCores * cpuOversubscription;
-    const totalMemoryGB = totalPhysicalMemoryGB * memoryOversubscription;
+    const totalvCPUs = computeAvailableCores * cpuOversubscription;
+    const totalMemoryGB = computeAvailableMemoryGB * memoryOversubscription;
 
     // Calculate HA reservation based on failure tolerance
     const haReservation = this.calculateHAReservation(computeComponents);
@@ -342,7 +399,13 @@ export class PricingModelService {
       sellingMemoryGB,
       haReservation,
       virtualizationOverhead: this.config.virtualizationOverhead,
-      targetUtilization: this.config.targetUtilization
+      targetUtilization: this.config.targetUtilization,
+      isHyperConverged,
+      storageOverheadCores: isHyperConverged ? storageOverheadCores : undefined,
+      storageOverheadMemoryGB: isHyperConverged ? storageOverheadMemoryGB : undefined,
+      totalDisksInCluster: isHyperConverged ? totalDisksInCluster : undefined,
+      cpuCoresPerDisk: isHyperConverged ? cpuCoresPerDisk : undefined,
+      memoryGBPerDisk: isHyperConverged ? memoryGBPerDisk : undefined
     };
   }
 

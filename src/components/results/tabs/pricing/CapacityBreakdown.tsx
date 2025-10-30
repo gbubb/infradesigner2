@@ -47,15 +47,23 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
     : 0;
   
   // Calculate percentages for each segment
-  const cpuHAPercent = capacity.haReservation * 100;
-  const cpuVirtPercent = capacity.virtualizationOverhead * 100;
-  const cpuReservePercent = (1 - capacity.targetUtilization) * (100 - cpuHAPercent - cpuVirtPercent);
-  const cpuSellablePercent = 100 - cpuHAPercent - cpuVirtPercent - cpuReservePercent;
-  
-  const memHAPercent = capacity.haReservation * 100;
-  const memVirtPercent = capacity.virtualizationOverhead * 100;
-  const memReservePercent = (1 - capacity.targetUtilization) * (100 - memHAPercent - memVirtPercent);
-  const memSellablePercent = 100 - memHAPercent - memVirtPercent - memReservePercent;
+  // Storage overhead is calculated as a percentage of total physical capacity
+  const storageOverheadPercent = capacity.isHyperConverged && capacity.storageOverheadCores
+    ? (capacity.storageOverheadCores / capacity.totalPhysicalCores) * 100
+    : 0;
+
+  // Adjust other percentages to account for storage overhead
+  const availableForCompute = 100 - storageOverheadPercent;
+
+  const cpuHAPercent = capacity.haReservation * availableForCompute;
+  const cpuVirtPercent = capacity.virtualizationOverhead * availableForCompute;
+  const cpuReservePercent = (1 - capacity.targetUtilization) * (availableForCompute - cpuHAPercent - cpuVirtPercent);
+  const cpuSellablePercent = availableForCompute - cpuHAPercent - cpuVirtPercent - cpuReservePercent;
+
+  const memHAPercent = capacity.haReservation * availableForCompute;
+  const memVirtPercent = capacity.virtualizationOverhead * availableForCompute;
+  const memReservePercent = (1 - capacity.targetUtilization) * (availableForCompute - memHAPercent - memVirtPercent);
+  const memSellablePercent = availableForCompute - memHAPercent - memVirtPercent - memReservePercent;
 
   return (
     <Card>
@@ -277,11 +285,11 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                   {/* HA reservation - orange */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div 
+                      <div
                         className="absolute inset-y-0 bg-orange-600 dark:bg-orange-500 flex items-center justify-center cursor-help"
-                        style={{ 
+                        style={{
                           left: `${cpuSellablePercent + cpuReservePercent + cpuVirtPercent}%`,
-                          width: `${cpuHAPercent}%` 
+                          width: `${cpuHAPercent}%`
                         }}
                       >
                         <span className="text-xs text-white font-medium px-1">
@@ -298,11 +306,43 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                       </div>
                     </TooltipContent>
                   </Tooltip>
+
+                  {/* Storage overhead - purple (hyper-converged only) */}
+                  {capacity.isHyperConverged && storageOverheadPercent > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div
+                          className="absolute inset-y-0 bg-purple-600 dark:bg-purple-500 flex items-center justify-center cursor-help"
+                          style={{
+                            left: `${cpuSellablePercent + cpuReservePercent + cpuVirtPercent + cpuHAPercent}%`,
+                            width: `${storageOverheadPercent}%`
+                          }}
+                        >
+                          <span className="text-xs text-white font-medium px-1">
+                            {storageOverheadPercent > 3 && 'Storage'}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="space-y-1">
+                          <p className="font-medium">Storage Service Overhead</p>
+                          <p className="text-sm">CPU: {formatNumber(capacity.storageOverheadCores || 0)} cores</p>
+                          <p className="text-sm">Memory: {formatNumber(capacity.storageOverheadMemoryGB || 0)} GB</p>
+                          <p className="text-sm">Disks: {capacity.totalDisksInCluster || 0}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Resources reserved for storage services
+                            <br />• {capacity.cpuCoresPerDisk || 4} cores/disk
+                            <br />• {capacity.memoryGBPerDisk || 2} GB RAM/disk
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
               
               {/* Waterfall Legend */}
-              <div className="grid grid-cols-4 gap-2 mt-3 text-xs">
+              <div className={`grid ${capacity.isHyperConverged ? 'grid-cols-5' : 'grid-cols-4'} gap-2 mt-3 text-xs`}>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-green-600 dark:bg-green-500 rounded"></div>
                   <span className="text-muted-foreground">Sellable ({cpuSellablePercent.toFixed(0)}%)</span>
@@ -319,6 +359,12 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                   <div className="w-3 h-3 bg-orange-600 dark:bg-orange-500 rounded"></div>
                   <span className="text-muted-foreground">HA ({cpuHAPercent.toFixed(0)}%)</span>
                 </div>
+                {capacity.isHyperConverged && storageOverheadPercent > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-purple-600 dark:bg-purple-500 rounded"></div>
+                    <span className="text-muted-foreground">Storage ({storageOverheadPercent.toFixed(0)}%)</span>
+                  </div>
+                )}
               </div>
             </div>
           </TooltipProvider>
@@ -327,7 +373,7 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
         {/* Overhead Breakdown */}
         <div>
           <h4 className="text-sm font-medium mb-3">Overhead Components</h4>
-          <div className="grid grid-cols-3 gap-3 text-sm">
+          <div className={`grid ${capacity.isHyperConverged ? 'grid-cols-4' : 'grid-cols-3'} gap-3 text-sm`}>
             <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-900">
               <div className="flex items-center justify-between">
                 <div className="text-orange-600 dark:text-orange-400 font-medium">
@@ -370,6 +416,19 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
                 Operational buffer
               </div>
             </div>
+            {capacity.isHyperConverged && capacity.storageOverheadCores && capacity.storageOverheadCores > 0 && (
+              <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-900">
+                <div className="text-purple-600 dark:text-purple-400 font-medium">
+                  Storage Overhead
+                </div>
+                <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                  {formatPercentage(storageOverheadPercent / 100)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {capacity.totalDisksInCluster} disks × {capacity.cpuCoresPerDisk}c/{capacity.memoryGBPerDisk}GB
+                </div>
+              </div>
+            )}
           </div>
           
           {/* HA Reservation Breakdown */}
