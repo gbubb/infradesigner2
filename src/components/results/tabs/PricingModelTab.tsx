@@ -64,11 +64,42 @@ export const PricingModelTab: React.FC = () => {
     // Get available clusters
     const clusters = pricingService.getAvailableClusters();
     setAvailableClusters(clusters);
-    
+
     // Calculate pricing
     const result = pricingService.calculatePricing();
     setPricingResult(result);
   }, [pricingService]);
+
+  // Calculate proportional operational costs based on cluster selection
+  const proportionalOperationalCosts = useMemo(() => {
+    if (selectedClusterId === 'all' || !pricingResult) {
+      return operationalCosts;
+    }
+
+    // Calculate the proportion of compute capacity this cluster represents
+    // We'll use physical cores as the basis for allocation since most costs scale with compute
+    const selectedClusterCapacity = pricingResult.clusterCapacity;
+
+    // Get total design capacity by creating a pricing service with no cluster filter
+    const totalPricingService = new PricingModelService(activeDesign, config, componentTemplates, undefined, operationalCosts);
+    const totalCapacity = totalPricingService.calculateClusterCapacity();
+
+    // Calculate proportion based on physical cores (most fair allocation)
+    const proportion = totalCapacity.totalPhysicalCores > 0
+      ? selectedClusterCapacity.totalPhysicalCores / totalCapacity.totalPhysicalCores
+      : 0;
+
+    // Apply proportion to all cost components
+    return {
+      racksMonthly: operationalCosts.racksMonthly * proportion,
+      facilityMonthly: operationalCosts.facilityMonthly * proportion,
+      energyMonthly: operationalCosts.energyMonthly * proportion,
+      amortizedMonthly: operationalCosts.amortizedMonthly * proportion,
+      licensingMonthly: operationalCosts.licensingMonthly * proportion,
+      networkMonthly: operationalCosts.networkMonthly * proportion,
+      totalMonthly: operationalCosts.totalMonthly * proportion
+    };
+  }, [selectedClusterId, operationalCosts, pricingResult, activeDesign, config, componentTemplates]);
 
   const handleConfigChange = (key: keyof PricingConfig, value: string | number) => {
     setConfig(prev => ({ ...prev, [key]: value }));
@@ -703,6 +734,11 @@ export const PricingModelTab: React.FC = () => {
               <CardTitle>Cost & Profit Analysis</CardTitle>
               <CardDescription>
                 Infrastructure costs vs sellable capacity pricing
+                {selectedClusterId !== 'all' && (
+                  <span className="block mt-1 text-xs">
+                    Showing proportional costs for selected cluster
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -711,11 +747,11 @@ export const PricingModelTab: React.FC = () => {
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Total Monthly Cost</p>
                   <p className="text-xl font-bold">
-                    {formatMonthlyCurrency(operationalCosts.totalMonthly, currency)}
+                    {formatMonthlyCurrency(proportionalOperationalCosts.totalMonthly, currency)}
                   </p>
                   <p className="text-xs text-muted-foreground">Infrastructure + operations</p>
                 </div>
-                
+
                 {/* Sellable Capacity */}
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Sellable Capacity</p>
@@ -727,7 +763,7 @@ export const PricingModelTab: React.FC = () => {
                     At {(config.targetUtilization * 100).toFixed(0)}% utilization
                   </p>
                 </div>
-                
+
                 {/* Total Revenue Potential */}
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Monthly Revenue</p>
@@ -739,15 +775,15 @@ export const PricingModelTab: React.FC = () => {
                   </p>
                   <p className="text-xs text-muted-foreground">At target utilization</p>
                 </div>
-                
+
                 {/* Monthly Profit */}
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Monthly Profit</p>
                   {(() => {
-                    const monthlyProfit = 
+                    const monthlyProfit =
                       ((pricingResult.clusterCapacity.sellingvCPUs * pricingResult.baseCostPerVCPU * 730) +
                        (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730)) -
-                      operationalCosts.totalMonthly;
+                      proportionalOperationalCosts.totalMonthly;
                     const isPositive = monthlyProfit >= 0;
                     return (
                       <>
@@ -762,50 +798,50 @@ export const PricingModelTab: React.FC = () => {
                   })()}
                 </div>
               </div>
-              
+
               {/* Cost Breakdown */}
               <div className="pt-4 border-t">
                 <h5 className="text-sm font-medium mb-3">Monthly Cost Breakdown</h5>
                 <div className="space-y-2">
-                  {operationalCosts.amortizedMonthly > 0 && (
+                  {proportionalOperationalCosts.amortizedMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Hardware Amortization</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.amortizedMonthly, currency)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.amortizedMonthly, currency)}</span>
                     </div>
                   )}
-                  {operationalCosts.energyMonthly > 0 && (
+                  {proportionalOperationalCosts.energyMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Energy Costs</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.energyMonthly, currency)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.energyMonthly, currency)}</span>
                     </div>
                   )}
-                  {operationalCosts.racksMonthly > 0 && (
+                  {proportionalOperationalCosts.racksMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Rack Costs</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.racksMonthly, currency)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.racksMonthly, currency)}</span>
                     </div>
                   )}
-                  {operationalCosts.facilityMonthly > 0 && (
+                  {proportionalOperationalCosts.facilityMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Facility Costs</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.facilityMonthly, currency)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.facilityMonthly, currency)}</span>
                     </div>
                   )}
-                  {operationalCosts.licensingMonthly > 0 && (
+                  {proportionalOperationalCosts.licensingMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Licensing</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.licensingMonthly, currency)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.licensingMonthly, currency)}</span>
                     </div>
                   )}
-                  {operationalCosts.networkMonthly > 0 && (
+                  {proportionalOperationalCosts.networkMonthly > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Network Operations</span>
-                      <span className="font-medium">{formatMonthlyCurrency(operationalCosts.networkMonthly, currency)}</span>
+                      <span className="font-medium">{formatMonthlyCurrency(proportionalOperationalCosts.networkMonthly, currency)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm font-medium pt-2 border-t">
                     <span>Total Monthly Cost</span>
-                    <span>{formatMonthlyCurrency(operationalCosts.totalMonthly, currency)}</span>
+                    <span>{formatMonthlyCurrency(proportionalOperationalCosts.totalMonthly, currency)}</span>
                   </div>
                 </div>
               </div>
