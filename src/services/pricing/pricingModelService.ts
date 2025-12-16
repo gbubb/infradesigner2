@@ -76,9 +76,14 @@ export interface StorageClusterCapacity {
   name: string;
   poolType: string; // '3 Replica', 'Erasure Coding 8+3', etc.
   isHyperConverged: boolean;
-  // Raw capacity
+  // Physical storage cluster info (for shared capacity tracking)
+  physicalClusterId: string;
+  physicalClusterName: string;
+  // Raw capacity for this pool (may be shared with other pools)
   totalRawCapacityTB: number;
   totalRawCapacityTiB: number;
+  // Physical cluster's total raw capacity (shared across all pools targeting it)
+  physicalClusterRawTiB: number;
   // After replication/EC overhead
   poolEfficiencyFactor: number;
   usableCapacityTB: number;
@@ -86,10 +91,17 @@ export interface StorageClusterCapacity {
   // After max fill factor
   maxFillFactor: number;
   effectiveCapacityTiB: number;
-  // After target utilization (sellable)
+  // After target utilization (sellable) - before shared capacity adjustment
   targetUtilization: number;
+  theoreticalSellableTiB: number;
+  // Raw consumption at target utilization
+  rawConsumptionTiB: number;
+  // Adjusted sellable capacity (after accounting for shared consumption)
   sellableCapacityTiB: number;
   sellableCapacityGB: number;
+  // Shared capacity metrics
+  sharedCapacityWarning: boolean;
+  capacityAdjustmentFactor: number; // 1.0 = no adjustment, < 1.0 = reduced due to sharing
   // Cost metrics
   totalCost: number;
   costPerUsableTiB: number;
@@ -307,13 +319,98 @@ export class PricingModelService {
 
     const storageTargetUtilization = this.config.storageTargetUtilization ?? this.config.targetUtilization;
 
-    return storagePools.map(pool => {
-      // Find the physical storage cluster this pool targets
+    // Step 1: Filter storage pools based on selected cluster
+    // When a specific compute cluster is selected, only include storage pools
+    // that target storage clusters linked to that compute cluster
+    let filteredPools = storagePools;
+
+    if (this.selectedClusterId && this.selectedClusterId !== 'all') {
+      // Find storage clusters that are linked to the selected compute cluster
+      const linkedStorageClusterIds = storageClusters
+        .filter(sc => sc.type === 'hyperConverged' && sc.computeClusterId === this.selectedClusterId)
+        .map(sc => sc.id);
+
+      // Filter pools to only those targeting linked storage clusters
+      filteredPools = storagePools.filter(pool =>
+        pool.storageClusterId && linkedStorageClusterIds.includes(pool.storageClusterId)
+      );
+
+      console.log('[PricingModelService] Storage pool filtering:', {
+        selectedClusterId: this.selectedClusterId,
+        linkedStorageClusterIds,
+        originalPoolCount: storagePools.length,
+        filteredPoolCount: filteredPools.length
+      });
+    }
+
+    // Step 2: Calculate raw capacity per physical storage cluster
+    // This is needed to properly handle shared capacity across pools
+    const physicalClusterRawCapacity = new Map<string, { rawTiB: number; rawTB: number; name: string }>();
+
+    storageClusters.forEach(sc => {
+      let clusterNodes: InfrastructureComponent[] = [];
+
+      if (sc.type === 'hyperConverged' && sc.computeClusterId) {
+        clusterNodes = designComponents.filter(
+          component => component.role === 'hyperConvergedNode' &&
+          component.clusterInfo?.clusterId === sc.computeClusterId
+        );
+      } else {
+        clusterNodes = designComponents.filter(
+          component => component.role === 'storageNode' &&
+          component.clusterInfo?.clusterId === sc.id
+        );
+      }
+
+      let totalRawTB = 0;
+      clusterNodes.forEach(node => {
+        const quantity = node.quantity || 1;
+        if ('attachedDisks' in node && node.attachedDisks) {
+          const disks = node.attachedDisks || [];
+          disks.forEach((disk: { capacityTB?: number; quantity?: number; storageClusterId?: string }) => {
+            if (disk && 'capacityTB' in disk) {
+              if (sc.type === 'hyperConverged') {
+                // For HCI, only count disks tagged for this storage cluster
+                if ('storageClusterId' in disk && disk.storageClusterId === sc.id) {
+                  const diskQuantity = disk.quantity || 1;
+                  totalRawTB += (disk.capacityTB || 0) * diskQuantity * quantity;
+                }
+              } else {
+                const diskQuantity = disk.quantity || 1;
+                totalRawTB += (disk.capacityTB || 0) * diskQuantity * quantity;
+              }
+            }
+          });
+        }
+      });
+
+      physicalClusterRawCapacity.set(sc.id, {
+        rawTB: totalRawTB,
+        rawTiB: totalRawTB * TB_TO_TIB,
+        name: sc.name
+      });
+    });
+
+    // Step 3: Calculate initial pool metrics (before shared capacity adjustment)
+    interface PoolMetrics {
+      pool: typeof filteredPools[0];
+      targetCluster: typeof storageClusters[0] | undefined;
+      poolEfficiencyFactor: number;
+      maxFillFactor: number;
+      totalRawCapacityTB: number;
+      totalRawCapacityTiB: number;
+      usableCapacityTB: number;
+      usableCapacityTiB: number;
+      effectiveCapacityTiB: number;
+      theoreticalSellableTiB: number;
+      rawConsumptionTiB: number; // Raw capacity consumed at target utilization
+      totalCost: number;
+    }
+
+    const poolMetrics: PoolMetrics[] = filteredPools.map(pool => {
       const targetCluster = storageClusters.find(sc => sc.id === pool.storageClusterId);
 
       let clusterNodes: InfrastructureComponent[] = [];
-
-      // Check if this pool targets a hyper-converged physical cluster
       if (targetCluster?.type === 'hyperConverged' && targetCluster.computeClusterId) {
         clusterNodes = designComponents.filter(
           component => component.role === 'hyperConvergedNode' &&
@@ -326,7 +423,6 @@ export class PricingModelService {
         );
       }
 
-      // Calculate total raw capacity and costs
       let totalRawCapacityTB = 0;
       let totalCost = 0;
 
@@ -340,7 +436,6 @@ export class PricingModelService {
 
           disks.forEach((disk: { capacityTB?: number; quantity?: number; cost?: number; storageClusterId?: string }) => {
             if (disk && 'capacityTB' in disk) {
-              // For hyper-converged clusters, only count disks tagged for this physical storage cluster
               if (targetCluster?.type === 'hyperConverged') {
                 if ('storageClusterId' in disk && disk.storageClusterId === targetCluster.id) {
                   const diskQuantity = disk.quantity || 1;
@@ -355,7 +450,6 @@ export class PricingModelService {
             }
           });
 
-          // For hyper-converged, use proportional cost; for dedicated, use full node cost
           if (targetCluster?.type === 'hyperConverged') {
             totalCost += diskCostForNode;
           } else {
@@ -364,7 +458,6 @@ export class PricingModelService {
         }
       });
 
-      // Calculate capacity tiers
       const poolEfficiencyFactor = poolEfficiencyFactors[pool.poolType || '3 Replica'] || 0.33333;
       const maxFillFactor = (pool.maxFillFactor || 80) / 100;
 
@@ -372,37 +465,116 @@ export class PricingModelService {
       const usableCapacityTB = totalRawCapacityTB * poolEfficiencyFactor;
       const usableCapacityTiB = usableCapacityTB * TB_TO_TIB;
       const effectiveCapacityTiB = usableCapacityTiB * maxFillFactor;
-      const sellableCapacityTiB = effectiveCapacityTiB * storageTargetUtilization;
-      const sellableCapacityGB = sellableCapacityTiB * TIB_TO_GB;
+      const theoreticalSellableTiB = effectiveCapacityTiB * storageTargetUtilization;
+
+      // Calculate raw consumption: sellable capacity converted back to raw
+      // rawConsumption = theoreticalSellable / efficiency / maxFill
+      // This represents how much raw capacity this pool would consume at target utilization
+      const rawConsumptionTiB = theoreticalSellableTiB / poolEfficiencyFactor / maxFillFactor;
+
+      return {
+        pool,
+        targetCluster,
+        poolEfficiencyFactor,
+        maxFillFactor,
+        totalRawCapacityTB,
+        totalRawCapacityTiB,
+        usableCapacityTB,
+        usableCapacityTiB,
+        effectiveCapacityTiB,
+        theoreticalSellableTiB,
+        rawConsumptionTiB,
+        totalCost
+      };
+    });
+
+    // Step 4: Calculate shared capacity adjustments
+    // Group pools by physical storage cluster and check for over-commitment
+    const poolsByPhysicalCluster = new Map<string, PoolMetrics[]>();
+
+    poolMetrics.forEach(pm => {
+      const physicalClusterId = pm.targetCluster?.id || 'unknown';
+      if (!poolsByPhysicalCluster.has(physicalClusterId)) {
+        poolsByPhysicalCluster.set(physicalClusterId, []);
+      }
+      poolsByPhysicalCluster.get(physicalClusterId)!.push(pm);
+    });
+
+    // Calculate adjustment factors for each physical cluster
+    const adjustmentFactors = new Map<string, number>();
+
+    poolsByPhysicalCluster.forEach((pools, physicalClusterId) => {
+      const physicalCapacity = physicalClusterRawCapacity.get(physicalClusterId);
+      if (!physicalCapacity || physicalCapacity.rawTiB === 0) {
+        adjustmentFactors.set(physicalClusterId, 1.0);
+        return;
+      }
+
+      // Sum total raw consumption across all pools targeting this physical cluster
+      const totalRawConsumption = pools.reduce((sum, pm) => sum + pm.rawConsumptionTiB, 0);
+
+      // If total consumption exceeds available raw capacity, calculate adjustment factor
+      if (totalRawConsumption > physicalCapacity.rawTiB) {
+        const factor = physicalCapacity.rawTiB / totalRawConsumption;
+        adjustmentFactors.set(physicalClusterId, factor);
+        console.log('[PricingModelService] Shared capacity over-commitment:', {
+          physicalClusterId,
+          physicalClusterName: physicalCapacity.name,
+          availableRawTiB: physicalCapacity.rawTiB,
+          totalRawConsumption,
+          adjustmentFactor: factor,
+          poolCount: pools.length
+        });
+      } else {
+        adjustmentFactors.set(physicalClusterId, 1.0);
+      }
+    });
+
+    // Step 5: Build final results with adjusted capacities
+    return poolMetrics.map(pm => {
+      const physicalClusterId = pm.targetCluster?.id || 'unknown';
+      const physicalCapacity = physicalClusterRawCapacity.get(physicalClusterId);
+      const adjustmentFactor = adjustmentFactors.get(physicalClusterId) || 1.0;
+
+      // Apply adjustment factor to sellable capacity
+      const adjustedSellableTiB = pm.theoreticalSellableTiB * adjustmentFactor;
+      const sellableCapacityGB = adjustedSellableTiB * TIB_TO_GB;
 
       // Calculate cost metrics
-      const costPerUsableTiB = usableCapacityTiB > 0 ? totalCost / usableCapacityTiB : 0;
+      const costPerUsableTiB = pm.usableCapacityTiB > 0 ? pm.totalCost / pm.usableCapacityTiB : 0;
 
       // Get per-cluster price or use default
       const clusterPricing = this.config.storageClusterPricing?.find(
-        p => p.clusterId === pool.id || p.clusterName === pool.name
+        p => p.clusterId === pm.pool.id || p.clusterName === pm.pool.name
       );
       const pricePerGBMonth = clusterPricing?.fixedPricePerGBMonth ?? this.config.fixedStoragePrice ?? 0.036;
 
-      // Calculate monthly revenue
+      // Calculate monthly revenue based on adjusted sellable capacity
       const monthlyRevenue = sellableCapacityGB * pricePerGBMonth;
 
       return {
-        id: pool.id,
-        name: pool.name,
-        poolType: pool.poolType || '3 Replica',
-        isHyperConverged: targetCluster?.type === 'hyperConverged' || false,
-        totalRawCapacityTB,
-        totalRawCapacityTiB,
-        poolEfficiencyFactor,
-        usableCapacityTB,
-        usableCapacityTiB,
-        maxFillFactor,
-        effectiveCapacityTiB,
+        id: pm.pool.id,
+        name: pm.pool.name,
+        poolType: pm.pool.poolType || '3 Replica',
+        isHyperConverged: pm.targetCluster?.type === 'hyperConverged' || false,
+        physicalClusterId,
+        physicalClusterName: physicalCapacity?.name || 'Unknown',
+        totalRawCapacityTB: pm.totalRawCapacityTB,
+        totalRawCapacityTiB: pm.totalRawCapacityTiB,
+        physicalClusterRawTiB: physicalCapacity?.rawTiB || pm.totalRawCapacityTiB,
+        poolEfficiencyFactor: pm.poolEfficiencyFactor,
+        usableCapacityTB: pm.usableCapacityTB,
+        usableCapacityTiB: pm.usableCapacityTiB,
+        maxFillFactor: pm.maxFillFactor,
+        effectiveCapacityTiB: pm.effectiveCapacityTiB,
         targetUtilization: storageTargetUtilization,
-        sellableCapacityTiB,
+        theoreticalSellableTiB: pm.theoreticalSellableTiB,
+        rawConsumptionTiB: pm.rawConsumptionTiB,
+        sellableCapacityTiB: adjustedSellableTiB,
         sellableCapacityGB,
-        totalCost,
+        sharedCapacityWarning: adjustmentFactor < 1.0,
+        capacityAdjustmentFactor: adjustmentFactor,
+        totalCost: pm.totalCost,
         costPerUsableTiB,
         pricePerGBMonth,
         monthlyRevenue

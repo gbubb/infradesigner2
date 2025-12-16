@@ -556,18 +556,43 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, 
               <CollapsibleContent>
                 <div className="space-y-4 pt-4">
                   {storageCapacities.map((sc) => (
-                    <div key={sc.id} className="p-4 bg-muted/30 rounded-lg space-y-4">
+                    <div key={sc.id} className={`p-4 rounded-lg space-y-4 ${sc.sharedCapacityWarning ? 'bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900' : 'bg-muted/30'}`}>
                       {/* Storage Cluster Header */}
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <HardDrive className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                           <span className="font-medium">{sc.name}</span>
                           {sc.isHyperConverged && (
                             <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded">HCI</span>
                           )}
+                          {sc.sharedCapacityWarning && (
+                            <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Shared
+                            </span>
+                          )}
                         </div>
-                        <span className="text-sm text-muted-foreground">{sc.poolType}</span>
+                        <div className="text-right">
+                          <span className="text-sm text-muted-foreground">{sc.poolType}</span>
+                          <div className="text-xs text-muted-foreground">
+                            Physical: {sc.physicalClusterName}
+                          </div>
+                        </div>
                       </div>
+
+                      {/* Shared Capacity Warning */}
+                      {sc.sharedCapacityWarning && (
+                        <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded text-sm text-orange-800 dark:text-orange-200 flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-medium">Shared Physical Capacity</p>
+                            <p className="text-xs mt-1">
+                              Multiple pools share the underlying physical cluster "{sc.physicalClusterName}" ({sc.physicalClusterRawTiB.toFixed(1)} TiB raw).
+                              Sellable capacity reduced by {((1 - sc.capacityAdjustmentFactor) * 100).toFixed(0)}% to prevent over-commitment.
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Storage Capacity Waterfall */}
                       <TooltipProvider>
@@ -701,6 +726,9 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, 
                         <div className="p-2 bg-muted/50 rounded">
                           <p className="text-xs text-muted-foreground">Raw Capacity</p>
                           <p className="font-medium">{sc.totalRawCapacityTiB.toFixed(1)} TiB</p>
+                          {sc.physicalClusterRawTiB !== sc.totalRawCapacityTiB && (
+                            <p className="text-xs text-muted-foreground">Physical: {sc.physicalClusterRawTiB.toFixed(1)} TiB</p>
+                          )}
                         </div>
                         <div className="p-2 bg-muted/50 rounded">
                           <p className="text-xs text-muted-foreground">Usable Capacity</p>
@@ -712,10 +740,20 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, 
                           <p className="font-medium">{sc.effectiveCapacityTiB.toFixed(1)} TiB</p>
                           <p className="text-xs text-muted-foreground">({(sc.maxFillFactor * 100).toFixed(0)}% max fill)</p>
                         </div>
-                        <div className="p-2 bg-purple-50 dark:bg-purple-950/20 rounded border border-purple-200 dark:border-purple-900">
-                          <p className="text-xs text-purple-600 dark:text-purple-400">Sellable Capacity</p>
-                          <p className="font-medium text-purple-700 dark:text-purple-300">{sc.sellableCapacityTiB.toFixed(1)} TiB</p>
-                          <p className="text-xs text-muted-foreground">({(sc.targetUtilization * 100).toFixed(0)}% util)</p>
+                        <div className={`p-2 rounded border ${sc.sharedCapacityWarning ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900' : 'bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900'}`}>
+                          <p className={`text-xs ${sc.sharedCapacityWarning ? 'text-orange-600 dark:text-orange-400' : 'text-purple-600 dark:text-purple-400'}`}>
+                            Sellable Capacity
+                          </p>
+                          <p className={`font-medium ${sc.sharedCapacityWarning ? 'text-orange-700 dark:text-orange-300' : 'text-purple-700 dark:text-purple-300'}`}>
+                            {sc.sellableCapacityTiB.toFixed(1)} TiB
+                          </p>
+                          {sc.sharedCapacityWarning ? (
+                            <p className="text-xs text-orange-600 dark:text-orange-400">
+                              <span className="line-through text-muted-foreground">{sc.theoreticalSellableTiB.toFixed(1)}</span> → {sc.sellableCapacityTiB.toFixed(1)} TiB
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">({(sc.targetUtilization * 100).toFixed(0)}% util)</p>
+                          )}
                         </div>
                       </div>
 
