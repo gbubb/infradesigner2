@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { ClusterCapacity } from '@/services/pricing/pricingModelService';
-import { Cpu, MemoryStick, Server, AlertCircle, Info, ChevronDown, ChevronUp, DollarSign } from 'lucide-react';
+import { ClusterCapacity, StorageClusterCapacity } from '@/services/pricing/pricingModelService';
+import { Cpu, MemoryStick, Server, AlertCircle, Info, ChevronDown, ChevronUp, DollarSign, HardDrive, Database } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDesignStore } from '@/store';
+import { useCurrency } from '@/hooks/useCurrency';
+import { formatMonthlyCurrency } from '@/lib/utils';
 
 interface CapacityBreakdownProps {
   capacity: ClusterCapacity;
+  storageCapacities?: StorageClusterCapacity[];
 }
 
-export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }) => {
+export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, storageCapacities = [] }) => {
   const [haDetailsOpen, setHaDetailsOpen] = useState(false);
+  const [storageDetailsOpen, setStorageDetailsOpen] = useState(false);
   const activeDesign = useDesignStore((state) => state.activeDesign);
+  const { currency } = useCurrency();
 
   // Debug logging
   console.log('[CapacityBreakdown] Received capacity:', {
@@ -524,6 +529,222 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity }
             </CollapsibleContent>
           </Collapsible>
         </div>
+
+        {/* Storage Cluster Capacity Breakdown */}
+        {storageCapacities.length > 0 && (
+          <div className="mt-6 pt-6 border-t">
+            <Collapsible open={storageDetailsOpen} onOpenChange={setStorageDetailsOpen}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between p-4 hover:bg-muted/50"
+                >
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    <Database className="h-4 w-4" />
+                    Storage Cluster Capacity Breakdown
+                    <span className="text-muted-foreground font-normal">
+                      ({storageCapacities.length} pool{storageCapacities.length !== 1 ? 's' : ''})
+                    </span>
+                  </h4>
+                  {storageDetailsOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-4 pt-4">
+                  {storageCapacities.map((sc) => (
+                    <div key={sc.id} className="p-4 bg-muted/30 rounded-lg space-y-4">
+                      {/* Storage Cluster Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <HardDrive className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                          <span className="font-medium">{sc.name}</span>
+                          {sc.isHyperConverged && (
+                            <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded">HCI</span>
+                          )}
+                        </div>
+                        <span className="text-sm text-muted-foreground">{sc.poolType}</span>
+                      </div>
+
+                      {/* Storage Capacity Waterfall */}
+                      <TooltipProvider>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Capacity Allocation</span>
+                            <span className="font-medium">
+                              {sc.sellableCapacityTiB.toFixed(1)} TiB sellable
+                            </span>
+                          </div>
+                          <div className="relative h-10 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+                            {/* Sellable capacity - green */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className="absolute inset-y-0 left-0 bg-purple-600 dark:bg-purple-500 flex items-center justify-center cursor-help"
+                                  style={{ width: `${(sc.sellableCapacityTiB / sc.totalRawCapacityTiB) * 100}%` }}
+                                >
+                                  <span className="text-xs text-white font-medium px-1">
+                                    {((sc.sellableCapacityTiB / sc.totalRawCapacityTiB) * 100) > 15 && 'Sellable'}
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="space-y-1">
+                                  <p className="font-medium">Sellable Capacity</p>
+                                  <p className="text-sm">{sc.sellableCapacityTiB.toFixed(2)} TiB</p>
+                                  <p className="text-sm">{formatNumber(sc.sellableCapacityGB)} GB</p>
+                                  <p className="text-xs text-muted-foreground mt-1">Available for customer allocation</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+
+                            {/* Reserve capacity - lighter purple */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className="absolute inset-y-0 bg-purple-400 dark:bg-purple-600 flex items-center justify-center cursor-help"
+                                  style={{
+                                    left: `${(sc.sellableCapacityTiB / sc.totalRawCapacityTiB) * 100}%`,
+                                    width: `${((sc.effectiveCapacityTiB - sc.sellableCapacityTiB) / sc.totalRawCapacityTiB) * 100}%`
+                                  }}
+                                >
+                                  <span className="text-xs text-white font-medium px-1">
+                                    {((sc.effectiveCapacityTiB - sc.sellableCapacityTiB) / sc.totalRawCapacityTiB * 100) > 5 && 'Reserve'}
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="space-y-1">
+                                  <p className="font-medium">Reserve Capacity</p>
+                                  <p className="text-sm">{(sc.effectiveCapacityTiB - sc.sellableCapacityTiB).toFixed(2)} TiB</p>
+                                  <p className="text-xs text-muted-foreground mt-1">Buffer for growth ({((1 - sc.targetUtilization) * 100).toFixed(0)}%)</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+
+                            {/* Max fill factor overhead - blue */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className="absolute inset-y-0 bg-blue-600 dark:bg-blue-500 flex items-center justify-center cursor-help"
+                                  style={{
+                                    left: `${(sc.effectiveCapacityTiB / sc.totalRawCapacityTiB) * 100}%`,
+                                    width: `${((sc.usableCapacityTiB - sc.effectiveCapacityTiB) / sc.totalRawCapacityTiB) * 100}%`
+                                  }}
+                                >
+                                  <span className="text-xs text-white font-medium px-1">
+                                    {((sc.usableCapacityTiB - sc.effectiveCapacityTiB) / sc.totalRawCapacityTiB * 100) > 5 && 'Fill'}
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="space-y-1">
+                                  <p className="font-medium">Max Fill Factor Reserve</p>
+                                  <p className="text-sm">{(sc.usableCapacityTiB - sc.effectiveCapacityTiB).toFixed(2)} TiB</p>
+                                  <p className="text-xs text-muted-foreground mt-1">Reserved at {((1 - sc.maxFillFactor) * 100).toFixed(0)}% for performance</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+
+                            {/* Replication/EC overhead - orange */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className="absolute inset-y-0 bg-orange-600 dark:bg-orange-500 flex items-center justify-center cursor-help"
+                                  style={{
+                                    left: `${(sc.usableCapacityTiB / sc.totalRawCapacityTiB) * 100}%`,
+                                    width: `${((sc.totalRawCapacityTiB - sc.usableCapacityTiB) / sc.totalRawCapacityTiB) * 100}%`
+                                  }}
+                                >
+                                  <span className="text-xs text-white font-medium px-1">
+                                    {((sc.totalRawCapacityTiB - sc.usableCapacityTiB) / sc.totalRawCapacityTiB * 100) > 10 && 'Protection'}
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="space-y-1">
+                                  <p className="font-medium">Data Protection Overhead</p>
+                                  <p className="text-sm">{(sc.totalRawCapacityTiB - sc.usableCapacityTiB).toFixed(2)} TiB</p>
+                                  <p className="text-xs text-muted-foreground mt-1">{sc.poolType} ({((1 - sc.poolEfficiencyFactor) * 100).toFixed(0)}% overhead)</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+
+                          {/* Legend */}
+                          <div className="grid grid-cols-4 gap-2 mt-2 text-xs">
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-purple-600 dark:bg-purple-500 rounded"></div>
+                              <span className="text-muted-foreground">Sellable ({((sc.sellableCapacityTiB / sc.totalRawCapacityTiB) * 100).toFixed(0)}%)</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-purple-400 dark:bg-purple-600 rounded"></div>
+                              <span className="text-muted-foreground">Reserve ({(((sc.effectiveCapacityTiB - sc.sellableCapacityTiB) / sc.totalRawCapacityTiB) * 100).toFixed(0)}%)</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-blue-600 dark:bg-blue-500 rounded"></div>
+                              <span className="text-muted-foreground">Fill ({(((sc.usableCapacityTiB - sc.effectiveCapacityTiB) / sc.totalRawCapacityTiB) * 100).toFixed(0)}%)</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-orange-600 dark:bg-orange-500 rounded"></div>
+                              <span className="text-muted-foreground">Protection ({(((sc.totalRawCapacityTiB - sc.usableCapacityTiB) / sc.totalRawCapacityTiB) * 100).toFixed(0)}%)</span>
+                            </div>
+                          </div>
+                        </div>
+                      </TooltipProvider>
+
+                      {/* Storage Metrics Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div className="p-2 bg-muted/50 rounded">
+                          <p className="text-xs text-muted-foreground">Raw Capacity</p>
+                          <p className="font-medium">{sc.totalRawCapacityTiB.toFixed(1)} TiB</p>
+                        </div>
+                        <div className="p-2 bg-muted/50 rounded">
+                          <p className="text-xs text-muted-foreground">Usable Capacity</p>
+                          <p className="font-medium">{sc.usableCapacityTiB.toFixed(1)} TiB</p>
+                          <p className="text-xs text-muted-foreground">({(sc.poolEfficiencyFactor * 100).toFixed(0)}% efficient)</p>
+                        </div>
+                        <div className="p-2 bg-muted/50 rounded">
+                          <p className="text-xs text-muted-foreground">Effective Capacity</p>
+                          <p className="font-medium">{sc.effectiveCapacityTiB.toFixed(1)} TiB</p>
+                          <p className="text-xs text-muted-foreground">({(sc.maxFillFactor * 100).toFixed(0)}% max fill)</p>
+                        </div>
+                        <div className="p-2 bg-purple-50 dark:bg-purple-950/20 rounded border border-purple-200 dark:border-purple-900">
+                          <p className="text-xs text-purple-600 dark:text-purple-400">Sellable Capacity</p>
+                          <p className="font-medium text-purple-700 dark:text-purple-300">{sc.sellableCapacityTiB.toFixed(1)} TiB</p>
+                          <p className="text-xs text-muted-foreground">({(sc.targetUtilization * 100).toFixed(0)}% util)</p>
+                        </div>
+                      </div>
+
+                      {/* Pricing & Revenue */}
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div className="flex gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Price: </span>
+                            <span className="font-medium">${sc.pricePerGBMonth.toFixed(3)}/GB/mo</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Cost: </span>
+                            <span className="font-medium">${sc.costPerUsableTiB.toFixed(0)}/TiB</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm text-muted-foreground">Monthly Revenue: </span>
+                          <span className="font-medium text-purple-600 dark:text-purple-400">
+                            {formatMonthlyCurrency(sc.monthlyRevenue, currency)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

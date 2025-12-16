@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { useDesignStore } from '@/store';
-import { PricingModelService, PricingConfig, PricingModelResult } from '@/services/pricing/pricingModelService';
+import { PricingModelService, PricingConfig, PricingModelResult, StorageClusterPricing, StorageClusterCapacity } from '@/services/pricing/pricingModelService';
 import { ComputeCluster } from '@/types/placement';
 import { formatCurrency, formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -64,6 +64,8 @@ export const PricingModelTab: React.FC = () => {
     fixedCpuPrice: 0.01,
     fixedMemoryPrice: 0.003,
     fixedStoragePrice: 0.036, // per GB per month (~$36/TB/month)
+    storageTargetUtilization: 0.8, // 80% target storage utilization
+    storageClusterPricing: [], // Per-cluster storage pricing
     targetUtilization: 0.8, // 80% target utilization
     virtualizationOverhead: 0.05, // 5% overhead default
     virtualizationOverheadType: 'percentage', // Default to percentage
@@ -161,16 +163,38 @@ export const PricingModelTab: React.FC = () => {
     setPricingResult(result);
   }, [pricingService]);
 
-  const handleConfigChange = (key: keyof PricingConfig, value: string | number) => {
+  const handleConfigChange = (key: keyof PricingConfig, value: string | number | StorageClusterPricing[]) => {
     const updatedConfig = { ...config, [key]: value };
     updatePricingConfig(updatedConfig);
+  };
+
+  // Handle per-cluster storage pricing updates
+  const handleStorageClusterPriceChange = (clusterId: string, clusterName: string, price: number) => {
+    const currentPricing = config.storageClusterPricing || [];
+    const existingIndex = currentPricing.findIndex(p => p.clusterId === clusterId);
+
+    let newPricing: StorageClusterPricing[];
+    if (existingIndex >= 0) {
+      newPricing = [...currentPricing];
+      newPricing[existingIndex] = { clusterId, clusterName, fixedPricePerGBMonth: price };
+    } else {
+      newPricing = [...currentPricing, { clusterId, clusterName, fixedPricePerGBMonth: price }];
+    }
+
+    handleConfigChange('storageClusterPricing', newPricing);
+  };
+
+  // Get storage cluster price (from per-cluster config or default)
+  const getStorageClusterPrice = (clusterId: string): number => {
+    const clusterPricing = config.storageClusterPricing?.find(p => p.clusterId === clusterId);
+    return clusterPricing?.fixedPricePerGBMonth ?? config.fixedStoragePrice ?? 0.036;
   };
 
   const marginPercentage = config.operatingModel === 'costPlus'
     ? (config.profitMargin - 1) * 100
     : (pricingResult?.effectiveMargin || 0) * 100;
 
-  // Calculate breakeven utilization for fixed price mode
+  // Calculate breakeven utilization for fixed price mode (including storage)
   const breakevenUtilization = useMemo(() => {
     if (config.operatingModel !== 'fixedPrice' || !pricingResult) return null;
 
@@ -178,10 +202,19 @@ export const PricingModelTab: React.FC = () => {
     const usablevCPUs = pricingResult.clusterCapacity.usablevCPUs;
     const usableMemoryGB = pricingResult.clusterCapacity.usableMemoryGB;
 
-    // Revenue at 100% utilization
-    const maxMonthlyRevenue =
-      (usablevCPUs * config.fixedCpuPrice * 730) +
-      (usableMemoryGB * config.fixedMemoryPrice * 730);
+    // Compute revenue at 100% utilization
+    const maxComputeRevenue =
+      (usablevCPUs * (config.fixedCpuPrice || 0.01) * 730) +
+      (usableMemoryGB * (config.fixedMemoryPrice || 0.003) * 730);
+
+    // Storage revenue at 100% utilization (using effective capacity before target util)
+    const maxStorageRevenue = pricingResult.storageClusterCapacities.reduce((sum, sc) => {
+      // Calculate max sellable at 100% utilization
+      const maxSellableGB = sc.effectiveCapacityTiB * 1024; // TiB to GB
+      return sum + (maxSellableGB * sc.pricePerGBMonth);
+    }, 0);
+
+    const maxMonthlyRevenue = maxComputeRevenue + maxStorageRevenue;
 
     if (maxMonthlyRevenue === 0) return null;
 
@@ -457,17 +490,17 @@ export const PricingModelTab: React.FC = () => {
               </div>
             )}
 
-            {/* Target Utilization - moved to same row */}
+            {/* Target Utilization - Compute */}
             <div className="space-y-2">
               <div className="flex items-center space-x-1">
-                <Label htmlFor="targetUtil" className="text-sm font-medium">Target Utilization</Label>
+                <Label htmlFor="targetUtil" className="text-sm font-medium">Compute Utilization</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
                       <Info className="h-3 w-3 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Target cluster utilization for sellable capacity</p>
+                      <p>Target compute cluster utilization for sellable capacity</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -490,6 +523,87 @@ export const PricingModelTab: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Storage Target Utilization - separate row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-1">
+                <Label htmlFor="storageTargetUtil" className="text-sm font-medium">Storage Utilization</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Target storage utilization for sellable capacity (applies to all storage clusters)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="storageTargetUtil"
+                  type="number"
+                  step="5"
+                  min="50"
+                  max="100"
+                  value={((config.storageTargetUtilization ?? config.targetUtilization) * 100).toFixed(0)}
+                  onChange={(e) => {
+                    const percentage = parseFloat(e.target.value) || 80;
+                    handleConfigChange('storageTargetUtilization', percentage / 100);
+                  }}
+                  className="w-full"
+                />
+                <span className="text-sm text-muted-foreground">%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Per-Cluster Storage Pricing (Fixed Price Mode Only) */}
+          {config.operatingModel === 'fixedPrice' && pricingResult && pricingResult.storageClusterCapacities.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center space-x-1">
+                <Label className="text-sm font-medium">Storage Cluster Pricing</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Set individual pricing per storage cluster. Default storage price is used if not specified.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {pricingResult.storageClusterCapacities.map((sc) => (
+                  <div key={sc.id} className="p-3 bg-muted/30 rounded-lg space-y-2">
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium truncate" title={sc.name}>{sc.name}</span>
+                      {sc.isHyperConverged && (
+                        <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded">HCI</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {sc.poolType} • {sc.sellableCapacityTiB.toFixed(1)} TiB sellable
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        value={getStorageClusterPrice(sc.id)}
+                        onChange={(e) => handleStorageClusterPriceChange(sc.id, sc.name, parseFloat(e.target.value) || 0)}
+                        className="flex-1 h-8 text-sm"
+                      />
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">$/GB/mo</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Virtualization Overhead */}
           <div className="space-y-2">
@@ -874,10 +988,10 @@ export const PricingModelTab: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Sellable Capacity */}
+                  {/* Sellable Capacity - Compute */}
                   <div className="flex justify-between items-start p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                     <div className="flex-1">
-                      <p className="text-sm text-muted-foreground">Sellable Capacity</p>
+                      <p className="text-sm text-muted-foreground">Sellable Compute Capacity</p>
                       <div className="flex gap-4 mt-1">
                         <div>
                           <p className="text-lg font-bold">{Math.round(pricingResult.clusterCapacity.sellingvCPUs)}</p>
@@ -894,18 +1008,64 @@ export const PricingModelTab: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Sellable Capacity - Storage */}
+                  {pricingResult.storageClusterCapacities.length > 0 && (
+                    <div className="flex justify-between items-start p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground">Sellable Storage Capacity</p>
+                        <div className="flex gap-4 mt-1">
+                          <div>
+                            <p className="text-lg font-bold">
+                              {(pricingResult.totalSellableStorageGB / 1024).toFixed(1)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">TiB</p>
+                          </div>
+                          <div>
+                            <p className="text-lg font-bold">{pricingResult.storageClusterCapacities.length}</p>
+                            <p className="text-xs text-muted-foreground">Pool{pricingResult.storageClusterCapacities.length !== 1 ? 's' : ''}</p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          At {((config.storageTargetUtilization ?? config.targetUtilization) * 100).toFixed(0)}% utilization
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Total Revenue Potential */}
                   <div className="flex justify-between items-start p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                    <div>
+                    <div className="w-full">
                       <p className="text-sm text-muted-foreground">Monthly Revenue</p>
-                      <p className="text-2xl font-bold text-blue-600">
-                        {formatMonthlyCurrency(
+                      {(() => {
+                        const computeRevenue =
                           (pricingResult.clusterCapacity.sellingvCPUs * pricingResult.baseCostPerVCPU * 730) +
-                          (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730),
-                          currency
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground">At target utilization</p>
+                          (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730);
+                        const storageRevenue = pricingResult.totalStorageMonthlyRevenue;
+                        const totalRevenue = computeRevenue + storageRevenue;
+
+                        return (
+                          <>
+                            <p className="text-2xl font-bold text-blue-600">
+                              {formatMonthlyCurrency(totalRevenue, currency)}
+                            </p>
+                            {storageRevenue > 0 && (
+                              <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                                <div className="flex justify-between">
+                                  <span>Compute:</span>
+                                  <span>{formatMonthlyCurrency(computeRevenue, currency)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Storage:</span>
+                                  <span>{formatMonthlyCurrency(storageRevenue, currency)}</span>
+                                </div>
+                              </div>
+                            )}
+                            {storageRevenue === 0 && (
+                              <p className="text-xs text-muted-foreground">At target utilization</p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -914,18 +1074,23 @@ export const PricingModelTab: React.FC = () => {
                     <div>
                       <p className="text-sm text-muted-foreground">Monthly Profit</p>
                       {(() => {
-                        const monthlyProfit =
-                          ((pricingResult.clusterCapacity.sellingvCPUs * pricingResult.baseCostPerVCPU * 730) +
-                           (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730)) -
-                          proportionalOperationalCosts.totalMonthly;
+                        const computeRevenue =
+                          (pricingResult.clusterCapacity.sellingvCPUs * pricingResult.baseCostPerVCPU * 730) +
+                          (pricingResult.clusterCapacity.sellingMemoryGB * pricingResult.baseCostPerGBMemory * 730);
+                        const storageRevenue = pricingResult.totalStorageMonthlyRevenue;
+                        const totalRevenue = computeRevenue + storageRevenue;
+                        const monthlyProfit = totalRevenue - proportionalOperationalCosts.totalMonthly;
                         const isPositive = monthlyProfit >= 0;
+                        const effectiveMargin = proportionalOperationalCosts.totalMonthly > 0
+                          ? ((totalRevenue - proportionalOperationalCosts.totalMonthly) / proportionalOperationalCosts.totalMonthly) * 100
+                          : 0;
                         return (
                           <>
                             <p className={`text-2xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                               {formatMonthlyCurrency(Math.round(monthlyProfit), currency)}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {marginPercentage.toFixed(1)}% margin
+                              {effectiveMargin.toFixed(1)}% margin
                             </p>
                           </>
                         );
@@ -992,7 +1157,10 @@ export const PricingModelTab: React.FC = () => {
           </div>
 
           {/* Capacity Breakdown */}
-          <CapacityBreakdown capacity={pricingResult.clusterCapacity} />
+          <CapacityBreakdown
+            capacity={pricingResult.clusterCapacity}
+            storageCapacities={pricingResult.storageClusterCapacities}
+          />
 
           {/* VM Price Calculator */}
           <VMPriceCalculator pricingService={pricingService} />

@@ -1,12 +1,21 @@
 import { InfrastructureDesign, InfrastructureComponent, ComponentRole } from '@/types/infrastructure';
 import { PlacedComponent, ComputeCluster } from '@/types/placement';
 
+// Per-storage-cluster pricing configuration
+export interface StorageClusterPricing {
+  clusterId: string;
+  clusterName: string;
+  fixedPricePerGBMonth: number; // $/GB/month for this cluster
+}
+
 export interface PricingConfig {
   operatingModel: 'costPlus' | 'fixedPrice';
   profitMargin: number; // Multiplier for cost plus model (e.g., 1.3 = 30% margin)
   fixedCpuPrice?: number; // $/vCPU/hour for fixed price model
   fixedMemoryPrice?: number; // $/GB/hour for fixed price model
-  fixedStoragePrice?: number; // $/GB/month for fixed price model
+  fixedStoragePrice?: number; // $/GB/month for fixed price model (default/fallback)
+  storageTargetUtilization?: number; // Target storage utilization (0-1), defaults to targetUtilization if not set
+  storageClusterPricing?: StorageClusterPricing[]; // Per-cluster storage pricing
   targetUtilization: number; // Target cluster utilization (0-1)
   virtualizationOverhead: number; // Overhead percentage (0-1) or fixed vCPUs
   virtualizationOverheadType: 'percentage' | 'fixed'; // New field
@@ -61,13 +70,45 @@ export interface ClusterCapacity {
   memoryGBPerDisk?: number;
 }
 
+// Storage cluster capacity breakdown
+export interface StorageClusterCapacity {
+  id: string;
+  name: string;
+  poolType: string; // '3 Replica', 'Erasure Coding 8+3', etc.
+  isHyperConverged: boolean;
+  // Raw capacity
+  totalRawCapacityTB: number;
+  totalRawCapacityTiB: number;
+  // After replication/EC overhead
+  poolEfficiencyFactor: number;
+  usableCapacityTB: number;
+  usableCapacityTiB: number;
+  // After max fill factor
+  maxFillFactor: number;
+  effectiveCapacityTiB: number;
+  // After target utilization (sellable)
+  targetUtilization: number;
+  sellableCapacityTiB: number;
+  sellableCapacityGB: number;
+  // Cost metrics
+  totalCost: number;
+  costPerUsableTiB: number;
+  // Pricing (for fixed price mode)
+  pricePerGBMonth: number;
+  monthlyRevenue: number;
+}
+
 export interface PricingModelResult {
   clusterCapacity: ClusterCapacity;
+  storageClusterCapacities: StorageClusterCapacity[];
   cpuMemoryWeightRatio: number;
   baseCostPerVCPU: number;
   baseCostPerGBMemory: number;
   effectiveMargin: number;
   samplePrices: VMPricing[];
+  // Storage revenue metrics
+  totalSellableStorageGB: number;
+  totalStorageMonthlyRevenue: number;
 }
 
 export interface ExternalOperationalCosts {
@@ -210,9 +251,10 @@ export class PricingModelService {
 
   calculatePricing(): PricingModelResult {
     const clusterCapacity = this.calculateClusterCapacity();
+    const storageClusterCapacities = this.calculateStorageClusterCapacities();
     const infrastructureCosts = this.calculateInfrastructureCosts();
     const cpuMemoryRatio = this.calculateCpuMemoryWeightRatio(clusterCapacity);
-    
+
     const baseCosts = this.calculateBaseCosts(
       infrastructureCosts,
       clusterCapacity,
@@ -221,14 +263,151 @@ export class PricingModelService {
 
     const samplePrices = this.generateSamplePrices(baseCosts, clusterCapacity);
 
+    // Calculate total storage metrics
+    const totalSellableStorageGB = storageClusterCapacities.reduce(
+      (sum, sc) => sum + sc.sellableCapacityGB, 0
+    );
+    const totalStorageMonthlyRevenue = storageClusterCapacities.reduce(
+      (sum, sc) => sum + sc.monthlyRevenue, 0
+    );
+
     return {
       clusterCapacity,
+      storageClusterCapacities,
       cpuMemoryWeightRatio: cpuMemoryRatio,
       baseCostPerVCPU: baseCosts.cpuCost,
       baseCostPerGBMemory: baseCosts.memoryCost,
       effectiveMargin: this.calculateEffectiveMargin(baseCosts, infrastructureCosts),
-      samplePrices
+      samplePrices,
+      totalSellableStorageGB,
+      totalStorageMonthlyRevenue
     };
+  }
+
+  public calculateStorageClusterCapacities(): StorageClusterCapacity[] {
+    if (!this.design?.requirements?.storageRequirements?.storagePools) {
+      return [];
+    }
+
+    const TB_TO_TIB = 0.909495;
+    const TIB_TO_GB = 1024;
+    const storagePools = this.design.requirements.storageRequirements.storagePools;
+    const storageClusters = this.design.requirements.storageRequirements.storageClusters || [];
+    const designComponents = this.design.components as InfrastructureComponent[] || [];
+
+    // Storage pool efficiency factors
+    const poolEfficiencyFactors: Record<string, number> = {
+      '3 Replica': 0.33333,
+      '2 Replica': 0.5,
+      'Erasure Coding 4+2': 0.66666,
+      'Erasure Coding 8+3': 0.72727,
+      'Erasure Coding 8+4': 0.66666,
+      'Erasure Coding 10+4': 0.71428
+    };
+
+    const storageTargetUtilization = this.config.storageTargetUtilization ?? this.config.targetUtilization;
+
+    return storagePools.map(pool => {
+      // Find the physical storage cluster this pool targets
+      const targetCluster = storageClusters.find(sc => sc.id === pool.storageClusterId);
+
+      let clusterNodes: InfrastructureComponent[] = [];
+
+      // Check if this pool targets a hyper-converged physical cluster
+      if (targetCluster?.type === 'hyperConverged' && targetCluster.computeClusterId) {
+        clusterNodes = designComponents.filter(
+          component => component.role === 'hyperConvergedNode' &&
+          component.clusterInfo?.clusterId === targetCluster.computeClusterId
+        );
+      } else if (targetCluster) {
+        clusterNodes = designComponents.filter(
+          component => component.role === 'storageNode' &&
+          component.clusterInfo?.clusterId === targetCluster.id
+        );
+      }
+
+      // Calculate total raw capacity and costs
+      let totalRawCapacityTB = 0;
+      let totalCost = 0;
+
+      clusterNodes.forEach(node => {
+        const quantity = node.quantity || 1;
+        const nodeCost = (node.cost || 0) * quantity;
+
+        if ('attachedDisks' in node && node.attachedDisks) {
+          const disks = node.attachedDisks || [];
+          let diskCostForNode = 0;
+
+          disks.forEach((disk: { capacityTB?: number; quantity?: number; cost?: number; storageClusterId?: string }) => {
+            if (disk && 'capacityTB' in disk) {
+              // For hyper-converged clusters, only count disks tagged for this physical storage cluster
+              if (targetCluster?.type === 'hyperConverged') {
+                if ('storageClusterId' in disk && disk.storageClusterId === targetCluster.id) {
+                  const diskQuantity = disk.quantity || 1;
+                  totalRawCapacityTB += (disk.capacityTB || 0) * diskQuantity * quantity;
+                  diskCostForNode += (disk.cost || 0) * diskQuantity * quantity;
+                }
+              } else {
+                const diskQuantity = disk.quantity || 1;
+                totalRawCapacityTB += (disk.capacityTB || 0) * diskQuantity * quantity;
+                diskCostForNode += (disk.cost || 0) * diskQuantity * quantity;
+              }
+            }
+          });
+
+          // For hyper-converged, use proportional cost; for dedicated, use full node cost
+          if (targetCluster?.type === 'hyperConverged') {
+            totalCost += diskCostForNode;
+          } else {
+            totalCost += nodeCost;
+          }
+        }
+      });
+
+      // Calculate capacity tiers
+      const poolEfficiencyFactor = poolEfficiencyFactors[pool.poolType || '3 Replica'] || 0.33333;
+      const maxFillFactor = (pool.maxFillFactor || 80) / 100;
+
+      const totalRawCapacityTiB = totalRawCapacityTB * TB_TO_TIB;
+      const usableCapacityTB = totalRawCapacityTB * poolEfficiencyFactor;
+      const usableCapacityTiB = usableCapacityTB * TB_TO_TIB;
+      const effectiveCapacityTiB = usableCapacityTiB * maxFillFactor;
+      const sellableCapacityTiB = effectiveCapacityTiB * storageTargetUtilization;
+      const sellableCapacityGB = sellableCapacityTiB * TIB_TO_GB;
+
+      // Calculate cost metrics
+      const costPerUsableTiB = usableCapacityTiB > 0 ? totalCost / usableCapacityTiB : 0;
+
+      // Get per-cluster price or use default
+      const clusterPricing = this.config.storageClusterPricing?.find(
+        p => p.clusterId === pool.id || p.clusterName === pool.name
+      );
+      const pricePerGBMonth = clusterPricing?.fixedPricePerGBMonth ?? this.config.fixedStoragePrice ?? 0.036;
+
+      // Calculate monthly revenue
+      const monthlyRevenue = sellableCapacityGB * pricePerGBMonth;
+
+      return {
+        id: pool.id,
+        name: pool.name,
+        poolType: pool.poolType || '3 Replica',
+        isHyperConverged: targetCluster?.type === 'hyperConverged' || false,
+        totalRawCapacityTB,
+        totalRawCapacityTiB,
+        poolEfficiencyFactor,
+        usableCapacityTB,
+        usableCapacityTiB,
+        maxFillFactor,
+        effectiveCapacityTiB,
+        targetUtilization: storageTargetUtilization,
+        sellableCapacityTiB,
+        sellableCapacityGB,
+        totalCost,
+        costPerUsableTiB,
+        pricePerGBMonth,
+        monthlyRevenue
+      };
+    });
   }
 
   public calculateClusterCapacity(): ClusterCapacity {
