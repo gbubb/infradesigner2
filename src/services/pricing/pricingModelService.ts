@@ -1,7 +1,15 @@
 import { InfrastructureDesign, InfrastructureComponent, ComponentRole } from '@/types/infrastructure';
 import { PlacedComponent, ComputeCluster } from '@/types/placement';
 
-// Per-storage-cluster pricing configuration
+// Per-storage-pool pricing and utilization configuration
+export interface StoragePoolConfig {
+  poolId: string;
+  poolName: string;
+  fixedPricePerGBMonth: number; // $/GB/month for this pool
+  targetUtilization: number; // 0-1, target utilization for this specific pool
+}
+
+// Legacy: Per-storage-cluster pricing configuration (deprecated, use StoragePoolConfig)
 export interface StorageClusterPricing {
   clusterId: string;
   clusterName: string;
@@ -14,8 +22,9 @@ export interface PricingConfig {
   fixedCpuPrice?: number; // $/vCPU/hour for fixed price model
   fixedMemoryPrice?: number; // $/GB/hour for fixed price model
   fixedStoragePrice?: number; // $/GB/month for fixed price model (default/fallback)
-  storageTargetUtilization?: number; // Target storage utilization (0-1), defaults to targetUtilization if not set
-  storageClusterPricing?: StorageClusterPricing[]; // Per-cluster storage pricing
+  storageTargetUtilization?: number; // Default storage utilization (0-1), used when pool-specific not set
+  storagePoolConfigs?: StoragePoolConfig[]; // Per-pool pricing and utilization
+  storageClusterPricing?: StorageClusterPricing[]; // Legacy: Per-cluster storage pricing
   targetUtilization: number; // Target cluster utilization (0-1)
   virtualizationOverhead: number; // Overhead percentage (0-1) or fixed vCPUs
   virtualizationOverheadType: 'percentage' | 'fixed'; // New field
@@ -91,17 +100,18 @@ export interface StorageClusterCapacity {
   // After max fill factor
   maxFillFactor: number;
   effectiveCapacityTiB: number;
-  // After target utilization (sellable) - before shared capacity adjustment
+  // Target utilization for this specific pool
   targetUtilization: number;
-  theoreticalSellableTiB: number;
   // Raw consumption at target utilization
   rawConsumptionTiB: number;
-  // Adjusted sellable capacity (after accounting for shared consumption)
+  // Sellable capacity at target utilization
   sellableCapacityTiB: number;
   sellableCapacityGB: number;
-  // Shared capacity metrics
-  sharedCapacityWarning: boolean;
-  capacityAdjustmentFactor: number; // 1.0 = no adjustment, < 1.0 = reduced due to sharing
+  // Shared capacity validation
+  maxAvailableUtilization: number; // Max utilization this pool can use given other pools' consumption
+  capacityError: boolean; // True if total consumption exceeds physical capacity
+  totalPhysicalConsumptionTiB: number; // Total raw consumption across all pools on same physical cluster
+  otherPoolsConsumptionTiB: number; // Raw consumption by other pools on same physical cluster
   // Cost metrics
   totalCost: number;
   costPerUsableTiB: number;
@@ -317,7 +327,8 @@ export class PricingModelService {
       'Erasure Coding 10+4': 0.71428
     };
 
-    const storageTargetUtilization = this.config.storageTargetUtilization ?? this.config.targetUtilization;
+    // Default storage utilization (used when pool-specific not configured)
+    const defaultStorageUtilization = this.config.storageTargetUtilization ?? this.config.targetUtilization;
 
     // Step 1: Filter storage pools based on selected cluster
     // When a specific compute cluster is selected, only include storage pools
@@ -391,7 +402,7 @@ export class PricingModelService {
       });
     });
 
-    // Step 3: Calculate initial pool metrics (before shared capacity adjustment)
+    // Step 3: Calculate initial pool metrics
     interface PoolMetrics {
       pool: typeof filteredPools[0];
       targetCluster: typeof storageClusters[0] | undefined;
@@ -402,8 +413,6 @@ export class PricingModelService {
       usableCapacityTB: number;
       usableCapacityTiB: number;
       effectiveCapacityTiB: number;
-      theoreticalSellableTiB: number;
-      rawConsumptionTiB: number; // Raw capacity consumed at target utilization
       totalCost: number;
     }
 
@@ -465,12 +474,6 @@ export class PricingModelService {
       const usableCapacityTB = totalRawCapacityTB * poolEfficiencyFactor;
       const usableCapacityTiB = usableCapacityTB * TB_TO_TIB;
       const effectiveCapacityTiB = usableCapacityTiB * maxFillFactor;
-      const theoreticalSellableTiB = effectiveCapacityTiB * storageTargetUtilization;
-
-      // Calculate raw consumption: sellable capacity converted back to raw
-      // rawConsumption = theoreticalSellable / efficiency / maxFill
-      // This represents how much raw capacity this pool would consume at target utilization
-      const rawConsumptionTiB = theoreticalSellableTiB / poolEfficiencyFactor / maxFillFactor;
 
       return {
         pool,
@@ -482,14 +485,11 @@ export class PricingModelService {
         usableCapacityTB,
         usableCapacityTiB,
         effectiveCapacityTiB,
-        theoreticalSellableTiB,
-        rawConsumptionTiB,
         totalCost
       };
     });
 
-    // Step 4: Calculate shared capacity adjustments
-    // Group pools by physical storage cluster and check for over-commitment
+    // Step 4: Group pools by physical storage cluster for shared capacity tracking
     const poolsByPhysicalCluster = new Map<string, PoolMetrics[]>();
 
     poolMetrics.forEach(pm => {
@@ -500,56 +500,75 @@ export class PricingModelService {
       poolsByPhysicalCluster.get(physicalClusterId)!.push(pm);
     });
 
-    // Calculate adjustment factors for each physical cluster
-    const adjustmentFactors = new Map<string, number>();
-
-    poolsByPhysicalCluster.forEach((pools, physicalClusterId) => {
-      const physicalCapacity = physicalClusterRawCapacity.get(physicalClusterId);
-      if (!physicalCapacity || physicalCapacity.rawTiB === 0) {
-        adjustmentFactors.set(physicalClusterId, 1.0);
-        return;
-      }
-
-      // Sum total raw consumption across all pools targeting this physical cluster
-      const totalRawConsumption = pools.reduce((sum, pm) => sum + pm.rawConsumptionTiB, 0);
-
-      // If total consumption exceeds available raw capacity, calculate adjustment factor
-      if (totalRawConsumption > physicalCapacity.rawTiB) {
-        const factor = physicalCapacity.rawTiB / totalRawConsumption;
-        adjustmentFactors.set(physicalClusterId, factor);
-        console.log('[PricingModelService] Shared capacity over-commitment:', {
-          physicalClusterId,
-          physicalClusterName: physicalCapacity.name,
-          availableRawTiB: physicalCapacity.rawTiB,
-          totalRawConsumption,
-          adjustmentFactor: factor,
-          poolCount: pools.length
-        });
-      } else {
-        adjustmentFactors.set(physicalClusterId, 1.0);
-      }
-    });
-
-    // Step 5: Build final results with adjusted capacities
+    // Step 5: Build final results with shared capacity validation
     return poolMetrics.map(pm => {
       const physicalClusterId = pm.targetCluster?.id || 'unknown';
       const physicalCapacity = physicalClusterRawCapacity.get(physicalClusterId);
-      const adjustmentFactor = adjustmentFactors.get(physicalClusterId) || 1.0;
+      const siblingsOnSameCluster = poolsByPhysicalCluster.get(physicalClusterId) || [];
 
-      // Apply adjustment factor to sellable capacity
-      const adjustedSellableTiB = pm.theoreticalSellableTiB * adjustmentFactor;
-      const sellableCapacityGB = adjustedSellableTiB * TIB_TO_GB;
+      // Get per-pool utilization from config, or use default
+      const poolConfig = this.config.storagePoolConfigs?.find(
+        p => p.poolId === pm.pool.id || p.poolName === pm.pool.name
+      );
+      const poolTargetUtilization = poolConfig?.targetUtilization ?? defaultStorageUtilization;
+
+      // Calculate this pool's sellable capacity at its target utilization
+      const sellableCapacityTiB = pm.effectiveCapacityTiB * poolTargetUtilization;
+      const sellableCapacityGB = sellableCapacityTiB * TIB_TO_GB;
+
+      // Calculate raw consumption for this pool
+      const rawConsumptionTiB = sellableCapacityTiB / pm.poolEfficiencyFactor / pm.maxFillFactor;
+
+      // Calculate consumption by OTHER pools on the same physical cluster
+      let otherPoolsConsumptionTiB = 0;
+      siblingsOnSameCluster.forEach(sibling => {
+        if (sibling.pool.id !== pm.pool.id) {
+          const siblingConfig = this.config.storagePoolConfigs?.find(
+            p => p.poolId === sibling.pool.id || p.poolName === sibling.pool.name
+          );
+          const siblingUtilization = siblingConfig?.targetUtilization ?? defaultStorageUtilization;
+          const siblingSellable = sibling.effectiveCapacityTiB * siblingUtilization;
+          const siblingRawConsumption = siblingSellable / sibling.poolEfficiencyFactor / sibling.maxFillFactor;
+          otherPoolsConsumptionTiB += siblingRawConsumption;
+        }
+      });
+
+      // Calculate total consumption across all pools on this physical cluster
+      const totalPhysicalConsumptionTiB = rawConsumptionTiB + otherPoolsConsumptionTiB;
+
+      // Calculate max available utilization for this pool given other pools' consumption
+      const availableRawForThisPool = (physicalCapacity?.rawTiB || pm.totalRawCapacityTiB) - otherPoolsConsumptionTiB;
+      // Max sellable = available raw * efficiency * maxFill
+      const maxSellableForThisPool = Math.max(0, availableRawForThisPool * pm.poolEfficiencyFactor * pm.maxFillFactor);
+      // Max utilization = maxSellable / effectiveCapacity (capped at 1.0)
+      const maxAvailableUtilization = pm.effectiveCapacityTiB > 0
+        ? Math.min(1.0, maxSellableForThisPool / pm.effectiveCapacityTiB)
+        : 0;
+
+      // Check if configuration exceeds physical capacity
+      const capacityError = totalPhysicalConsumptionTiB > (physicalCapacity?.rawTiB || pm.totalRawCapacityTiB);
+
+      if (capacityError) {
+        console.log('[PricingModelService] Capacity error detected:', {
+          poolId: pm.pool.id,
+          poolName: pm.pool.name,
+          physicalClusterId,
+          physicalClusterName: physicalCapacity?.name,
+          physicalRawTiB: physicalCapacity?.rawTiB,
+          totalConsumptionTiB: totalPhysicalConsumptionTiB,
+          thisPoolConsumptionTiB: rawConsumptionTiB,
+          otherPoolsConsumptionTiB,
+          maxAvailableUtilization
+        });
+      }
 
       // Calculate cost metrics
       const costPerUsableTiB = pm.usableCapacityTiB > 0 ? pm.totalCost / pm.usableCapacityTiB : 0;
 
-      // Get per-cluster price or use default
-      const clusterPricing = this.config.storageClusterPricing?.find(
-        p => p.clusterId === pm.pool.id || p.clusterName === pm.pool.name
-      );
-      const pricePerGBMonth = clusterPricing?.fixedPricePerGBMonth ?? this.config.fixedStoragePrice ?? 0.036;
+      // Get per-pool price or use default
+      const pricePerGBMonth = poolConfig?.fixedPricePerGBMonth ?? this.config.fixedStoragePrice ?? 0.036;
 
-      // Calculate monthly revenue based on adjusted sellable capacity
+      // Calculate monthly revenue (even if over capacity, to show what would be earned)
       const monthlyRevenue = sellableCapacityGB * pricePerGBMonth;
 
       return {
@@ -567,13 +586,14 @@ export class PricingModelService {
         usableCapacityTiB: pm.usableCapacityTiB,
         maxFillFactor: pm.maxFillFactor,
         effectiveCapacityTiB: pm.effectiveCapacityTiB,
-        targetUtilization: storageTargetUtilization,
-        theoreticalSellableTiB: pm.theoreticalSellableTiB,
-        rawConsumptionTiB: pm.rawConsumptionTiB,
-        sellableCapacityTiB: adjustedSellableTiB,
+        targetUtilization: poolTargetUtilization,
+        rawConsumptionTiB,
+        sellableCapacityTiB,
         sellableCapacityGB,
-        sharedCapacityWarning: adjustmentFactor < 1.0,
-        capacityAdjustmentFactor: adjustmentFactor,
+        maxAvailableUtilization,
+        capacityError,
+        totalPhysicalConsumptionTiB,
+        otherPoolsConsumptionTiB,
         totalCost: pm.totalCost,
         costPerUsableTiB,
         pricePerGBMonth,

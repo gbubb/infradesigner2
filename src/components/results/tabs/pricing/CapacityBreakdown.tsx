@@ -556,18 +556,23 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, 
               <CollapsibleContent>
                 <div className="space-y-4 pt-4">
                   {storageCapacities.map((sc) => (
-                    <div key={sc.id} className={`p-4 rounded-lg space-y-4 ${sc.sharedCapacityWarning ? 'bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900' : 'bg-muted/30'}`}>
+                    <div key={sc.id} className={`p-4 rounded-lg space-y-4 ${sc.capacityError ? 'bg-red-50 dark:bg-red-950/20 border border-red-300 dark:border-red-800' : sc.otherPoolsConsumptionTiB > 0 ? 'bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900' : 'bg-muted/30'}`}>
                       {/* Storage Cluster Header */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <HardDrive className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                          <HardDrive className={`h-5 w-5 ${sc.capacityError ? 'text-red-500' : 'text-purple-600 dark:text-purple-400'}`} />
                           <span className="font-medium">{sc.name}</span>
                           {sc.isHyperConverged && (
                             <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded">HCI</span>
                           )}
-                          {sc.sharedCapacityWarning && (
-                            <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded flex items-center gap-1">
+                          {sc.capacityError && (
+                            <span className="text-xs bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
+                              Over Capacity
+                            </span>
+                          )}
+                          {!sc.capacityError && sc.otherPoolsConsumptionTiB > 0 && (
+                            <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded">
                               Shared
                             </span>
                           )}
@@ -580,15 +585,29 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, 
                         </div>
                       </div>
 
-                      {/* Shared Capacity Warning */}
-                      {sc.sharedCapacityWarning && (
-                        <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded text-sm text-orange-800 dark:text-orange-200 flex items-start gap-2">
+                      {/* Capacity Error */}
+                      {sc.capacityError && (
+                        <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded text-sm text-red-800 dark:text-red-200 flex items-start gap-2">
                           <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-medium">Configuration Exceeds Physical Capacity</p>
+                            <p className="text-xs mt-1">
+                              Total consumption ({sc.totalPhysicalConsumptionTiB.toFixed(1)} TiB raw) exceeds physical cluster "{sc.physicalClusterName}" capacity ({sc.physicalClusterRawTiB.toFixed(1)} TiB raw).
+                              Reduce utilization on this pool or other pools sharing this cluster.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Shared Capacity Info (no error) */}
+                      {!sc.capacityError && sc.otherPoolsConsumptionTiB > 0 && (
+                        <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded text-sm text-orange-800 dark:text-orange-200 flex items-start gap-2">
+                          <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="font-medium">Shared Physical Capacity</p>
                             <p className="text-xs mt-1">
-                              Multiple pools share the underlying physical cluster "{sc.physicalClusterName}" ({sc.physicalClusterRawTiB.toFixed(1)} TiB raw).
-                              Sellable capacity reduced by {((1 - sc.capacityAdjustmentFactor) * 100).toFixed(0)}% to prevent over-commitment.
+                              Other pools consume {sc.otherPoolsConsumptionTiB.toFixed(1)} TiB raw from "{sc.physicalClusterName}".
+                              Max available utilization for this pool: {(sc.maxAvailableUtilization * 100).toFixed(0)}%
                             </p>
                           </div>
                         </div>
@@ -740,20 +759,17 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, 
                           <p className="font-medium">{sc.effectiveCapacityTiB.toFixed(1)} TiB</p>
                           <p className="text-xs text-muted-foreground">({(sc.maxFillFactor * 100).toFixed(0)}% max fill)</p>
                         </div>
-                        <div className={`p-2 rounded border ${sc.sharedCapacityWarning ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900' : 'bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900'}`}>
-                          <p className={`text-xs ${sc.sharedCapacityWarning ? 'text-orange-600 dark:text-orange-400' : 'text-purple-600 dark:text-purple-400'}`}>
+                        <div className={`p-2 rounded border ${sc.capacityError ? 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800' : 'bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900'}`}>
+                          <p className={`text-xs ${sc.capacityError ? 'text-red-600 dark:text-red-400' : 'text-purple-600 dark:text-purple-400'}`}>
                             Sellable Capacity
                           </p>
-                          <p className={`font-medium ${sc.sharedCapacityWarning ? 'text-orange-700 dark:text-orange-300' : 'text-purple-700 dark:text-purple-300'}`}>
+                          <p className={`font-medium ${sc.capacityError ? 'text-red-700 dark:text-red-300' : 'text-purple-700 dark:text-purple-300'}`}>
                             {sc.sellableCapacityTiB.toFixed(1)} TiB
                           </p>
-                          {sc.sharedCapacityWarning ? (
-                            <p className="text-xs text-orange-600 dark:text-orange-400">
-                              <span className="line-through text-muted-foreground">{sc.theoreticalSellableTiB.toFixed(1)}</span> → {sc.sellableCapacityTiB.toFixed(1)} TiB
-                            </p>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">({(sc.targetUtilization * 100).toFixed(0)}% util)</p>
-                          )}
+                          <p className={`text-xs ${sc.capacityError ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+                            ({(sc.targetUtilization * 100).toFixed(0)}% util
+                            {sc.otherPoolsConsumptionTiB > 0 && `, max ${(sc.maxAvailableUtilization * 100).toFixed(0)}%`})
+                          </p>
                         </div>
                       </div>
 

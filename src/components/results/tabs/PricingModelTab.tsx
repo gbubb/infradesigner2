@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { useDesignStore } from '@/store';
-import { PricingModelService, PricingConfig, PricingModelResult, StorageClusterPricing, StorageClusterCapacity } from '@/services/pricing/pricingModelService';
+import { PricingModelService, PricingConfig, PricingModelResult, StoragePoolConfig, StorageClusterCapacity } from '@/services/pricing/pricingModelService';
 import { ComputeCluster } from '@/types/placement';
 import { formatCurrency, formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -64,8 +64,8 @@ export const PricingModelTab: React.FC = () => {
     fixedCpuPrice: 0.01,
     fixedMemoryPrice: 0.003,
     fixedStoragePrice: 0.036, // per GB per month (~$36/TB/month)
-    storageTargetUtilization: 0.8, // 80% target storage utilization
-    storageClusterPricing: [], // Per-cluster storage pricing
+    storageTargetUtilization: 0.8, // Default storage utilization when pool-specific not set
+    storagePoolConfigs: [], // Per-pool pricing and utilization
     targetUtilization: 0.8, // 80% target utilization
     virtualizationOverhead: 0.05, // 5% overhead default
     virtualizationOverheadType: 'percentage', // Default to percentage
@@ -163,31 +163,48 @@ export const PricingModelTab: React.FC = () => {
     setPricingResult(result);
   }, [pricingService]);
 
-  const handleConfigChange = (key: keyof PricingConfig, value: string | number | StorageClusterPricing[]) => {
+  const handleConfigChange = (key: keyof PricingConfig, value: string | number | StoragePoolConfig[]) => {
     const updatedConfig = { ...config, [key]: value };
     updatePricingConfig(updatedConfig);
   };
 
-  // Handle per-cluster storage pricing updates
-  const handleStorageClusterPriceChange = (clusterId: string, clusterName: string, price: number) => {
-    const currentPricing = config.storageClusterPricing || [];
-    const existingIndex = currentPricing.findIndex(p => p.clusterId === clusterId);
+  // Handle per-pool storage config updates (price and utilization)
+  const handleStoragePoolConfigChange = (
+    poolId: string,
+    poolName: string,
+    updates: { fixedPricePerGBMonth?: number; targetUtilization?: number }
+  ) => {
+    const currentConfigs = config.storagePoolConfigs || [];
+    const existingIndex = currentConfigs.findIndex(p => p.poolId === poolId);
+    const defaultUtil = config.storageTargetUtilization ?? config.targetUtilization;
 
-    let newPricing: StorageClusterPricing[];
+    let newConfigs: StoragePoolConfig[];
     if (existingIndex >= 0) {
-      newPricing = [...currentPricing];
-      newPricing[existingIndex] = { clusterId, clusterName, fixedPricePerGBMonth: price };
+      newConfigs = [...currentConfigs];
+      newConfigs[existingIndex] = {
+        ...newConfigs[existingIndex],
+        ...updates
+      };
     } else {
-      newPricing = [...currentPricing, { clusterId, clusterName, fixedPricePerGBMonth: price }];
+      newConfigs = [...currentConfigs, {
+        poolId,
+        poolName,
+        fixedPricePerGBMonth: updates.fixedPricePerGBMonth ?? config.fixedStoragePrice ?? 0.036,
+        targetUtilization: updates.targetUtilization ?? defaultUtil
+      }];
     }
 
-    handleConfigChange('storageClusterPricing', newPricing);
+    handleConfigChange('storagePoolConfigs', newConfigs);
   };
 
-  // Get storage cluster price (from per-cluster config or default)
-  const getStorageClusterPrice = (clusterId: string): number => {
-    const clusterPricing = config.storageClusterPricing?.find(p => p.clusterId === clusterId);
-    return clusterPricing?.fixedPricePerGBMonth ?? config.fixedStoragePrice ?? 0.036;
+  // Get storage pool config (price and utilization)
+  const getStoragePoolConfig = (poolId: string): { price: number; utilization: number } => {
+    const poolConfig = config.storagePoolConfigs?.find(p => p.poolId === poolId);
+    const defaultUtil = config.storageTargetUtilization ?? config.targetUtilization;
+    return {
+      price: poolConfig?.fixedPricePerGBMonth ?? config.fixedStoragePrice ?? 0.036,
+      utilization: poolConfig?.targetUtilization ?? defaultUtil
+    };
   };
 
   const marginPercentage = config.operatingModel === 'costPlus'
@@ -559,48 +576,126 @@ export const PricingModelTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Per-Cluster Storage Pricing (Fixed Price Mode Only) */}
+          {/* Per-Pool Storage Configuration (Fixed Price Mode Only) */}
           {config.operatingModel === 'fixedPrice' && pricingResult && pricingResult.storageClusterCapacities.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center space-x-1">
-                <Label className="text-sm font-medium">Storage Cluster Pricing</Label>
+                <Label className="text-sm font-medium">Storage Pool Configuration</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
                       <Info className="h-3 w-3 text-muted-foreground" />
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Set individual pricing per storage cluster. Default storage price is used if not specified.</p>
+                    <TooltipContent className="max-w-xs">
+                      <p>Set pricing and utilization per storage pool. Pools sharing a physical cluster have linked capacity - increasing one reduces available capacity for others.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {pricingResult.storageClusterCapacities.map((sc) => (
-                  <div key={sc.id} className="p-3 bg-muted/30 rounded-lg space-y-2">
-                    <div className="flex items-center gap-2">
-                      <HardDrive className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium truncate" title={sc.name}>{sc.name}</span>
-                      {sc.isHyperConverged && (
-                        <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded">HCI</span>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {pricingResult.storageClusterCapacities.map((sc) => {
+                  const poolConfig = getStoragePoolConfig(sc.id);
+                  const hasCapacityError = sc.capacityError;
+                  const maxUtil = Math.round(sc.maxAvailableUtilization * 100);
+
+                  return (
+                    <div
+                      key={sc.id}
+                      className={`p-3 rounded-lg space-y-3 ${hasCapacityError ? 'bg-red-50 dark:bg-red-950/20 border border-red-300 dark:border-red-800' : 'bg-muted/30'}`}
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <HardDrive className={`h-4 w-4 ${hasCapacityError ? 'text-red-500' : 'text-muted-foreground'}`} />
+                          <span className="text-sm font-medium truncate" title={sc.name}>{sc.name}</span>
+                          {sc.isHyperConverged && (
+                            <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded">HCI</span>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">{sc.poolType}</span>
+                      </div>
+
+                      {/* Physical cluster info for shared pools */}
+                      {sc.otherPoolsConsumptionTiB > 0 && (
+                        <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                          Physical cluster: {sc.physicalClusterName} ({sc.physicalClusterRawTiB.toFixed(1)} TiB raw)
+                          <br />
+                          Other pools using: {sc.otherPoolsConsumptionTiB.toFixed(1)} TiB raw
+                        </div>
                       )}
+
+                      {/* Capacity Error */}
+                      {hasCapacityError && (
+                        <div className="text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 p-2 rounded font-medium">
+                          ⚠️ Configuration exceeds physical capacity!
+                          Total consumption: {sc.totalPhysicalConsumptionTiB.toFixed(1)} TiB / {sc.physicalClusterRawTiB.toFixed(1)} TiB available
+                        </div>
+                      )}
+
+                      {/* Utilization Slider */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Target Utilization</span>
+                          <span className={`font-medium ${hasCapacityError ? 'text-red-600 dark:text-red-400' : ''}`}>
+                            {Math.round(poolConfig.utilization * 100)}%
+                            {sc.otherPoolsConsumptionTiB > 0 && (
+                              <span className="text-muted-foreground ml-1">(max {maxUtil}%)</span>
+                            )}
+                          </span>
+                        </div>
+                        <Slider
+                          value={[poolConfig.utilization * 100]}
+                          min={0}
+                          max={100}
+                          step={5}
+                          onValueChange={([value]) => {
+                            handleStoragePoolConfigChange(sc.id, sc.name, {
+                              targetUtilization: value / 100
+                            });
+                          }}
+                          className={hasCapacityError ? '[&_[role=slider]]:bg-red-500' : ''}
+                        />
+                        {/* Visual indicator for max available */}
+                        {sc.otherPoolsConsumptionTiB > 0 && maxUtil < 100 && (
+                          <div className="relative h-1 mt-1">
+                            <div
+                              className="absolute top-0 right-0 h-1 bg-orange-300 dark:bg-orange-700 rounded-r"
+                              style={{ width: `${100 - maxUtil}%` }}
+                              title={`${100 - maxUtil}% reserved by other pools`}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Price Input and Capacity */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              step="0.001"
+                              min="0"
+                              value={poolConfig.price}
+                              onChange={(e) => handleStoragePoolConfigChange(sc.id, sc.name, {
+                                fixedPricePerGBMonth: parseFloat(e.target.value) || 0
+                              })}
+                              className="h-7 text-sm"
+                            />
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">$/GB/mo</span>
+                          </div>
+                        </div>
+                        <div className="text-right text-xs">
+                          <div className={hasCapacityError ? 'text-red-600 dark:text-red-400 font-medium' : 'text-muted-foreground'}>
+                            {sc.sellableCapacityTiB.toFixed(1)} TiB sellable
+                          </div>
+                          <div className="text-muted-foreground">
+                            {formatMonthlyCurrency(sc.monthlyRevenue, currency)}/mo
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {sc.poolType} • {sc.sellableCapacityTiB.toFixed(1)} TiB sellable
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        step="0.001"
-                        min="0"
-                        value={getStorageClusterPrice(sc.id)}
-                        onChange={(e) => handleStorageClusterPriceChange(sc.id, sc.name, parseFloat(e.target.value) || 0)}
-                        className="flex-1 h-8 text-sm"
-                      />
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">$/GB/mo</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
