@@ -1,69 +1,72 @@
-# Welcome to your Lovable project
+# Infra Design Tool
 
-## Project info
+A network infrastructure design application for designing, configuring, and analyzing data center and network infrastructure deployments. Features include component selection, rack layout visualization, cost analysis, power calculations, and design comparison.
 
-**URL**: https://lovable.dev/projects/dc01e3fd-2b79-49b7-a7d9-e5e9a7b8510d
+## Tech Stack
 
-## How can I edit this code?
+- **React 18** + TypeScript
+- **Vite** (SWC) for build tooling
+- **Zustand** for state management
+- **Supabase** for authentication and database
+- **shadcn/ui** (Radix UI + Tailwind CSS)
+- **React Router v6** for routing
+- **TanStack Query** for data fetching
+- **Recharts** + **Plotly.js** for visualization
 
-There are several ways of editing your application.
+## Getting Started
 
-**Use Lovable**
+### Prerequisites
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/dc01e3fd-2b79-49b7-a7d9-e5e9a7b8510d) and start prompting.
+- Node.js 18+ and npm
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Setup
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Install dependencies
+npm install
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app will be available at `http://localhost:8080`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Build
 
-**Use GitHub Codespaces**
+```sh
+# Production build
+npm run build
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Preview the production build
+npm run preview
+```
 
-## What technologies are used for this project?
+### Lint
 
-This project is built with .
+```sh
+npm run lint
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Project Structure
 
-## How can I deploy this project?
+```
+src/
+├── components/     # UI components organized by feature
+├── context/        # React context providers
+├── data/           # Static data and constants
+├── hooks/          # Custom React hooks
+├── integrations/   # Supabase client and generated types
+├── lib/            # Utility helpers
+├── pages/          # Route pages
+├── services/       # Business logic layer
+├── store/          # Zustand state management
+├── types/          # TypeScript type definitions
+├── utils/          # Utility functions
+└── workers/        # Web workers
+```
 
-Simply open [Lovable](https://lovable.dev/projects/dc01e3fd-2b79-49b7-a7d9-e5e9a7b8510d) and click on Share -> Publish.
+## Deployment
 
-## I want to use a custom domain - is that possible?
+Build the project with `npm run build` and deploy the `dist/` directory to any static hosting provider (Netlify, Vercel, Cloudflare Pages, etc.).
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+The app requires a Supabase backend. Configure the Supabase URL and anon key in `src/integrations/supabase/client.ts`.
