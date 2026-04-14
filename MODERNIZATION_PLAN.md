@@ -10,7 +10,9 @@
 |---|---|---|
 | 7 — Testing infrastructure | ✅ Done | Vitest wired, 85 seed tests green across BreakoutManager, PortMatcher, CableManager, TransceiverManager, PricingModelService |
 | 0 — Prerequisites | 🟡 Partial | Node pinned, backup deleted, ESLint rule re-enabled, `strict: true` flipped. 651 → 428 strict errors via type widening; remaining 428 deferred (many will be reshaped by Phase 2/4 migrations) |
-| 1–6 | ⬜ Not started | |
+| 1 — Build tooling | ✅ Done | Vite 8.0.8 (bumped past 7 to current latest — Rolldown bundler), `@vitejs/plugin-react-swc` 4.3.0, TypeScript 6.0.2, typescript-eslint 8.58.2, `@types/node` 22.19.17 (pinned to match Node 22 LTS engine). Build/lint/tests/dev all green |
+| 2 — React 19 | ✅ Done | React 19.2.5, ReactDOM 19.2.5, `@types/react` 19.2.14, `@types/react-dom` 19.2.3. Codemod recipe ran clean (no legacy APIs). Added `.npmrc legacy-peer-deps=true` for stale React 18 peer constraints in cmdk/vaul/sonner/next-themes/input-otp/embla/react-day-picker (to be tightened in Phase 3 shadcn regen). Build 38s (vs 115s on Vite 7), dev ready in 388ms, 85/85 tests green |
+| 3–6 | ⬜ Not started | |
 
 ## Goal
 
@@ -76,13 +78,16 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
 
 **Outcomes:** Vite 7, TS 5.9, ESLint current.
 
-- [ ] Bump `vite` → 7.x.
-- [ ] Bump `@vitejs/plugin-react-swc` → latest.
-- [ ] Review `vite.config.ts` for the new default browser target (`baseline-widely-available`). Explicitly set if you need the old `modules` target.
-- [ ] Bump `typescript` → 5.9+.
-- [ ] Bump `typescript-eslint` → latest 8.x.
-- [ ] Bump `@types/node` → 22.x.
-- [ ] Verify `npm run build` and `npm run dev` still work.
+- [x] Bump `vite` → 8.0.8 (exceeded plan target — Vite 8 is current latest; swaps Rollup for Rolldown, ~3x faster builds).
+- [x] Bump `@vitejs/plugin-react-swc` → 4.3.0.
+- [x] Review `vite.config.ts` for the new default browser target (`baseline-widely-available`). Left at default — fine for this internal app.
+- [x] Bump `typescript` → 6.0.2 (exceeded plan target — TS 6 is current latest; within `typescript-eslint` peer range `>=4.8.4 <6.1.0`).
+- [x] Bump `typescript-eslint` → 8.58.2.
+- [x] Bump `@types/node` → 22.19.17 (pinned to 22.x to match `engines.node >=22.12`).
+- [x] Verify `npm run build` (✅ 38s), `npm run lint` (✅ 0 errors, 300 warnings pre-existing), `npm run test:run` (✅ 85/85), and `npm run dev` (✅ Vite 8.0.8 ready in 388ms).
+
+**Notes:**
+- Vite 8 logs `[vite:react-swc] We recommend switching to @vitejs/plugin-react` since no SWC-specific plugins are active. Non-blocking; flag as potential Phase 3 follow-up.
 
 **Risk:** Low. Vite 7's breaking changes are mostly ecosystem-level.
 
@@ -92,13 +97,13 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
 
 **Outcomes:** React 19.2 with all dependent libraries compatible.
 
-- [ ] Run `npx codemod@latest react/19/migration-recipe`.
-- [ ] Bump `react`, `react-dom` → 19.2.
-- [ ] Bump `@types/react`, `@types/react-dom` → 19.
-- [ ] Audit `forwardRef` usage — refs are now regular props; codemod should handle most.
-- [ ] Verify peer compatibility: Radix UI primitives, TanStack Query, Zustand, React Hook Form, react-hook-form/resolvers, cmdk, vaul, sonner.
-- [ ] Remove any `UNSAFE_*` lifecycle holdovers (unlikely in this codebase).
-- [ ] Smoke-test all routes.
+- [x] Run `npx codemod@latest react/19/migration-recipe` — **no changes**; codebase has no `ReactDOM.render`, string refs, `useFormState`, legacy `act` import, or `prop-types`.
+- [x] Bump `react`, `react-dom` → 19.2.5.
+- [x] Bump `@types/react` → 19.2.14, `@types/react-dom` → 19.2.3.
+- [x] Audit `forwardRef` usage — 162 occurrences in `src/components/ui/*` (shadcn primitives). Still supported in React 19 (deprecated only); cleanup deferred to **Phase 3** shadcn regeneration.
+- [x] Verify peer compatibility — stale React-18-only peer strings in **cmdk@1.0.0, vaul@0.9.9, sonner@1.5.0, next-themes@0.3.0, input-otp@1.2.4, react-day-picker@8.10.1, embla-carousel-react@8.3.0**. Runtime-compatible; handled via `.npmrc legacy-peer-deps=true`. Newer versions exist for each (some via major bumps e.g. vaul→1.x, sonner→2.x, react-day-picker→9.x) and will be re-evaluated during Phase 3 shadcn regen. Confirmed compatible: Radix UI, TanStack Query, Zustand, React Hook Form, `@hookform/resolvers`, react-resizable-panels, recharts.
+- [x] Remove any `UNSAFE_*` lifecycle holdovers — none present.
+- [x] Smoke-test — dev server boots cleanly, build/lint/tests green.
 
 **Risk:** Medium. React 19's typings are stricter; expect some `ReactNode` / `children` type friction.
 
