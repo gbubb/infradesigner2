@@ -2,7 +2,7 @@ name: infradesigner
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: infradesigner-db
     restart: unless-stopped
     ports:
@@ -23,7 +23,7 @@ services:
       retries: 10
 
   postgrest:
-    image: postgrest/postgrest:v12.2.3
+    image: postgrest/postgrest:v14.9
     container_name: infradesigner-postgrest
     restart: unless-stopped
     depends_on:
@@ -40,7 +40,7 @@ services:
       PGRST_DB_POOL_TIMEOUT: "10"
 
   gotrue:
-    image: supabase/gotrue:v2.163.2
+    image: supabase/auth:v2.188.1
     container_name: infradesigner-gotrue
     restart: unless-stopped
     depends_on:
@@ -72,7 +72,7 @@ services:
       GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
 
   kong:
-    image: kong:3.4-ubuntu
+    image: kong:3.9.1-ubuntu
     container_name: infradesigner-kong
     restart: unless-stopped
     depends_on:

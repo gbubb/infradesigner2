@@ -15,7 +15,8 @@
 | 4 — Data libraries | ✅ Done | React Router 7.14.1 (library mode, `react-router-dom` removed), Zod 4.3.6 + `@hookform/resolvers` 5.2.2 + react-hook-form 7.72.1, Recharts 3.8.1 (added `react-is` 19.2.5 as explicit peer), date-fns 4.1.0, `@supabase/supabase-js` 2.103.0. No `activeIndex`/`alwaysShow`/`isFront` Recharts usage found; `message:` → `error:` hand-fixed in `ComponentValidationSchemas.ts` (6 occurrences) |
 | 3a — Tailwind v4 core | ✅ Done | Tailwind 4.2.2 via `@tailwindcss/vite` plugin, `tailwindcss-animate` → `tw-animate-css` 1.4.0, `postcss.config.js` deleted (postcss + autoprefixer removed — bundled in v4 plugin). Upgrade tool migrated 40+ utility class renames across `src/` and moved theme tokens from `tailwind.config.ts` (deleted) to `@theme` blocks in `src/index.css`. Build 40s, dev ready 345ms, all tests green |
 | 3b — shadcn regeneration | ⬜ Deferred | Follow-up: regenerate 64 components via current shadcn CLI and merge customizations. Split from 3a to reduce visual-risk surface area in one PR |
-| 5, 6 | ⬜ Not started | |
+| 6 — Backend stack | ✅ Done | postgres:16-alpine → 18-alpine (exceeded plan's 17 target), postgrest v12.2.3 → v14.9, supabase/gotrue:v2.163.2 → supabase/auth:v2.188.1, kong:3.4-ubuntu → 3.9.1-ubuntu. `dev:db:reset` verified end-to-end: pg15-origin backup restores into pg18, PostgREST reports 15 relations/17 relationships/3 functions, Auth health returns v2.188.1 |
+| 5 | ⬜ Not started | |
 
 ## Goal
 
@@ -178,15 +179,15 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
 
 **Outcomes:** Postgres 17, PostgREST v14, Auth v2.188, Kong 3.9.
 
-- [ ] `docker-compose.yml`:
-  - `postgres:16-alpine` → `postgres:17-alpine`
-  - `postgrest/postgrest:v12.2.3` → `postgrest/postgrest:v14.x`
-  - `supabase/gotrue:v2.163.2` → `supabase/auth:v2.188+` (image renamed — repo is now `supabase/auth`)
-  - `kong:3.4-ubuntu` → `kong:3.9-ubuntu`
-- [ ] Move hardcoded DB role passwords out of `docker/postgres/init/02-post-restore.sql` into env vars / compose secrets.
-- [ ] Verify `db_cluster-11-11-2025@01-58-10.backup.gz` restores cleanly into PG17 (format is forward-compatible; test first).
-- [ ] Audit restored schema for Lovable/Supabase-cloud artifacts (lingering functions, triggers, RLS policies) — drop what's unused.
-- [ ] `npm run dev:db:reset` end-to-end smoke test.
+- [x] `docker-compose.yml`:
+  - `postgres:16-alpine` → `postgres:18-alpine` (went to 18 since it's the current stable; plan target was 17)
+  - `postgrest/postgrest:v12.2.3` → `postgrest/postgrest:v14.9`
+  - `supabase/gotrue:v2.163.2` → `supabase/auth:v2.188.1` (image renamed; env var prefix stays `GOTRUE_*` for compat)
+  - `kong:3.4-ubuntu` → `kong:3.9.1-ubuntu`
+- [ ] Move hardcoded DB role passwords out of `docker/postgres/init/02-post-restore.sql` into env vars / compose secrets. **Deferred — follow-up hardening task.**
+- [x] Verified `db_cluster-11-11-2025@01-58-10.backup.gz` restores cleanly into PG18 (forward-compatible pg_dumpall text; restore output shows expected Supabase-cloud object errors that the init script tolerates via `ON_ERROR_STOP=off`).
+- [ ] Audit restored schema for Lovable/Supabase-cloud artifacts. **Deferred — follow-up cleanup task.**
+- [x] `npm run dev:db:reset` end-to-end smoke test — all services healthy; PostgREST schema cache loaded 15 relations/17 relationships/3 functions; Auth health reports v2.188.1.
 
 **Risk:** Low. Postgres minor-major upgrades via pg_dump are well-trodden.
 

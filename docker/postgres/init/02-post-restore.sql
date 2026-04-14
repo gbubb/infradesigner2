@@ -27,7 +27,7 @@ ALTER ROLE service_role      WITH NOLOGIN NOINHERIT BYPASSRLS;
 
 -- 2a. Strip Supabase-cloud-only role configs that reference extensions/libraries
 --     we don't have installed (safeupdate is a shared library used in Supabase
---     cloud; not present in the vanilla postgres:16-alpine image).
+--     cloud; not present in the vanilla postgres:18-alpine image).
 ALTER ROLE authenticator       RESET session_preload_libraries;
 ALTER ROLE supabase_admin      RESET ALL;
 ALTER ROLE supabase_storage_admin RESET ALL;
