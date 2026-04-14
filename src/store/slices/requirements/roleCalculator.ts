@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType, DesignRequirements, StorageCluster } from '@/types/infrastructure';
+import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType, DesignRequirements, StorageCluster, ComputeClusterRequirement } from '@/types/infrastructure';
+import { StoragePool } from '@/types/infrastructure/storage-types';
 
 /**
  * Calculates component roles based on requirements
@@ -7,10 +8,12 @@ import { ComponentRole, NetworkTopology, ManagementNetworkType, IPMINetworkType,
 export const calculateComponentRoles = (requirements: DesignRequirements): ComponentRole[] => {
   const getValue = <T>(obj: DesignRequirements, path: string, defaultValue: T): T => {
     try {
-      const result = path.split('.').reduce((o: Record<string, unknown>, key) => o?.[key], obj as Record<string, unknown>);
-      // Check for null or undefined explicitly to handle boolean false values correctly
-      return result !== null && result !== undefined ? result : defaultValue;
-    } catch (error) {
+      const result = path.split('.').reduce<unknown>(
+        (o, key) => (o as Record<string, unknown> | undefined)?.[key],
+        obj,
+      );
+      return result !== null && result !== undefined ? (result as T) : defaultValue;
+    } catch {
       return defaultValue;
     }
   };
@@ -21,9 +24,9 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
   const infrastructureClusterRequired = getValue(requirements, 'computeRequirements.infrastructureClusterRequired', false);
   const infrastructureNodeCount = getValue(requirements, 'computeRequirements.infrastructureNodeCount', 3);
   
-  const computeClusters = getValue(requirements, 'computeRequirements.computeClusters', []);
-  const storageClusters = getValue(requirements, 'storageRequirements.storageClusters', []); // Physical infrastructure
-  const storagePools = getValue(requirements, 'storageRequirements.storagePools', []); // Logical capacity tiers
+  const computeClusters = getValue<ComputeClusterRequirement[]>(requirements, 'computeRequirements.computeClusters', []);
+  const storageClusters = getValue<StorageCluster[]>(requirements, 'storageRequirements.storageClusters', []); // Physical infrastructure
+  const storagePools = getValue<StoragePool[]>(requirements, 'storageRequirements.storagePools', []); // Logical capacity tiers
   
   const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', "Spine-Leaf") as NetworkTopology;
   const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false);

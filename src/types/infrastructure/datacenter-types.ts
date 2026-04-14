@@ -7,6 +7,7 @@ export interface DatacenterFacility {
   powerInfrastructure: PowerLayer[];
   costLayers: CostLayer[];
   constraints: FacilityConstraints;
+  nonProductiveLoads?: NonProductiveLoad[];
   metadata?: {
     createdAt: string;
     updatedAt: string;
@@ -53,6 +54,9 @@ export interface RedundancyConfig {
   customConfig?: {
     active: number;
     redundant: number;
+  };
+  config?: {
+    n?: number;
   };
 }
 
@@ -199,10 +203,40 @@ export interface CostAllocation {
 export interface PowerEfficiencyMetrics {
   pue: number; // Power Usage Effectiveness
   dcie: number; // Data Center Infrastructure Efficiency (1/PUE)
-  coolingEfficiency: number;
-  distributionEfficiency: number;
-  totalLosses: number; // kW lost in distribution
-  efficiencyByLayer: Record<string, number>; // layerId -> efficiency
+  coolingEfficiency?: number;
+  distributionEfficiency?: number;
+  totalLosses?: number; // kW lost in distribution
+  efficiencyByLayer?: Record<string, number>; // layerId -> efficiency
+  itPowerKW?: number;
+  totalFacilityPowerKW?: number;
+  infrastructureOverheadKW?: number;
+  nonProductivePowerKW?: number;
+  layerEfficiencies?: Array<{
+    layerName: string;
+    efficiency: number;
+    annualEnergyLossMWh: number;
+  }>;
+  layerUtilizations?: PowerLayerUtilization[];
+  powerDistributionLosses?: {
+    totalLossesKW: number;
+    lossPercentage: number;
+    lossesByLayer: Array<{ layerName: string; lossKW: number }>;
+  };
+  criticalReserveKW?: number;
+  effectivePUE?: number;
+}
+
+export interface PowerLayerUtilization {
+  layerId: string;
+  layerName: string;
+  inputPowerKW: number;
+  outputPowerKW: number;
+  lossesKW: number;
+  efficiency: number;
+  capacityKW: number;
+  utilizationPercent: number;
+  redundancyOverhead: number;
+  isBottleneck: boolean;
 }
 
 export interface FacilityUtilization {
@@ -244,10 +278,12 @@ export interface DatacenterDesignMapping {
 export interface NonProductiveLoad {
   id: string;
   name: string;
-  category: 'cooling' | 'lighting' | 'security' | 'other';
+  category?: 'cooling' | 'lighting' | 'security' | 'other';
   powerKW: number;
-  isVariable: boolean; // true if load varies with IT load
+  isVariable?: boolean; // true if load varies with IT load
   variabilityFactor?: number; // e.g., 0.3 for cooling that scales at 30% of IT load
+  type?: 'fixed' | 'percentage';
+  percentage?: number;
 }
 
 export interface FacilityTemplate {

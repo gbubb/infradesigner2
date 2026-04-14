@@ -73,11 +73,21 @@ export interface InfrastructureComponent {
   isDefault?: boolean;
   role?: string;
   quantity?: number;
+  description?: string;
+  category?: string;
   // Added naming and placement properties
   namingPrefix?: string;
+  typePrefix?: string;
   placement?: ComponentPlacement;
+  validRUStart?: number;
+  validRUEnd?: number;
+  preferredRU?: number;
+  preferredRack?: number;
+  position?: { x: number; y: number };
+  templateId?: string;
   // Standardized to ruSize for rack space consumption
   ruSize?: number;
+  rackUnitsConsumed?: number;
   // Add ports for network connectivity
   ports?: Port[];
   // For Switch components
@@ -89,17 +99,46 @@ export interface InfrastructureComponent {
     clusterId: string;
     clusterName?: string;
   };
+  clusterId?: string;
   // Additional component-specific properties
-  // Server properties
+  // Server properties — multiple legacy/alternate access paths coexist at runtime
   cpuCores?: number;
+  cpuSockets?: number;
+  cpuCoresPerSocket?: number;
+  coreCount?: number;
+  cores?: number;
+  totalCores?: number;
   memoryGB?: number;
+  memoryCapacity?: number;
+  memoryTB?: number;
+  totalMemoryGB?: number;
   storageCapacityGB?: number;
+  storageCapacity?: number;
+  powerRequired?: number;
+  // Nested spec access used by some callers
+  specifications?: {
+    cpu?: { cores?: number; sockets?: number };
+    memory?: { capacity?: number; oversubscriptionRatio?: number };
+    storage?: { capacity?: number };
+    gpu?: { quantity?: number; model?: string };
+  };
+  cpu?: { cores?: number; sockets?: number };
+  memory?: { capacity?: number; oversubscriptionRatio?: number };
+  storage?: { capacity?: number };
+  gpu?: { quantity?: number; model?: string };
+  // Cost/pricing fields (legacy access paths)
+  pricing?: { basePrice?: number; yearlyOperationalCost?: number };
+  basePrice?: number;
+  yearlyOperationalCost?: number;
   // Network properties
   portCount?: number;
   portSpeed?: string;
+  portSpeedType?: string;
   // Storage properties
   capacityTB?: number;
   diskType?: string;
+  attachedDisks?: InfrastructureComponent[];
+  attachedGPUs?: InfrastructureComponent[];
   // GPU properties
   gpuModel?: string;
   gpuMemoryGB?: number;

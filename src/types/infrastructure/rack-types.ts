@@ -100,4 +100,15 @@ export interface RowLayoutConfiguration {
   updatedAt: Date;
 }
 
+// Service-layer Rack shape used by datacenter calculators. Loosely typed
+// to match legacy runtime access across datacenter services.
+export interface Rack extends RackProfile {
+  placedComponents: Array<{
+    id?: string;
+    component?: unknown;
+    power?: number;
+    quantity?: number;
+    [key: string]: unknown;
+  }>;
+}
 // Additional rack-related types could be added here in the future

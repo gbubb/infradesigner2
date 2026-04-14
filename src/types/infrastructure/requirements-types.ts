@@ -26,6 +26,19 @@ export interface AvailabilityZone {
 
 // Infrastructure Design Requirements
 export interface DesignRequirements {
+  // Legacy aliases — some call sites access `.compute`/`.physical` instead of the long forms
+  compute?: {
+    memory?: { oversubscriptionRatio?: number };
+    cpuPerVM?: number;
+    memoryPerVMGB?: number;
+    vmDensityPercent?: number;
+    totalClusters?: number;
+    overcommitRatio?: number;
+  };
+  physical?: {
+    availabilityZones?: AvailabilityZone[];
+    totalAvailabilityZones?: number;
+  };
   computeRequirements: {
     controllerClusterRequired?: boolean;
     controllerNodeCount?: number;
@@ -35,6 +48,12 @@ export interface DesignRequirements {
     deviceLifespanYears?: number;
     averageVMVCPUs?: number;
     averageVMMemoryGB?: number;
+    cpuPerVM?: number;
+    memoryPerVMGB?: number;
+    vmDensityPercent?: number;
+    totalClusters?: number;
+    overcommitRatio?: number;
+    memory?: { oversubscriptionRatio?: number };
   };
   storageRequirements: {
     storageClusters: StorageCluster[]; // Physical storage infrastructure
