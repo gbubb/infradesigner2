@@ -49,13 +49,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
+  const { user, isLoading: authLoading } = useAuth();
   const isInitializing = useDesignStore(state => state.isInitializing);
-  
-  // Initialize store data when the app starts
+
+  // Store init issues authenticated DB reads and (if the DB is empty) writes
+  // of the default component library. Both require a signed-in user under
+  // RLS, so defer until auth has resolved and a user is present.
   useEffect(() => {
-    initializeStore();
-  }, []);
-  
+    if (!authLoading && user) {
+      initializeStore();
+    }
+  }, [authLoading, user]);
+
   // Show loading spinner while initializing
   if (isInitializing) {
     return <LoadingSpinner fullScreen text="Initializing application..." size="lg" />;
