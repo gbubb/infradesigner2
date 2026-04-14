@@ -119,7 +119,7 @@ export const PlacedComponent: React.FC<PlacedComponentProps> = ({
     <div
       ref={componentRef}
       className={`absolute w-40 p-3 bg-white border rounded-md ${
-        isSelected ? 'ring-2 ring-primary shadow-lg' : 'shadow-sm'
+        isSelected ? 'ring-2 ring-primary shadow-lg' : 'shadow-xs'
       } cursor-move flex flex-col items-center`}
       style={{
         left: `${position.x}px`,

@@ -588,7 +588,7 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, 
                       {/* Capacity Error */}
                       {sc.capacityError && (
                         <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded text-sm text-red-800 dark:text-red-200 flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                           <div>
                             <p className="font-medium">Configuration Exceeds Physical Capacity</p>
                             <p className="text-xs mt-1">
@@ -602,7 +602,7 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, 
                       {/* Shared Capacity Info (no error) */}
                       {!sc.capacityError && sc.otherPoolsConsumptionTiB > 0 && (
                         <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded text-sm text-orange-800 dark:text-orange-200 flex items-start gap-2">
-                          <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <Info className="h-4 w-4 mt-0.5 shrink-0" />
                           <div>
                             <p className="font-medium">Shared Physical Capacity</p>
                             <p className="text-xs mt-1">

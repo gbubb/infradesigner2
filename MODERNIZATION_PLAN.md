@@ -13,7 +13,9 @@
 | 1 — Build tooling | ✅ Done | Vite 8.0.8 (bumped past 7 to current latest — Rolldown bundler), `@vitejs/plugin-react-swc` 4.3.0, TypeScript 6.0.2, typescript-eslint 8.58.2, `@types/node` 22.19.17 (pinned to match Node 22 LTS engine). Build/lint/tests/dev all green |
 | 2 — React 19 | ✅ Done | React 19.2.5, ReactDOM 19.2.5, `@types/react` 19.2.14, `@types/react-dom` 19.2.3. Codemod recipe ran clean (no legacy APIs). Added `.npmrc legacy-peer-deps=true` for stale React 18 peer constraints in cmdk/vaul/sonner/next-themes/input-otp/embla/react-day-picker (to be tightened in Phase 3 shadcn regen). Build 38s (vs 115s on Vite 7), dev ready in 388ms, 85/85 tests green |
 | 4 — Data libraries | ✅ Done | React Router 7.14.1 (library mode, `react-router-dom` removed), Zod 4.3.6 + `@hookform/resolvers` 5.2.2 + react-hook-form 7.72.1, Recharts 3.8.1 (added `react-is` 19.2.5 as explicit peer), date-fns 4.1.0, `@supabase/supabase-js` 2.103.0. No `activeIndex`/`alwaysShow`/`isFront` Recharts usage found; `message:` → `error:` hand-fixed in `ComponentValidationSchemas.ts` (6 occurrences) |
-| 3, 5, 6 | ⬜ Not started | |
+| 3a — Tailwind v4 core | ✅ Done | Tailwind 4.2.2 via `@tailwindcss/vite` plugin, `tailwindcss-animate` → `tw-animate-css` 1.4.0, `postcss.config.js` deleted (postcss + autoprefixer removed — bundled in v4 plugin). Upgrade tool migrated 40+ utility class renames across `src/` and moved theme tokens from `tailwind.config.ts` (deleted) to `@theme` blocks in `src/index.css`. Build 40s, dev ready 345ms, all tests green |
+| 3b — shadcn regeneration | ⬜ Deferred | Follow-up: regenerate 64 components via current shadcn CLI and merge customizations. Split from 3a to reduce visual-risk surface area in one PR |
+| 5, 6 | ⬜ Not started | |
 
 ## Goal
 
@@ -114,11 +116,14 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
 
 **Outcomes:** Tailwind 4.1, CSS-first config, shadcn components regenerated with `data-slot` attrs.
 
-- [ ] Run `npx @tailwindcss/upgrade@next`.
-- [ ] Migrate `tailwind.config.ts` theme tokens into CSS `@theme { ... }` blocks.
-- [ ] Replace `tailwindcss-animate` → `tw-animate-css` in `package.json` and CSS imports.
-- [ ] Drop `autoprefixer` and `postcss` standalone — Tailwind v4 bundles both via its Vite plugin.
-- [ ] Switch from `postcss.config.js` to the `@tailwindcss/vite` plugin in `vite.config.ts`.
+### 3a. Tailwind v4 core migration ✅
+- [x] Ran `npx @tailwindcss/upgrade@latest` — auto-migrated config + 40+ utility class renames (e.g. `shadow-sm` → `shadow-xs`, `flex-shrink-0` → `shrink-0`).
+- [x] `tailwind.config.ts` deleted; theme tokens now live in `@theme { ... }` blocks in `src/index.css`.
+- [x] Replaced `tailwindcss-animate` → `tw-animate-css` 1.4.0 (`@plugin` directive replaced by `@import 'tw-animate-css'` in CSS).
+- [x] Dropped `autoprefixer` and standalone `postcss` — Tailwind v4's Vite plugin bundles both.
+- [x] Switched from `postcss.config.js` (deleted) to `@tailwindcss/vite` plugin in `vite.config.ts`.
+
+### 3b. shadcn regeneration (deferred)
 - [ ] Regenerate shadcn components with the current CLI (pulls in Tailwind v4 output with `data-slot` styling hooks).
 - [ ] Audit custom overrides in `src/components/ui/` — merge into regenerated components.
 - [ ] Visual regression pass across all routes.

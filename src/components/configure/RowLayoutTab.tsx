@@ -62,7 +62,7 @@ const RackItem: React.FC<RackItemProps> = ({
   return (
     <div
       ref={ref}
-      className={`bg-white border rounded-lg p-4 shadow-sm transition-opacity ${
+      className={`bg-white border rounded-lg p-4 shadow-xs transition-opacity ${
         isDragging ? 'opacity-50' : 'opacity-100'
       } cursor-move`}
     >

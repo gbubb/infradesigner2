@@ -203,7 +203,7 @@ export const ClusterVMCostBreakdown: React.FC<ClusterVMCostBreakdownProps> = ({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Cluster VM Cost Calculation - {clusterName}</DialogTitle>
           </DialogHeader>
 

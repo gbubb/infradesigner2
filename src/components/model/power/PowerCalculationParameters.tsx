@@ -30,7 +30,7 @@ export const PowerCalculationParameters: React.FC<PowerCalculationParametersProp
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Calculation Parameters</span>
-          <Badge variant={isUsingCalibration ? "default" : "outline"}>
+          <Badge variant={isUsingCalibration ? "default" : "outline-solid"}>
             {isUsingCalibration ? `Profile: ${calibrationProfile.name}` : 'Default Parameters'}
           </Badge>
         </CardTitle>

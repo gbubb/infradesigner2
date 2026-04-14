@@ -5,7 +5,7 @@ import { LayoutDashboard, Wrench, Folder, FolderOpen, ArrowRight, Settings, Tren
 const SIDEBAR_WIDTH = 140;
 
 const sidebarSections = [
-  { label: "Requirements", path: "/", icon: LayoutDashboard, color: "bg-[#3e78b2]" },
+  { label: "Requirements", path: "/", icon: LayoutDashboard, color: "bg-infra-blue-light" },
   { label: "Components", path: "/components", icon: Folder, color: "bg-[#FFB703]" },
   { label: "Design", path: "/design", icon: Wrench, color: "bg-[#219EBC]" },
   { label: "Configure", path: "/configure", icon: Settings, color: "bg-[#8E54E9]" },
@@ -45,7 +45,7 @@ export const AppSidebar: React.FC = () => {
                 cursor-pointer shadow
                 transition duration-150
                 opacity-100
-                focus:outline-none
+                focus:outline-hidden
                 border border-infra-blue
                 hover:shadow-md
               `}
@@ -58,7 +58,7 @@ export const AppSidebar: React.FC = () => {
               }}
             >
               <div className="flex flex-col items-center justify-center pt-2 flex-1 w-full">
-                <section.icon size={26} strokeWidth={2.2} className="mb-1 flex-shrink-0 text-white" />
+                <section.icon size={26} strokeWidth={2.2} className="mb-1 shrink-0 text-white" />
                 <span
                   className={`
                     font-semibold text-[14px] tracking-tight text-white text-center leading-tight

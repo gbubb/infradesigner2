@@ -205,7 +205,7 @@ export const PricingSampleTableEnhanced: React.FC<PricingSampleTableEnhancedProp
   const getSizeBadgeColor = (vCPU: number) => {
     if (vCPU <= 2) return 'default';
     if (vCPU <= 8) return 'secondary';
-    if (vCPU <= 16) return 'outline';
+    if (vCPU <= 16) return 'outline-solid';
     return 'destructive';
   };
 
@@ -251,7 +251,7 @@ export const PricingSampleTableEnhanced: React.FC<PricingSampleTableEnhancedProp
               return (
                 <TableRow key={index}>
                   <TableCell>
-                    <Badge variant={badgeColor as 'default' | 'secondary' | 'outline' | 'destructive'}>
+                    <Badge variant={badgeColor as 'default' | 'secondary' | 'outline-solid' | 'destructive'}>
                       {item.name}
                     </Badge>
                   </TableCell>

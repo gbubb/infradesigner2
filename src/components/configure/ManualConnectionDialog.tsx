@@ -293,7 +293,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
     return (
       <div key={device.id} className="border rounded-lg p-2 mb-2 hover:bg-accent/50 transition-colors">
         <div className="flex items-center gap-2">
-          <div className="flex-shrink-0 min-w-0">
+          <div className="shrink-0 min-w-0">
             <div className="font-medium text-sm truncate">{device.name}</div>
             {az && <Badge variant="secondary" className="text-xs mt-1">{az}</Badge>}
           </div>
@@ -305,7 +305,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
                   key={port.id}
                   className={cn(
                     "w-8 h-8 rounded text-xs text-white font-medium transition-all",
-                    "flex items-center justify-center flex-shrink-0",
+                    "flex items-center justify-center shrink-0",
                     connected ? "opacity-50 cursor-not-allowed ring-4 ring-gray-600" : "cursor-pointer",
                     connected ? "bg-gray-400" : getPortColor(port.connectorType)
                   )}
@@ -326,7 +326,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-7xl h-[85vh] flex flex-col overflow-hidden">
-        <DialogHeader className="flex-shrink-0">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Create Manual Network Connections</DialogTitle>
         </DialogHeader>
         
@@ -336,7 +336,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
             <div className="grid grid-cols-2 gap-0 h-full">
               {/* Source Side */}
               <div className="flex flex-col h-full border-r overflow-hidden">
-                <div className="p-3 border-b bg-muted/50 flex-shrink-0">
+                <div className="p-3 border-b bg-muted/50 shrink-0">
                   <Label className="text-sm font-medium mb-2 block">Source Ports</Label>
                   <div className="space-y-2">
                     <Input
@@ -394,7 +394,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
               
               {/* Destination Side */}
               <div className="flex flex-col h-full overflow-hidden">
-                <div className="p-3 border-b bg-muted/50 flex-shrink-0">
+                <div className="p-3 border-b bg-muted/50 shrink-0">
                   <Label className="text-sm font-medium mb-2 block">Destination Ports</Label>
                   <div className="space-y-2">
                     <Input
@@ -455,7 +455,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
           {/* Bottom Half - Connection Definitions */}
           <div className="h-[35%] min-h-0 border rounded-lg overflow-hidden">
             <div className="h-full flex flex-col">
-              <div className="p-3 border-b bg-muted/50 flex-shrink-0">
+              <div className="p-3 border-b bg-muted/50 shrink-0">
                 <Label className="text-sm font-medium">Connection Definitions ({connections.length})</Label>
               </div>
               
@@ -471,7 +471,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
                       <div className="space-y-2">
                         {connections.map((conn) => (
                           <div key={conn.id} className="flex items-center gap-2 p-3 border rounded-lg">
-                            <div className="flex-1 grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
+                            <div className="flex-1 grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                               <div className="text-sm">
                                 <div className="font-medium">{conn.source?.deviceName}</div>
                                 <div className="text-xs text-muted-foreground">
@@ -516,7 +516,7 @@ const ManualConnectionDialog: React.FC<ManualConnectionDialogProps> = ({ open, o
           </div>
         </div>
         
-        <DialogFooter className="flex-shrink-0 pt-4">
+        <DialogFooter className="shrink-0 pt-4">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={connections.length === 0}>
             Save {connections.length} Connection{connections.length !== 1 ? 's' : ''}

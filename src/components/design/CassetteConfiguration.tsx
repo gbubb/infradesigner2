@@ -90,7 +90,7 @@ export const CassetteConfiguration: React.FC<CassetteConfigurationProps> = ({ ro
       
       {availableSlots > 0 ? (
         <div className="flex items-end gap-3">
-          <div className="flex-grow">
+          <div className="grow">
             <Label htmlFor="cassette-select">Cassette Type</Label>
             <Select
               value={selectedCassetteId}

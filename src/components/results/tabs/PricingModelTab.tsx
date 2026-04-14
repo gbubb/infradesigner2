@@ -653,7 +653,7 @@ export const PricingModelTab: React.FC = () => {
                               targetUtilization: value / 100
                             });
                           }}
-                          className={hasCapacityError ? '[&_[role=slider]]:bg-red-500' : ''}
+                          className={hasCapacityError ? '**:[[role=slider]]:bg-red-500' : ''}
                         />
                         {/* Visual indicator for max available */}
                         {sc.otherPoolsConsumptionTiB > 0 && maxUtil < 100 && (

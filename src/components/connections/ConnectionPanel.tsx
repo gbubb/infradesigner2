@@ -50,13 +50,13 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onCl
       <CardContent>
         <div className="flex space-x-2 mb-4">
           <Button 
-            variant={activeTab === 'info' ? 'default' : 'outline'} 
+            variant={activeTab === 'info' ? 'default' : 'outline-solid'} 
             onClick={() => setActiveTab('info')}
           >
             Device Info
           </Button>
           <Button 
-            variant={activeTab === 'connections' ? 'default' : 'outline'} 
+            variant={activeTab === 'connections' ? 'default' : 'outline-solid'} 
             onClick={() => setActiveTab('connections')}
           >
             Connections ({deviceConnections.length})

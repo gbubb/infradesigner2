@@ -136,7 +136,7 @@ export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOp
                         <div className="text-sm text-muted-foreground line-clamp-2">{design.description}</div>
                       )}
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
+                    <div className="flex gap-2 shrink-0">
                       <Button
                         variant="outline"
                         size="sm"

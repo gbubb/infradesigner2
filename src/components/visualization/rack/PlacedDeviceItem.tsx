@@ -70,7 +70,7 @@ export const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
           <div
             ref={drag}
             className={cn(
-              "absolute left-0 right-0 border rounded shadow-sm flex flex-col justify-center items-center px-1 py-0 overflow-hidden", // Minimal padding
+              "absolute left-0 right-0 border rounded shadow-xs flex flex-col justify-center items-center px-1 py-0 overflow-hidden", // Minimal padding
               getDeviceColor(type, serverRole ? { serverRole } as Pick<InfrastructureComponent, 'serverRole'> : undefined),
               "cursor-move"
             )}

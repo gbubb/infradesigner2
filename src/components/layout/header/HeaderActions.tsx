@@ -103,7 +103,7 @@ export const HeaderActions = () => {
         type="button"
         className={`
           relative flex items-center bg-[#f0f1f5] hover:bg-gray-200 text-[#1A3A5F] 
-          shadow-sm hover:shadow rounded-md border border-gray-300 focus:outline-none
+          shadow-xs hover:shadow-sm rounded-md border border-gray-300 focus:outline-hidden
           focus:ring-2 focus:ring-offset-1 focus:ring-blue-400
           transition-all duration-200 ease-out overflow-hidden
           ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
@@ -123,7 +123,7 @@ export const HeaderActions = () => {
       >
         {/* Icon container - no movement or scaling */}
         <div 
-          className="flex items-center justify-center flex-shrink-0"
+          className="flex items-center justify-center shrink-0"
           style={{
             width: "40px",
             height: "40px",
@@ -215,7 +215,7 @@ export const HeaderActions = () => {
       )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="rounded-full bg-[#f0f1f5] w-10 h-10 flex items-center justify-center shadow-sm hover:shadow border border-gray-300 hover:bg-gray-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-400">
+          <button className="rounded-full bg-[#f0f1f5] w-10 h-10 flex items-center justify-center shadow-xs hover:shadow-sm border border-gray-300 hover:bg-gray-200 transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-offset-1 focus:ring-blue-400">
             <Avatar className="h-7 w-7">
               <AvatarFallback className="bg-transparent">{getUserInitials()}</AvatarFallback>
             </Avatar>

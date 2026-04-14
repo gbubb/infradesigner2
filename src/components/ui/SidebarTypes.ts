@@ -36,7 +36,7 @@ export type SidebarMenuButtonProps = React.ComponentProps<"button"> & {
   asChild?: boolean
   isActive?: boolean
   tooltip?: string | TooltipContentProps
-  variant?: "default" | "outline"
+  variant?: "default" | "outline-solid"
   size?: "default" | "sm" | "lg"
 }
 

@@ -39,7 +39,7 @@ const PlacementReportDialog: React.FC<PlacementReportDialogProps> = ({
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
       <AlertDialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <button
-          className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 z-[10000] text-2xl bg-white p-1 rounded"
+          className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 z-10000 text-2xl bg-white p-1 rounded"
           style={{ lineHeight: 1, border: "none", cursor: "pointer" }}
           onClick={() => onOpenChange(false)}
           aria-label="Close"

@@ -378,7 +378,7 @@ export function RackDefinitionPanel() {
                                   variant={
                                     rack.status === 'available' ? 'secondary' :
                                     rack.status === 'occupied' ? 'default' :
-                                    rack.status === 'reserved' ? 'outline' :
+                                    rack.status === 'reserved' ? 'outline-solid' :
                                     'destructive'
                                   }
                                 >
