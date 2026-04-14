@@ -3,7 +3,7 @@ import { Header } from "@/components/layout/header";
 import { useDesignStore } from "@/store/designStore";
 import { ComponentProvider } from "@/context/ComponentContext";
 import { AppSidebar } from "@/components/layout/AppSidebar";
-import { Outlet } from "react-router-dom";
+import { Outlet } from "react-router";
 
 // Sidebar width and header height should match sidebar styling
 const SIDEBAR_WIDTH = 140; // must match AppSidebar

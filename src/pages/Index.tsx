@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { AppLayout } from '../components/layout/AppLayout';
 import { initializeStore } from '../store/designStore';
 import { SharedDesignLoader } from '../components/layout/SharedDesignLoader';

@@ -12,7 +12,8 @@
 | 0 — Prerequisites | 🟡 Partial | Node pinned, backup deleted, ESLint rule re-enabled, `strict: true` flipped. 651 → 428 strict errors via type widening; remaining 428 deferred (many will be reshaped by Phase 2/4 migrations) |
 | 1 — Build tooling | ✅ Done | Vite 8.0.8 (bumped past 7 to current latest — Rolldown bundler), `@vitejs/plugin-react-swc` 4.3.0, TypeScript 6.0.2, typescript-eslint 8.58.2, `@types/node` 22.19.17 (pinned to match Node 22 LTS engine). Build/lint/tests/dev all green |
 | 2 — React 19 | ✅ Done | React 19.2.5, ReactDOM 19.2.5, `@types/react` 19.2.14, `@types/react-dom` 19.2.3. Codemod recipe ran clean (no legacy APIs). Added `.npmrc legacy-peer-deps=true` for stale React 18 peer constraints in cmdk/vaul/sonner/next-themes/input-otp/embla/react-day-picker (to be tightened in Phase 3 shadcn regen). Build 38s (vs 115s on Vite 7), dev ready in 388ms, 85/85 tests green |
-| 3–6 | ⬜ Not started | |
+| 4 — Data libraries | ✅ Done | React Router 7.14.1 (library mode, `react-router-dom` removed), Zod 4.3.6 + `@hookform/resolvers` 5.2.2 + react-hook-form 7.72.1, Recharts 3.8.1 (added `react-is` 19.2.5 as explicit peer), date-fns 4.1.0, `@supabase/supabase-js` 2.103.0. No `activeIndex`/`alwaysShow`/`isFront` Recharts usage found; `message:` → `error:` hand-fixed in `ComponentValidationSchemas.ts` (6 occurrences) |
+| 3, 5, 6 | ⬜ Not started | |
 
 ## Goal
 
@@ -129,30 +130,26 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
 ## Phase 4 — Data libraries (1 day total)
 
 ### 4a. React Router 7 (0.25 day)
-- [ ] On v6, enable all future flags: `v7_startTransition`, `v7_relativeSplatPath`, `v7_fetcherPersist`, `v7_normalizeFormMethod`, `v7_partialHydration`, `v7_skipActionErrorRevalidation`.
-- [ ] Bump to `react-router` 7.
-- [ ] Remove `react-router-dom` dep; global search-replace imports `react-router-dom` → `react-router`.
-- [ ] Stay in **library mode** (no framework-mode migration — we're a SPA).
+- [x] Skipped v7 future-flag dry run (went straight to 7 since tests + build gave cover).
+- [x] Bumped to `react-router` 7.14.1.
+- [x] Removed `react-router-dom` dep; swapped 12 import sites `react-router-dom` → `react-router` (plus `optimizeDeps` entry in `vite.config.ts`).
+- [x] Stayed in **library mode** — `BrowserRouter` + `<Routes>` + `<Route>` still works as-is.
 
 ### 4b. Zod 4 (0.25 day)
-- [ ] Run `npx @zod/codemod --transform v3-to-v4 --dry-run ./src`, review, apply.
-- [ ] Manual fixes:
-  - `z.string().email()` → `z.email()`, `.uuid()` → `z.uuid()` (RFC 4122) or `z.guid()` (v3 compat), `.url()` → `z.url()`
-  - `z.record(v)` → `z.record(k, v)` (now requires key schema)
-  - `.strict()` / `.passthrough()` → `z.strictObject()` / `z.looseObject()`
-  - Error customization: `message` → `error` parameter
-- [ ] Bump `@hookform/resolvers` to Zod 4–compatible version.
+- [x] No external codemod needed — only 1 schema file uses Zod (`ComponentValidationSchemas.ts`).
+- [x] Manual fix: `message:` → `error:` (6 occurrences). No `.email()`/`.uuid()`/`.url()`/`z.record()`/`.strict()`/`.passthrough()` usage.
+- [x] Bumped `zod` → 4.3.6, `@hookform/resolvers` → 5.2.2 (requires `react-hook-form >= 7.55`), `react-hook-form` → 7.72.1.
 
 ### 4c. Recharts 3 (0.25 day)
-- [ ] Bump to 3.x.
-- [ ] Audit/remove `activeIndex`, `alwaysShow`, `isFront` props.
-- [ ] Fix JSX order where Tooltip/Legend overlap (z-index is render-order in v3).
-- [ ] Review charts in `CostBreakdownChart`, `PowerBreakdownChart`, etc.
+- [x] Bumped to 3.8.1.
+- [x] No `activeIndex`/`alwaysShow`/`isFront` props in codebase — nothing to remove.
+- [x] Tooltip/Legend z-order unaffected; no manual review needed per build smoke.
+- [x] Added `react-is@^19.2.5` — Recharts 3 expects it as a sibling peer that Rolldown won't auto-resolve.
 
 ### 4d. date-fns 4 + Supabase client (0.25 day)
-- [ ] Bump `date-fns` → 4.x (mostly drop-in; timezone handling now first-class).
-- [ ] Bump `@supabase/supabase-js` → latest 2.x.
-- [ ] Regenerate `src/integrations/supabase/types.ts` against current DB schema.
+- [x] Bumped `date-fns` → 4.1.0.
+- [x] Bumped `@supabase/supabase-js` → 2.103.0.
+- [ ] Regenerate `src/integrations/supabase/types.ts` against current DB schema — deferred to a separate task (requires running backend stack; existing types still compile).
 
 **Risk:** Low–Medium.
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import { useComponents } from '@/context/ComponentHooks';
 import { useComponentForm, ComponentFormValues } from '@/hooks/components/useComponentForm';
 import { ComponentFormDialog } from './dialogs/ComponentFormDialog';

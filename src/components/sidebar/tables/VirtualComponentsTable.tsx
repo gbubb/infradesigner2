@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { VirtualTable, VirtualTableColumn } from '@/components/ui/virtual-table';
 import { TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';

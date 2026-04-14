@@ -15,7 +15,7 @@ import {
   CopperPatchPanel,
   Cassette
 } from "@/types/infrastructure";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { ExternalLink, Cpu, HardDrive, Network, Cable as CableIcon, Router as RouterIcon, Shield } from "lucide-react";
 
 interface BomItemHoverCardProps {

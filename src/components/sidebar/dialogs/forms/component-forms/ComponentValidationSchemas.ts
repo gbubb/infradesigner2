@@ -25,13 +25,13 @@ const numberPreprocess = (val: unknown) => {
 const baseComponentSchema = z.object({
   type: z.nativeEnum(ComponentType),
   name: z.string().min(2, {
-    message: 'Component name must be at least 2 characters.',
+    error: 'Component name must be at least 2 characters.',
   }),
   manufacturer: z.string().min(2, {
-    message: 'Manufacturer must be at least 2 characters.',
+    error: 'Manufacturer must be at least 2 characters.',
   }),
   model: z.string().min(2, {
-    message: 'Model must be at least 2 characters.',
+    error: 'Model must be at least 2 characters.',
   }),
   cost: z.preprocess((val) => {
     if (val === "" || val === undefined || val === null) return 0;
@@ -208,13 +208,13 @@ export const componentFormSchema = z.discriminatedUnion('type', [
 export const legacyFormSchema = z.object({
   type: z.nativeEnum(ComponentType),
   name: z.string().min(2, {
-    message: 'Component name must be at least 2 characters.',
+    error: 'Component name must be at least 2 characters.',
   }),
   manufacturer: z.string().min(2, {
-    message: 'Manufacturer must be at least 2 characters.',
+    error: 'Manufacturer must be at least 2 characters.',
   }),
   model: z.string().min(2, {
-    message: 'Model must be at least 2 characters.',
+    error: 'Model must be at least 2 characters.',
   }),
   cost: z.preprocess((val) => {
     if (val === "" || val === undefined || val === null) return 0;

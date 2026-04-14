@@ -1,5 +1,5 @@
 import React from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link } from "react-router";
 import { LayoutDashboard, Wrench, Folder, FolderOpen, ArrowRight, Settings, TrendingUp, ShoppingCart, Building } from "lucide-react";
 
 const SIDEBAR_WIDTH = 140;
