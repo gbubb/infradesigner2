@@ -47,13 +47,16 @@ services:
           credentials: true
           headers:
             - Accept
+            - Accept-Profile
             - Authorization
             - Content-Type
+            - Content-Profile
             - apikey
             - x-client-info
             - Prefer
             - Range
             - Range-Unit
+            - X-Client-Info
           methods:
             - GET
             - POST
@@ -65,3 +68,4 @@ services:
           exposed_headers:
             - Content-Length
             - Content-Range
+            - Content-Profile
