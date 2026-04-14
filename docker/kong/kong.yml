@@ -1,0 +1,67 @@
+_format_version: "2.1"
+_transform: true
+
+services:
+  - name: auth-v1
+    url: http://gotrue:9999/
+    routes:
+      - name: auth-v1-all
+        strip_path: true
+        paths:
+          - /auth/v1/
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "*"
+          credentials: true
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - apikey
+            - x-client-info
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          exposed_headers:
+            - Content-Length
+            - Content-Range
+
+  - name: rest-v1
+    url: http://postgrest:3000/
+    routes:
+      - name: rest-v1-all
+        strip_path: true
+        paths:
+          - /rest/v1/
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "*"
+          credentials: true
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - apikey
+            - x-client-info
+            - Prefer
+            - Range
+            - Range-Unit
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+            - HEAD
+          exposed_headers:
+            - Content-Length
+            - Content-Range

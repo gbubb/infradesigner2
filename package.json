@@ -8,7 +8,11 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:db": "docker compose up -d",
+    "dev:db:stop": "docker compose down",
+    "dev:db:reset": "bash scripts/reset-db.sh",
+    "dev:db:logs": "docker compose logs -f"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

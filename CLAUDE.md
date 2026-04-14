@@ -12,12 +12,20 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ```bash
 npm install          # Install dependencies
-npm run dev          # Start dev server (Vite, port 8080)
+npm run dev:db       # Start local backend stack (postgres + postgrest + gotrue + kong + mailpit)
+npm run dev          # Start Vite dev server on port 8080
 npm run build        # Production build
 npm run build:dev    # Development build
 npm run lint         # Run ESLint
 npm run preview      # Preview production build
+
+# Backend stack management
+npm run dev:db:stop    # Stop stack (data persists in volume)
+npm run dev:db:reset   # Nuke volume, re-restore from backup
+npm run dev:db:logs    # Tail all container logs
 ```
+
+The backend stack is defined in `docker-compose.yml`. Kong on `:54321` fronts PostgREST (at `/rest/v1`) and GoTrue (at `/auth/v1`), matching Supabase's URL shape so the `@supabase/supabase-js` client works unchanged.
 
 ## Testing
 
@@ -29,7 +37,7 @@ No test framework is currently configured. Verify changes by running `npm run bu
 - **React 18** + TypeScript
 - **Vite** for build tooling (SWC plugin)
 - **Zustand** for state management (modular slice pattern)
-- **Supabase** for auth and database
+- **PostgreSQL** (vanilla) + **PostgREST** (REST API) + **GoTrue** (auth), self-hosted via Docker Compose. The `@supabase/supabase-js` client points at a Kong gateway so queries/auth work unchanged.
 - **shadcn/ui** (Radix UI + Tailwind CSS)
 - **React Router v6** for routing
 - **React Hook Form + Zod** for forms/validation
@@ -107,22 +115,27 @@ src/
 - Error boundaries around critical UI sections
 - ESLint: `@typescript-eslint/no-unused-vars` is off
 
-## Lovable Dependencies to Remove
+## Backend architecture (post-Supabase migration)
 
-These are the Lovable-specific artifacts that need to be cleaned up:
+The app still uses `@supabase/supabase-js` as its client library because both PostgREST and GoTrue implement the same wire protocols Supabase does. But the backend is now vanilla infrastructure:
 
-1. **`lovable-tagger`** - Dev dependency in `package.json`, imported in `vite.config.ts` as `componentTagger` plugin
-2. **GPT Engineer script** - `index.html` loads `https://cdn.gpteng.co/gptengineer.js`
-3. **Lovable meta tags** - `index.html` has og:image and twitter tags pointing to `lovable.dev`
-4. **`lovable-uploads/`** - `public/lovable-uploads/` contains logo images referenced by `HeaderLogo.tsx`
-5. **README.md** - Entirely Lovable-centric (references Lovable project URL, deployment via Lovable)
-6. **Supabase client comment** - `src/integrations/supabase/client.ts` has "automatically generated" comment (cosmetic)
-7. **`bun.lockb`** - Bun lockfile (project uses npm/`package-lock.json`)
+- **Postgres 16** (alpine image) — the DB itself, data volume-mounted
+- **PostgREST** — serves the REST API at `/rest/v1`
+- **GoTrue** — handles signup/signin/JWT at `/auth/v1`
+- **Kong** — API gateway on port 54321, fronts both of the above
+- **Mailpit** — dev-only SMTP capture (browse at `:8025`)
 
-### What is NOT a Lovable dependency
-- **Supabase** - Genuine backend dependency, not Lovable-specific. Keep as-is.
-- **shadcn/ui** - Standard component library. Keep as-is.
-- **`components.json`** - shadcn/ui config. Keep as-is.
+JWT auth: all services share `JWT_SECRET`. The anon key is a JWT signed with that secret, `role: anon`. Existing users and data are preserved from the `db_cluster-11-11-2025@01-58-10.backup.gz` snapshot.
+
+### Switching to external Postgres
+
+Only env vars change — no code. See README.md § "Switching to an external/hosted Postgres".
+
+### Init script order
+
+`docker/postgres/init/` executes alphabetically on first container start:
+1. `01-restore-backup.sh` — pipes the gzipped pg_dumpall through psql
+2. `02-post-restore.sql` — drops unused Supabase-cloud schemas (pgsodium, vault, realtime, storage, graphql), sets role passwords, wires up PostgREST role hierarchy, strips role configs referencing libraries we don't ship (e.g. `safeupdate`)
 
 ## Key Services
 

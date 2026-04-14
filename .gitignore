@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment overrides (.env.development is committed — only localhost config)
+.env.local
+.env.production
+.env.*.local
+
+# Docker volume mounts
+docker/postgres/data/
