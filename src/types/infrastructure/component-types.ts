@@ -132,7 +132,7 @@ export interface InfrastructureComponent {
   yearlyOperationalCost?: number;
   // Network properties
   portCount?: number;
-  portSpeed?: string;
+  portSpeed?: string | number;
   portSpeedType?: string;
   // Storage properties
   capacityTB?: number;

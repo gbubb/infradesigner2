@@ -105,10 +105,7 @@ export class IntelligentDesignUpdater {
     });
     
     // Calculate new roles based on updated requirements
-    const newRoles = calculateComponentRoles(
-      context.newRequirements,
-      state.componentTemplates
-    );
+    const newRoles = calculateComponentRoles(context.newRequirements);
     
     // Preserve existing assignments where possible
     const preservedRoles = this.preserveRoleAssignments(existingRoles, newRoles, context);

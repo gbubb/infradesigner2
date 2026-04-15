@@ -181,12 +181,12 @@ export const useComputeClusterMetrics = () => {
         if (template) {
           // Handle different CPU field names based on component type
           let physicalCores = 0;
-          if (template.type === ComponentType.Server || template.type === 'Server') {
+          if (template.type === ComponentType.Server) {
             // Servers use cpuCoresPerSocket and cpuSockets
             physicalCores = (template.cpuCoresPerSocket || template.coreCount || 0) * (template.cpuSockets || 1);
           } else {
             // Other components might use cpuCores
-            physicalCores = (template.cpuCores || 0) * (template.cpuSockets || 1);
+            physicalCores = ((template as { cpuCores?: number }).cpuCores || 0) * (template.cpuSockets || 1);
           }
 
           const memoryGB = template.memoryCapacity || template.memoryGB || 0;
@@ -206,9 +206,10 @@ export const useComputeClusterMetrics = () => {
             clusterComponents.forEach(node => {
               if ('attachedDisks' in node && node.attachedDisks) {
                 const disks = node.attachedDisks || [];
-                disks.forEach((disk: DiskConfig) => {
-                  if (disk && 'quantity' in disk) {
-                    const diskQuantity = disk.quantity || 1;
+                disks.forEach((disk) => {
+                  const d = disk as InfrastructureComponent & { quantity?: number };
+                  if (d && 'quantity' in d) {
+                    const diskQuantity = d.quantity || 1;
                     totalDisksInCluster += diskQuantity;
                   }
                 });

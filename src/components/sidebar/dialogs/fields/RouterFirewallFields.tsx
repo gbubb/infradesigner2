@@ -9,5 +9,5 @@ interface Props {
 }
 
 export const RouterFirewallFields: React.FC<Props> = ({ control }) => (
-  <RouterFirewallFormFields register={{ control }} />
+  <RouterFirewallFormFields register={{ control: control as never }} />
 );

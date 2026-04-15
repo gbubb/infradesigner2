@@ -4,6 +4,7 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+// @ts-expect-error — no shipped types for react-plotly.js
 import Plot from 'react-plotly.js';
 
 interface PricingVisualization3DProps {
@@ -146,9 +147,9 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
           data={[
             {
               type: 'surface',
-              x: plotData.x,
-              y: plotData.y,
-              z: plotData.z,
+              x: plotData?.x,
+              y: plotData?.y,
+              z: plotData?.z,
               colorscale: [
                 [0, '#10b981'],     // Green - Best value
                 [0.2, '#34d399'],   // Emerald

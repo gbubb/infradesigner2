@@ -11,6 +11,7 @@ import { useStore } from '@/store';
 import { ComputeClusterRequirement } from '@/types/infrastructure';
 
 interface ComputeRequirements {
+  controllerClusterRequired?: boolean;
   controllerNodeCount?: number;
   infrastructureClusterRequired?: boolean;
   infrastructureNodeCount?: number;
@@ -20,18 +21,23 @@ interface ComputeRequirements {
   averageVMMemoryGB?: number;
 }
 
-export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
+interface ComputeRequirementsFormProps {
+  requirements: ComputeRequirements;
+  onUpdate: (requirements: ComputeRequirements) => void;
+}
+
+export const ComputeRequirementsForm = ({ requirements, onUpdate }: ComputeRequirementsFormProps) => {
   const storageClusters = useStore((state) => state.requirements.storageRequirements.storageClusters);
   const totalAvailabilityZones = useStore((state) => state.requirements.physicalConstraints?.totalAvailabilityZones || 3);
-  
-  const handleInputChange = (e) => {
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const numericValue = parseInt(value);
     onUpdate({ ...requirements, [name]: isNaN(numericValue) ? undefined : numericValue });
   };
 
   const handleAddCluster = () => {
-    const newCluster = {
+    const newCluster: ComputeClusterRequirement = {
       id: uuidv4(),
       name: `Compute Cluster ${requirements.computeClusters.length + 1}`,
       totalVCPUs: 0,
@@ -47,14 +53,14 @@ export const ComputeRequirementsForm = ({ requirements, onUpdate }) => {
     });
   };
 
-  const handleRemoveCluster = (id) => {
+  const handleRemoveCluster = (id: string) => {
     onUpdate({
       ...requirements,
       computeClusters: requirements.computeClusters.filter((cluster) => cluster.id !== id),
     });
   };
 
-  const handleClusterUpdate = (id, updatedCluster) => {
+  const handleClusterUpdate = (id: string, updatedCluster: Partial<ComputeClusterRequirement>) => {
     onUpdate({
       ...requirements,
       computeClusters: requirements.computeClusters.map((cluster) =>

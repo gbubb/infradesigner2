@@ -1,4 +1,5 @@
-import type { PlacedComponent, InfrastructureDesign } from '@/types/infrastructure';
+import type { InfrastructureDesign } from '@/types/infrastructure';
+import type { PlacedComponent } from '@/types/placement';
 
 interface CostAnalysisRequest {
   design: InfrastructureDesign;
@@ -58,16 +59,17 @@ function calculateCostAnalysis(
   const byVendor: Record<string, number> = {};
   let totalCapex = 0;
 
-  for (const component of components) {
-    const unitCost = component.price || 0;
-    const quantity = component.quantity || 1;
+  for (const placed of components) {
+    const inner = placed.component as unknown as Record<string, unknown> | undefined;
+    const unitCost = (inner?.price as number | undefined) || 0;
+    const quantity = placed.quantity || 1;
     const totalCost = unitCost * quantity;
-    const category = component.type || 'Other';
-    const vendor = component.vendor || 'Unknown';
+    const category = (inner?.type as string | undefined) || 'Other';
+    const vendor = (inner?.vendor as string | undefined) || 'Unknown';
 
     breakdown.push({
-      componentId: component.id,
-      componentName: component.name,
+      componentId: placed.id,
+      componentName: (inner?.name as string | undefined) || placed.id,
       unitCost,
       quantity,
       totalCost,
@@ -93,16 +95,19 @@ function calculateCostAnalysis(
   if (includeOperational) {
     // Calculate total power consumption
     let totalPowerKw = 0;
-    for (const component of components) {
-      if (component.specifications?.powerConsumption) {
-        const power = component.specifications.powerConsumption;
-        const quantity = component.quantity || 1;
+    for (const placed of components) {
+      const inner = placed.component as unknown as Record<string, unknown> | undefined;
+      const specifications = inner?.specifications as { powerConsumption?: number } | undefined;
+      if (specifications?.powerConsumption) {
+        const power = specifications.powerConsumption;
+        const quantity = placed.quantity || 1;
         totalPowerKw += (power * quantity) / 1000; // Convert W to kW
       }
     }
 
     // Apply PUE for cooling overhead
-    const pue = design.specifications?.pue || 1.5;
+    const designSpecs = (design as unknown as { specifications?: { pue?: number } }).specifications;
+    const pue = designSpecs?.pue || 1.5;
     const totalPowerWithCooling = totalPowerKw * pue;
     const coolingPowerKw = totalPowerWithCooling - totalPowerKw;
 

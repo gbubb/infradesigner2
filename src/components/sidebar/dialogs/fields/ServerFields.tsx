@@ -34,7 +34,8 @@ export const ServerFields: React.FC<Props> = ({
     return formValues.pcieSlots || [];
   }, [formValues.pcieSlots]);
 
-  const [pcieSlots, setPcieSlots] = React.useState(initialPcieSlots);
+  type PcieSlot = { quantity?: number; type?: string; formFactor?: string; [key: string]: unknown };
+  const [pcieSlots, setPcieSlots] = React.useState<PcieSlot[]>(initialPcieSlots as PcieSlot[]);
 
   // Update local state when formValues change
   React.useEffect(() => {
@@ -64,13 +65,13 @@ export const ServerFields: React.FC<Props> = ({
         name: 'pcieSlots',
         value: updatedSlots
       }
-    } as React.ChangeEvent<HTMLInputElement>;
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
     onInputChange(syntheticEvent);
   };
 
   const updatePcieSlot = (index: number, field: 'quantity' | 'formFactor', value: string | number) => {
     const updatedSlots = [...pcieSlots];
-    updatedSlots[index][field] = field === 'quantity' ? Number(value) : value;
+    (updatedSlots[index] as Record<string, unknown>)[field] = field === 'quantity' ? Number(value) : value;
     setPcieSlots(updatedSlots);
     // Create a synthetic event to update the form
     const syntheticEvent = {

@@ -25,7 +25,7 @@ export const ScenarioCharts: React.FC<ScenarioChartsProps> = ({
   storagePricing,
   formatCurrency
 }) => {
-  const { currency } = useCurrency();
+  const currency = useCurrency();
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -50,9 +50,9 @@ export const ScenarioCharts: React.FC<ScenarioChartsProps> = ({
                   domain={[0, 100]}
                   label={{ value: 'Utilization %', angle: -90, position: 'insideLeft' }}
                 />
-                <Tooltip 
-                  formatter={(value: number) => `${Number(value).toFixed(1)}%`}
-                  labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
+                <Tooltip
+                  formatter={((value: number) => `${Number(value).toFixed(1)}%`) as never}
+                  labelFormatter={((label: unknown) => `Month ${Number(label).toFixed(1)}`) as never}
                 />
                 <Legend wrapperStyle={{fontSize: '12px'}} />
                 {[...(computePricing || []), ...(storagePricing || [])].map((cluster, index) => {
@@ -105,9 +105,9 @@ export const ScenarioCharts: React.FC<ScenarioChartsProps> = ({
                     return `$${Math.round(value)}`;
                   }}
                 />
-                <Tooltip 
-                  formatter={(value: number) => formatCurrency(value, currency)}
-                  labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
+                <Tooltip
+                  formatter={((value: number) => formatCurrency(value)) as never}
+                  labelFormatter={((label: unknown) => `Month ${Number(label).toFixed(1)}`) as never}
                 />
                 <Legend wrapperStyle={{fontSize: '12px'}} />
                 <Line
@@ -171,14 +171,14 @@ export const ScenarioCharts: React.FC<ScenarioChartsProps> = ({
                   ticks={[-100, -50, 0, 50, 100]}
                   tickFormatter={(value) => `${value}%`}
                 />
-                <Tooltip 
-                  formatter={(value: number, name: string) => {
+                <Tooltip
+                  formatter={((value: number, name: string) => {
                     if (name.includes('Margin')) {
                       return `${Number(value).toFixed(1)}%`;
                     }
-                    return formatCurrency(value, currency);
-                  }}
-                  labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
+                    return formatCurrency(value);
+                  }) as never}
+                  labelFormatter={((label: unknown) => `Month ${Number(label).toFixed(1)}`) as never}
                 />
                 <Legend wrapperStyle={{fontSize: '12px'}} />
                 <Line
@@ -236,9 +236,9 @@ export const ScenarioCharts: React.FC<ScenarioChartsProps> = ({
                     return `$${Math.round(value)}`;
                   }}
                 />
-                <Tooltip 
-                  formatter={(value: number) => formatCurrency(value, currency)}
-                  labelFormatter={(label) => `Month ${Number(label).toFixed(1)}`}
+                <Tooltip
+                  formatter={((value: number) => formatCurrency(value)) as never}
+                  labelFormatter={((label: unknown) => `Month ${Number(label).toFixed(1)}`) as never}
                 />
                 <Legend wrapperStyle={{fontSize: '12px'}} />
                 <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />

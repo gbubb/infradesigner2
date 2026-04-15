@@ -244,11 +244,8 @@ export class ChangeManager {
     const changes = {
       // Check actual field names from the data structure
       storageClusters: JSON.stringify(oldStorage.storageClusters || []) !== JSON.stringify(newStorage.storageClusters || []),
+      storagePools: JSON.stringify(oldStorage.storagePools || []) !== JSON.stringify(newStorage.storagePools || []),
       deviceLifespanYears: oldStorage.deviceLifespanYears !== newStorage.deviceLifespanYears,
-      // Legacy field support for backward compatibility
-      totalCapacityTB: oldStorage.totalCapacityTB !== newStorage.totalCapacityTB,
-      storageEfficiencyPercent: oldStorage.storageEfficiencyPercent !== newStorage.storageEfficiencyPercent,
-      clusters: false // Legacy field removed
     };
     
     
@@ -283,10 +280,6 @@ export class ChangeManager {
       fiberPatchPanelsPerAZ: oldNetwork.fiberPatchPanelsPerAZ !== newNetwork.fiberPatchPanelsPerAZ,
       copperPatchPanelsPerCoreRack: oldNetwork.copperPatchPanelsPerCoreRack !== newNetwork.copperPatchPanelsPerCoreRack,
       fiberPatchPanelsPerCoreRack: oldNetwork.fiberPatchPanelsPerCoreRack !== newNetwork.fiberPatchPanelsPerCoreRack,
-      // Legacy field support for backward compatibility
-      topology: oldNetwork.topology !== newNetwork.topology,
-      redundancy: oldNetwork.redundancy !== newNetwork.redundancy,
-      firewallEnabled: oldNetwork.firewallEnabled !== newNetwork.firewallEnabled
     };
     
     
@@ -319,9 +312,6 @@ export class ChangeManager {
       electricityPricePerKwh: oldPhysical.electricityPricePerKwh !== newPhysical.electricityPricePerKwh,
       operationalLoadPercentage: oldPhysical.operationalLoadPercentage !== newPhysical.operationalLoadPercentage,
       networkCoreRackQuantity: oldPhysical.networkCoreRackQuantity !== newPhysical.networkCoreRackQuantity,
-      // Legacy field support for backward compatibility
-      rackUHeight: oldPhysical.rackUHeight !== newPhysical.rackUHeight,
-      powerRedundancy: oldPhysical.powerRedundancy !== newPhysical.powerRedundancy
     };
     
     

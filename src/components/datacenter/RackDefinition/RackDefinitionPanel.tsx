@@ -153,7 +153,7 @@ export function RackDefinitionPanel() {
             <div className="flex items-center gap-2 text-xs">
               {hasCapacity ? (
                 <Badge variant="secondary">
-                  {level.capacity.racks} rack capacity
+                  {level.capacity?.racks} rack capacity
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-muted-foreground">
@@ -378,7 +378,7 @@ export function RackDefinitionPanel() {
                                   variant={
                                     rack.status === 'available' ? 'secondary' :
                                     rack.status === 'occupied' ? 'default' :
-                                    rack.status === 'reserved' ? 'outline-solid' :
+                                    rack.status === 'reserved' ? 'outline' :
                                     'destructive'
                                   }
                                 >

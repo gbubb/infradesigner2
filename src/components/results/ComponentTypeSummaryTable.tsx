@@ -89,8 +89,8 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
       
       // Calculate percentage based on the data key being displayed
       const dataKey = payloadItem.dataKey as string;
-      const total = typeData.reduce((sum, item) => sum + (item[dataKey] || 0), 0);
-      const value = data[dataKey] || 0;
+      const total = typeData.reduce((sum, item) => sum + ((item as unknown as Record<string, number>)[dataKey] || 0), 0);
+      const value = (data as unknown as Record<string, number>)[dataKey] || 0;
       const percentage = total > 0 ? (value / total * 100) : 0;
       
       return (
@@ -170,7 +170,7 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
                       fill="#8884d8"
                       dataKey="cost"
                       nameKey="type"
-                      label={(entry) => `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`}
+                      label={((entry: { type?: string; percent?: number }) => `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`) as never}
                     >
                       {typeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={getTypeColor(entry.originalType)} />
@@ -196,7 +196,7 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
                       fill="#8884d8"
                       dataKey="power"
                       nameKey="type"
-                      label={(entry) => `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`}
+                      label={((entry: { type?: string; percent?: number }) => `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`) as never}
                     >
                       {typeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={getTypeColor(entry.originalType)} />
@@ -222,7 +222,7 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
                       fill="#8884d8"
                       dataKey="rackUnits"
                       nameKey="type"
-                      label={(entry) => `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`}
+                      label={((entry: { type?: string; percent?: number }) => `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`) as never}
                     >
                       {typeData
                         .filter(item => item.rackUnits > 0)

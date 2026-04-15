@@ -4,7 +4,7 @@ import { useHardwareTotals } from './useHardwareTotals';
 import { usePowerCalculations } from './usePowerCalculations';
 import { useRackLayout } from './useRackLayout';
 import { useStorageClustersWrapper } from './useStorageClustersWrapper';
-import { ComponentType } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
 import { DatacenterCostCalculator } from '@/services/datacenter/DatacenterCostCalculator';
 
 export const useCostAnalysis = () => {
@@ -12,7 +12,7 @@ export const useCostAnalysis = () => {
   const activeDesign = useDesignStore(state => state.activeDesign);
   const { actualHardwareTotals } = useHardwareTotals();
   const { energyCosts } = usePowerCalculations();
-  const { racks } = useRackLayout();
+  const racks = useRackLayout().getAllRackProfiles();
   const { storageClustersMetrics } = useStorageClustersWrapper();
   
   // Get facility data
@@ -32,7 +32,7 @@ export const useCostAnalysis = () => {
       return null;
     }
     
-    const calculator = new DatacenterCostCalculator(selectedFacility, racks);
+    const calculator = new DatacenterCostCalculator(selectedFacility, racks as never);
     return calculator.calculateFacilityCosts();
   }, [facilityType, selectedFacility, racks]);
   

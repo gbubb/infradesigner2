@@ -145,7 +145,7 @@ export class PowerEfficiencyCalculator {
         return sum + load.powerKW;
       } else if (load.type === 'percentage') {
         const itPower = this.calculateITPower();
-        return sum + (itPower * load.percentage / 100);
+        return sum + (itPower * (load.percentage ?? 0) / 100);
       }
       return sum;
     }, 0);
@@ -206,17 +206,18 @@ export class PowerEfficiencyCalculator {
     this.facility.powerInfrastructure.forEach(layer => {
       if (layer.redundancyConfig) {
         const { type, config } = layer.redundancyConfig;
+        const n = config?.n ?? 1;
         let reserveFactor = 0;
 
         switch (type) {
           case 'N+1':
-            reserveFactor = 1 / (config.n || 1);
+            reserveFactor = 1 / n;
             break;
           case '2N':
             reserveFactor = 0.5;
             break;
           case '2N+1':
-            reserveFactor = 0.5 + (1 / ((config.n || 1) * 2));
+            reserveFactor = 0.5 + (1 / (n * 2));
             break;
         }
 
@@ -235,14 +236,15 @@ export class PowerEfficiencyCalculator {
     if (!layer.redundancyConfig) return 0;
 
     const { type, config } = layer.redundancyConfig;
-    
+    const n = config?.n ?? 1;
+
     switch (type) {
       case 'N+1':
-        return 100 / (config.n || 1);
+        return 100 / n;
       case '2N':
         return 100;
       case '2N+1':
-        return 100 + (100 / (config.n || 1));
+        return 100 + (100 / n);
       default:
         return 0;
     }
@@ -285,14 +287,15 @@ export class PowerEfficiencyCalculator {
       maxAdditionalITLoadKW: number;
     }> = [];
 
-    metrics.layerUtilizations.forEach((utilization, index) => {
+    const layerUtilizations = metrics.layerUtilizations ?? [];
+    layerUtilizations.forEach((utilization, index) => {
       if (utilization.utilizationPercent > targetUtilization) {
         const availableCapacity = utilization.capacityKW - utilization.inputPowerKW;
-        
+
         // Calculate how much IT load this translates to
         let efficiencyFactor = 1;
-        for (let i = index + 1; i < metrics.layerUtilizations.length; i++) {
-          efficiencyFactor *= metrics.layerUtilizations[i].efficiency;
+        for (let i = index + 1; i < layerUtilizations.length; i++) {
+          efficiencyFactor *= layerUtilizations[i].efficiency;
         }
         
         bottlenecks.push({
@@ -318,16 +321,18 @@ export class PowerEfficiencyCalculator {
     carbonPerITkWTonsCO2: number;
   } {
     const metrics = this.calculateEfficiencyMetrics();
-    const annualEnergyMWh = metrics.totalFacilityPowerKW * 24 * 365 / 1000;
+    const totalFacilityPowerKW = metrics.totalFacilityPowerKW ?? 0;
+    const itPowerKW = metrics.itPowerKW ?? 0;
+    const annualEnergyMWh = totalFacilityPowerKW * 24 * 365 / 1000;
     const annualCarbonTonsCO2 = annualEnergyMWh * carbonIntensityKgCO2PerMWh / 1000;
-    
+
     const activeRacks = this.racks.filter(r => r.placedComponents.length > 0).length;
-    const carbonPerRackTonsCO2 = activeRacks > 0 
-      ? annualCarbonTonsCO2 / activeRacks 
+    const carbonPerRackTonsCO2 = activeRacks > 0
+      ? annualCarbonTonsCO2 / activeRacks
       : 0;
-    
-    const carbonPerITkWTonsCO2 = metrics.itPowerKW > 0
-      ? annualCarbonTonsCO2 / metrics.itPowerKW
+
+    const carbonPerITkWTonsCO2 = itPowerKW > 0
+      ? annualCarbonTonsCO2 / itPowerKW
       : 0;
 
     return {

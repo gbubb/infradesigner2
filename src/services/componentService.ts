@@ -55,7 +55,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
     }
     
     // Convert database format to application format with proper type assertion
-    const components = (data?.map((component: ComponentRow) => {
+    const components = ((data ?? []) as unknown as ComponentRow[]).map((component: ComponentRow) => {
       if ('type' in component) {
         const baseComponent = {
           id: component.id,
@@ -268,7 +268,7 @@ export const loadComponents = async (): Promise<InfrastructureComponent[]> => {
       // This should never happen if database is properly set up
       console.error('Invalid component data:', component);
       return null;
-    }).filter(Boolean) || []) as InfrastructureComponent[];
+    }).filter(Boolean) as unknown as InfrastructureComponent[];
     
     console.log(`Loaded ${components.length} components from database`);
     return components;
@@ -391,7 +391,7 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
     
     const { error } = await supabase
       .from(TABLES.COMPONENTS)
-      .upsert(componentToSave);
+      .upsert(componentToSave as never);
     
     if (handleSupabaseError(error, 'saving component')) {
       return false;

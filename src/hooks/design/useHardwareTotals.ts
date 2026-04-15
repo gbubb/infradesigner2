@@ -61,14 +61,14 @@ export const useHardwareTotals = () => {
       totalVCPUs += totalServerVCPUs;
       
       // Memory calculation
+      const memComp = component as unknown as Record<string, number | undefined>;
       let componentMemoryGB = 0;
-      if ('memoryCapacity' in component && component.memoryCapacity > 0) {
-        componentMemoryGB = component.memoryCapacity;
-      } else if ('memoryGB' in component && component.memoryGB > 0) {
-        componentMemoryGB = component.memoryGB;
-      }
-      else if ('memoryTB' in component && (component as { memoryTB?: number }).memoryTB && (component as { memoryTB?: number }).memoryTB! > 0) {
-        componentMemoryGB = (component as { memoryTB?: number }).memoryTB! * 1024;
+      if (memComp.memoryCapacity != null && memComp.memoryCapacity > 0) {
+        componentMemoryGB = memComp.memoryCapacity;
+      } else if (memComp.memoryGB != null && memComp.memoryGB > 0) {
+        componentMemoryGB = memComp.memoryGB;
+      } else if (memComp.memoryTB != null && memComp.memoryTB > 0) {
+        componentMemoryGB = memComp.memoryTB * 1024;
       }
       if (componentMemoryGB === 0) {
         // Keep this warn for missing configuration
@@ -85,7 +85,7 @@ export const useHardwareTotals = () => {
     // For hyper-converged storage, we need to map storage clusters to their compute clusters
     const hyperConvergedStorageMap = new Map<string, string>();
     storageClusters.forEach(sc => {
-      if (sc.hyperConverged && sc.computeClusterId) {
+      if (sc.type === 'hyperConverged' && sc.computeClusterId) {
         hyperConvergedStorageMap.set(sc.id, sc.computeClusterId);
       }
     });
@@ -125,21 +125,24 @@ export const useHardwareTotals = () => {
         return acc;
       }, {});
     
+    const storagePools = requirements.storageRequirements.storagePools || [];
     Object.entries(storageNodesByCluster).forEach(([clusterId, nodes]) => {
       const cluster = storageClusters.find(c => c.id === clusterId);
       if (!cluster) return;
-      
-      const poolType = cluster.poolType || '3 Replica';
+
+      // Find an associated pool to determine poolType/maxFillFactor (these live on StoragePool, not StorageCluster)
+      const pool = storagePools.find(p => p.storageClusterId === cluster.id);
+      const poolType = pool?.poolType || '3 Replica';
       const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);
-      const maxFillFactor = (cluster.maxFillFactor || 80) / 100;
-      
+      const maxFillFactor = ((pool?.maxFillFactor ?? 80)) / 100;
+
       let clusterRawCapacityTB = 0;
-      
+
       nodes.forEach(node => {
         const quantity = node.quantity || 1;
         if ('attachedDisks' in node && Array.isArray(node.attachedDisks)) {
           node.attachedDisks.forEach((disk) => {
-            if (disk && 'capacityTB' in disk) {
+            if (disk && 'capacityTB' in disk && disk.capacityTB != null) {
               clusterRawCapacityTB += disk.capacityTB * (disk.quantity || 1) * quantity;
             }
           });
@@ -158,13 +161,14 @@ export const useHardwareTotals = () => {
       )
       .forEach(component => {
         const quantity = component.quantity || 1;
+        const memComp = component as unknown as Record<string, number | undefined>;
         let componentMemoryGB = 0;
-        if ('memoryCapacity' in component && component.memoryCapacity > 0) {
-          componentMemoryGB = component.memoryCapacity;
-        } else if ('memoryGB' in component && component.memoryGB > 0) {
-          componentMemoryGB = component.memoryGB;
-        } else if ('memoryTB' in component && (component as { memoryTB?: number }).memoryTB && (component as { memoryTB?: number }).memoryTB! > 0) {
-          componentMemoryGB = (component as { memoryTB?: number }).memoryTB! * 1024;
+        if (memComp.memoryCapacity != null && memComp.memoryCapacity > 0) {
+          componentMemoryGB = memComp.memoryCapacity;
+        } else if (memComp.memoryGB != null && memComp.memoryGB > 0) {
+          componentMemoryGB = memComp.memoryGB;
+        } else if (memComp.memoryTB != null && memComp.memoryTB > 0) {
+          componentMemoryGB = memComp.memoryTB * 1024;
         }
         otherMemoryGB += componentMemoryGB * quantity;
       });

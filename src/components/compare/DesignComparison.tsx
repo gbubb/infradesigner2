@@ -301,7 +301,9 @@ export const DesignComparison: React.FC<DesignComparisonProps> = ({ designA, des
         
         // Calculate usable capacity based on pool type and efficiency
         
-        const poolEfficiencyFactor = StoragePoolEfficiencyFactors[cluster.poolType || '3 Replica'] || (1/3);
+        // poolType lives on the associated StoragePool, not on StorageCluster — look it up.
+        const pool = design.requirements?.storageRequirements?.storagePools?.find(p => p.storageClusterId === cluster.id);
+        const poolEfficiencyFactor = StoragePoolEfficiencyFactors[pool?.poolType || '3 Replica'] || (1/3);
         const clusterUsableCapacityTB = clusterRawCapacityTB * poolEfficiencyFactor;
         usableStorageTB += clusterUsableCapacityTB;
       });

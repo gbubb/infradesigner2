@@ -1,9 +1,8 @@
 
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR, InfrastructureComponent } from '@/types/infrastructure';
+import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR, InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { ClusterInfo } from '@/types/infrastructure/roles-types';
-import { DiskAttachment } from '@/types/infrastructure/storage-types';
 
 export const useStorageClusters = () => {
   const { activeDesign, requirements, componentTemplates } = useDesignStore();
@@ -21,7 +20,7 @@ export const useStorageClusters = () => {
         sc => sc.id === pool.storageClusterId
       );
 
-      let clusterNodes = [];
+      let clusterNodes: InfrastructureComponent[] = [];
 
       // Check if this pool targets a hyper-converged physical cluster
       if (targetCluster?.type === 'hyperConverged' && targetCluster.computeClusterId) {
@@ -54,8 +53,8 @@ export const useStorageClusters = () => {
           let totalDisksInNode = 0;
           let diskCostForNode = 0;
 
-          disks.forEach((disk) => {
-            if (disk && 'capacityTB' in disk) {
+          disks.forEach((disk: InfrastructureComponent & { capacityTB?: number; quantity?: number; cost?: number; storageClusterId?: string }) => {
+            if (disk && 'capacityTB' in disk && disk.capacityTB != null) {
               // For hyper-converged clusters, only count disks tagged for this physical storage cluster
               if (targetCluster?.type === 'hyperConverged') {
                 if ('storageClusterId' in disk && disk.storageClusterId === targetCluster.id) {
@@ -77,10 +76,10 @@ export const useStorageClusters = () => {
           // For hyper-converged nodes, calculate storage-specific cost
           // This provides a more accurate Cost per TiB by only including the
           // portion of server cost attributable to storage operations
-          if (targetCluster?.type === 'hyperConverged' && targetCluster.computeClusterId && node.componentId) {
+          if (targetCluster?.type === 'hyperConverged' && targetCluster.computeClusterId && (node as InfrastructureComponent & { componentId?: string }).componentId) {
             // Find the server template to get CPU core count
-            const serverTemplate = componentTemplates.find(t => t.id === node.componentId);
-            if (serverTemplate && serverTemplate.type === 'server') {
+            const serverTemplate = componentTemplates.find(t => t.id === (node as InfrastructureComponent & { componentId?: string }).componentId);
+            if (serverTemplate && serverTemplate.type === ComponentType.Server) {
               const server = serverTemplate as { cpuSockets?: number; cpuCoresPerSocket?: number };
               const totalCores = (server.cpuSockets || 0) * (server.cpuCoresPerSocket || 0);
               

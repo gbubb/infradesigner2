@@ -114,7 +114,7 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={renderCustomLabel(designAData, designATotal)}
+                    label={renderCustomLabel(designAData, designATotal) as never}
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
@@ -148,7 +148,7 @@ export const CostDistributionPieCharts: React.FC<CostDistributionPieChartsProps>
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={renderCustomLabel(designBData, designBTotal)}
+                    label={renderCustomLabel(designBData, designBTotal) as never}
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"

@@ -9,7 +9,7 @@ export interface RackProfileInitializationData {
   id: string;
   name: string;
   azName: string;
-  availabilityZoneId: string;
+  availabilityZoneId?: string;
   rackType: 'ComputeStorage' | 'Core';
 }
 

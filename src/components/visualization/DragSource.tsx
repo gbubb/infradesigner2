@@ -18,9 +18,9 @@ export const DragSource: React.FC<DragSourceProps> = ({ component, children }) =
   });
 
   return (
-    <div 
-      ref={drag} 
-      style={{ 
+    <div
+      ref={drag as unknown as React.Ref<HTMLDivElement>}
+      style={{
         opacity: isDragging ? 0.5 : 1,
         cursor: 'move',
       }}

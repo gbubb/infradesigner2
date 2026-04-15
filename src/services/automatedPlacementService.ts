@@ -6,6 +6,7 @@ import { tryPlaceDeviceInRacksWithConstraints } from './placementHelpers';
 import { defaultRequirements } from '@/store/slices/requirements/types';
 import { getTypeKey, isCoreNet, isPatchPanel, isComputeLike, getCoreAndComputeRacks } from './placement/placementUtils';
 import { ComponentWithPlacement } from '@/types/service-types';
+import type { PlacementConfig } from '@/types/placement-types';
 import { placePatchPanel } from './placement/patchPanelPlacement';
 import { placeCoreDevice } from './placement/coreDevicePlacement';
 import { placeComputeLike } from './placement/computePlacement';
@@ -283,7 +284,7 @@ export class AutomatedPlacementService {
           fiberPatchPanelsPerAZ
         });
         if (placed) placedDevices++; else failedDevices++;
-        placementResult.items.push(reportItem);
+        if (reportItem) placementResult.items.push(reportItem);
         continue;
       }
 
@@ -293,7 +294,7 @@ export class AutomatedPlacementService {
           component, coreRacks, components, state, typeLabel, typeCounters
         });
         if (placed) placedDevices++; else failedDevices++;
-        placementResult.items.push(reportItem);
+        if (reportItem) placementResult.items.push(reportItem);
         continue;
       }
 
@@ -313,10 +314,12 @@ export class AutomatedPlacementService {
       // Compute/controller/storage/ipmi/leafswitch
       if (isComputeLike(component)) {
         const { placed, reportItem } = placeComputeLike({
-          component, allAZs, coreAZId, allowedAZsMap, computeRacks, components, state, typeLabel, typeCounters
+          component, allAZs, coreAZId, allowedAZsMap, computeRacks, components,
+          state: state as unknown as PlacementConfig['state'],
+          typeLabel, typeCounters
         });
         if (placed) placedDevices++; else failedDevices++;
-        placementResult.items.push(reportItem);
+        if (reportItem) placementResult.items.push(reportItem);
         continue;
       }
 
@@ -335,7 +338,7 @@ export class AutomatedPlacementService {
         component, allowedAZs, rackProfiles, components, state, typeLabel, typeCounters
       });
       if (placed) placedDevices++; else failedDevices++;
-      placementResult.items.push(reportItem);
+      if (reportItem) placementResult.items.push(reportItem);
     }
 
     placementResult.totalDevices = totalDevices;

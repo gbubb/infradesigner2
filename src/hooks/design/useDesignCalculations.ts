@@ -7,10 +7,28 @@ import { useCostAnalysis } from './useCostAnalysis';
 import { useDesignValidation } from './useDesignValidation';
 import { useResourceMetrics } from './useResourceMetrics';
 import { useComputeClusterMetrics } from './useComputeClusterMetrics';
-import { InfrastructureDesign } from '@/types/infrastructure';
+import { InfrastructureDesign, InfrastructureComponent } from '@/types/infrastructure';
 
 export const AVERAGE_VM_VCPU = 6;
 export const AVERAGE_VM_MEM_GIB = 18;
+
+const RESOURCE_METRICS_DEFAULTS = {
+  totalPower: 0,
+  totalRackUnits: 0,
+  totalServers: 0,
+  totalRackQuantity: 0,
+  totalAvailableRU: 0,
+  totalAvailablePower: 0,
+  totalLeafSwitches: 0,
+  totalMgmtSwitches: 0,
+  leafPortsUsed: 0,
+  leafPortsAvailable: 0,
+  mgmtPortsUsed: 0,
+  mgmtPortsAvailable: 0,
+  storagePortsUsed: 0,
+  storagePortsAvailable: 0,
+  hasDedicatedStorageNetwork: false,
+};
 
 /**
  * Calculate usable capacity after accounting for redundancy
@@ -87,7 +105,7 @@ const calculateUsableCapacity = (
 export const useDesignCalculations = () => {
   // Get store 
   const store = useDesignStore();
-  const activeDesign: InfrastructureDesign | undefined = store.activeDesign;
+  const activeDesign: InfrastructureDesign | null | undefined = store.activeDesign;
   const requirements = store.requirements;
   
   // Use our safer wrapper versions instead of the original hooks
@@ -100,21 +118,7 @@ export const useDesignCalculations = () => {
   
   // Memoize the resource metrics to avoid recalculations
   const resourceMetrics = useMemo(() => ({
-    totalPower: 0,
-    totalRackUnits: 0,
-    totalServers: 0,
-    totalRackQuantity: 0,
-    totalAvailableRU: 0,
-    totalAvailablePower: 0,
-    totalLeafSwitches: 0,
-    totalMgmtSwitches: 0,
-    leafPortsUsed: 0,
-    leafPortsAvailable: 0,
-    mgmtPortsUsed: 0,
-    mgmtPortsAvailable: 0,
-    storagePortsUsed: 0,
-    storagePortsAvailable: 0,
-    hasDedicatedStorageNetwork: false,
+    ...RESOURCE_METRICS_DEFAULTS,
     ...resourceMetricsResult
   }), [resourceMetricsResult]);
   
@@ -172,10 +176,11 @@ export const useDesignCalculations = () => {
   const computeClusters = activeDesign?.requirements?.computeRequirements?.computeClusters || [];
 
   // Count ALL compute-capable nodes (including hyperConverged and GPU nodes)
+  const componentsByTypeRecord = componentsByType as Record<string, InfrastructureComponent[]>;
   const computeNodes = [
-    ...(componentsByType?.computeNode || []),
-    ...(componentsByType?.hyperConvergedNode || []),
-    ...(componentsByType?.gpuNode || [])
+    ...(componentsByTypeRecord?.computeNode || []),
+    ...(componentsByTypeRecord?.hyperConvergedNode || []),
+    ...(componentsByTypeRecord?.gpuNode || [])
   ];
   const totalComputeNodes = computeNodes.length;
 

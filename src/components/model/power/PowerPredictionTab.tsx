@@ -262,11 +262,13 @@ export const PowerPredictionTab: React.FC<PowerPredictionTabProps> = ({ selected
           <PowerBreakdownChart breakdown={calculationResult.componentBreakdown} />
           
           {/* Power Consumption Chart */}
-          <PowerConsumptionChart 
-            result={calculationResult} 
-            inputs={powerInputs}
-            calibrationProfile={calibrationProfile}
-          />
+          {powerInputs && (
+            <PowerConsumptionChart
+              result={calculationResult}
+              inputs={powerInputs}
+              calibrationProfile={calibrationProfile}
+            />
+          )}
           
           {/* Debug View */}
           <PowerCalculationDebug 
@@ -276,8 +278,8 @@ export const PowerPredictionTab: React.FC<PowerPredictionTabProps> = ({ selected
           
           {/* Calculation Parameters */}
           {powerInputs && (
-            <PowerCalculationParameters 
-              inputs={powerInputs} 
+            <PowerCalculationParameters
+              inputs={powerInputs}
               calibrationProfile={calibrationProfile}
             />
           )}
@@ -295,7 +297,7 @@ export const PowerPredictionTab: React.FC<PowerPredictionTabProps> = ({ selected
               dimmCapacityGB={powerInputs.dimmCapacityGB}
               memoryType={powerInputs.memoryType}
               memorySpeedMHz={powerInputs.memorySpeedMHz}
-              calibrationProfile={calibrationProfile}
+              calibrationProfile={calibrationProfile ?? undefined}
             />
           )}
           
@@ -334,10 +336,12 @@ export const PowerPredictionTab: React.FC<PowerPredictionTabProps> = ({ selected
           )}
           
           {/* Power Values Push Card */}
-          <PowerValuesPushCard
-            selectedServer={selectedServer}
-            calculationResult={calculationResult}
-          />
+          {selectedServer && (
+            <PowerValuesPushCard
+              selectedServer={selectedServer}
+              calculationResult={calculationResult}
+            />
+          )}
         </div>
       )}
       

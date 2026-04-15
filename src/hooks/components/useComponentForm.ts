@@ -229,7 +229,7 @@ export const useComponentForm = () => {
       manufacturer: prev.manufacturer,
       model: prev.model,
       cost: prev.cost,
-      powerRequired: prev.powerRequired,
+      powerRequired: (prev as unknown as { powerRequired?: number }).powerRequired,
       isDefault: prev.isDefault,
       namingPrefix: prev.namingPrefix,
     }));
@@ -277,7 +277,7 @@ export const useComponentForm = () => {
   // Process form values before submission
   const processFormForSubmission = (form: ComponentFormValues) => {
     // Create placement object only if validRUStart and validRUEnd are both defined and type is not Cable
-    let placement;
+    let placement: { validRUStart: number; validRUEnd: number; preferredRU?: number; preferredRack?: number } | undefined;
     if (
       form.type !== "Cable" &&
       form.validRUStart !== undefined &&
@@ -295,7 +295,7 @@ export const useComponentForm = () => {
       }
     }
 
-    const component = {
+    const component: Record<string, unknown> = {
       ...form,
       ...(placement ? { placement } : {}), // Only add placement if it exists
     };
@@ -304,7 +304,7 @@ export const useComponentForm = () => {
     if (component.type === "Cable") {
       delete component.ports;
     }
-    
+
     // Remove temporary placement fields
     delete component.validRUStart;
     delete component.validRUEnd;

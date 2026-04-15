@@ -37,7 +37,7 @@ export class DatacenterCostCalculator {
     const totalMonthlyCost = costLayerBreakdowns.reduce((sum, layer) => sum + layer.monthlyAmount, 0);
     const totalCapitalCost = costLayerBreakdowns
       .filter(layer => layer.type === 'capital')
-      .reduce((sum, layer) => sum + layer.totalAmount, 0);
+      .reduce((sum, layer) => sum + (layer.totalAmount ?? 0), 0);
     const totalOperationalCost = costLayerBreakdowns
       .filter(layer => layer.type === 'operational')
       .reduce((sum, layer) => sum + layer.monthlyAmount, 0);
@@ -75,8 +75,8 @@ export class DatacenterCostCalculator {
   ): CostLayerBreakdown {
     let monthlyAmount = 0;
     
-    if (layer.type === 'capital' && layer.amortizationMonths) {
-      monthlyAmount = layer.amount / layer.amortizationMonths;
+    if (layer.type === 'capital' && layer.amortisationMonths) {
+      monthlyAmount = layer.amount / layer.amortisationMonths;
     } else if (layer.type === 'operational') {
       monthlyAmount = layer.frequency === 'annual' ? layer.amount / 12 : layer.amount;
     }
@@ -93,7 +93,7 @@ export class DatacenterCostCalculator {
       perRackAmount,
       perKWAmount,
       allocationMethod: layer.allocationMethod,
-      amortizationMonths: layer.amortizationMonths,
+      amortisationMonths: layer.amortisationMonths,
       currency: layer.currency
     };
   }
@@ -194,8 +194,8 @@ export class DatacenterCostCalculator {
   ): number {
     let monthlyAmount = 0;
     
-    if (layer.type === 'capital' && layer.amortizationMonths) {
-      monthlyAmount = layer.amount / layer.amortizationMonths;
+    if (layer.type === 'capital' && layer.amortisationMonths) {
+      monthlyAmount = layer.amount / layer.amortisationMonths;
     } else if (layer.type === 'operational') {
       switch (layer.frequency) {
         case 'annual':
@@ -259,7 +259,7 @@ export class DatacenterCostCalculator {
       
       while (currentLevel) {
         path.unshift(currentLevel.name);
-        currentLevel = currentLevel.parentId ? hierarchyMap.get(currentLevel.parentId) : null;
+        currentLevel = currentLevel.parentId ? hierarchyMap.get(currentLevel.parentId) : undefined;
       }
       
       return path;
@@ -343,12 +343,15 @@ export class DatacenterCostCalculator {
         Math.round((this.datacenterRacks?.length || 0) * growthFactor),
         this.facility.constraints?.maxRacks || 0
       );
+      const utilizationMetrics = baseBreakdown.utilizationMetrics;
       const projectedPower = Math.min(
-        baseBreakdown.utilizationMetrics.allocatedPowerKW * growthFactor,
-        baseBreakdown.utilizationMetrics.totalPowerCapacityKW
+        (utilizationMetrics?.allocatedPowerKW ?? 0) * growthFactor,
+        utilizationMetrics?.totalPowerCapacityKW ?? 0
       );
-      
-      const utilizationFactor = projectedRacks / baseBreakdown.utilizationMetrics.totalRackCount;
+
+      const utilizationFactor = utilizationMetrics?.totalRackCount
+        ? projectedRacks / utilizationMetrics.totalRackCount
+        : 0;
       const monthlyCost = baseBreakdown.totalMonthlyCost * utilizationFactor;
       cumulativeCost += monthlyCost;
       

@@ -56,8 +56,8 @@ export class DatacenterRackService {
       .order('rack_number', { ascending: true });
 
     if (error) throw error;
-    
-    return (data || []).map(this.mapFromDatabase);
+
+    return ((data || []) as unknown as DatacenterRackDatabaseRow[]).map(this.mapFromDatabase);
   }
 
   /**
@@ -72,8 +72,8 @@ export class DatacenterRackService {
       .order('position_x', { ascending: true });
 
     if (error) throw error;
-    
-    return (data || []).map(this.mapFromDatabase);
+
+    return ((data || []) as unknown as DatacenterRackDatabaseRow[]).map(this.mapFromDatabase);
   }
 
   /**
@@ -96,7 +96,7 @@ export class DatacenterRackService {
 
     // Create a map of datacenter rack ID to design rack
     const rackMappingMap = new Map<string, RackProfileDatabaseRow>();
-    mappings?.forEach(mapping => {
+    (mappings as unknown as Array<{ datacenter_rack_id: string; rack_profiles?: RackProfileDatabaseRow }> | null)?.forEach(mapping => {
       if (mapping.rack_profiles) {
         rackMappingMap.set(mapping.datacenter_rack_id, mapping.rack_profiles);
       }
@@ -106,14 +106,14 @@ export class DatacenterRackService {
     return racks.map(rack => {
       const mappedRack = rackMappingMap.get(rack.id);
       const powerUsageKw = mappedRack?.actual_power_usage_kw || 0;
-      const spaceUsageU = this.calculateSpaceUsage(mappedRack?.devices || []);
-      
+      const spaceUsageU = this.calculateSpaceUsage((mappedRack?.devices as PlacedDevice[] | undefined) || []);
+
       return {
         ...rack,
         mappedRack: mappedRack ? {
           id: mappedRack.id,
           name: mappedRack.name,
-          devices: mappedRack.devices || [],
+          devices: (mappedRack.devices as PlacedDevice[] | undefined) || [],
           actualPowerUsageKw: mappedRack.actual_power_usage_kw || 0,
           powerAllocationKw: mappedRack.power_allocation_kw || 0
         } : undefined,
@@ -122,7 +122,7 @@ export class DatacenterRackService {
         spaceUsageU,
         spaceUtilization: (spaceUsageU / rack.uHeight) * 100
       };
-    });
+    }) as DatacenterRackWithUsage[];
   }
 
   /**
@@ -139,8 +139,8 @@ export class DatacenterRackService {
     });
 
     if (error) throw error;
-    
-    return (result || []).map(this.mapFromDatabase);
+
+    return ((result || []) as unknown as DatacenterRackDatabaseRow[]).map(this.mapFromDatabase);
   }
 
   /**
@@ -157,8 +157,8 @@ export class DatacenterRackService {
       .single();
 
     if (error) throw error;
-    
-    return this.mapFromDatabase(data);
+
+    return this.mapFromDatabase(data as unknown as DatacenterRackDatabaseRow);
   }
 
   /**
@@ -206,7 +206,7 @@ export class DatacenterRackService {
       reservedForDesignId: designId
     });
 
-    return this.mapMappingFromDatabase(data);
+    return this.mapMappingFromDatabase(data as unknown as RackMappingDatabaseRow);
   }
 
   /**
@@ -255,8 +255,8 @@ export class DatacenterRackService {
       .eq('design_id', designId);
 
     if (error) throw error;
-    
-    return (data || []).map(this.mapMappingFromDatabase);
+
+    return ((data || []) as unknown as RackMappingDatabaseRow[]).map(this.mapMappingFromDatabase);
   }
 
   /**
@@ -321,8 +321,8 @@ export class DatacenterRackService {
       rowNumber: record.row_number,
       uHeight: record.u_height,
       maxPowerKw: record.max_power_kw,
-      rackType: record.rack_type,
-      status: record.status,
+      rackType: record.rack_type as DatacenterRack['rackType'],
+      status: (record.status as DatacenterRack['status']) || 'available',
       reservedForDesignId: record.reserved_for_design_id,
       positionX: record.position_x,
       positionY: record.position_y,

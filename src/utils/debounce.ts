@@ -2,17 +2,17 @@
  * Creates a debounced version of a function that delays invoking the function
  * until after the specified delay has elapsed since the last time it was invoked.
  */
-export function debounce<T extends (...args: unknown[]) => unknown>(
-  func: T,
+export function debounce<Args extends unknown[]>(
+  func: (...args: Args) => unknown,
   delay: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout | null = null;
+): (...args: Args) => void {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
   
-  return function debounced(...args: Parameters<T>): void {
+  return function debounced(...args: Args): void {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
-    
+
     timeoutId = setTimeout(() => {
       func(...args);
       timeoutId = null;
@@ -23,19 +23,19 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 /**
  * Creates a debounced version of an async function
  */
-export function debounceAsync<T extends (...args: unknown[]) => Promise<unknown>>(
-  func: T,
+export function debounceAsync<Args extends unknown[], R>(
+  func: (...args: Args) => Promise<R>,
   delay: number
-): (...args: Parameters<T>) => Promise<ReturnType<T> | void> {
-  let timeoutId: NodeJS.Timeout | null = null;
-  let pendingPromise: Promise<ReturnType<T> | void> | null = null;
-  
-  return function debounced(...args: Parameters<T>): Promise<ReturnType<T> | void> {
+): (...args: Args) => Promise<R | void> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let pendingPromise: Promise<R | void> | null = null;
+
+  return function debounced(...args: Args): Promise<R | void> {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
-    
-    pendingPromise = new Promise((resolve) => {
+
+    pendingPromise = new Promise<R | void>((resolve) => {
       timeoutId = setTimeout(async () => {
         try {
           const result = await func(...args);
@@ -49,7 +49,7 @@ export function debounceAsync<T extends (...args: unknown[]) => Promise<unknown>
         }
       }, delay);
     });
-    
+
     return pendingPromise;
   };
 }
@@ -58,14 +58,14 @@ export function debounceAsync<T extends (...args: unknown[]) => Promise<unknown>
  * Creates a throttled version of a function that only invokes the function
  * at most once per specified interval
  */
-export function throttle<T extends (...args: unknown[]) => unknown>(
-  func: T,
+export function throttle<Args extends unknown[]>(
+  func: (...args: Args) => unknown,
   interval: number
-): (...args: Parameters<T>) => void {
+): (...args: Args) => void {
   let lastCallTime = 0;
-  let timeoutId: NodeJS.Timeout | null = null;
-  
-  return function throttled(...args: Parameters<T>): void {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  return function throttled(...args: Args): void {
     const now = Date.now();
     const timeSinceLastCall = now - lastCallTime;
     

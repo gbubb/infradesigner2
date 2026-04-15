@@ -22,7 +22,7 @@ export const trackDesignChange = (
   };
   
   tracker.fieldsChanged.add(field);
-  tracker.pendingChanges[field] = value;
+  (tracker.pendingChanges as Record<string, unknown>)[field] = value;
   designChangesTracker.set(designId, tracker);
 };
 
@@ -40,7 +40,7 @@ export const saveDesignOptimized = async (
     }
     
     // Build partial update object with only changed fields
-    const partialUpdate: Record<string, string | boolean | null> = {
+    const partialUpdate: Record<string, unknown> = {
       id: design.id,
       updatedat: new Date().toISOString()
     };
@@ -77,7 +77,7 @@ export const saveDesignOptimized = async (
     // Use UPDATE instead of UPSERT for partial updates
     const { error } = await supabase
       .from(TABLES.DESIGNS)
-      .update(partialUpdate)
+      .update(partialUpdate as never)
       .eq('id', design.id);
     
     if (handleSupabaseError(error, 'saving design')) {
@@ -111,7 +111,7 @@ const saveFullDesign = async (
       selected_disks_by_storage_cluster: JSON.stringify(design.selectedDisksByStorageCluster || {}),
       selected_gpus_by_role: JSON.stringify(design.selectedGPUsByRole || {}),
       connection_rules: JSON.stringify(design.connectionRules || []),
-      placement_rules: design.placementRules?.length > 0
+      placement_rules: (design.placementRules?.length ?? 0) > 0
         ? JSON.stringify(design.placementRules)
         : null,
       row_layout: design.rowLayout
@@ -125,7 +125,7 @@ const saveFullDesign = async (
     
     const { error } = await supabase
       .from(TABLES.DESIGNS)
-      .upsert(designToSave);
+      .upsert(designToSave as never);
     
     if (handleSupabaseError(error, 'saving design')) {
       return false;

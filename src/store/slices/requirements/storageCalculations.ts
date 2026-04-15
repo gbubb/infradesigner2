@@ -21,7 +21,7 @@ export const calculateStorageNodeCapacity: CalculateStorageNodeCapacityFn = (
   
   roleDiskConfigs.forEach(diskConfig => {
     const disk = componentTemplates.find(c => c.id === diskConfig.diskId);
-    if (disk && disk.type === ComponentType.Disk && 'capacityTB' in disk) {
+    if (disk && disk.type === ComponentType.Disk && 'capacityTB' in disk && disk.capacityTB != null) {
       const diskCapacityTiB = disk.capacityTB * TB_TO_TIB_FACTOR * diskConfig.quantity;
       totalCapacityTiB += diskCapacityTiB;
     }
@@ -60,7 +60,7 @@ export const calculateStorageNodeQuantity: CalculateStorageNodeQuantityFn = (
   calculationSteps.push(`Availability Zone Quantity: ${availabilityZoneQuantity}`);
   
   if (storageNodeCapacityTiB > 0) {
-    calculationSteps.push(`Server Model: ${role.assignedComponentName || 'Selected server'} with attached disks`);
+    calculationSteps.push(`Server Model: ${(role as { assignedComponentName?: string }).assignedComponentName || 'Selected server'} with attached disks`);
     calculationSteps.push(`Raw Capacity per Node: ${storageNodeCapacityTiB.toFixed(2)} TiB`);
     
     const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);

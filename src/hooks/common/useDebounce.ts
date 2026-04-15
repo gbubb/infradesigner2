@@ -28,30 +28,29 @@ export function useDebounce<T>(value: T, delay: number): T {
 export function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number,
-  options?: { leading?: boolean; trailing?: boolean }
+  _options?: { leading?: boolean; trailing?: boolean }
 ): T {
   const callbackRef = useRef(callback);
-  const debouncedRef = useRef<ReturnType<typeof debounce>>();
+  const debouncedRef = useRef<((...args: unknown[]) => void) | undefined>(undefined);
 
   // Update callback ref on each render
   callbackRef.current = callback;
 
   // Create debounced function
   useEffect(() => {
-    debouncedRef.current = debounce(
-      (...args: Parameters<T>) => callbackRef.current(...args),
-      delay,
-      options
+    debouncedRef.current = debounce<unknown[]>(
+      (...args) => { callbackRef.current(...args); },
+      delay
     );
 
     return () => {
-      debouncedRef.current?.cancel?.();
+      debouncedRef.current = undefined;
     };
-  }, [delay, options]);
+  }, [delay]);
 
   // Return stable reference
   return ((...args: Parameters<T>) => {
-    return debouncedRef.current?.(...args);
+    return debouncedRef.current?.(...(args as unknown[]));
   }) as T;
 }
 

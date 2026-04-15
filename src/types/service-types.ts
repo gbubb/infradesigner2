@@ -22,6 +22,7 @@ export interface ComponentWithPlacement extends InfrastructureComponent {
   clusterInfo?: {
     clusterId: string;
     clusterName?: string;
+    clusterIndex?: number;
   };
   attachedDisks?: InfrastructureComponent[];
   attachedGPUs?: InfrastructureComponent[];

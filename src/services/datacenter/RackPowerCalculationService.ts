@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { RackProfile } from '@/types/infrastructure/rack-types';
-import type { Component } from '@/types/component-types';
+import type { RackProfile, PlacedDevice } from '@/types/infrastructure/rack-types';
 
 export class RackPowerCalculationService {
   /**
@@ -14,8 +13,10 @@ export class RackPowerCalculationService {
     let totalPowerKw = 0;
 
     // Get all unique component IDs from the rack
+    // `components` is a legacy nested shape on PlacedDevice rows; not in the current type.
     const componentIds = new Set<string>();
-    for (const device of rack.devices) {
+    for (const rawDevice of rack.devices) {
+      const device = rawDevice as PlacedDevice & { components?: Array<{ id?: string; quantity?: number }> };
       if (device.components) {
         for (const component of device.components) {
           if (component.id) {
@@ -47,7 +48,8 @@ export class RackPowerCalculationService {
     });
 
     // Calculate total power usage
-    for (const device of rack.devices) {
+    for (const rawDevice of rack.devices) {
+      const device = rawDevice as PlacedDevice & { components?: Array<{ id?: string; quantity?: number }> };
       if (device.components) {
         for (const component of device.components) {
           if (component.id && componentPowerMap.has(component.id)) {
@@ -80,7 +82,7 @@ export class RackPowerCalculationService {
     }
 
     // Calculate the actual power usage
-    const actualPowerKw = await this.calculateRackPowerUsage(rack);
+    const actualPowerKw = await this.calculateRackPowerUsage(rack as unknown as RackProfile);
 
     // Update the rack with the calculated power
     const { error: updateError } = await supabase

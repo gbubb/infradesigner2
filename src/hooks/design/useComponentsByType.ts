@@ -205,7 +205,7 @@ export const useComponentsByType = () => {
     if (sameTypeAndRole.length === 1) return true;
     
     // If multiple exist, check if this specific one is marked as default
-    return component.isDefault === true;
+    return Boolean(component.isDefault);
   };
 
   return {

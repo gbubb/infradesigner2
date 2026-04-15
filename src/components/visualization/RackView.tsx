@@ -37,7 +37,7 @@ export const RackView: React.FC<RackViewProps> = ({
 
   const { isOver, canDrop, drop } = useRackDropzone({
     rackProfileId,
-    rackProfile,
+    rackProfile: rackProfile ?? null,
     placeDevice,
     moveDevice
   });
@@ -96,7 +96,7 @@ export const RackView: React.FC<RackViewProps> = ({
 
           <div
             id={`rack-${rackProfileId}`}
-            ref={drop}
+            ref={drop as unknown as React.Ref<HTMLDivElement>}
             className={`relative bg-gray-100 border border-gray-300 rounded flex-1`}
             style={{
               height: `${height}px`,

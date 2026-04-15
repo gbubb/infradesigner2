@@ -92,7 +92,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
   const maxRackUnits = physicalConstraints?.rackUnitsPerRack || 42;
 
   const form = useForm<z.infer<typeof legacyFormSchema>>({
-    resolver: zodResolver(legacyFormSchema),
+    resolver: zodResolver(legacyFormSchema) as never,
     defaultValues: {
       type: (formValues.type as ComponentType) || ComponentType.Server,
       name: (formValues.name as string) || '',
@@ -181,7 +181,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
       isBreakout: (formValues.isBreakout as boolean) || false,
       connectorB_Quantity: (formValues.connectorB_Quantity as number) || 4
     },
-    values: formValues && Object.keys(formValues).length > 0 ? formValues : undefined,
+    values: (formValues && Object.keys(formValues).length > 0 ? formValues : undefined) as never,
   });
 
   const getDefaultPrefix = (type: string) => {
@@ -225,7 +225,7 @@ export const ComponentFormDialog: React.FC<ComponentFormDialogProps> = ({
         </DialogHeader>
         <ScrollArea className="max-h-[calc(90vh-8rem)] px-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFormSubmit, handleFormErrors)} id="component-form" className="space-y-4 py-4">
+            <form onSubmit={form.handleSubmit(handleFormSubmit as never, handleFormErrors)} id="component-form" className="space-y-4 py-4">
               {/* Basic Component Information Section */}
               <BasicInfoFields
                 control={control}

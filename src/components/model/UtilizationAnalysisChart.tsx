@@ -1,18 +1,17 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ClusterAnalysis } from '@/types/model-types';
+import { ClusterAnalysis, StorageClusterMetrics } from '@/types/model-types';
 import { formatMonthlyCurrency } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { TrendingUp } from 'lucide-react';
-import { ComputePricingModel, StoragePricingModel } from '@/types/pricing-types';
+import { ClusterPricing } from '@/types/infrastructure';
 import { DesignRequirements } from '@/types/infrastructure/requirements-types';
-import { StorageClusterMetrics } from '@/types/calculation-types';
 
 interface UtilizationAnalysisChartProps {
   clusterAnalysis: Record<string, ClusterAnalysis>;
-  computePricing: ComputePricingModel[];
-  storagePricing: StoragePricingModel[];
+  computePricing: ClusterPricing[];
+  storagePricing: ClusterPricing[];
   operationalCosts: {
     amortizedMonthly: number;
     networkMonthly: number;
@@ -54,7 +53,7 @@ export const UtilizationAnalysisChart: React.FC<UtilizationAnalysisChartProps> =
   storageClustersMetrics,
   clusterDeviceCounts,
 }) => {
-  const { currency } = useCurrency();
+  const currency = useCurrency();
 
   // Generate data points across utilization spectrum
   const chartData = useMemo(() => {

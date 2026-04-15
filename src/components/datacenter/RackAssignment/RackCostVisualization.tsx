@@ -26,6 +26,7 @@ const COST_COLORS = {
 
 export function RackCostVisualization() {
   const { selectedFacilityId, getFacilityById, calculateRackCosts } = useStore();
+  const currency = useCurrency();
   const [rackCosts, setRackCosts] = useState<RackCostAllocation[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRack, setSelectedRack] = useState<RackCostAllocation | null>(null);
@@ -192,9 +193,9 @@ export function RackCostVisualization() {
                       height={80}
                     />
                     <YAxis />
-                    <Tooltip 
-                      formatter={(value: number) => formatCurrency(value, currency)}
-                      labelFormatter={(label: string) => `Rack: ${label}`}
+                    <Tooltip
+                      formatter={((value: number) => formatCurrency(value, currency)) as never}
+                      labelFormatter={((label: unknown) => `Rack: ${label}`) as never}
                     />
                     <Bar dataKey="cost" fill="#8884d8" />
                   </BarChart>
@@ -221,7 +222,7 @@ export function RackCostVisualization() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
@@ -233,7 +234,7 @@ export function RackCostVisualization() {
                           />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value, currency)} />
+                      <Tooltip formatter={((value: number) => formatCurrency(value, currency)) as never} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>

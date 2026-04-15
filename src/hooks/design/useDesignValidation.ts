@@ -7,7 +7,7 @@ export const useDesignValidation = () => {
   
   // Check for implausible scenarios
   const designErrors = useMemo(() => {
-    const errors = [];
+    const errors: Array<{ id: string; title: string; description: string }> = [];
     
     if (!resourceUtilization) {
       return errors;

@@ -356,7 +356,7 @@ export const simulateDesignConfiguration = (
 
       // Subtract storage amortization from total operational cost
       // Storage costs scale with capacity usage, not VM count
-      const storageAmortizedCost = costAnalysis.amortizedCostsByType?.storage || 0;
+      const storageAmortizedCost = (costAnalysis as { amortizedCostsByType?: { storage?: number } }).amortizedCostsByType?.storage || 0;
       const computeOnlyOperationalCost = costAnalysis.monthlyOperationalCost - storageAmortizedCost;
 
       // Allocate this cluster's proportional share

@@ -5,10 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { NetworkTopology } from '@/types/infrastructure';
+import { NetworkTopology, DesignRequirements } from '@/types/infrastructure';
 import { toast } from 'sonner';
 
-export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
+type NetworkRequirements = DesignRequirements['networkRequirements'];
+
+interface NetworkRequirementsFormProps {
+  requirements: NetworkRequirements;
+  onUpdate: (requirements: NetworkRequirements) => void;
+}
+
+export const NetworkRequirementsForm = ({ requirements, onUpdate }: NetworkRequirementsFormProps) => {
   const isConvergedManagement = requirements.managementNetwork === 'Converged Management Plane';
   
   // Updated to not enforce IPMI network to be "Management converged" when using converged management
@@ -22,7 +29,7 @@ export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
     }
   }, [isConvergedManagement, onUpdate, requirements]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const numericValue = parseInt(value, 10);
     onUpdate({
@@ -31,14 +38,14 @@ export const NetworkRequirementsForm = ({ requirements, onUpdate }) => {
     });
   };
 
-  const handleSelectChange = (field, value) => {
+  const handleSelectChange = (field: keyof NetworkRequirements, value: string) => {
     onUpdate({
       ...requirements,
       [field]: value,
     });
   };
 
-  const handleSwitchChange = (field, checked) => {
+  const handleSwitchChange = (field: keyof NetworkRequirements, checked: boolean) => {
     onUpdate({
       ...requirements,
       [field]: checked,

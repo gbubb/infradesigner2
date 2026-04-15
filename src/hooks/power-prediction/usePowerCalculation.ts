@@ -91,8 +91,8 @@ export const usePowerCalculation = (
       networkPorts: networkPortsArray,
       
       // PSU - Use server component PSU data if available
-      psuRating: customInputs.psuRating || selectedServer.psuRatingWatts || 
-                 (selectedServer.power ? selectedServer.power * 1.5 : 750),
+      psuRating: customInputs.psuRating || selectedServer.psuRatingWatts ||
+                 ((selectedServer as unknown as { power?: number }).power ? (selectedServer as unknown as { power?: number }).power! * 1.5 : 750),
       psuEfficiencyRating: customInputs.psuEfficiencyRating || 
                            mapPSUEfficiencyRating(selectedServer.psuEfficiency),
       redundantPsu: customInputs.redundantPsu !== undefined ? customInputs.redundantPsu : 

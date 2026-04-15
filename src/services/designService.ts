@@ -21,13 +21,14 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
     }
     
     // Convert database format to application format
-    const designs = (data?.map(design => {
+    const rows = (data as unknown as DesignDatabaseRow[] | null) ?? [];
+    const designs = rows.map(design => {
       if ('createdat' in design && 'name' in design) {
         try {
           // Helper function to handle JSONB fields (already parsed objects from Supabase)
           const parseJsonField = <T>(field: unknown, defaultValue: T): T => {
             if (!field) return defaultValue;
-            return typeof field === 'string' ? JSON.parse(field) : field;
+            return (typeof field === 'string' ? JSON.parse(field) : field) as T;
           };
 
           const parsedComponents = parseJsonField(design.components, []);
@@ -38,7 +39,7 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
           const parsedGPUsByRole = parseJsonField(design.selected_gpus_by_role, {});
           const parsedConnectionRules = parseJsonField(design.connection_rules, []);
           const parsedPlacementRules = parseJsonField(design.placement_rules, []);
-          const parsedRowLayout = parseJsonField(design.row_layout, null);
+          const parsedRowLayout = parseJsonField(design.row_layout, undefined);
 
           return {
             id: design.id,
@@ -55,9 +56,9 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
             rowLayout: parsedRowLayout,
             createdAt: new Date(design.createdat),
             updatedAt: design.updatedat ? new Date(design.updatedat) : new Date(design.createdat),
-            user_id: design.user_id || null,
+            user_id: design.user_id || undefined,
             is_public: design.is_public || false,
-            sharing_id: design.sharing_id || null
+            sharing_id: design.sharing_id || undefined
           };
         } catch (parseErr) {
           console.error('Error parsing design data:', parseErr);
@@ -71,9 +72,9 @@ export const loadDesigns = async (userId?: string): Promise<InfrastructureDesign
       }
       console.error('Invalid design data:', design);
       return null;
-    }).filter(Boolean) || []);
-    
-    return designs as InfrastructureDesign[];
+    }).filter(Boolean);
+
+    return designs as unknown as InfrastructureDesign[];
   } catch (err) {
     console.error('Error loading designs:', err);
     toast.error('Failed to load designs from the database');
@@ -99,28 +100,29 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
       toast.error('Design not found or not public');
       return null;
     }
-    
+
+    const row = data as unknown as DesignDatabaseRow;
     try {
       // Helper function to handle JSONB fields (already parsed objects from Supabase)
       const parseJsonField = <T>(field: unknown, defaultValue: T): T => {
         if (!field) return defaultValue;
-        return typeof field === 'string' ? JSON.parse(field) : field;
+        return (typeof field === 'string' ? JSON.parse(field) : field) as T;
       };
 
-      const parsedComponents = parseJsonField(data.components, []);
-      const parsedRequirements = parseJsonField(data.requirements, {});
-      const parsedComponentRoles = parseJsonField(data.component_roles, []);
-      const parsedDisksByRole = parseJsonField(data.selected_disks_by_role, {});
-      const parsedDisksByStorageCluster = parseJsonField(data.selected_disks_by_storage_cluster, {});
-      const parsedGPUsByRole = parseJsonField(data.selected_gpus_by_role, {});
-      const parsedConnectionRules = parseJsonField(data.connection_rules, []);
-      const parsedPlacementRules = parseJsonField(data.placement_rules, []);
-      const parsedRowLayout = parseJsonField(data.row_layout, null);
+      const parsedComponents = parseJsonField(row.components, []);
+      const parsedRequirements = parseJsonField(row.requirements, {});
+      const parsedComponentRoles = parseJsonField(row.component_roles, []);
+      const parsedDisksByRole = parseJsonField(row.selected_disks_by_role, {});
+      const parsedDisksByStorageCluster = parseJsonField(row.selected_disks_by_storage_cluster, {});
+      const parsedGPUsByRole = parseJsonField(row.selected_gpus_by_role, {});
+      const parsedConnectionRules = parseJsonField(row.connection_rules, []);
+      const parsedPlacementRules = parseJsonField(row.placement_rules, []);
+      const parsedRowLayout = parseJsonField(row.row_layout, undefined);
 
       return {
-        id: data.id,
-        name: data.name,
-        description: data.description || '',
+        id: row.id,
+        name: row.name,
+        description: row.description || '',
         components: parsedComponents,
         requirements: parsedRequirements,
         componentRoles: parsedComponentRoles,
@@ -130,12 +132,12 @@ export const loadDesignBySharing = async (sharingId: string): Promise<Infrastruc
         connectionRules: parsedConnectionRules,
         placementRules: parsedPlacementRules,
         rowLayout: parsedRowLayout,
-        createdAt: new Date(data.createdat),
-        updatedAt: data.updatedat ? new Date(data.updatedat) : new Date(data.createdat),
-        user_id: data.user_id || null,
-        is_public: data.is_public || false,
-        sharing_id: data.sharing_id || null
-      };
+        createdAt: new Date(row.createdat),
+        updatedAt: row.updatedat ? new Date(row.updatedat) : new Date(row.createdat),
+        user_id: row.user_id || undefined,
+        is_public: row.is_public || false,
+        sharing_id: row.sharing_id || undefined
+      } as unknown as InfrastructureDesign;
     } catch (parseErr) {
       console.error('Error parsing shared design data:', parseErr, data);
       return null;
@@ -163,7 +165,7 @@ export const saveDesign = async (design: InfrastructureDesign, userId?: string):
       connection_rules: JSON.stringify(design.connectionRules || []),
       createdat: design.createdAt.toISOString(),
       updatedat: new Date().toISOString(),
-      user_id: userId || design.user_id,
+      user_id: userId || design.user_id || undefined,
       is_public: design.is_public || false
     };
     
@@ -179,7 +181,7 @@ export const saveDesign = async (design: InfrastructureDesign, userId?: string):
     
     const { error } = await supabase
       .from(TABLES.DESIGNS)
-      .upsert(designToSave);
+      .upsert(designToSave as never);
     
     if (handleSupabaseError(error, 'saving design')) {
       return false;

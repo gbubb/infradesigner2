@@ -4,15 +4,15 @@ import {
   calculateStorageNodeCapacity
 } from './calculationUtils';
 import { CalculationResult, CalculateRequiredQuantityFn } from '@/types/store-operations';
-import { StoreState } from '../../types';
+import { StoragePool } from '@/types/infrastructure/storage-types';
 
 /**
  * Manages the calculation of required quantities for different component types
  */
 export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
-  roleId: string,
-  componentId: string,
-  state: StoreState
+  roleId,
+  componentId,
+  state
 ): CalculationResult => {
   const { 
     requirements, 
@@ -54,25 +54,26 @@ export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
         const serverComponent = component; // Renamed for clarity
         
         // Determine cores per server more reliably
+        const sc = serverComponent as unknown as Record<string, number | undefined>;
         let coresPerServer = 0;
-        if ('cpuSockets' in serverComponent && 'cpuCoresPerSocket' in serverComponent) {
-          coresPerServer = serverComponent.cpuSockets * serverComponent.cpuCoresPerSocket;
-        } else if ('coreCount' in serverComponent) {
-          coresPerServer = serverComponent.coreCount;
-        } else if ('cores' in serverComponent) {
-          coresPerServer = serverComponent.cores;
-        } else if ('totalCores' in serverComponent) {
-          coresPerServer = serverComponent.totalCores;
+        if (sc.cpuSockets != null && sc.cpuCoresPerSocket != null) {
+          coresPerServer = sc.cpuSockets * sc.cpuCoresPerSocket;
+        } else if (sc.coreCount != null) {
+          coresPerServer = sc.coreCount;
+        } else if (sc.cores != null) {
+          coresPerServer = sc.cores;
+        } else if (sc.totalCores != null) {
+          coresPerServer = sc.totalCores;
         }
-        
+
         // Determine memory per server
         let memoryGBPerServer = 0;
-        if ('memoryCapacity' in serverComponent && serverComponent.memoryCapacity > 0) {
-          memoryGBPerServer = serverComponent.memoryCapacity;
-        } else if ('memoryGB' in serverComponent && serverComponent.memoryGB > 0) {
-          memoryGBPerServer = serverComponent.memoryGB;
-        } else if ('memoryTB' in serverComponent && serverComponent.memoryTB > 0) {
-          memoryGBPerServer = serverComponent.memoryTB * 1024;
+        if (sc.memoryCapacity != null && sc.memoryCapacity > 0) {
+          memoryGBPerServer = sc.memoryCapacity;
+        } else if (sc.memoryGB != null && sc.memoryGB > 0) {
+          memoryGBPerServer = sc.memoryGB;
+        } else if (sc.memoryTB != null && sc.memoryTB > 0) {
+          memoryGBPerServer = sc.memoryTB * 1024;
         }
         
         // For GPU nodes, also pass GPU configurations
@@ -101,7 +102,7 @@ export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
           // Find ALL associated storage clusters
           const storageClusters = requirements.storageRequirements?.storageClusters || [];
           const associatedStorageClusters = storageClusters.filter(sc =>
-            sc.hyperConverged && sc.computeClusterId === cluster.id
+            sc.type === 'hyperConverged' && sc.computeClusterId === cluster.id
           );
 
           if (associatedStorageClusters.length > 0) {
@@ -118,7 +119,7 @@ export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
                 // Calculate capacity based on storage-cluster-specific disks
                 storageClusterDisks.forEach(diskConfig => {
                   const disk = componentTemplates.find(c => c.id === diskConfig.diskId);
-                  if (disk && disk.type === 'Disk' && 'capacityTB' in disk) {
+                  if (disk && disk.type === 'Disk' && 'capacityTB' in disk && disk.capacityTB != null) {
                     const diskCapacityTiB = disk.capacityTB * 0.9095 * diskConfig.quantity;
                     storageNodeCapacityTiB += diskCapacityTiB;
                   }
@@ -133,7 +134,7 @@ export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
               }
 
               if (storageNodeCapacityTiB > 0) {
-                const storageResult = calculateStorageNodeQuantity(role, storageCluster, roleId, storageNodeCapacityTiB);
+                const storageResult = calculateStorageNodeQuantity(role, storageCluster as unknown as StoragePool, roleId, storageNodeCapacityTiB);
                 storageResults.push({
                   clusterName: storageCluster.name,
                   requiredNodes: storageResult.requiredQuantity,
@@ -237,7 +238,7 @@ export const calculateRequiredQuantity: CalculateRequiredQuantityFn = (
         // });
         
         if (storageNodeCapacityTiB > 0) {
-          const result = calculateStorageNodeQuantity(role, storageCluster, roleId, storageNodeCapacityTiB);
+          const result = calculateStorageNodeQuantity(role, storageCluster as unknown as StoragePool, roleId, storageNodeCapacityTiB);
           requiredQuantity = result.requiredQuantity;
           calculationSteps = result.calculationSteps;
         } else {

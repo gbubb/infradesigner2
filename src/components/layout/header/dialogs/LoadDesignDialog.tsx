@@ -36,7 +36,7 @@ export const LoadDesignDialog: React.FC<LoadDesignDialogProps> = ({ isOpen, onOp
       design.description,
       {
         ...design,
-        id: undefined, // Let the store generate a new ID
+        id: '', // Let the store generate a new ID
         name: newName,
         createdAt: new Date(),
         updatedAt: new Date()

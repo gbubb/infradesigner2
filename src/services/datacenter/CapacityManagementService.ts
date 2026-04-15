@@ -199,10 +199,11 @@ export class CapacityManagementService {
   } {
     const totalRacks = this.facility.constraints.maxRacks || 0;
     const usedRacks = this.racks.filter(r => r.placedComponents.length > 0).length;
-    const totalRU = this.racks.reduce((sum, rack) => sum + (rack.heightU || 42), 0);
+    const totalRU = this.racks.reduce((sum, rack) => sum + (rack.uHeight || 42), 0);
     const usedRU = this.racks.reduce((sum, rack) => {
       return sum + rack.placedComponents.reduce((rackSum, comp) => {
-        return rackSum + ((comp.heightU || 0) * (comp.quantity || 1));
+        const c = comp as { heightU?: number; quantity?: number };
+        return rackSum + ((c.heightU || 0) * (c.quantity || 1));
       }, 0);
     }, 0);
 
@@ -259,17 +260,23 @@ export class CapacityManagementService {
     // Count ports from network components in racks
     this.racks.forEach(rack => {
       rack.placedComponents.forEach(component => {
-        if (component.componentType === 'Switch' || component.componentType === 'Router') {
-          const portCount = component.ports?.length || 0;
-          totalPorts += portCount * (component.quantity || 1);
-          
+        const c = component as {
+          componentType?: string;
+          quantity?: number;
+          ports?: Array<{ speed?: string; count: number }>;
+        };
+        if (c.componentType === 'Switch' || c.componentType === 'Router') {
+          const ports = c.ports ?? [];
+          const portCount = ports.length;
+          totalPorts += portCount * (c.quantity || 1);
+
           // Track by speed
-          component.ports?.forEach(port => {
+          ports.forEach(port => {
             const speed = port.speed || 'Unknown';
             if (!portsBySpeed[speed]) {
               portsBySpeed[speed] = { total: 0, used: 0 };
             }
-            portsBySpeed[speed].total += port.count * (component.quantity || 1);
+            portsBySpeed[speed].total += port.count * (c.quantity || 1);
           });
         }
       });
@@ -328,9 +335,9 @@ export class CapacityManagementService {
       ...this.facility.powerInfrastructure.map(layer => {
         if (!layer.redundancyConfig) return 0;
         switch (layer.redundancyConfig.type) {
-          case 'N+1': return layer.capacityKW / (layer.redundancyConfig.config.n || 1);
+          case 'N+1': return layer.capacityKW / (layer.redundancyConfig.config?.n || 1);
           case '2N': return layer.capacityKW * 0.5;
-          case '2N+1': return layer.capacityKW * 0.5 + (layer.capacityKW / ((layer.redundancyConfig.config.n || 1) * 2));
+          case '2N+1': return layer.capacityKW * 0.5 + (layer.capacityKW / ((layer.redundancyConfig.config?.n || 1) * 2));
           default: return 0;
         }
       })

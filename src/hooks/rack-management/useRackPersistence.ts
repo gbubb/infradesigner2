@@ -11,7 +11,7 @@ export function useRackPersistence() {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [resetTrigger, setResetTrigger] = useState<number>(0);
 
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hasUnsavedChangesRef = useRef(false);
   const isNavigatingAwayRef = useRef(false);
   const previousRequirementsHashRef = useRef<string | null>(null);
@@ -108,7 +108,7 @@ export function useRackPersistence() {
       
       try {
         const data = await LayoutPersistenceService.loadLayoutForDesign();
-        if (data?.rackprofiles?.length > 0) {
+        if (data?.rackprofiles && data.rackprofiles.length > 0) {
           // Only load if requirements haven't changed
           const currentRequirementsHash = JSON.stringify(activeDesign.requirements || {});
           const savedRequirementsHash = JSON.stringify(data.requirements || {});

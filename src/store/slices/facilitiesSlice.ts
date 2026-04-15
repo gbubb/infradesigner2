@@ -82,7 +82,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           createdAt: facility.createdAt,
           updatedAt: facility.updatedAt
         }
-      }));
+      }) as unknown as DatacenterFacility);
 
       // Preserve the selected facility ID when loading
       const currentSelectedId = get().selectedFacilityId;
@@ -116,7 +116,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           description: facilityData.description,
           constraints: facilityData.constraints,
           createdBy: userData.user.id
-        })
+        } as never)
         .select()
         .single();
 
@@ -130,7 +130,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
             facilityData.powerInfrastructure.map(layer => ({
               ...layer,
               facilityId: facility.id
-            }))
+            })) as never
           );
         if (powerError) throw powerError;
       }
@@ -142,7 +142,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
             facilityData.costLayers.map(layer => ({
               ...layer,
               facilityId: facility.id
-            }))
+            })) as never
           );
         if (costError) throw costError;
       }
@@ -154,7 +154,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
             facilityData.hierarchyConfig.map(level => ({
               ...level,
               facilityId: facility.id
-            }))
+            })) as never
           );
         if (hierarchyError) throw hierarchyError;
       }
@@ -175,6 +175,8 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
   updateFacility: async (id: string, updates: Partial<DatacenterFacility>) => {
     try {
       // Update main facility record
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      if (!userId) throw new Error('User not authenticated');
       const { error: facilityError } = await supabase
         .from('facilities')
         .update({
@@ -183,9 +185,9 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           description: updates.description,
           constraints: updates.constraints,
           updatedAt: new Date().toISOString()
-        })
+        } as never)
         .eq('id', id)
-        .eq('createdBy', (await supabase.auth.getUser()).data.user?.id);
+        .eq('createdBy', userId);
 
       if (facilityError) throw facilityError;
 
@@ -205,7 +207,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
               updates.powerInfrastructure.map(layer => ({
                 ...layer,
                 facilityId: id
-              }))
+              })) as never
             );
         }
       }
@@ -215,7 +217,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           .from('facility_cost_layers')
           .delete()
           .eq('facilityId', id);
-        
+
         if (updates.costLayers.length > 0) {
           await supabase
             .from('facility_cost_layers')
@@ -223,7 +225,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
               updates.costLayers.map(layer => ({
                 ...layer,
                 facilityId: id
-              }))
+              })) as never
             );
         }
       }
@@ -233,7 +235,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
           .from('facility_hierarchy')
           .delete()
           .eq('facilityId', id);
-        
+
         if (updates.hierarchyConfig.length > 0) {
           await supabase
             .from('facility_hierarchy')
@@ -241,7 +243,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
               updates.hierarchyConfig.map(level => ({
                 ...level,
                 facilityId: id
-              }))
+              })) as never
             );
         }
       }
@@ -256,11 +258,13 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
 
   deleteFacility: async (id: string) => {
     try {
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      if (!userId) throw new Error('User not authenticated');
       const { error } = await supabase
         .from('facilities')
         .delete()
         .eq('id', id)
-        .eq('createdBy', (await supabase.auth.getUser()).data.user?.id);
+        .eq('createdBy', userId);
 
       if (error) throw error;
 
@@ -293,7 +297,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
 
       const assignmentMap = new Map<string, RackHierarchyAssignment>();
       (assignments || []).forEach(assignment => {
-        assignmentMap.set(assignment.rack_id, assignment);
+        assignmentMap.set(assignment.rack_id, assignment as unknown as RackHierarchyAssignment);
       });
 
       set(state => ({

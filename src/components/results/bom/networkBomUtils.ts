@@ -208,7 +208,7 @@ export function createPortUtilizationRows(
         deviceId: device.id,
         deviceName: device.model,
         portName: port.name || port.id,
-        portType: port.role,
+        portType: port.role ?? '',
         portSpeed: String(port.speed || '-'),
         portMedia: String(port.mediaType || '-'),
         portConnector: String(port.connectorType || '-'),

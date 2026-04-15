@@ -92,20 +92,20 @@ export const useVMCostScalingAsync = () => {
     cancelledRef.current = false;
 
     // Validate configuration
-    if (config.minNodes > config.maxNodes) {
+    if (config.minScaleFactor > config.maxScaleFactor) {
       setState(prev => ({
         ...prev,
         status: 'error',
-        error: 'Minimum nodes cannot be greater than maximum nodes'
+        error: 'Minimum scale factor cannot be greater than maximum scale factor'
       }));
       return;
     }
 
-    if (config.increment <= 0) {
+    if (config.steps <= 0) {
       setState(prev => ({
         ...prev,
         status: 'error',
-        error: 'Increment must be greater than zero'
+        error: 'Steps must be greater than zero'
       }));
       return;
     }

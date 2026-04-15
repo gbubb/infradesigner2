@@ -2,14 +2,14 @@
  * Runtime type guards for validating data at application boundaries
  */
 
-import { 
-  InfrastructureComponent, 
+import {
+  InfrastructureComponent,
   InfrastructureDesign,
   DesignRequirements,
   ComponentRole,
-  ConnectionRule,
-  PlacedComponent
+  ConnectionRule
 } from '@/types/infrastructure';
+import { PlacedComponent } from '@/types/placement';
 
 /**
  * Type guard for InfrastructureComponent

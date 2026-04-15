@@ -19,7 +19,7 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, 
   const [haDetailsOpen, setHaDetailsOpen] = useState(false);
   const [storageDetailsOpen, setStorageDetailsOpen] = useState(false);
   const activeDesign = useDesignStore((state) => state.activeDesign);
-  const { currency } = useCurrency();
+  const currency = useCurrency();
 
   // Debug logging
   console.log('[CapacityBreakdown] Received capacity:', {

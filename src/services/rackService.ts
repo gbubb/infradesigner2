@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { useDesignStore } from '@/store/designStore';
 import { RackProfile, PlacedDevice, DeviceOrientation, RackType } from '@/types/infrastructure/rack-types';
+import { InfrastructureComponent } from '@/types/infrastructure';
 
 export interface PlacementResult {
   success: boolean;

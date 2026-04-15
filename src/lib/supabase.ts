@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 export const TABLES = {
   COMPONENTS: 'components',
   DESIGNS: 'designs',
+  FACILITIES: 'facilities',
+  FACILITY_HIERARCHY: 'facility_hierarchy',
 } as const;  // Use const assertion to ensure TypeScript recognizes these as literal types
 
 // Error handler utility

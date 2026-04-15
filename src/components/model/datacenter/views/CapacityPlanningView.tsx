@@ -132,9 +132,9 @@ export const CapacityPlanningView: React.FC<CapacityPlanningViewProps> = ({
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="label" className="text-xs" />
                 <YAxis className="text-xs" domain={[0, 120]} />
-                <Tooltip 
-                  formatter={(value: number) => `${value.toFixed(1)}%`}
-                  labelFormatter={(label) => `Month: ${label}`}
+                <Tooltip
+                  formatter={((value: number) => `${value.toFixed(1)}%`) as never}
+                  labelFormatter={((label: unknown) => `Month: ${label}`) as never}
                 />
                 <Legend />
                 <Area

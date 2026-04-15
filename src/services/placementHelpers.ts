@@ -23,7 +23,7 @@ export function tryPlaceDeviceInRacksWithConstraints({
   ruPosition?: number
 } {
   // Read device placement constraints from device.placement or default
-  const placement = device.placement || {};
+  const placement = (device.placement || {}) as { validRUStart?: number; validRUEnd?: number; preferredRU?: number };
   const validRUStart = (placement.validRUStart ?? 1);
   const validRUEnd = (placement.validRUEnd ?? (racks[0]?.uHeight || 42));
   const preferredRU = (placement.preferredRU ?? undefined);

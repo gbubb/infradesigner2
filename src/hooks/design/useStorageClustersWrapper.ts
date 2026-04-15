@@ -4,7 +4,6 @@ import { useDesignStore } from '@/store/designStore';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
 import { ClusterInfo } from '@/types/infrastructure/roles-types';
-import { DiskAttachment } from '@/types/infrastructure/storage-types';
 import { Server } from '@/types/infrastructure/server-types';
 
 export const useStorageClustersWrapper = () => {
@@ -28,7 +27,7 @@ export const useStorageClustersWrapper = () => {
         sc => sc.id === pool.storageClusterId
       );
 
-      let clusterNodes = [];
+      let clusterNodes: InfrastructureComponent[] = [];
 
       // Check if this pool targets a hyper-converged physical cluster
       if (targetCluster?.type === 'hyperConverged' && targetCluster.computeClusterId) {
@@ -86,8 +85,8 @@ export const useStorageClustersWrapper = () => {
           let totalDisksInNode = 0;
           let diskCostForNode = 0;
           
-          disks.forEach((disk) => {
-            if (disk && 'capacityTB' in disk) {
+          disks.forEach((disk: InfrastructureComponent & { capacityTB?: number; quantity?: number; cost?: number; storageClusterId?: string; name?: string }) => {
+            if (disk && 'capacityTB' in disk && disk.capacityTB != null) {
               // For hyper-converged clusters, only count disks tagged for this physical storage cluster
               if (targetCluster?.type === 'hyperConverged') {
                 if ('storageClusterId' in disk && disk.storageClusterId === targetCluster.id) {
@@ -151,13 +150,13 @@ export const useStorageClustersWrapper = () => {
                 cpuCoresPerSocket: serverNode.cpuCoresPerSocket,
                 totalCores: cores
               });
-            } else if (node.componentId) {
+            } else if ((node as InfrastructureComponent & { componentId?: string }).componentId) {
               // Find the server template to get CPU core count
-              const serverTemplate = componentTemplates.find(t => t.id === node.componentId);
+              const serverTemplate = componentTemplates.find(t => t.id === (node as InfrastructureComponent & { componentId?: string }).componentId);
               
               // Debug logging
               console.log('[StorageCluster] Looking for server template:', {
-                nodeComponentId: node.componentId,
+                nodeComponentId: (node as InfrastructureComponent & { componentId?: string }).componentId,
                 nodeType: node.type,
                 templateFound: !!serverTemplate,
                 templateType: serverTemplate?.type,
@@ -171,7 +170,7 @@ export const useStorageClustersWrapper = () => {
                 
                 console.log('[StorageCluster] CPU calculation from template:', {
                   nodeName: node.name,
-                  componentId: node.componentId,
+                  componentId: (node as InfrastructureComponent & { componentId?: string }).componentId,
                   serverName: server.name,
                   cpuSockets: server.cpuSockets,
                   cpuCoresPerSocket: server.cpuCoresPerSocket,
@@ -205,7 +204,7 @@ export const useStorageClustersWrapper = () => {
         }
         
         // Find server name from template
-        const serverTemplate = componentTemplates.find(t => t.id === node.componentId);
+        const serverTemplate = componentTemplates.find(t => t.id === (node as InfrastructureComponent & { componentId?: string }).componentId);
         const serverName = serverTemplate?.name || node.name || 'Server';
         
         const nodeBreakdown = {

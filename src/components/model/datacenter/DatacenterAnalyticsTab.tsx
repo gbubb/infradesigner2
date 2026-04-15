@@ -163,8 +163,8 @@ export const DatacenterAnalyticsTab: React.FC = () => {
 
     // Initialize services with proper parameters
     const costCalculator = new DatacenterCostCalculator(mockFacility, mockDatacenterRacks);
-    const powerCalculator = new PowerEfficiencyCalculator(mockFacility, mockRacks);
-    const capacityService = new CapacityManagementService(mockFacility, mockRacks);
+    const powerCalculator = new PowerEfficiencyCalculator(mockFacility, mockRacks as never);
+    const capacityService = new CapacityManagementService(mockFacility, mockRacks as never);
 
     // Calculate costs
     const facilityCostBreakdown = costCalculator.calculateFacilityCosts();
@@ -185,8 +185,14 @@ export const DatacenterAnalyticsTab: React.FC = () => {
     // Calculate power efficiency
     const powerEfficiency = powerCalculator.calculateEfficiencyMetrics();
 
-    // Calculate capacity utilization
-    const utilization = capacityService.calculateCapacityMetrics();
+    // Calculate capacity utilization and reduce to the shape the dashboards expect
+    const capacityMetrics = capacityService.calculateCapacityMetrics();
+    const utilization = {
+      rackUtilization: capacityMetrics.spaceCapacity.utilization,
+      powerUtilization: capacityMetrics.powerCapacity.utilization,
+      spaceUtilization: capacityMetrics.spaceCapacity.utilization,
+      coolingUtilization: capacityMetrics.coolingCapacity.utilization,
+    };
 
     return {
       costBreakdown: costAllocationArray,

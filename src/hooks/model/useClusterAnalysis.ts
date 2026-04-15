@@ -1,17 +1,16 @@
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
-import { ClusterAnalysis } from '@/types/model-types';
+import { ClusterAnalysis, StorageClusterMetrics } from '@/types/model-types';
 import { ComponentWithPlacement } from '@/types/service-types';
-import { ComputePricingModel, StoragePricingModel } from '@/types/pricing-types';
+import { ClusterPricing } from '@/types/infrastructure';
 import { DesignRequirements } from '@/types/infrastructure/requirements-types';
-import { StorageClusterMetrics } from '@/types/calculation-types';
 
 interface UseClusterAnalysisProps {
   clusterConsumption: Record<string, number>;
   clusterDeviceCounts: Record<string, number>;
-  computePricing: ComputePricingModel[];
-  storagePricing: StoragePricingModel[];
+  computePricing: ClusterPricing[];
+  storagePricing: ClusterPricing[];
   operationalCosts: {
     amortizedMonthly: number;
     networkMonthly: number;

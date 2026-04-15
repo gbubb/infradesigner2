@@ -121,7 +121,7 @@ export function useFacilityHierarchyQuery(facilityId?: string): UseQueryResult<F
         let query = supabase.from(TABLES.FACILITY_HIERARCHY).select('*');
         
         if (facilityId) {
-          query = query.eq('facility_id', facilityId);
+          query = query.eq('facilityId' as never, facilityId);
         }
         
         const { data, error } = await query;
@@ -131,7 +131,7 @@ export function useFacilityHierarchyQuery(facilityId?: string): UseQueryResult<F
           throw error;
         }
         
-        return data as FacilityHierarchyDatabaseRow[];
+        return data as unknown as FacilityHierarchyDatabaseRow[];
       },
       {
         staleTime: 1000 * 60 * 15,
@@ -149,7 +149,7 @@ export function useCreateComponentMutation(): UseMutationResult<InfrastructureCo
     mutationFn: async (component) => {
       const { data, error } = await supabase
         .from(TABLES.COMPONENTS)
-        .insert(component)
+        .insert(component as never)
         .select()
         .single();
       
@@ -177,7 +177,7 @@ export function useUpdateComponentMutation(): UseMutationResult<InfrastructureCo
     mutationFn: async ({ id, updates }) => {
       const { data, error } = await supabase
         .from(TABLES.COMPONENTS)
-        .update(updates)
+        .update(updates as never)
         .eq('id', id)
         .select()
         .single();

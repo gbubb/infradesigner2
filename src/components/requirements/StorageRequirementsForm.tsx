@@ -7,17 +7,24 @@ import { v4 as uuidv4 } from 'uuid';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { StoragePoolEfficiencyFactors, StorageCluster, StoragePool } from '@/types/infrastructure';
+import { StoragePoolEfficiencyFactors, StorageCluster, StoragePool, DesignRequirements } from '@/types/infrastructure';
 import { useStore } from '@/store';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 
-export const StorageRequirementsForm = ({ requirements, onUpdate }) => {
+type StorageRequirements = DesignRequirements['storageRequirements'];
+
+interface StorageRequirementsFormProps {
+  requirements: StorageRequirements;
+  onUpdate: (requirements: StorageRequirements) => void;
+}
+
+export const StorageRequirementsForm = ({ requirements, onUpdate }: StorageRequirementsFormProps) => {
   const computeClusters = useStore((state) => state.requirements.computeRequirements.computeClusters);
   const storageClusters = requirements.storageClusters || [];
   const storagePools = requirements.storagePools || [];
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const numericValue = parseInt(value, 10);
     onUpdate({

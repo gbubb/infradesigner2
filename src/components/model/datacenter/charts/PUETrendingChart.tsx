@@ -90,9 +90,9 @@ export const PUETrendingChart: React.FC<PUETrendingChartProps> = ({
               domain={[1, 2.5]}
               ticks={[1.0, 1.5, 2.0, 2.5]}
             />
-            <Tooltip 
-              formatter={(value: number) => value.toFixed(2)}
-              labelFormatter={(label) => `Month: ${label}`}
+            <Tooltip
+              formatter={((value: number) => value.toFixed(2)) as never}
+              labelFormatter={((label: unknown) => `Month: ${label}`) as never}
             />
             <ReferenceLine 
               y={targetPUE} 

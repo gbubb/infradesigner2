@@ -54,18 +54,21 @@ export function migrateStorageRequirements(requirements: DesignRequirements): De
   }));
 
   // Legacy clusters (logical) → New pools (logical)
-  const newPools = legacyClusters.map((legacyCluster: Partial<StoragePool>) => ({
-    id: legacyCluster.id,
-    name: legacyCluster.name,
-    totalCapacityTB: legacyCluster.totalCapacityTB || 0,
-    poolType: legacyCluster.poolType || '3 Replica',
-    maxFillFactor: legacyCluster.maxFillFactor || 85,
-    storageClusterId: legacyCluster.storagePoolId, // Map storagePoolId → storageClusterId
-    // Preserve legacy fields for compatibility
-    availabilityZoneQuantity: legacyCluster.availabilityZoneQuantity,
-    hyperConverged: legacyCluster.hyperConverged,
-    computeClusterId: legacyCluster.computeClusterId,
-  }));
+  const newPools = legacyClusters.map((rawLegacyCluster) => {
+    const legacyCluster = rawLegacyCluster as Partial<StoragePool> & { storagePoolId?: string };
+    return {
+      id: legacyCluster.id,
+      name: legacyCluster.name,
+      totalCapacityTB: legacyCluster.totalCapacityTB || 0,
+      poolType: legacyCluster.poolType || '3 Replica',
+      maxFillFactor: legacyCluster.maxFillFactor || 85,
+      storageClusterId: legacyCluster.storagePoolId, // Map storagePoolId → storageClusterId
+      // Preserve legacy fields for compatibility
+      availabilityZoneQuantity: legacyCluster.availabilityZoneQuantity,
+      hyperConverged: legacyCluster.hyperConverged,
+      computeClusterId: legacyCluster.computeClusterId,
+    };
+  });
 
   console.log('[Migration] Migrated:', {
     clustersCount: newClusters.length,
@@ -76,8 +79,8 @@ export function migrateStorageRequirements(requirements: DesignRequirements): De
     ...requirements,
     storageRequirements: {
       ...storageRequirements,
-      storageClusters: newClusters,
-      storagePools: newPools,
+      storageClusters: newClusters as StorageCluster[],
+      storagePools: newPools as StoragePool[],
     }
   };
 }

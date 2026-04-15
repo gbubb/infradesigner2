@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
 
 /**
@@ -94,15 +94,16 @@ export const useHardwareTotalsWrapper = () => {
         const totalServerVCPUs = serverVCPUs * quantity;
         totalVCPUs += totalServerVCPUs;
 
+        const memComp = component as unknown as Record<string, number | undefined>;
         let componentMemoryGB = 0;
-        if ('memoryCapacity' in component && component.memoryCapacity > 0) {
-          componentMemoryGB = component.memoryCapacity;
+        if (memComp.memoryCapacity != null && memComp.memoryCapacity > 0) {
+          componentMemoryGB = memComp.memoryCapacity;
         }
-        else if ('memoryGB' in component && component.memoryGB > 0) {
-          componentMemoryGB = component.memoryGB;
+        else if (memComp.memoryGB != null && memComp.memoryGB > 0) {
+          componentMemoryGB = memComp.memoryGB;
         }
-        else if ('memoryTB' in component && component.memoryTB > 0) {
-          componentMemoryGB = component.memoryTB * 1024;
+        else if (memComp.memoryTB != null && memComp.memoryTB > 0) {
+          componentMemoryGB = memComp.memoryTB * 1024;
         }
         const totalServerMemoryGB = componentMemoryGB * quantity;
         computeMemoryGB += totalServerMemoryGB;
@@ -113,7 +114,7 @@ export const useHardwareTotalsWrapper = () => {
       // For hyper-converged storage, we need to map storage clusters to their compute clusters
       const hyperConvergedStorageMap = new Map<string, string>();
       storageClusters.forEach(sc => {
-        if (sc.hyperConverged && sc.computeClusterId) {
+        if (sc.type === 'hyperConverged' && sc.computeClusterId) {
           hyperConvergedStorageMap.set(sc.id, sc.computeClusterId);
         }
       });
@@ -159,10 +160,13 @@ export const useHardwareTotalsWrapper = () => {
           return acc;
         }, {} as Record<string, InfrastructureComponent[]>);
       
+      const storagePools = requirements?.storageRequirements?.storagePools || [];
       Object.entries(storageNodesByCluster).forEach(([clusterId, nodes]) => {
         const cluster = storageClusters.find(c => c.id === clusterId);
         if (!cluster) return;
-        const poolType = cluster.poolType || '3 Replica';
+        // Find an associated pool to determine data-protection scheme (poolType lives on StoragePool, not StorageCluster)
+        const pool = storagePools.find(p => p.storageClusterId === cluster.id);
+        const poolType = pool?.poolType || '3 Replica';
         const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);
         let clusterRawCapacityTB = 0;
         nodes.forEach(node => {
@@ -189,13 +193,14 @@ export const useHardwareTotalsWrapper = () => {
         )
         .forEach(component => {
           const quantity = component.quantity || 1;
+          const memComp = component as unknown as Record<string, number | undefined>;
           let componentMemoryGB = 0;
-          if ('memoryCapacity' in component && component.memoryCapacity > 0) {
-            componentMemoryGB = component.memoryCapacity;
-          } else if ('memoryGB' in component && component.memoryGB > 0) {
-            componentMemoryGB = component.memoryGB;
-          } else if ('memoryTB' in component && component.memoryTB > 0) {
-            componentMemoryGB = component.memoryTB * 1024;
+          if (memComp.memoryCapacity != null && memComp.memoryCapacity > 0) {
+            componentMemoryGB = memComp.memoryCapacity;
+          } else if (memComp.memoryGB != null && memComp.memoryGB > 0) {
+            componentMemoryGB = memComp.memoryGB;
+          } else if (memComp.memoryTB != null && memComp.memoryTB > 0) {
+            componentMemoryGB = memComp.memoryTB * 1024;
           }
           otherMemoryGB += componentMemoryGB * quantity;
         });

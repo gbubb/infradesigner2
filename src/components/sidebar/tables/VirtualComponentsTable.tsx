@@ -13,6 +13,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { formatCurrency, formatPower } from '@/lib/formatters';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface VirtualComponentsTableProps {
   components: InfrastructureComponent[];
@@ -32,6 +33,7 @@ export const VirtualComponentsTable: React.FC<VirtualComponentsTableProps> = ({
   onDelete
 }) => {
   const navigate = useNavigate();
+  const currency = useCurrency();
 
   const handlePowerPrediction = useCallback((component: InfrastructureComponent) => {
     navigate('/model', { 

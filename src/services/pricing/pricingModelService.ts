@@ -671,7 +671,7 @@ export class PricingModelService {
     });
 
     // Count disks for hyper-converged clusters from actual design components
-    if (isHyperConverged && this.design.components) {
+    if (isHyperConverged && this.design?.components) {
       const designComponents = this.design.components as InfrastructureComponent[];
 
       // Filter to hyper-converged nodes in the selected cluster(s)
@@ -1038,7 +1038,7 @@ export class PricingModelService {
       totalOperationalCost += opex;
 
       // Track network costs per AZ
-      if (comp.component.type === 'network') {
+      if ((comp.component.type as string) === 'network') {
         const az = comp.metadata?.availability_zone || 'default';
         const currentCost = networkCostPerAZ.get(az) || 0;
         networkCostPerAZ.set(az, currentCost + capex + (opex / 12));

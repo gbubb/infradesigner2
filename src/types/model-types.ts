@@ -95,3 +95,17 @@ export interface MemoryPowerData {
   totalPower: number;
   memoryType: string;
 }
+
+export interface StorageClusterMetrics {
+  id: string;
+  name: string;
+  poolType: string;
+  maxFillFactor: number;
+  totalRawCapacityTB: number;
+  usableCapacityTB: number;
+  usableCapacityTiB: number;
+  effectiveCapacityTiB: number;
+  totalNodeCost: number;
+  costPerTiB: number;
+  nodeCount: number;
+}

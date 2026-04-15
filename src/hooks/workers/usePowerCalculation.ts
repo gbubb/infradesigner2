@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { PlacedComponent, InfrastructureDesign } from '@/types/infrastructure';
+import type { InfrastructureDesign } from '@/types/infrastructure';
+import type { PlacedComponent } from '@/types/placement';
 
 interface PowerBreakdown {
   componentId: string;

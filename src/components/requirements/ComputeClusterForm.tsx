@@ -7,14 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Trash2, Plus } from 'lucide-react';
-import { ComputeClusterRequirement, StorageClusterRequirement } from '@/types/infrastructure';
+import { ComputeClusterRequirement, StorageCluster } from '@/types/infrastructure';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ComputeClusterFormProps {
   clusters: ComputeClusterRequirement[];
   onUpdate: (clusters: ComputeClusterRequirement[]) => void;
   showHeader?: boolean;
-  storageClusters?: StorageClusterRequirement[];
+  storageClusters?: StorageCluster[];
   totalAvailabilityZones?: number;
 }
 
@@ -27,7 +27,7 @@ export const ComputeClusterForm: React.FC<ComputeClusterFormProps> = ({
 }) => {
   // Check if a compute cluster is being used for hyper-converged storage
   const isHyperConverged = (clusterId: string) => {
-    return storageClusters.some(sc => sc.hyperConverged && sc.computeClusterId === clusterId);
+    return storageClusters.some(sc => sc.type === 'hyperConverged' && sc.computeClusterId === clusterId);
   };
   const addCluster = () => {
     const newCluster: ComputeClusterRequirement = {

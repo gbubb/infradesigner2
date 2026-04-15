@@ -258,11 +258,11 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
       }));
     };
     
-    updatedLevels = calculateLevels(updatedLevels);
-    
+    updatedLevels = calculateLevels(updatedLevels as HierarchyLevel[]);
+
     onUpdate({
       ...facility,
-      hierarchyConfig: updatedLevels
+      hierarchyConfig: updatedLevels as HierarchyLevel[]
     });
   };
 

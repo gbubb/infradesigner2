@@ -171,13 +171,13 @@ export const PowerInfrastructureDesigner: React.FC<PowerInfrastructureDesignerPr
     return leafLayers.reduce((sum, layer) => {
       // Calculate effective capacity considering all parent efficiencies
       let effectiveCapacity = layer.capacityKW;
-      let currentLayer = layer;
-      
+      let currentLayer: typeof layer | undefined = layer;
+
       while (currentLayer) {
         effectiveCapacity *= currentLayer.efficiency;
-        currentLayer = facility.powerInfrastructure.find(l => 
+        currentLayer = facility.powerInfrastructure.find(l =>
           l.id === currentLayer?.parentLayerId
-        ) || null;
+        );
       }
       
       return sum + effectiveCapacity;

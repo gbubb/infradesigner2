@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { RackProfile } from '@/types/infrastructure/rack-types';
-import { Component, ComponentType } from '@/types/infrastructure/component-types';
+import { InfrastructureComponent, ComponentType } from '@/types/infrastructure/component-types';
 import { PlacedDevice } from '@/types/infrastructure/rack-types';
 import { formatPower } from '@/lib/formatters';
 
@@ -16,7 +16,7 @@ interface RackWithDevices {
   rack: RackProfile;
   devices: Array<{
     placedDevice: PlacedDevice;
-    component: Component;
+    component: InfrastructureComponent;
   }>;
 }
 
@@ -335,7 +335,7 @@ export class RackExportService {
 
     // Group devices by component type and specification
     const deviceGroups = new Map<string, {
-      component: Component;
+      component: InfrastructureComponent;
       positions: number[];
     }>();
 
@@ -373,11 +373,11 @@ export class RackExportService {
       positions.sort((a, b) => b - a);
       
       // Component header
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.text(`${component.name} (${positions.length}x)`, x, currentY);
       
       // Component details
-      pdf.setFont(undefined, 'normal');
+      pdf.setFont('helvetica', 'normal');
       pdf.text(`Type: ${component.type}`, x + 5, currentY + 5);
       pdf.text(`Model: ${component.model || 'N/A'}`, x + 5, currentY + 10);
       pdf.text(`Manufacturer: ${component.manufacturer || 'N/A'}`, x + 5, currentY + 15);
@@ -471,9 +471,9 @@ export class RackExportService {
       pdf.setFontSize(9);
       const peakUtilization = (totalPeakPower / powerPerRack) * 100;
       
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.text(`Power Capacity: ${formatPower(powerPerRack)}`, x + 5, currentY);
-      pdf.setFont(undefined, 'normal');
+      pdf.setFont('helvetica', 'normal');
       currentY += 5;
       
       // Power states
@@ -502,22 +502,22 @@ export class RackExportService {
       if (peakUtilization > 100) {
         currentY += 5;
         pdf.setTextColor(255, 0, 0);
-        pdf.setFont(undefined, 'bold');
+        pdf.setFont('helvetica', 'bold');
         pdf.text('⚠ Warning: Peak power exceeds rack capacity!', x + 5, currentY);
         pdf.setTextColor(0, 0, 0);
-        pdf.setFont(undefined, 'normal');
+        pdf.setFont('helvetica', 'normal');
       } else if (peakUtilization > 80) {
         currentY += 5;
         pdf.setTextColor(255, 140, 0);
-        pdf.setFont(undefined, 'bold');
+        pdf.setFont('helvetica', 'bold');
         pdf.text('⚠ Warning: Peak power above 80% of capacity', x + 5, currentY);
         pdf.setTextColor(0, 0, 0);
-        pdf.setFont(undefined, 'normal');
+        pdf.setFont('helvetica', 'normal');
       }
     }
   }
 
-  private static getDeviceColorForPDF(type: string, component?: Component): { r: number; g: number; b: number } {
+  private static getDeviceColorForPDF(type: string, component?: InfrastructureComponent): { r: number; g: number; b: number } {
     // Enhanced saturated colors for better PDF visibility
     // For servers, differentiate by role
     if (type === ComponentType.Server && component && 'serverRole' in component && component.serverRole) {

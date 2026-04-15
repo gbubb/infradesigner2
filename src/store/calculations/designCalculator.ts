@@ -215,20 +215,9 @@ export const recalculateDesign = () => {
               }
               if (attachedDisks.length > 0) (instanceComponent as ComponentWithPlacement).attachedDisks = attachedDisks;
               if (role.clusterInfo) {
-              (instanceComponent as ComponentWithPlacement).clusterInfo = role.clusterInfo;
-              (instanceComponent as ComponentWithPlacement).clusterId = role.clusterInfo.clusterId;
-              
-              // Debug logging for controller/infrastructure nodes
-              if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
-                // console.log(`[designCalculator] Creating ${role.role} component:`, {
-//                   roleName: role.role,
-//                   roleClusterInfo: role.clusterInfo,
-//                   componentName: instanceName,
-//                   componentClusterInfo: role.clusterInfo,
-//                   componentClusterId: role.clusterInfo.clusterId
-//                 });
+                (instanceComponent as ComponentWithPlacement).clusterInfo = role.clusterInfo;
+                (instanceComponent as ComponentWithPlacement).clusterId = role.clusterInfo.clusterId;
               }
-            }
               instances.push(instanceComponent);
             }
             return instances;
@@ -280,7 +269,7 @@ export const recalculateDesign = () => {
                         ...diskTemplate,
                         quantity: diskConfig.quantity,
                         storageClusterId: storageCluster.id, // Tag disk with storage cluster ID
-                      });
+                      } as InfrastructureComponent);
                     }
                   });
                 });
@@ -348,20 +337,9 @@ export const recalculateDesign = () => {
               }
               if (attachedGPUs.length > 0) (instanceComponent as ComponentWithPlacement).attachedGPUs = attachedGPUs;
               if (role.clusterInfo) {
-              (instanceComponent as ComponentWithPlacement).clusterInfo = role.clusterInfo;
-              (instanceComponent as ComponentWithPlacement).clusterId = role.clusterInfo.clusterId;
-              
-              // Debug logging for controller/infrastructure nodes
-              if (role.role === 'controllerNode' || role.role === 'infrastructureNode') {
-                // console.log(`[designCalculator] Creating ${role.role} component:`, {
-//                   roleName: role.role,
-//                   roleClusterInfo: role.clusterInfo,
-//                   componentName: instanceName,
-//                   componentClusterInfo: role.clusterInfo,
-//                   componentClusterId: role.clusterInfo.clusterId
-//                 });
+                (instanceComponent as ComponentWithPlacement).clusterInfo = role.clusterInfo;
+                (instanceComponent as ComponentWithPlacement).clusterId = role.clusterInfo.clusterId;
               }
-            }
               instances.push(instanceComponent);
             }
             return instances;

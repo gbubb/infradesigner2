@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
-import { ComputePricingModel, StoragePricingModel } from '@/types/pricing-types';
+import { ClusterPricing } from '@/types/infrastructure';
 
 /**
  * Custom hook for managing cluster consumption and overallocation state
  */
 export function useClusterConsumption(
-  computePricing: ComputePricingModel[],
-  storagePricing: StoragePricingModel[]
+  computePricing: ClusterPricing[],
+  storagePricing: ClusterPricing[]
 ) {
   // Initialize state for consumption sliders - one per cluster
   const [clusterConsumption, setClusterConsumption] = useState<Record<string, number>>(() => {

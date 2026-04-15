@@ -1,4 +1,5 @@
-import type { PlacedComponent, InfrastructureDesign } from '@/types/infrastructure';
+import type { InfrastructureDesign } from '@/types/infrastructure';
+import type { PlacedComponent } from '@/types/placement';
 
 interface PowerCalculationRequest {
   design: InfrastructureDesign;
@@ -38,18 +39,22 @@ function calculatePowerConsumption(design: InfrastructureDesign, components: Pla
   let totalPower = 0;
 
   // Process each placed component
-  for (const component of components) {
-    if (!component.specifications?.powerConsumption) continue;
+  for (const placed of components) {
+    const component = placed.component as unknown as Record<string, unknown> | undefined;
+    const specifications = component?.specifications as { powerConsumption?: number } | undefined;
+    if (!specifications?.powerConsumption) continue;
 
-    const power = component.specifications.powerConsumption;
-    const quantity = component.quantity || 1;
+    const power = specifications.powerConsumption;
+    const quantity = placed.quantity || 1;
     const totalComponentPower = power * quantity;
-    const category = component.type || 'Other';
+    const category = (component?.type as string | undefined) || 'Other';
+    const componentName = (component?.name as string | undefined) || placed.id;
+    const rackId = placed.metadata?.rack_id;
 
     // Add to breakdown
     breakdown.push({
-      componentId: component.id,
-      componentName: component.name,
+      componentId: placed.id,
+      componentName,
       powerUsage: power,
       quantity,
       totalPower: totalComponentPower,
@@ -60,19 +65,19 @@ function calculatePowerConsumption(design: InfrastructureDesign, components: Pla
     byCategory[category] = (byCategory[category] || 0) + totalComponentPower;
 
     // Add to rack totals if component has rack assignment
-    if (component.rackId) {
-      if (!byRack[component.rackId]) {
-        byRack[component.rackId] = {
-          rackId: component.rackId,
-          rackName: `Rack ${component.rackId}`,
+    if (rackId) {
+      if (!byRack[rackId]) {
+        byRack[rackId] = {
+          rackId,
+          rackName: `Rack ${rackId}`,
           totalPower: 0,
           components: []
         };
       }
-      byRack[component.rackId].totalPower += totalComponentPower;
-      byRack[component.rackId].components.push({
-        componentId: component.id,
-        componentName: component.name,
+      byRack[rackId].totalPower += totalComponentPower;
+      byRack[rackId].components.push({
+        componentId: placed.id,
+        componentName,
         powerUsage: power,
         quantity,
         totalPower: totalComponentPower,
@@ -84,7 +89,8 @@ function calculatePowerConsumption(design: InfrastructureDesign, components: Pla
   }
 
   // Apply PUE if specified
-  const pue = design.specifications?.pue || 1.0;
+  const designSpecs = (design as unknown as { specifications?: { pue?: number } }).specifications;
+  const pue = designSpecs?.pue || 1.0;
   const adjustedTotalPower = totalPower * pue;
 
   // Adjust all values by PUE

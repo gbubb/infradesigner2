@@ -22,7 +22,7 @@ export const renderComponentSpecificDetails = (component: InfrastructureComponen
             )}
             
             <div className="text-gray-500">CPU Model</div>
-            <div>{component.cpuModel as string}</div>
+            <div>{String(component.cpuModel ?? '')}</div>
             
             {'cpuSockets' in component && component.cpuSockets && (
               <>
@@ -44,10 +44,10 @@ export const renderComponentSpecificDetails = (component: InfrastructureComponen
             <div className="text-gray-500">Memory</div>
             <div>{serverMemory} GB</div>
             
-            {'diskSlotType' in component && 'diskSlotQuantity' in component && component.diskSlotType && component.diskSlotQuantity && (
+            {'diskSlotType' in component && 'diskSlotQuantity' in component && Boolean(component.diskSlotType) && Boolean(component.diskSlotQuantity) && (
               <>
                 <div className="text-gray-500">Disk Slots</div>
-                <div>{component.diskSlotQuantity as number}x {component.diskSlotType as string}</div>
+                <div>{Number(component.diskSlotQuantity)}x {String(component.diskSlotType)}</div>
               </>
             )}
           </div>

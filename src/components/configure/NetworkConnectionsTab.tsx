@@ -180,12 +180,14 @@ const formatConnectionRow = (
 
   const srcRackObj = getRackAndRU(racks, row.sourceDeviceId, rowLayoutProperties);
   const dstRackObj = getRackAndRU(racks, row.destinationDeviceId, rowLayoutProperties);
-  
+
   // Get device orientations from rack placement
-  const srcDevice = srcRackObj.rackId && racks.find(r => r.id === srcRackObj.rackId)
-    ?.devices.find(d => d.deviceId === row.sourceDeviceId);
-  const dstDevice = dstRackObj.rackId && racks.find(r => r.id === dstRackObj.rackId)
-    ?.devices.find(d => d.deviceId === row.destinationDeviceId);
+  const srcDevice = srcRackObj.rackId && racks
+    ? racks.find(r => r.id === srcRackObj.rackId)?.devices.find(d => d.deviceId === row.sourceDeviceId)
+    : undefined;
+  const dstDevice = dstRackObj.rackId && racks
+    ? racks.find(r => r.id === dstRackObj.rackId)?.devices.find(d => d.deviceId === row.destinationDeviceId)
+    : undefined;
 
   // Calculate cable distance with the unified function
   const { distanceMm, breakdown } = calculateCableDistance(
@@ -230,7 +232,7 @@ const formatConnectionRow = (
     cable,
     cableType: cable?.name || row.mediaType || "-",
     calculatedDistanceMm: distanceMm.toFixed(0),
-    distanceBreakdown: breakdown,
+    distanceBreakdown: breakdown ?? undefined,
     lengthMeters: typeof row.lengthMeters === "number" && !isNaN(row.lengthMeters) ? row.lengthMeters.toFixed(1) : "-",
     transceiverSourceModel: srcTransceiverName,
     transceiverDestinationModel: dstTransceiverName,
@@ -257,7 +259,7 @@ const NetworkConnectionsTab: React.FC = () => {
       (c): c is Transceiver => c.type === ComponentType.Transceiver
     );
     const allCableTemplates = componentTemplates.filter(
-      (c): c is Cable => c.type === ComponentType.Cable
+      (c): c is CableType => c.type === ComponentType.Cable
     );
     const rows: NetworkConnectionTableRow[] = (networkConnections || []).map(r =>
       formatConnectionRow(r, designComponents, activeDesign?.rackprofiles, allTransceiverTemplates, allCableTemplates, activeDesign?.rowLayout?.rackProperties, activeDesign?.rowLayout, cableDistanceSettings)
@@ -531,19 +533,19 @@ const NetworkConnectionsTab: React.FC = () => {
                       {col.key === 'sourceDeviceId' && row.sourceDevice ? (
                         <BomItemHoverCard component={row.sourceDevice}>
                           <span className="cursor-pointer hover:underline">
-                            {row[col.key as keyof NetworkConnectionTableRow]}
+                            {row[col.key as keyof NetworkConnectionTableRow] as React.ReactNode}
                           </span>
                         </BomItemHoverCard>
                       ) : col.key === 'destinationDeviceId' && row.destinationDevice ? (
                         <BomItemHoverCard component={row.destinationDevice}>
                           <span className="cursor-pointer hover:underline">
-                            {row[col.key as keyof NetworkConnectionTableRow]}
+                            {row[col.key as keyof NetworkConnectionTableRow] as React.ReactNode}
                           </span>
                         </BomItemHoverCard>
                       ) : col.key === 'cableType' && row.cable ? (
                         <BomItemHoverCard component={row.cable}>
                           <span className="cursor-pointer hover:underline">
-                            {row[col.key as keyof NetworkConnectionTableRow]}
+                            {row[col.key as keyof NetworkConnectionTableRow] as React.ReactNode}
                           </span>
                         </BomItemHoverCard>
                       ) : col.key === 'calculatedDistanceMm' ? (
@@ -552,7 +554,7 @@ const NetworkConnectionsTab: React.FC = () => {
                           breakdown={row.distanceBreakdown} 
                         />
                       ) : (
-                        row[col.key as keyof NetworkConnectionTableRow]
+                        row[col.key as keyof NetworkConnectionTableRow] as React.ReactNode
                       )}
                     </TableCell>
                   ))}

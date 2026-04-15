@@ -205,7 +205,7 @@ export function validateConnectionRequirements(
   maxDistance?: number
 ): { valid: boolean; reason?: string } {
   // Check minimum speed requirement
-  if (minSpeed && connection.speed < minSpeed) {
+  if (minSpeed && connection.speed !== undefined && connection.speed < minSpeed) {
     return {
       valid: false,
       reason: `Connection speed (${connection.speed}) is below minimum required (${minSpeed})`
@@ -213,7 +213,7 @@ export function validateConnectionRequirements(
   }
 
   // Check maximum distance
-  if (maxDistance && connection.lengthMeters > maxDistance) {
+  if (maxDistance && connection.lengthMeters !== undefined && connection.lengthMeters > maxDistance) {
     return {
       valid: false,
       reason: `Connection distance (${connection.lengthMeters}m) exceeds maximum allowed (${maxDistance}m)`

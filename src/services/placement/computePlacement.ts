@@ -80,7 +80,7 @@ export function placeComputeLike({
     racks: [rackToPlace],
     device: component,
     ruSize,
-    activeDesignState: state
+    activeDesignState: state as never
   });
   const instanceName = `${typeLabel}-${typeCounters[typeLabel]++}`;
   if (placement.success) {

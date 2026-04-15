@@ -18,7 +18,7 @@ export const DndProvider: React.FC<DndProviderProps> = ({ children }) => {
       import('react-dnd-html5-backend')
     ]).then(([dndModule, backendModule]) => {
       setDndComponents({
-        DndProvider: dndModule.DndProvider,
+        DndProvider: dndModule.DndProvider as React.ComponentType<{ backend: unknown; children: React.ReactNode }>,
         HTML5Backend: backendModule.HTML5Backend
       });
     }).catch(error => {

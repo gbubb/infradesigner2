@@ -35,7 +35,7 @@ export const PricingModelTab: React.FC = () => {
   const [sizePremiumChartOpen, setSizePremiumChartOpen] = useState(false);
   const [ratioPremiumChartOpen, setRatioPremiumChartOpen] = useState(false);
   const { operationalCosts: rawOperationalCosts } = useCostAnalysis();
-  const { currency } = useCurrency();
+  const currency = useCurrency();
   const clusterMetrics = useComputeClusterMetrics();
 
   // Stabilize operationalCosts reference to prevent unnecessary re-renders

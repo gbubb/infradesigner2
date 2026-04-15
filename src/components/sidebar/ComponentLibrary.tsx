@@ -243,7 +243,7 @@ export const ComponentLibrary: React.FC = () => {
     console.log('Setting form values for editing:', formValues);
     
     // Set the component form with the extracted values
-    setComponentForm(formValues);
+    setComponentForm(formValues as never);
     setIsEditDialogOpen(true);
   };
 
@@ -270,7 +270,7 @@ export const ComponentLibrary: React.FC = () => {
       updateComponentTemplate(editingComponentId, componentToSave);
       handleCloseEditDialog();
     } else {
-      addComponentTemplate(componentToSave as InfrastructureComponent);
+      addComponentTemplate(componentToSave as unknown as InfrastructureComponent);
       handleCloseAddDialog();
     }
     
@@ -344,11 +344,11 @@ export const ComponentLibrary: React.FC = () => {
           resetForm();
           handleCloseAddDialog();
         }}
-        onSubmit={handleAddComponent}
+        onSubmit={handleAddComponent as never}
         isEditing={false}
         addPort={addPort}
         removePort={removePort}
-        updatePort={updatePort}
+        updatePort={updatePort as never}
       />
       
       <ComponentFormDialog 
@@ -374,11 +374,11 @@ export const ComponentLibrary: React.FC = () => {
           resetForm();
           handleCloseEditDialog();
         }}
-        onSubmit={handleAddComponent}
+        onSubmit={handleAddComponent as never}
         isEditing={true}
         addPort={addPort}
         removePort={removePort}
-        updatePort={updatePort}
+        updatePort={updatePort as never}
       />
       
       <DeleteConfirmationDialog 

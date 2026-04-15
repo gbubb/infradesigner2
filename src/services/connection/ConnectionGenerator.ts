@@ -118,7 +118,8 @@ export function generateConnections(
 
   const usedSrcPorts = new Set<string>();
   const usedDstPorts = new Set<string>();
-  const breakoutGroups = new Map<string, NetworkConnection[]>();
+  // Tracks in-flight breakout cable groups (BreakoutGroup internal type from BreakoutManager).
+  const breakoutGroups = new Map<string, never>();
   const breakoutCableCounter = 1000;
   
   // Map deviceId to rack and ru
@@ -208,12 +209,12 @@ export function generateConnections(
         allDevices,
         rackPlacement,
         rackprofiles as RackProfile[],
-        design.rowLayoutConfiguration,
+        design.rowLayout,
         usedSrcPorts,
         usedDstPorts,
         breakoutGroups,
         breakoutCableCounter,
-        cableLookup,
+        cableLookup as unknown as Map<string, Cable>,
         allCableTemplates,
         allTransceiverTemplates
       );
@@ -333,7 +334,7 @@ export function generateConnections(
             dstPlace,
             srcRack,
             dstRack,
-            design.rowLayoutConfiguration,
+            design.rowLayout,
             cableLookup,
             allTransceiverTemplates,
             allDevices,
@@ -344,19 +345,20 @@ export function generateConnections(
           );
 
           if (connectionResult.success && connectionResult.connection) {
+            const resultConnection = connectionResult.connection;
             // Get port names for the report
-            const srcPort = srcDevice.ports?.find(p => p.id === connectionResult.connection.sourcePortId);
-            const dstPort = targetDevice.ports?.find(p => p.id === connectionResult.connection.destinationPortId);
+            const srcPort = srcDevice.ports?.find(p => p.id === resultConnection.sourcePortId);
+            const dstPort = targetDevice.ports?.find(p => p.id === resultConnection.destinationPortId);
             
             connectionAttempts.push({
               ruleId: rule.id,
               ruleName: rule.name,
               sourceDeviceName: getDeviceName(allDevices, srcDevice.id),
               sourceDeviceId: srcDevice.id,
-              sourcePortId: srcPort?.name || connectionResult.connection.sourcePortId,
+              sourcePortId: srcPort?.name || resultConnection.sourcePortId,
               targetDeviceName: getDeviceName(allDevices, targetDevice.id),
               targetDeviceId: targetDevice.id,
-              targetPortId: dstPort?.name || connectionResult.connection.destinationPortId,
+              targetPortId: dstPort?.name || resultConnection.destinationPortId,
               status: "Success",
               reason: connectionResult.reason,
               connection: connectionResult.connection,

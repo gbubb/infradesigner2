@@ -134,7 +134,7 @@ export const RequirementsPanel: React.FC = () => {
             <PricingRequirementsForm
               requirements={requirements.pricingRequirements || { computePricing: [], storagePricing: [] }}
               computeClusters={requirements.computeRequirements.computeClusters}
-              storageClusters={requirements.storageRequirements.storageClusters}
+              storageClusters={requirements.storageRequirements.storageClusters as never}
               onUpdate={handleUpdatePricingRequirements}
             />
           </div>

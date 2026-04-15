@@ -26,7 +26,7 @@ import { debounce, DEBOUNCE_DELAYS } from '@/utils/debounce';
 
 // Create debounced save function outside the slice to persist between renders
 const debouncedSaveToDatabase = debounce(
-  async (updatedDesign: InfrastructureDesign, userId?: string, forceFullSave = false) => {
+  async (updatedDesign: InfrastructureDesign, userId: string | undefined, forceFullSave: boolean) => {
     const success = await saveDesignOptimized(updatedDesign, userId, forceFullSave);
     if (success) {
       // Only show toast for manual saves, not auto-saves
@@ -47,11 +47,11 @@ export const createDesignSlice: StateCreator<
   savedDesigns: [],
   activeDesign: null,
   
-  createNewDesign: (name, description, existingDesign = null) => {
+  createNewDesign: (name, description, existingDesign) => {
     let newDesignId = '';
-    
+
     set((state) => {
-      const newDesign = createNewDesignOperation(name, description, existingDesign, state.requirements);
+      const newDesign = createNewDesignOperation(name, description, existingDesign ?? null, state.requirements);
       newDesignId = newDesign.id;
       
       // Ensure the design has a sharing_id
@@ -245,7 +245,7 @@ export const createDesignSlice: StateCreator<
           if (design.selectedDisksByRole && design.selectedDisksByRole[role.id]) {
             // Find storage clusters targeting this compute cluster
             const targetingClusters = storageClusters.filter(
-              sc => sc.hyperConverged && sc.computeClusterId === role.clusterInfo?.clusterId
+              sc => sc.type === 'hyperConverged' && sc.computeClusterId === role.clusterInfo?.clusterId
             );
 
             // If there's exactly one storage cluster, migrate the disks to it

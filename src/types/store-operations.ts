@@ -38,6 +38,8 @@ export type CalculateRequiredQuantityFn = (
     componentRoles: ComponentRole[];
     componentTemplates: InfrastructureComponent[];
     selectedDisksByRole: Record<string, DiskConfig[]>;
+    selectedDisksByStorageCluster?: Record<string, DiskConfig[]>;
+    selectedDisksByStoragePool?: Record<string, DiskConfig[]>;
     selectedGPUsByRole: Record<string, GPUConfig[]>;
     requirements: DesignRequirements;
   }
@@ -173,11 +175,12 @@ export type UpdateComponentTemplateFn = (id: string, updates: Partial<Infrastruc
 export type CloneComponentTemplateFn = (id: string) => void;
 export type DeleteComponentTemplateFn = (id: string) => void;
 
-// Store setter and getter types
-export type StoreSet<T> = (
-  partial: T | Partial<T> | ((state: T) => T | Partial<T>),
-  replace?: boolean | undefined
-) => void;
+// Store setter and getter types — matches zustand's StateCreator `set` shape,
+// including its overloaded `replace: true` variant.
+export type StoreSet<T> = {
+  (partial: T | Partial<T> | ((state: T) => T | Partial<T>), replace?: false): void;
+  (state: T | ((state: T) => T), replace: true): void;
+};
 
 export type StoreGet<T> = () => T;
 

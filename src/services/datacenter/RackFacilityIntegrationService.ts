@@ -62,7 +62,20 @@ export class RackFacilityIntegrationService {
     // Calculate and update power usage for the rack
     await RackPowerCalculationService.updateRackPowerUsage(rackId);
 
-    return assignment;
+    return this.mapAssignmentFromDb(assignment);
+  }
+
+  private static mapAssignmentFromDb(
+    row: { id: string; rack_id: string; facility_id: string; hierarchy_level_id: string; hierarchy_path: string[] | null; assigned_at: string | null }
+  ): RackHierarchyAssignment {
+    return {
+      id: row.id,
+      rackId: row.rack_id,
+      facilityId: row.facility_id,
+      hierarchyLevelId: row.hierarchy_level_id,
+      hierarchyPath: row.hierarchy_path || [],
+      assignedAt: row.assigned_at || new Date().toISOString()
+    } as unknown as RackHierarchyAssignment;
   }
 
   /**
@@ -138,7 +151,7 @@ export class RackFacilityIntegrationService {
       .order('position_in_level', { nullsFirst: true });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as unknown as RackProfile[];
   }
 
   /**
@@ -152,7 +165,7 @@ export class RackFacilityIntegrationService {
       .order('name');
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as unknown as RackProfile[];
   }
 
   /**
@@ -194,16 +207,16 @@ export class RackFacilityIntegrationService {
     // Check capacity constraints
     const capacity = hierarchy.capacity as { racks?: number; powerKW?: number } | undefined;
     if (capacity?.racks) {
-      const assignedCount = hierarchy.assignedRacks || 0;
+      const assignedCount = hierarchy.assigned_racks || 0;
       if (assignedCount >= capacity.racks) {
         return { isValid: false, error: 'Hierarchy level is at rack capacity' };
       }
     }
 
     // Check power constraints
-    if (capacity?.powerKW && rack.powerAllocationKw) {
-      const currentPower = hierarchy.actualPowerKw || 0;
-      if (currentPower + rack.powerAllocationKw > capacity.powerKW) {
+    if (capacity?.powerKW && rack.power_allocation_kw) {
+      const currentPower = hierarchy.actual_power_kw || 0;
+      if (currentPower + rack.power_allocation_kw > capacity.powerKW) {
         return { isValid: false, error: 'Insufficient power capacity' };
       }
     }
@@ -257,12 +270,12 @@ export class RackFacilityIntegrationService {
     if (unassignedError) throw unassignedError;
 
     const assignedRacks = racks || [];
-    const totalPowerAllocated = assignedRacks.reduce((sum, r) => sum + (r.powerAllocationKw || 0), 0);
-    const totalPowerUsed = assignedRacks.reduce((sum, r) => sum + (r.actualPowerUsageKw || 0), 0);
+    const totalPowerAllocated = assignedRacks.reduce((sum, r) => sum + (r.power_allocation_kw || 0), 0);
+    const totalPowerUsed = assignedRacks.reduce((sum, r) => sum + (r.actual_power_usage_kw || 0), 0);
 
     // Group by hierarchy
     const racksByHierarchy = assignedRacks.reduce((acc, rack) => {
-      const levelId = rack.hierarchyLevelId || 'unassigned';
+      const levelId = rack.hierarchy_level_id || 'unassigned';
       acc[levelId] = (acc[levelId] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -301,7 +314,7 @@ export class RackFacilityIntegrationService {
     const { error } = await supabase
       .from('rack_profiles')
       .update({
-        rack_specifications: specifications,
+        rack_specifications: specifications as unknown as never,
         u_height: specifications.heightU
       })
       .eq('id', rackId);
@@ -432,7 +445,7 @@ export class RackFacilityIntegrationService {
         }
 
         if (newRack) {
-          importedRacks.push(newRack);
+          importedRacks.push(newRack as unknown as RackProfile);
         }
       }
     }
@@ -448,7 +461,7 @@ export class RackFacilityIntegrationService {
         .select('*')
         .in('id', rackIds);
       
-      return updatedRacks || importedRacks;
+      return (updatedRacks as unknown as RackProfile[] | null) || importedRacks;
     }
 
     return importedRacks;

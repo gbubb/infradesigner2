@@ -118,18 +118,31 @@ export interface FacilityConstraints {
 
 export interface FacilityCostBreakdown {
   facilityId: string;
+  facilityName?: string;
   totalCapitalCost: number;
   totalOperationalCost: number;
-  monthlyAmortisedCapital: number;
-  monthlyOperational: number;
+  monthlyAmortisedCapital?: number;
+  monthlyOperational?: number;
   totalMonthlyCost: number;
   costPerRack: number;
   costPerKW: number;
-  breakdown: {
+  costPerAllocatedRack?: number;
+  costPerAllocatedKW?: number;
+  utilizationMetrics?: {
+    rackUtilization: number;
+    powerUtilization: number;
+    totalRackCount: number;
+    allocatedRackCount: number;
+    totalPowerCapacityKW: number;
+    allocatedPowerKW: number;
+  };
+  costLayerBreakdowns?: CostLayerBreakdown[];
+  rackAllocations?: RackCostAllocation[];
+  breakdown?: {
     byCategory: Record<CostCategory, number>;
     byLayer: CostLayerBreakdown[];
   };
-  utilization: {
+  utilization?: {
     racksUsed: number;
     racksTotal: number;
     powerUsedKW: number;
@@ -141,9 +154,18 @@ export interface FacilityCostBreakdown {
 export interface CostLayerBreakdown {
   layerId: string;
   layerName: string;
-  monthlyCost: number;
-  percentageOfTotal: number;
-  allocatedToRacks: Record<string, number>; // rackId -> cost
+  type?: CostLayer['type'];
+  totalAmount?: number;
+  monthlyAmount: number;
+  perRackAmount?: number;
+  perKWAmount?: number;
+  allocationMethod?: AllocationMethod;
+  amortisationMonths?: number;
+  currency?: string;
+  // Legacy/alternative fields retained for downstream consumers
+  monthlyCost?: number;
+  percentageOfTotal?: number;
+  allocatedToRacks?: Record<string, number>;
 }
 
 export interface RackCostAllocation {
@@ -296,4 +318,97 @@ export interface FacilityTemplate {
   constraintTemplate: FacilityConstraints;
   isPublic: boolean;
   tags: string[];
+}
+
+// Capacity management types used by CapacityManagementService
+export interface HierarchyCapacityNode {
+  id: string;
+  name: string;
+  type: string;
+  totalCapacity: {
+    racks: number;
+    powerKW: number;
+    coolingKW: number;
+  };
+  usedCapacity: {
+    racks: number;
+    powerKW: number;
+    coolingKW: number;
+  };
+  utilization: number;
+  children: HierarchyCapacityNode[];
+}
+
+export interface CapacityConstraint {
+  type: 'power' | 'space' | 'cooling' | 'network';
+  severity: 'warning' | 'critical';
+  currentUtilization: number;
+  thresholdPercent: number;
+  availableCapacity: number;
+  recommendedAction: string;
+  impactedHierarchy: string[];
+}
+
+export interface CapacityMetrics {
+  facilityId: string;
+  facilityName: string;
+  lastUpdated: string;
+  powerCapacity: {
+    totalKW: number;
+    usedKW: number;
+    availableKW: number;
+    utilization: number;
+    criticalReserveKW: number;
+    effectiveAvailableKW: number;
+  };
+  spaceCapacity: {
+    totalRacks: number;
+    usedRacks: number;
+    availableRacks: number;
+    utilization: number;
+    totalRU: number;
+    usedRU: number;
+    availableRU: number;
+  };
+  coolingCapacity: {
+    totalKW: number;
+    usedKW: number;
+    availableKW: number;
+    utilization: number;
+    coolingEfficiency: number;
+  };
+  networkCapacity: {
+    totalPorts: number;
+    usedPorts: number;
+    availablePorts: number;
+    utilization: number;
+    portsBySpeed: Record<string, { total: number; used: number }>;
+  };
+  hierarchyCapacity: HierarchyCapacityNode;
+  constraints: CapacityConstraint[];
+  overallUtilization: number;
+  expansionPotential: {
+    maxAdditionalRacks: number;
+    maxAdditionalPowerKW: number;
+    limitingFactor: 'power' | 'space' | 'cooling' | 'none';
+    expansionCost?: number;
+  };
+}
+
+export interface ExpansionScenario {
+  name: string;
+  description: string;
+  capitalCost: number;
+  timelineMonths: number;
+  additionalCapacity: {
+    racks: number;
+    powerKW: number;
+    coolingKW: number;
+  };
+  newConstraints: CapacityConstraint[];
+  roi: {
+    paybackMonths: number;
+    npv: number;
+    irr: number;
+  };
 }

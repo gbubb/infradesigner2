@@ -3,7 +3,8 @@
 import { InfrastructureComponent, InfrastructureDesign } from './infrastructure';
 import { RackProfile } from './infrastructure/rack-types';
 import { PlacementResult } from './service-types';
-import { ComputeClusterRequirement, StorageClusterRequirement } from './infrastructure/requirements-types';
+import { ComputeClusterRequirement } from './infrastructure/requirements-types';
+import { StorageClusterRequirement } from './infrastructure/storage-types';
 
 export interface PlacementConfig {
   component: InfrastructureComponent;
@@ -26,6 +27,8 @@ export interface PlacementReportItem {
   rackId?: string;
   startU?: number;
   endU?: number;
+  ruPosition?: number;
+  clusterId?: string;
 }
 
 export interface PlacementPanelConfig {

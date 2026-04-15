@@ -1,14 +1,15 @@
 
-import { 
-  InfrastructureComponent, 
-  InfrastructureDesign, 
-  DesignRequirements, 
-  ComponentRole, 
-  StorageClusterRequirement, 
-  ClusterInfo, 
-  ComputeClusterRequirement, 
-  ComponentType 
+import {
+  InfrastructureComponent,
+  InfrastructureDesign,
+  DesignRequirements,
+  ComponentRole,
+  ClusterInfo,
+  ComputeClusterRequirement,
+  ComponentType
 } from '@/types/infrastructure';
+import { StorageClusterRequirement } from '@/types/infrastructure/storage-types';
+import { ComponentWithPosition } from '@/types/workspace';
 
 export interface StoreState {
   // Component templates
@@ -46,11 +47,14 @@ export interface StoreState {
   
   // Workspace components
   placedComponents: Record<string, InfrastructureComponent>;
-  workspaceComponents: InfrastructureComponent[];
+  workspaceComponents: ComponentWithPosition[];
   selectedComponentId: string | null;
-  
+
   // Editing state
   editingComponentId: string | null;
+
+  // App initialization state
+  isInitializing: boolean;
   
   // Methods
   calculateComponentRoles: () => void;

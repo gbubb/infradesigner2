@@ -225,7 +225,7 @@ export function useCalibrationProfiles(onCalibrationChange: (profile: PowerCalib
       if (!(path[i] in current)) {
         current[path[i]] = {};
       }
-      current = current[path[i]];
+      current = current[path[i]] as Record<string, unknown>;
     }
     
     current[path[path.length - 1]] = value;
