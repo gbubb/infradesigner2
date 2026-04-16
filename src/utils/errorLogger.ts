@@ -1,4 +1,4 @@
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 type ErrorLevel = 'error' | 'warning' | 'info';
 
@@ -39,14 +39,16 @@ class ErrorLogger {
   }
   
   private showUserNotification(message: string, level: ErrorLevel): void {
-    const variant = level === 'error' ? 'destructive' : 'default';
     const title = level === 'error' ? 'Error' : level === 'warning' ? 'Warning' : 'Info';
-    
-    toast({
-      title,
-      description: message,
-      variant,
-    });
+    const opts = { description: message };
+
+    if (level === 'error') {
+      toast.error(title, opts);
+    } else if (level === 'warning') {
+      toast.warning(title, opts);
+    } else {
+      toast.info(title, opts);
+    }
   }
   
   /**

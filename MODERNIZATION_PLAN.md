@@ -14,7 +14,7 @@
 | 2 — React 19 | ✅ Done | React 19.2.5, ReactDOM 19.2.5, `@types/react` 19.2.14, `@types/react-dom` 19.2.3. Codemod recipe ran clean (no legacy APIs). Added `.npmrc legacy-peer-deps=true` for stale React 18 peer constraints in cmdk/vaul/sonner/next-themes/input-otp/embla/react-day-picker (to be tightened in Phase 3 shadcn regen). Build 38s (vs 115s on Vite 7), dev ready in 388ms, 85/85 tests green |
 | 4 — Data libraries | ✅ Done | React Router 7.14.1 (library mode, `react-router-dom` removed), Zod 4.3.6 + `@hookform/resolvers` 5.2.2 + react-hook-form 7.72.1, Recharts 3.8.1 (added `react-is` 19.2.5 as explicit peer), date-fns 4.1.0, `@supabase/supabase-js` 2.103.0. No `activeIndex`/`alwaysShow`/`isFront` Recharts usage found; `message:` → `error:` hand-fixed in `ComponentValidationSchemas.ts` (6 occurrences) |
 | 3a — Tailwind v4 core | ✅ Done | Tailwind 4.2.2 via `@tailwindcss/vite` plugin, `tailwindcss-animate` → `tw-animate-css` 1.4.0, `postcss.config.js` deleted (postcss + autoprefixer removed — bundled in v4 plugin). Upgrade tool migrated 40+ utility class renames across `src/` and moved theme tokens from `tailwind.config.ts` (deleted) to `@theme` blocks in `src/index.css`. Build 40s, dev ready 345ms, all tests green |
-| 3b — shadcn regeneration | ⬜ Deferred | Follow-up: regenerate 64 components via current shadcn CLI and merge customizations. Split from 3a to reduce visual-risk surface area in one PR |
+| 3b — shadcn regeneration | ✅ Done | Regenerated all 45 stock primitives via shadcn CLI 4.2.0 (`new-york` style → Tailwind v4 / `data-slot` output). Modern pattern: function components (no `forwardRef`, React 19 ref-as-prop), `data-slot=`/`data-variant=`/`data-size=` attrs, umbrella `radix-ui` package replacing 27 individual `@radix-ui/react-*` deps. Split files folded back into parents (`*-variants.ts`, `form-context.tsx`, `form-use-field.tsx`, `sidebar-hooks.tsx`, orphaned PascalCase `Sidebar*.tsx`). Old toast API removed (`toast.tsx`/`toaster.tsx`/`use-toast.ts` × 2) — 6 call sites migrated to sonner (`toast.success`/`toast.error`/`toast.warning`/`toast.info`/`toast`). Sidebar CSS migrated from `--sidebar-background` to `--sidebar` token pattern with project brand colors preserved. `components.json` updated for v4 (`tailwind.config: ""`, `iconLibrary: "lucide"`). Build 1m1s, lint 0 errors / 301 warnings (1 new pre-existing-style), 85/85 tests green |
 | 6 — Backend stack | ✅ Done | postgres:16-alpine → 18-alpine (exceeded plan's 17 target), postgrest v12.2.3 → v14.9, supabase/gotrue:v2.163.2 → supabase/auth:v2.188.1, kong:3.4-ubuntu → 3.9.1-ubuntu. `dev:db:reset` verified end-to-end: pg15-origin backup restores into pg18, PostgREST reports 15 relations/17 relationships/3 functions, Auth health returns v2.188.1 |
 | 5 | ⬜ Not started | |
 
@@ -124,10 +124,15 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
 - [x] Dropped `autoprefixer` and standalone `postcss` — Tailwind v4's Vite plugin bundles both.
 - [x] Switched from `postcss.config.js` (deleted) to `@tailwindcss/vite` plugin in `vite.config.ts`.
 
-### 3b. shadcn regeneration (deferred)
-- [ ] Regenerate shadcn components with the current CLI (pulls in Tailwind v4 output with `data-slot` styling hooks).
-- [ ] Audit custom overrides in `src/components/ui/` — merge into regenerated components.
-- [ ] Visual regression pass across all routes.
+### 3b. shadcn regeneration ✅
+- [x] Updated `components.json` for Tailwind v4 (`style: "new-york"`, `tailwind.config: ""`, added `iconLibrary: "lucide"`).
+- [x] Regenerated 45 stock primitives via `npx shadcn@latest add ... --overwrite` (one batch). Modern v4 output: `data-slot` attrs, function components without `forwardRef`, umbrella `radix-ui` package.
+- [x] Removed 27 individual `@radix-ui/react-*` deps from `package.json` — replaced by the umbrella `radix-ui` (1.4.3). Vite chunking rule (`@radix-ui/` matcher) still produces the same `radix-ui` chunk since the umbrella resolves to the same modules.
+- [x] Folded split files back into parents: `*-variants.ts` (badge/button/navigation-menu/sidebar-menu-button/toggle), `form-context.tsx` + `form-use-field.tsx`, `sidebar-hooks.tsx`. Deleted orphaned PascalCase `SidebarComponents/Context/Hooks/Provider/Types.tsx` (dead code, only referenced each other).
+- [x] Removed legacy toast API: deleted `src/components/ui/{toast,toaster,use-toast}.ts(x)` + `src/hooks/use-toast.ts`. Migrated 6 call sites (DatacenterPanel, RackAssignmentPanel, RackMappingPanel, RackDefinitionPanel, RackPDFExport, errorLogger) to sonner. Removed `<Toaster />` from `App.tsx` (Sonner remains).
+- [x] Sidebar CSS: cleaned up CLI-appended duplicate sidebar var blocks; migrated from `--sidebar-background` (raw HSL components) to `--sidebar` (full `hsl()` strings) with project brand colors preserved across light/dark.
+- [x] Custom files preserved: `loading-skeletons.tsx`, `virtual-table.tsx`.
+- [ ] Visual regression pass — pending manual sanity check (route-by-route walkthrough).
 
 **Risk:** High (visual). Expect to spend the most debugging time here. Consider capturing screenshots of key pages before the bump to diff against.
 

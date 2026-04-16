@@ -15,7 +15,7 @@ import type { DatacenterRack, DatacenterRackWithUsage } from '@/types/infrastruc
 import type { RackProfile } from '@/types/infrastructure/rack-types';
 import type { HierarchyLevel } from '@/types/infrastructure/datacenter-types';
 import { cn } from '@/lib/utils';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 export function RackMappingPanel() {
   const { 
@@ -62,11 +62,7 @@ export function RackMappingPanel() {
         setDatacenterRacks(racks);
       } catch (error) {
         console.error('Error loading datacenter racks:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load datacenter racks",
-          variant: "destructive",
-        });
+        toast.error("Error", { description: "Failed to load datacenter racks" });
       } finally {
         setLoading(false);
       }
@@ -126,8 +122,7 @@ export function RackMappingPanel() {
         activeDesign.id
       );
       
-      toast({
-        title: "Rack Mapped",
+      toast.success("Rack Mapped", {
         description: "Successfully mapped design rack to datacenter rack",
       });
       
@@ -149,11 +144,7 @@ export function RackMappingPanel() {
       setSelectedDatacenterRack(null);
     } catch (error) {
       console.error('Error mapping rack:', error);
-      toast({
-        title: "Error",
-        description: "Failed to map rack",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to map rack" });
     } finally {
       setMapping(false);
     }
@@ -163,8 +154,7 @@ export function RackMappingPanel() {
     try {
       await DatacenterRackService.unmapDesignRack(designRackId);
       
-      toast({
-        title: "Rack Unmapped",
+      toast.success("Rack Unmapped", {
         description: "Successfully unmapped design rack",
       });
       
@@ -174,11 +164,7 @@ export function RackMappingPanel() {
       }
     } catch (error) {
       console.error('Error unmapping rack:', error);
-      toast({
-        title: "Error",
-        description: "Failed to unmap rack",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to unmap rack" });
     }
   };
 

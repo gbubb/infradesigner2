@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  define: {
+    global: 'globalThis',
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -150,6 +153,7 @@ export default defineConfig(({ mode }) => ({
       '@supabase/functions-js',
       'react-dnd',
       'react-dnd-html5-backend',
+      'react-plotly.js',
     ],
   },
 }));

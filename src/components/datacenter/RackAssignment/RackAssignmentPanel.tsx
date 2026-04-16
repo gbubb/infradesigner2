@@ -10,7 +10,7 @@ import { RackFacilityIntegrationService } from '@/services/datacenter/RackFacili
 import type { RackProfile } from '@/types/infrastructure/rack-types';
 import type { HierarchyLevel } from '@/types/infrastructure/datacenter-types';
 import { cn } from '@/lib/utils';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 export function RackAssignmentPanel() {
   const { 
@@ -54,26 +54,21 @@ export function RackAssignmentPanel() {
       const importedRacks = await RackFacilityIntegrationService.importRacksFromDesign(activeDesign.id);
       
       if (importedRacks.length > 0) {
-        toast({
-          title: "Racks Imported",
+        toast.success("Racks Imported", {
           description: `Successfully imported ${importedRacks.length} racks from the current design.`,
         });
-        
+
         // Reload unassigned racks
         await loadUnassignedRacks();
       } else {
-        toast({
-          title: "No Racks to Import",
+        toast("No Racks to Import", {
           description: "All racks from the current design have already been imported.",
-          variant: "default",
         });
       }
     } catch (error) {
       console.error('Error importing racks:', error);
-      toast({
-        title: "Import Failed",
+      toast.error("Import Failed", {
         description: "Failed to import racks from the design. Please try again.",
-        variant: "destructive",
       });
     } finally {
       setImporting(false);

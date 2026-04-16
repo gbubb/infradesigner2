@@ -5,7 +5,25 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 // @ts-expect-error — no shipped types for react-plotly.js
-import Plot from 'react-plotly.js';
+import * as reactPlotlyModule from 'react-plotly.js';
+
+type PlotComponent = React.ComponentType<Record<string, unknown>>;
+// CJS interop: Vite/Rolldown may wrap react-plotly.js as:
+//   the component directly, { default: Component }, or { default: { default: Component } }.
+// Walk the .default chain until we hit something callable.
+const unwrapDefault = (mod: unknown): unknown => {
+  let out: unknown = mod;
+  for (let i = 0; i < 3; i++) {
+    if (typeof out === 'function') return out;
+    if (out && typeof out === 'object' && 'default' in out) {
+      out = (out as { default: unknown }).default;
+    } else {
+      return out;
+    }
+  }
+  return out;
+};
+const Plot = unwrapDefault(reactPlotlyModule) as PlotComponent;
 
 interface PricingVisualization3DProps {
   pricingService: PricingModelService;

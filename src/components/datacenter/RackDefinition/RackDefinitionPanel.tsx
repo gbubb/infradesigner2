@@ -14,7 +14,7 @@ import { DatacenterRackService } from '@/services/datacenter/DatacenterRackServi
 import type { DatacenterRack, RackCreationParams } from '@/types/infrastructure/datacenter-rack-types';
 import type { HierarchyLevel } from '@/types/infrastructure/datacenter-types';
 import { cn } from '@/lib/utils';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 export function RackDefinitionPanel() {
   const { selectedFacilityId, getFacilityById } = useStore();
@@ -42,11 +42,7 @@ export function RackDefinitionPanel() {
         setDatacenterRacks(racks);
       } catch (error) {
         console.error('Error loading datacenter racks:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load datacenter racks",
-          variant: "destructive",
-        });
+        toast.error("Error", { description: "Failed to load datacenter racks" });
       } finally {
         setLoading(false);
       }
@@ -71,10 +67,8 @@ export function RackDefinitionPanel() {
     };
 
     if (params.rackCount <= 0) {
-      toast({
-        title: "Invalid Input",
+      toast.error("Invalid Input", {
         description: "Please enter a valid number of racks to create",
-        variant: "destructive",
       });
       return;
     }
@@ -82,8 +76,7 @@ export function RackDefinitionPanel() {
     setCreating(true);
     try {
       await DatacenterRackService.createRacks(params);
-      toast({
-        title: "Racks Created",
+      toast.success("Racks Created", {
         description: `Successfully created ${params.rackCount} racks`,
       });
       
@@ -97,11 +90,7 @@ export function RackDefinitionPanel() {
       setRackCount('10');
     } catch (error) {
       console.error('Error creating racks:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create racks",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to create racks" });
     } finally {
       setCreating(false);
     }
@@ -110,8 +99,7 @@ export function RackDefinitionPanel() {
   const handleDeleteRacks = async (rackIds: string[]) => {
     try {
       await DatacenterRackService.deleteRacks(rackIds);
-      toast({
-        title: "Racks Deleted",
+      toast.success("Racks Deleted", {
         description: `Successfully deleted ${rackIds.length} rack(s)`,
       });
       if (selectedLevel) {
@@ -120,11 +108,7 @@ export function RackDefinitionPanel() {
       }
     } catch (error) {
       console.error('Error deleting racks:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete racks",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete racks" });
     }
   };
 

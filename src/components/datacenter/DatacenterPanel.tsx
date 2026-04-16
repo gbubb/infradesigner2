@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 const facilityFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -132,16 +132,9 @@ export const DatacenterPanel: React.FC = () => {
   const handleDeleteFacility = async (facilityId: string) => {
     try {
       await deleteFacility(facilityId);
-      toast({
-        title: 'Success',
-        description: 'Facility deleted successfully'
-      });
+      toast.success('Success', { description: 'Facility deleted successfully' });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete facility',
-        variant: 'destructive'
-      });
+      toast.error('Error', { description: 'Failed to delete facility' });
     }
   };
 
@@ -150,10 +143,7 @@ export const DatacenterPanel: React.FC = () => {
       if (editingFacility) {
         // Update existing facility
         await updateFacility(editingFacility.id, data);
-        toast({
-          title: 'Success',
-          description: 'Facility updated successfully'
-        });
+        toast.success('Success', { description: 'Facility updated successfully' });
       } else {
         // Create new facility
         const newFacility = await createFacility({
@@ -170,18 +160,13 @@ export const DatacenterPanel: React.FC = () => {
           }
         });
         selectFacility(newFacility.id);
-        toast({
-          title: 'Success',
-          description: 'Facility created successfully'
-        });
+        toast.success('Success', { description: 'Facility created successfully' });
       }
       setIsCreatingFacility(false);
       setEditingFacility(null);
     } catch (error) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: editingFacility ? 'Failed to update facility' : 'Failed to create facility',
-        variant: 'destructive'
       });
     }
   };

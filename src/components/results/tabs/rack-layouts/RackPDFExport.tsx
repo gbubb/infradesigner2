@@ -16,7 +16,7 @@ import { RackProfile, PlacedDevice } from '@/types/infrastructure/rack-types';
 import { InfrastructureComponent } from '@/types/infrastructure/component-types';
 import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface RackPDFExportProps {
   rackProfiles: Array<{ id: string; name: string; azName?: string; availabilityZoneId?: string }>;
@@ -37,14 +37,11 @@ export const RackPDFExport: React.FC<RackPDFExportProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   
   const activeDesign = useDesignStore(state => state.activeDesign);
-  const { toast } = useToast();
 
   const handleExport = async () => {
     if (!includeRowView && !includeDetailedView) {
-      toast({
-        title: "Export Options",
+      toast.error("Export Options", {
         description: "Please select at least one export option.",
-        variant: "destructive"
       });
       return;
     }
@@ -90,18 +87,15 @@ export const RackPDFExport: React.FC<RackPDFExportProps> = ({
         powerPerRack
       );
 
-      toast({
-        title: "Export Successful",
+      toast.success("Export Successful", {
         description: "Rack layouts have been exported to PDF.",
       });
 
       setIsOpen(false);
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      toast({
-        title: "Export Failed",
+      toast.error("Export Failed", {
         description: "An error occurred while exporting the PDF. Please try again.",
-        variant: "destructive"
       });
     } finally {
       setIsExporting(false);

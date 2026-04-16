@@ -20,7 +20,6 @@ const ProcurePanel = lazy(() => import(/* webpackPrefetch: true */ "@/components
 const RequirementsPanel = lazy(() => import(/* webpackPrefetch: true */ "@/components/requirements/RequirementsPanel").then(m => ({ default: m.RequirementsPanel })));
 const ResultsPanel = lazy(() => import(/* webpackPrefetch: true */ "@/components/results/ResultsPanel").then(m => ({ default: m.ResultsPanel })));
 import { ThemeProvider } from "./components/theme/theme-provider";
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./hooks/useAuth";
@@ -97,7 +96,6 @@ function App() {
             <TooltipProvider>
               <BrowserRouter>
                 <AuthProvider>
-                  <Toaster />
                   <Sonner />
                   <AppRoutes />
                 </AuthProvider>
