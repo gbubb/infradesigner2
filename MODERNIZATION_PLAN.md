@@ -160,7 +160,7 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
 ### 4d. date-fns 4 + Supabase client (0.25 day)
 - [x] Bumped `date-fns` → 4.1.0.
 - [x] Bumped `@supabase/supabase-js` → 2.103.0.
-- [ ] Regenerate `src/integrations/supabase/types.ts` against current DB schema — deferred to a separate task (requires running backend stack; existing types still compile).
+- [x] Regenerate `src/integrations/supabase/types.ts` against current DB schema. Ran `npx supabase@latest gen types typescript --db-url postgresql://postgres:postgres@localhost:5432/postgres --schema public` against the live PG18. Caught one real drift: `designs.selected_disks_by_storage_cluster: Json | null` was missing. Build + 115 tests green after apply.
 
 **Risk:** Low–Medium.
 
@@ -194,7 +194,7 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
   - `kong:3.4-ubuntu` → `kong:3.9.1-ubuntu`
 - [x] Move hardcoded DB role passwords out of `docker/postgres/init/02-post-restore.sql` into env vars / compose secrets. Converted `02-post-restore.sql` → `02-post-restore.sh` that reads `AUTHENTICATOR_PASSWORD` and `AUTH_ADMIN_PASSWORD` via `psql -v`. `docker-compose.yml` passes those env vars with `postgres` dev defaults and substitutes them into `PGRST_DB_URI` + `GOTRUE_DB_DATABASE_URL`. Documented in `.env.example`.
 - [x] Verified `db_cluster-11-11-2025@01-58-10.backup.gz` restores cleanly into PG18 (forward-compatible pg_dumpall text; restore output shows expected Supabase-cloud object errors that the init script tolerates via `ON_ERROR_STOP=off`).
-- [ ] Audit restored schema for Lovable/Supabase-cloud artifacts. **Deferred — follow-up cleanup task.**
+- [x] Audit restored schema for Lovable/Supabase-cloud artifacts. Schemas/extensions/functions/RLS-policies were clean. Found 9 zombie roles leftover from cloud: `pgsodium_key{holder,iduser,maker}`, `supabase_{realtime,storage,replication}_admin`, `supabase_read_only_user`, `dashboard_user` (had 168+54 grants), and `pgbouncer` (owned a vestigial schema + function; we don't run pgbouncer). Added `DROP OWNED BY dashboard_user/pgbouncer CASCADE` + `DROP ROLE IF EXISTS ...` block to `02-post-restore.sh` (and removed the now-stale `ALTER ROLE supabase_storage_admin RESET ALL`). Verified via `npm run dev:db:reset`: role count 16 → 7, schemas 4 → 3 (pgbouncer gone), all services healthy.
 - [x] `npm run dev:db:reset` end-to-end smoke test — all services healthy; PostgREST schema cache loaded 15 relations/17 relationships/3 functions; Auth health reports v2.188.1.
 
 **Risk:** Low. Postgres minor-major upgrades via pg_dump are well-trodden.

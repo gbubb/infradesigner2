@@ -30,3 +30,7 @@ dist-ssr
 
 # Docker volume mounts
 docker/postgres/data/
+
+# Supabase CLI scratch (recreated on `npx supabase gen types` runs).
+# Historical migrations in supabase/migrations/ ARE tracked — only the temp dir is ignored.
+supabase/.temp/

@@ -32,6 +32,23 @@ DROP SCHEMA IF EXISTS supabase_migrations CASCADE;
 DROP SCHEMA IF EXISTS _realtime CASCADE;
 DROP SCHEMA IF EXISTS _analytics CASCADE;
 
+-- 1a. Drop Supabase-cloud-only roles that survived the backup. Most are tied
+--     to schemas dropped above (pgsodium_*, supabase_realtime_admin,
+--     supabase_storage_admin) or to Supabase Studio (dashboard_user) and
+--     pgbouncer (we don't run pgbouncer). DROP OWNED first so lingering
+--     grants/schema ownership don't block the DROP ROLE.
+DROP OWNED BY dashboard_user CASCADE;
+DROP OWNED BY pgbouncer CASCADE;
+DROP ROLE IF EXISTS pgsodium_keyholder;
+DROP ROLE IF EXISTS pgsodium_keyiduser;
+DROP ROLE IF EXISTS pgsodium_keymaker;
+DROP ROLE IF EXISTS supabase_realtime_admin;
+DROP ROLE IF EXISTS supabase_storage_admin;
+DROP ROLE IF EXISTS supabase_replication_admin;
+DROP ROLE IF EXISTS supabase_read_only_user;
+DROP ROLE IF EXISTS dashboard_user;
+DROP ROLE IF EXISTS pgbouncer;
+
 -- 2. Set passwords for the roles that services connect as.
 --    (The dump creates these roles but without working passwords for a
 --    non-Supabase-cloud environment.) Values come via psql -v from env vars.
@@ -46,7 +63,6 @@ ALTER ROLE service_role      WITH NOLOGIN NOINHERIT BYPASSRLS;
 --     cloud; not present in the vanilla postgres:18-alpine image).
 ALTER ROLE authenticator       RESET session_preload_libraries;
 ALTER ROLE supabase_admin      RESET ALL;
-ALTER ROLE supabase_storage_admin RESET ALL;
 
 -- 3. PostgREST role hierarchy: authenticator switches into anon/authenticated/
 --    service_role based on the JWT claim.

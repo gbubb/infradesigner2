@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
-  }
   public: {
     Tables: {
       components: {
@@ -216,6 +211,7 @@ export type Database = {
           requirements: Json | null
           row_layout: Json | null
           selected_disks_by_role: Json | null
+          selected_disks_by_storage_cluster: Json | null
           selected_gpus_by_role: Json | null
           sharing_id: string | null
           updatedat: string | null
@@ -235,6 +231,7 @@ export type Database = {
           requirements?: Json | null
           row_layout?: Json | null
           selected_disks_by_role?: Json | null
+          selected_disks_by_storage_cluster?: Json | null
           selected_gpus_by_role?: Json | null
           sharing_id?: string | null
           updatedat?: string | null
@@ -254,6 +251,7 @@ export type Database = {
           requirements?: Json | null
           row_layout?: Json | null
           selected_disks_by_role?: Json | null
+          selected_disks_by_storage_cluster?: Json | null
           selected_gpus_by_role?: Json | null
           sharing_id?: string | null
           updatedat?: string | null
@@ -827,11 +825,11 @@ export type Database = {
       create_datacenter_racks: {
         Args: {
           p_hierarchy_level_id: string
+          p_max_power_kw?: number
           p_rack_count: number
           p_rack_prefix?: string
-          p_u_height?: number
-          p_max_power_kw?: number
           p_rack_type?: string
+          p_u_height?: number
         }
         Returns: {
           created_at: string | null
@@ -850,17 +848,23 @@ export type Database = {
           u_height: number | null
           updated_at: string | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "datacenter_racks"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_facility_utilization_summary: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
+          allocatedPowerKW: number
+          allocatedRacks: number
           facilityId: string
           facilityName: string
-          totalRacks: number
-          allocatedRacks: number
-          allocatedPowerKW: number
-          totalPowerKW: number
           pue: number
+          totalPowerKW: number
+          totalRacks: number
         }[]
       }
     }
@@ -995,3 +999,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
