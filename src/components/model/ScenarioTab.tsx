@@ -8,19 +8,19 @@ import { ScenarioParameters } from './scenario/ScenarioParameters';
 import { BreakEvenIndicators } from './scenario/BreakEvenIndicators';
 import { ScenarioCharts } from './scenario/ScenarioCharts';
 import { ScenarioSummary } from './scenario/ScenarioSummary';
-import { formatCurrency, formatPercentage } from '@/lib/formatters';
+import { formatCurrency } from '@/lib/formatters';
 
 
 export const ScenarioTab: React.FC<ScenarioTabProps> = ({
   clusterAnalysis,
   computePricing,
   storagePricing,
-  operationalCosts,
+  operationalCosts: _operationalCosts,
   storageClustersMetrics
 }) => {
   const { requirements } = useDesignStore();
   const { actualHardwareTotals, totalCost } = useDesignCalculations();
-  const activeDesign = useDesignStore(state => state.activeDesign);
+  const _activeDesign = useDesignStore(state => state.activeDesign);
 
   // Growth parameters
   const [scenarioMonths, setScenarioMonths] = useState(24);

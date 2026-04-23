@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Download, FileSpreadsheet, Server, Network, Cable as CableIcon } from 'lucide-react';
-import { ComponentCategory, ComponentType, InfrastructureComponent, componentTypeToCategory } from '@/types/infrastructure';
+import { Download, FileSpreadsheet, Server } from 'lucide-react';
+import { ComponentType, InfrastructureComponent, componentTypeToCategory } from '@/types/infrastructure';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
@@ -13,7 +13,6 @@ import { summarizeCablesFromConnections, summarizeTransceiversFromConnections, c
 import ComputeStorageTable from '../bom/ComputeStorageTable';
 import NetworkTable from '../bom/NetworkTable';
 import CablingTable from '../bom/CablingTable';
-import { ComponentWithPlacement } from '@/types/service-types';
 import { useCurrency } from '@/hooks/useCurrency';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -48,7 +47,7 @@ interface DiskLineItem {
   totalDiskCost: number;
 }
 
-interface CableLineItem {
+interface _CableLineItem {
   cableTemplateId?: string;
   lengthMeters?: number;
   model: string;
@@ -61,7 +60,7 @@ interface CableLineItem {
   mediaType?: CableMediaType;
 }
 
-interface TransceiverLineItem {
+interface _TransceiverLineItem {
   transceiverTemplateId?: string;
   name: string;
   model: string;
@@ -151,7 +150,7 @@ export const BillOfMaterialsTab: React.FC = () => {
   const networkConnections = useMemo(() => activeDesign?.networkConnections || [], [activeDesign?.networkConnections]);
   
   // Build lookup dictionaries for cost and details from component library templates:
-  const cableTemplates = useMemo(() => (componentTemplates || []).filter(c => c.type === ComponentType.Cable), [componentTemplates]);
+  const _cableTemplates = useMemo(() => (componentTemplates || []).filter(c => c.type === ComponentType.Cable), [componentTemplates]);
   const transceiverTemplates = useMemo(() => (componentTemplates || []).filter(c => c.type === ComponentType.Transceiver), [componentTemplates]);
   const devices = components.filter(c =>
     [ComponentType.Switch, ComponentType.Router, ComponentType.Firewall, ComponentType.Server].includes(c.type as ComponentType)

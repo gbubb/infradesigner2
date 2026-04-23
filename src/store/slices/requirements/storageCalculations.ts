@@ -4,8 +4,7 @@ import { ComponentType } from '@/types/infrastructure';
 import { 
   CalculateStorageNodeCapacityFn, 
   CalculateStorageNodeQuantityFn,
-  CalculationResult,
-  DiskConfig 
+  CalculationResult 
 } from '@/types/store-operations';
 
 /**

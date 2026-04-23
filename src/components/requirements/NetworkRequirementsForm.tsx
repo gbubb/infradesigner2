@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { NetworkTopology, DesignRequirements } from '@/types/infrastructure';
-import { toast } from 'sonner';
 
 type NetworkRequirements = DesignRequirements['networkRequirements'];
 

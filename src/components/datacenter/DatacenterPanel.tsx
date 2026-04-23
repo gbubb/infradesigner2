@@ -1,11 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Building2, Plus, DollarSign, Zap, AlertCircle, Edit, Trash2, Server, BarChart3 } from 'lucide-react';
 import { DatacenterFacility } from '@/types/infrastructure/datacenter-types';
@@ -40,7 +39,7 @@ export const DatacenterPanel: React.FC = () => {
     facilities,
     selectedFacilityId,
     isLoadingFacilities,
-    facilitiesError,
+    facilitiesError: _facilitiesError,
     loadFacilities,
     selectFacility,
     createFacility,
@@ -133,7 +132,7 @@ export const DatacenterPanel: React.FC = () => {
     try {
       await deleteFacility(facilityId);
       toast.success('Success', { description: 'Facility deleted successfully' });
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error', { description: 'Failed to delete facility' });
     }
   };
@@ -164,7 +163,7 @@ export const DatacenterPanel: React.FC = () => {
       }
       setIsCreatingFacility(false);
       setEditingFacility(null);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error', {
         description: editingFacility ? 'Failed to update facility' : 'Failed to create facility',
       });

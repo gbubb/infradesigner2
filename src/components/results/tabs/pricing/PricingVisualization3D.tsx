@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PricingModelService } from '@/services/pricing/pricingModelService';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
@@ -38,7 +38,7 @@ export const PricingVisualization3D: React.FC<PricingVisualization3DProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [plotData, setPlotData] = useState<{ x: number[]; y: number[]; z: (number | null)[][] } | null>(null);
-  const [shouldCalculate, setShouldCalculate] = useState(false);
+  const [_shouldCalculate, setShouldCalculate] = useState(false);
 
   useEffect(() => {
     // Check if dark mode is enabled

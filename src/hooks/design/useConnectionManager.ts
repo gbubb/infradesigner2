@@ -1,7 +1,6 @@
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { toast } from 'sonner';
 
 /**
  * Hook for managing connections between devices

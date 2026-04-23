@@ -2,8 +2,7 @@ import type {
   DatacenterFacility, 
   PowerLayer,
   PowerEfficiencyMetrics,
-  PowerLayerUtilization,
-  NonProductiveLoad
+  PowerLayerUtilization
 } from '@/types/infrastructure/datacenter-types';
 import type { Rack } from '@/types/infrastructure';
 

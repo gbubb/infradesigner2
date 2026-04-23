@@ -14,7 +14,7 @@ interface ComponentDetailsProps {
   onDelete?: () => void;
 }
 
-export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClose, onDelete }) => {
+export const ComponentDetails: React.FC<ComponentDetailsProps> = ({ open, onClose, onDelete: _onDelete }) => {
   const { 
     selectedComponentId, 
     placedComponents, 

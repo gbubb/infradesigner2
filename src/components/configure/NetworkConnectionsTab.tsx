@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useDesignStore } from "@/store/designStore";
-import { generateConnections } from "@/services/connectionService";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Save, Trash2, Plus, Network, Download, Cable, Settings } from "lucide-react";
-import { InfrastructureDesign, NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable as CableType, Port, Transceiver } from "@/types/infrastructure";
+import { NetworkConnection, RackProfile, InfrastructureComponent, ComponentType, Cable as CableType, Transceiver } from "@/types/infrastructure";
 import type { ConnectionAttempt } from "@/types/infrastructure/connection-service-types";
 import ConnectionReportModal from "./ConnectionReportModal";
 import ManualConnectionDialog from "./ManualConnectionDialog";
@@ -54,7 +53,7 @@ function filterConnections(rows: NetworkConnectionTableRow[], q: string) {
   );
 }
 
-const getDeviceName = (list: InfrastructureComponent[], id: string): string => {
+const _getDeviceName = (list: InfrastructureComponent[], id: string): string => {
   return list.find(d => d.id === id)?.name || id.substring(0, 6);
 };
 

@@ -45,7 +45,7 @@ const DetailedCostAnalysisCardComponent: React.FC<DetailedCostAnalysisCardProps>
   capitalCost,
   operationalCosts,
   amortizedCostsByType,
-  totalCostOfOwnership,
+  totalCostOfOwnership: _totalCostOfOwnership,
   licensingCosts,
   facilityType = 'none',
   facilityCosts,

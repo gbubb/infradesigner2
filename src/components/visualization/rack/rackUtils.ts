@@ -38,25 +38,27 @@ export const getDeviceColor = (type: string, component?: InfrastructureComponent
   }
 };
 
-// Helper to calculate RU position from drop coordinates
-export const calculateDropRUPosition = (
-  clientOffset: { y: number },
-  rackProfileId: string,
-  rackHeight: number
-): number => {
-  // Get the rack DOM element
-  const rackElement = document.getElementById(`rack-${rackProfileId}`);
-  if (!rackElement) return 1;
-  
-  // Get rack rect
-  const rackRect = rackElement.getBoundingClientRect();
-  
-  // Calculate y position within rack
-  const rackY = clientOffset.y - rackRect.top;
-  
-  // Convert to RU position (bottom to top)
-  const ruPosition = rackHeight - Math.floor((rackY / rackRect.height) * rackHeight);
-  
-  // Ensure value is in bounds
-  return Math.max(1, Math.min(ruPosition, rackHeight));
+/**
+ * Compute an RU position from a dnd-kit drop event.
+ *
+ * RU indexing is bottom-up: RU 1 is at the rack's bottom edge, RU N at the top.
+ * dnd-kit gives us the dragged element's translated top (viewport coords) and
+ * the droppable's bounding rect, so we compute the drop's vertical offset from
+ * the rack top and invert to an RU number.
+ */
+export const calculateDropRUPositionFromRect = ({
+  dropY,
+  rackTop,
+  rackHeight,
+  uHeight,
+}: {
+  dropY: number;
+  rackTop: number;
+  rackHeight: number;
+  uHeight: number;
+}): number => {
+  if (rackHeight <= 0 || uHeight <= 0) return 1;
+  const offsetFromTop = dropY - rackTop;
+  const ruPosition = uHeight - Math.floor((offsetFromTop / rackHeight) * uHeight);
+  return Math.max(1, Math.min(ruPosition, uHeight));
 };

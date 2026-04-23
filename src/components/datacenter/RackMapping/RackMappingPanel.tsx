@@ -5,11 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowRight, Server, Zap, Link2, Unlink, Package, AlertCircle } from 'lucide-react';
+import { ArrowRight, Server, Zap, Link2, Unlink, Package } from 'lucide-react';
 import { useStore } from '@/store';
 import { DatacenterRackService } from '@/services/datacenter/DatacenterRackService';
-import { RackFacilityIntegrationService } from '@/services/datacenter/RackFacilityIntegrationService';
 import { supabase } from '@/lib/supabase';
 import type { DatacenterRack, DatacenterRackWithUsage } from '@/types/infrastructure/datacenter-rack-types';
 import type { RackProfile } from '@/types/infrastructure/rack-types';
@@ -30,7 +28,7 @@ export function RackMappingPanel() {
   const [designRacks, setDesignRacks] = useState<RackProfile[]>([]);
   const [selectedDesignRack, setSelectedDesignRack] = useState<string | null>(null);
   const [selectedDatacenterRack, setSelectedDatacenterRack] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [mapping, setMapping] = useState(false);
 
   const facility = selectedFacilityId ? getFacilityById(selectedFacilityId) : null;

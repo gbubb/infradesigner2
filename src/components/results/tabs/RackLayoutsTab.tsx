@@ -12,7 +12,6 @@ import { PlacementRulesDialog } from './rack-layouts/PlacementRulesDialog';
 import PlacementReportDialog from './rack-layouts/PlacementReportDialog';
 import { useDesignStore } from '@/store/designStore';
 import { RackOperationsService } from '@/services/RackOperationsService';
-import { RackService } from '@/services/rackService';
 import { RackPDFExport } from './rack-layouts/RackPDFExport';
 import { RackProfile } from '@/types/infrastructure/rack-types';
 import {
@@ -33,7 +32,7 @@ export const RackLayoutsTab: React.FC = () => {
     isLoadingLayout,
     isAutoSaving,
     resetTrigger,
-    hasUnsavedChangesRef,
+    hasUnsavedChangesRef: _hasUnsavedChangesRef,
     handleSaveLayout,
     handleLoadLayout,
     handleResetLayout,
@@ -41,7 +40,7 @@ export const RackLayoutsTab: React.FC = () => {
   } = useRackPersistence();
   
   // Initialize racks
-  const { rackProfiles, availabilityZones } = useRackInitialization(resetTrigger) as {
+  const { rackProfiles, availabilityZones: _availabilityZones } = useRackInitialization(resetTrigger) as {
     rackProfiles: { id: string; name: string; azName?: string; availabilityZoneId?: string }[];
     availabilityZones: string[];
   };
@@ -87,7 +86,7 @@ export const RackLayoutsTab: React.FC = () => {
   const {
     selectedAZ,
     setSelectedAZ,
-    filteredRacks,
+    filteredRacks: _filteredRacks,
     getDisplayRacks
   } = useRackFiltering(rackProfiles, azNameMap);
   

@@ -105,7 +105,7 @@ export async function deduplicatedRequest<T>(
 }
 
 // Helper to create cached query functions
-export function createCachedQuery<TData, TError = Error>(
+export function createCachedQuery<TData, _TError = Error>(
   queryKey: readonly unknown[],
   fetcher: () => Promise<TData>,
   options?: {

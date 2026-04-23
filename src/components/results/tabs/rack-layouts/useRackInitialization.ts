@@ -3,7 +3,6 @@ import { useDesignStore } from '@/store/designStore';
 import { RackService } from '@/services/rackService';
 import { DeviceRoleType } from '@/types/infrastructure/requirements-types';
 import { ComponentType, RackType, InfrastructureComponent } from '@/types/infrastructure';
-import { toast } from 'sonner';
 
 export interface RackProfileInitializationData {
   id: string;
@@ -90,7 +89,7 @@ export const useRackInitialization = (resetTrigger: number) => {
       
       // For each cluster, distribute its nodes
       Object.entries(nodesByCluster).forEach(([clusterId, nodes]) => {
-        const clusterInfo = nodes[0]?.clusterInfo;
+        const _clusterInfo = nodes[0]?.clusterInfo;
         const storageCluster = activeDesign?.requirements.storageRequirements.storageClusters
           .find(sc => sc.id === clusterId);
         

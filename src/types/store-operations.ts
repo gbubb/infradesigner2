@@ -4,7 +4,6 @@ import {
   InfrastructureDesign,
   DesignRequirements,
   ComponentRole,
-  ComponentType,
   ComputeClusterRequirement,
   StorageClusterRequirement,
 } from './infrastructure';

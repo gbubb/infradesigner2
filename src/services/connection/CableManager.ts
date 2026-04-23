@@ -4,7 +4,6 @@ import {
   RowLayoutConfiguration,
   Cable,
   PortSpeed,
-  DeviceOrientation,
 } from "@/types/infrastructure";
 import { CableMediaType, ConnectorType } from "@/types/infrastructure";
 import { 
@@ -281,7 +280,7 @@ export function findCompatibleCableTemplate(
   requiredLengthMeters?: number
 ): Cable | undefined {
   const key = [connectorA, connectorB].sort().join(':');
-  const cablesForConnectors = cableLookup.get(key) || [];
+  const _cablesForConnectors = cableLookup.get(key) || [];
   const allCables = Array.from(cableLookup.values()).flat();
   
   // Enhanced debugging for cable search

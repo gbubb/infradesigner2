@@ -7,10 +7,7 @@ import type {
   CostCategory,
   HierarchyLevel
 } from '@/types/infrastructure/datacenter-types';
-import type { RackProfile } from '@/types/infrastructure/rack-types';
-import type { DatacenterRack, DatacenterRackWithUsage } from '@/types/infrastructure/datacenter-rack-types';
-import { RackFacilityIntegrationService } from './RackFacilityIntegrationService';
-import { DatacenterRackService } from './DatacenterRackService';
+import type { DatacenterRackWithUsage } from '@/types/infrastructure/datacenter-rack-types';
 
 export class DatacenterCostCalculator {
   private facility: DatacenterFacility;
@@ -190,7 +187,7 @@ export class DatacenterCostCalculator {
   private allocateCostToRack(
     layer: CostLayer,
     rack: DatacenterRackWithUsage,
-    facilityBreakdown: FacilityCostBreakdown
+    _facilityBreakdown: FacilityCostBreakdown
   ): number {
     let monthlyAmount = 0;
     

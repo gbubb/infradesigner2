@@ -10,13 +10,13 @@ import {
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { VMPricing, PricingModelService } from '@/services/pricing/pricingModelService';
-import { formatCurrency, formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
+import { formatPreciseCurrency, formatMonthlyCurrency } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Info, PieChartIcon } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChartIcon } from 'lucide-react';
 
 interface PricingSampleTableEnhancedProps {
   pricingService: PricingModelService;

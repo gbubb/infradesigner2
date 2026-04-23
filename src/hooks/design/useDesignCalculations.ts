@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { useStorageClustersWrapper } from './useStorageClustersWrapper';
 import { useHardwareTotalsWrapper } from './useHardwareTotalsWrapper';
@@ -106,7 +106,7 @@ export const useDesignCalculations = () => {
   // Get store 
   const store = useDesignStore();
   const activeDesign: InfrastructureDesign | null | undefined = store.activeDesign;
-  const requirements = store.requirements;
+  const _requirements = store.requirements;
   
   // Use our safer wrapper versions instead of the original hooks
   const { storageClustersMetrics } = useStorageClustersWrapper();

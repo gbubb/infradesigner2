@@ -5,10 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useDesignStore } from '@/store/designStore';
 import { useStore } from '@/store';
-import { recalculateDesign, manualRecalculateDesign } from '@/store/calculations/designCalculator';
+import { manualRecalculateDesign } from '@/store/calculations/designCalculator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ComponentType, DeviceRoleType, InfrastructureComponent } from '@/types/infrastructure';
+import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { Info, LayoutGrid, RotateCw, Save } from 'lucide-react';
@@ -26,7 +26,7 @@ export const DesignPanel: React.FC = () => {
     activeDesign,
     saveDesign,
     createNewDesign,
-    getDefaultComponent,
+    getDefaultComponent: _getDefaultComponent,
     requirements
   } = useDesignStore();
 

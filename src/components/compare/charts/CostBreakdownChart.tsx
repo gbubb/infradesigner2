@@ -26,7 +26,7 @@ export const CostBreakdownChart: React.FC<CostBreakdownChartProps> = ({
   designACosts,
   designBCosts,
 }) => {
-  const currency = useCurrency();
+  const _currency = useCurrency();
 
   const data: CostBreakdownData[] = [
     {

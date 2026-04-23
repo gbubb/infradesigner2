@@ -9,7 +9,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Edit2, Trash2, Building, Home, Server, Grid3x3, Box, AlertCircle } from 'lucide-react';
 import { DatacenterFacility, HierarchyLevel } from '@/types/infrastructure/datacenter-types';
 import { cn } from '@/lib/utils';
-import { useDrag, useDrop } from 'react-dnd';
+import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { DragType, DropType } from '@/components/visualization/dnd/dragTypes';
 
 interface HierarchyBuilderProps {
   facility: DatacenterFacility;
@@ -45,54 +55,58 @@ const HierarchyNode: React.FC<HierarchyNodeProps> = ({
   const children = allLevels.filter(l => l.parentId === level.id);
   const Icon = hierarchyIcons[level.name as keyof typeof hierarchyIcons] || Box;
 
-  const [{ isDragging }, drag] = useDrag({
-    type: 'HIERARCHY_LEVEL',
-    item: { id: level.id },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+    transform,
+  } = useDraggable({
+    id: `hierarchy-drag-${level.id}`,
+    data: { type: DragType.HierarchyLevel, levelId: level.id },
   });
 
-  const [{ isOver, canDrop }, drop] = useDrop({
-    accept: 'HIERARCHY_LEVEL',
-    drop: (item: { id: string }) => {
-      if (item.id !== level.id) {
-        onMove(item.id, level.id);
-      }
-    },
-    canDrop: (item: { id: string }) => {
-      // Prevent dropping a parent onto its own child
-      const isDescendant = (parentId: string, childId: string): boolean => {
-        const child = allLevels.find(l => l.id === childId);
-        if (!child) return false;
-        if (child.parentId === parentId) return true;
-        if (child.parentId) return isDescendant(parentId, child.parentId);
-        return false;
-      };
-      return item.id !== level.id && !isDescendant(item.id, level.id);
-    },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-      canDrop: monitor.canDrop(),
-    }),
+  const { setNodeRef: setDropRef, isOver, active } = useDroppable({
+    id: `hierarchy-drop-${level.id}`,
+    data: { type: DropType.HierarchyLevel, levelId: level.id },
   });
+
+  // `canDrop` is evaluated client-side against the active drag to avoid
+  // circular re-parenting (parent → descendant).
+  const activeId = active?.data?.current?.levelId as string | undefined;
+  const canDrop = (() => {
+    if (!activeId || activeId === level.id) return false;
+    const isDescendant = (parentId: string, childId: string): boolean => {
+      const child = allLevels.find(l => l.id === childId);
+      if (!child) return false;
+      if (child.parentId === parentId) return true;
+      if (child.parentId) return isDescendant(parentId, child.parentId);
+      return false;
+    };
+    return !isDescendant(activeId, level.id);
+  })();
 
   const dragDropRef = (el: HTMLDivElement | null) => {
-    drag(el);
-    drop(el);
+    setDragRef(el);
+    setDropRef(el);
   };
 
   return (
     <div className="relative">
       <div
         ref={dragDropRef}
+        {...listeners}
+        {...attributes}
         className={cn(
           "flex items-center gap-2 p-3 rounded-md border bg-card transition-all cursor-move",
           isDragging && "opacity-50",
           isOver && canDrop && "border-primary bg-primary/5",
           isOver && !canDrop && "border-destructive bg-destructive/5"
         )}
-        style={{ marginLeft: `${depth * 24}px` }}
+        style={{
+          marginLeft: `${depth * 24}px`,
+          transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+        }}
       >
         <Icon className="w-4 h-4 text-muted-foreground" />
         <span className="font-medium flex-1">{level.name}</span>
@@ -164,6 +178,11 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
   const [newLevelRackCapacity, setNewLevelRackCapacity] = useState<number | undefined>(undefined);
   const [newLevelPowerCapacity, setNewLevelPowerCapacity] = useState<number | undefined>(undefined);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor)
+  );
+
   const rootLevels = facility.hierarchyConfig.filter(l => !l.parentId);
 
   const handleAddLevel = () => {
@@ -231,6 +250,23 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
     });
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const activeLevelId = event.active?.data?.current?.levelId as string | undefined;
+    const overLevelId = event.over?.data?.current?.levelId as string | undefined;
+    if (!activeLevelId || !overLevelId || activeLevelId === overLevelId) return;
+
+    const isDescendant = (parentId: string, childId: string): boolean => {
+      const child = facility.hierarchyConfig.find(l => l.id === childId);
+      if (!child) return false;
+      if (child.parentId === parentId) return true;
+      if (child.parentId) return isDescendant(parentId, child.parentId);
+      return false;
+    };
+    if (isDescendant(activeLevelId, overLevelId)) return;
+
+    handleMoveLevel(activeLevelId, overLevelId);
+  };
+
   const handleMoveLevel = (draggedId: string, targetId: string | null) => {
     // First update the parent relationship
     let updatedLevels = facility.hierarchyConfig.map(level => {
@@ -289,6 +325,7 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
   };
 
   return (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
     <Card className="flex flex-col h-full">
       <CardHeader>
         <div className="flex justify-between items-center">
@@ -489,5 +526,6 @@ export const HierarchyBuilder: React.FC<HierarchyBuilderProps> = ({ facility, on
         </Dialog>
       </CardContent>
     </Card>
+    </DndContext>
   );
 };

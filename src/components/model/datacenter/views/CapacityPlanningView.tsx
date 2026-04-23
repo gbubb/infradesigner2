@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, ComposedChart } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, ComposedChart } from 'recharts';
 import { TrendingUp, AlertTriangle, Zap, Server } from 'lucide-react';
 import { PowerLayer } from '@/types/infrastructure/datacenter-types';
 
@@ -22,7 +22,7 @@ interface CapacityPlanningViewProps {
 export const CapacityPlanningView: React.FC<CapacityPlanningViewProps> = ({
   currentUsage,
   capacity,
-  powerInfrastructure
+  powerInfrastructure: _powerInfrastructure
 }) => {
   const [growthRate, setGrowthRate] = useState(20); // 20% annual growth default
   const [planningHorizon, setPlanningHorizon] = useState(36); // 36 months default

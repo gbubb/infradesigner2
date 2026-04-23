@@ -1,7 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { VirtualTable, VirtualTableColumn } from '@/components/ui/virtual-table';
-import { TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Pencil, Copy, Trash, Zap } from 'lucide-react';

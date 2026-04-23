@@ -1,6 +1,6 @@
 # Infradesigner Modernization Plan
 
-**Status:** In progress — 2026-04-14
+**Status:** ✅ Complete — 2026-04-23 (all 8 phases done; definition-of-done gates all green)
 **Owner:** _tbd_
 **Estimated effort:** ~2 weeks for one engineer, ~1 week for two
 
@@ -16,7 +16,7 @@
 | 3a — Tailwind v4 core | ✅ Done | Tailwind 4.2.2 via `@tailwindcss/vite` plugin, `tailwindcss-animate` → `tw-animate-css` 1.4.0, `postcss.config.js` deleted (postcss + autoprefixer removed — bundled in v4 plugin). Upgrade tool migrated 40+ utility class renames across `src/` and moved theme tokens from `tailwind.config.ts` (deleted) to `@theme` blocks in `src/index.css`. Build 40s, dev ready 345ms, all tests green |
 | 3b — shadcn regeneration | ✅ Done | Regenerated all 45 stock primitives via shadcn CLI 4.2.0 (`new-york` style → Tailwind v4 / `data-slot` output). Modern pattern: function components (no `forwardRef`, React 19 ref-as-prop), `data-slot=`/`data-variant=`/`data-size=` attrs, umbrella `radix-ui` package replacing 27 individual `@radix-ui/react-*` deps. Split files folded back into parents (`*-variants.ts`, `form-context.tsx`, `form-use-field.tsx`, `sidebar-hooks.tsx`, orphaned PascalCase `Sidebar*.tsx`). Old toast API removed (`toast.tsx`/`toaster.tsx`/`use-toast.ts` × 2) — 6 call sites migrated to sonner (`toast.success`/`toast.error`/`toast.warning`/`toast.info`/`toast`). Sidebar CSS migrated from `--sidebar-background` to `--sidebar` token pattern with project brand colors preserved. `components.json` updated for v4 (`tailwind.config: ""`, `iconLibrary: "lucide"`). Build 1m1s, lint 0 errors / 301 warnings (1 new pre-existing-style), 85/85 tests green |
 | 6 — Backend stack | ✅ Done | postgres:16-alpine → 18-alpine (exceeded plan's 17 target), postgrest v12.2.3 → v14.9, supabase/gotrue:v2.163.2 → supabase/auth:v2.188.1, kong:3.4-ubuntu → 3.9.1-ubuntu. `dev:db:reset` verified end-to-end: pg15-origin backup restores into pg18, PostgREST reports 15 relations/17 relationships/3 functions, Auth health returns v2.188.1 |
-| 5 | ⬜ Not started | |
+| 5 — DnD migration | ✅ Done | react-dnd → `@dnd-kit/core` 6.3.1 + `@dnd-kit/sortable` 10.0.0 + `@dnd-kit/utilities` 3.2.2. Global DndContext routes drag-end events via `over.data.current.onDrop`; HierarchyBuilder + RowLayoutTab use scoped nested contexts. Drag types unified in `src/components/visualization/dnd/dragTypes.ts`. Killed a latent bug where palette→rack drops were silently rejected by a stale `'RACK_DEVICE'` accept-type. `calculateDropRUPosition` rewritten as pure `calculateDropRUPositionFromRect`. PointerSensor (4px activation) + KeyboardSensor for a11y. Manual rack-placement smoke test signed off. |
 
 ## Goal
 
@@ -132,7 +132,7 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
 - [x] Removed legacy toast API: deleted `src/components/ui/{toast,toaster,use-toast}.ts(x)` + `src/hooks/use-toast.ts`. Migrated 6 call sites (DatacenterPanel, RackAssignmentPanel, RackMappingPanel, RackDefinitionPanel, RackPDFExport, errorLogger) to sonner. Removed `<Toaster />` from `App.tsx` (Sonner remains).
 - [x] Sidebar CSS: cleaned up CLI-appended duplicate sidebar var blocks; migrated from `--sidebar-background` (raw HSL components) to `--sidebar` (full `hsl()` strings) with project brand colors preserved across light/dark.
 - [x] Custom files preserved: `loading-skeletons.tsx`, `virtual-table.tsx`.
-- [ ] Visual regression pass — pending manual sanity check (route-by-route walkthrough).
+- [x] Visual regression pass — manual route-by-route walkthrough signed off.
 
 **Risk:** High (visual). Expect to spend the most debugging time here. Consider capturing screenshots of key pages before the bump to diff against.
 
@@ -170,13 +170,16 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
 
 **Outcomes:** Modern, actively-developed DnD, smaller bundle, better accessibility.
 
-- [ ] Inventory all `react-dnd` usage (rack layout, component palette, placement workspace).
-- [ ] Install `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`.
-- [ ] Rewrite drag sources/targets using `useDraggable`/`useDroppable` hooks.
-- [ ] Port custom drag layers to dnd-kit's `DragOverlay`.
-- [ ] Remove `react-dnd`, `react-dnd-html5-backend` deps.
+- [x] Inventory all `react-dnd` usage (6 files: DndProvider, DragSource, PlacedDeviceItem, useRackDropzone, HierarchyBuilder, RowLayoutTab).
+- [x] Install `@dnd-kit/core` 6.3.1, `@dnd-kit/sortable` 10.0.0, `@dnd-kit/utilities` 3.2.2.
+- [x] Rewrite drag sources/targets using `useDraggable`/`useDroppable` hooks. Global DndContext (in `DndProvider.tsx`) routes drag-end events via `over.data.current.onDrop`, letting each droppable own its drop logic. HierarchyBuilder and RowLayoutTab use nested scoped DndContexts.
+- [x] No custom drag layers existed; skipped `DragOverlay`.
+- [x] Remove `react-dnd`, `react-dnd-html5-backend` deps. `grep -r react-dnd src/` returns no matches.
+- [x] Unified drag types in `src/components/visualization/dnd/dragTypes.ts` (PALETTE_COMPONENT, PLACED_DEVICE, HIERARCHY_LEVEL, ROW_LAYOUT_RACK). Removed dead `'RACK_DEVICE'` accept-type in `useRackDropzone` that no draggable ever emitted — this fixes a latent bug where palette→rack drops were silently rejected (users relied on the `+` button fallback).
+- [x] `calculateDropRUPosition` in `rackUtils.ts` rewritten as pure `calculateDropRUPositionFromRect` (takes dropY + rack rect directly, no DOM lookup). Matches dnd-kit's synthetic-event model.
+- [x] PointerSensor with 4px activation distance + KeyboardSensor for a11y (SortableContext in RowLayoutTab uses `sortableKeyboardCoordinates`) — touch support for free via PointerSensor.
 
-**Risk:** High (functional). Touches rack-placement UX which is core to the product. Can be deferred and shipped as a separate release.
+**Risk:** High (functional). Touches rack-placement UX which is core to the product. Build/lint/tests green; manual rack-placement smoke test signed off.
 
 ---
 
@@ -189,7 +192,7 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
   - `postgrest/postgrest:v12.2.3` → `postgrest/postgrest:v14.9`
   - `supabase/gotrue:v2.163.2` → `supabase/auth:v2.188.1` (image renamed; env var prefix stays `GOTRUE_*` for compat)
   - `kong:3.4-ubuntu` → `kong:3.9.1-ubuntu`
-- [ ] Move hardcoded DB role passwords out of `docker/postgres/init/02-post-restore.sql` into env vars / compose secrets. **Deferred — follow-up hardening task.**
+- [x] Move hardcoded DB role passwords out of `docker/postgres/init/02-post-restore.sql` into env vars / compose secrets. Converted `02-post-restore.sql` → `02-post-restore.sh` that reads `AUTHENTICATOR_PASSWORD` and `AUTH_ADMIN_PASSWORD` via `psql -v`. `docker-compose.yml` passes those env vars with `postgres` dev defaults and substitutes them into `PGRST_DB_URI` + `GOTRUE_DB_DATABASE_URL`. Documented in `.env.example`.
 - [x] Verified `db_cluster-11-11-2025@01-58-10.backup.gz` restores cleanly into PG18 (forward-compatible pg_dumpall text; restore output shows expected Supabase-cloud object errors that the init script tolerates via `ON_ERROR_STOP=off`).
 - [ ] Audit restored schema for Lovable/Supabase-cloud artifacts. **Deferred — follow-up cleanup task.**
 - [x] `npm run dev:db:reset` end-to-end smoke test — all services healthy; PostgREST schema cache loaded 15 relations/17 relationships/3 functions; Auth health reports v2.188.1.
@@ -205,11 +208,13 @@ Bring the stack current (React 19, Vite 7, Tailwind 4, Postgres 17, etc.), flip 
 - [x] Install `vitest`, `@vitest/ui`, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`, `jsdom`.
 - [x] Add `vitest.config.ts` (jsdom env, `@/` alias, setup file for jest-dom matchers).
 - [x] Add `"test": "vitest"`, `"test:run": "vitest run"`, `"test:ui": "vitest --ui"` scripts.
-- [x] Seed test suites — **85 tests passing**:
+- [x] Seed test suites — **115 tests passing**:
   - [x] `src/services/connection/` — BreakoutManager (19), PortMatcher (23), CableManager (15), TransceiverManager (12). Covers cable length estimation, port filtering, breakout validation, transceiver compatibility.
   - [x] `src/services/pricing/pricingModelService.ts` — 15 tests covering getConfig, cluster discovery, capacity calculation (oversubscription + HA + virt overhead), pricing integration.
-  - [ ] `src/store/calculations/designCalculator.ts` — deferred (heavy Zustand store mocking required).
-  - [ ] `src/services/automatedPlacementService.ts` — deferred (needs full design fixtures + RackService mock).
+  - [x] `src/services/placement/placementUtils.ts` — 19 tests covering type classification (getTypeKey, isCoreNet, isPatchPanel, isComputeLike) and rack partitioning (getCoreAndComputeRacks). Backs `automatedPlacementService`.
+  - [x] `src/store/calculations/changeManager.ts` — 11 tests covering detectChanges (compute/storage/physical/GPU/multi-change) and getChangeImpact (aggregation of requiresNewRacks, preservation flags, wildcard role collapse).
+  - [~] `src/store/calculations/designCalculator.ts` — full entry-point tests deferred (tightly coupled to `useDesignStore.getState()`; requires either whole-store fixture or decoupling refactor). Adjacent pure helpers now covered via `changeManager.test.ts`.
+  - [~] `src/services/automatedPlacementService.ts` — full entry-point tests deferred (same store-coupling concern; also depends on `RackService` singleton state). Classification helpers from `placementUtils.ts` now covered.
 - [ ] Add `npm run test:run` to CI if/when CI exists.
 
 **Risk:** Low (new code). High **value** — this is the safety net for every other phase.
@@ -230,9 +235,9 @@ Not in scope for this plan, but flag for follow-up:
 - `src/store/slices/design/index.ts` (648 LOC)
 
 ### Documentation updates
-- [ ] Update `CLAUDE.md` version table.
-- [ ] Update `README.md` backend service versions.
-- [ ] Update deployment notes for Node 22 requirement.
+- [x] Update `CLAUDE.md` version table.
+- [x] Update `README.md` backend service versions.
+- [x] Update deployment notes for Node 22 requirement.
 
 ---
 
@@ -247,12 +252,12 @@ Rationale: tests first = safety net. Tailwind/shadcn after React 19 because shad
 
 ## Definition of done
 
-- [ ] All listed version bumps applied.
-- [ ] `npm run build`, `npm run lint`, `npm run test:run` all green.
-- [ ] TypeScript `strict: true` with zero errors.
-- [ ] All routes render and core flows work (design → configure → results → compare).
-- [ ] `docker compose up -d` bootstraps clean from the backup file.
-- [ ] `CLAUDE.md` and `README.md` reflect the new stack.
+- [x] All listed version bumps applied (most exceeded their original targets — Vite 8, TS 6, Postgres 18).
+- [x] `npm run build` (20.79s), `npm run lint` (0 errors / 8 warnings), `npm run test:run` (115/115) all green.
+- [x] TypeScript `strict: true` with zero errors.
+- [x] All routes render and core flows work (design → configure → results → compare) — route-by-route manual walkthrough signed off.
+- [x] `docker compose up -d` bootstraps clean from the backup file — verified via `npm run dev:db:reset`.
+- [x] `CLAUDE.md` and `README.md` reflect the new stack.
 
 ## Out of scope (follow-up work)
 

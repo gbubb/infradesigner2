@@ -1,9 +1,10 @@
 import React, { useCallback } from 'react';
-import { useDrag } from 'react-dnd';
+import { useDraggable } from '@dnd-kit/core';
 import { ComponentType, InfrastructureComponent } from '@/types/infrastructure/component-types';
 import { cn } from '@/lib/utils';
 import { getDeviceColor } from './rackUtils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DragType } from "../dnd/dragTypes";
 
 interface PlacedDeviceItemProps {
   deviceId: string;
@@ -36,13 +37,15 @@ export const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
   portsCount,
   serverRole
 }) => {
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'RACK_PLACED_DEVICE',
-    item: { id: deviceId, ruSize, currentPosition: ruPosition },
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
-    }),
-  }), [deviceId, ruSize, ruPosition]);
+  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
+    id: `placed-${deviceId}`,
+    data: {
+      type: DragType.PlacedDevice,
+      deviceId,
+      ruSize,
+      currentPosition: ruPosition,
+    },
+  });
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -61,16 +64,18 @@ export const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
     </div>
   );
 
-  const showModelLine = height >= 30 && ruSize > 1; // Only show model if enough space AND not a 1U device
+  const showModelLine = height >= 30 && ruSize > 1;
 
   return (
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
           <div
-            ref={drag as unknown as React.Ref<HTMLDivElement>}
+            ref={setNodeRef}
+            {...listeners}
+            {...attributes}
             className={cn(
-              "absolute left-0 right-0 border rounded shadow-xs flex flex-col justify-center items-center px-1 py-0 overflow-hidden", // Minimal padding
+              "absolute left-0 right-0 border rounded shadow-xs flex flex-col justify-center items-center px-1 py-0 overflow-hidden",
               getDeviceColor(type, serverRole ? ({ serverRole } as unknown as InfrastructureComponent) : undefined),
               "cursor-move"
             )}
@@ -79,23 +84,21 @@ export const PlacedDeviceItem: React.FC<PlacedDeviceItemProps> = React.memo(({
               height: `${height}px`,
               zIndex: 10,
               opacity: isDragging ? 0.5 : 1,
-              fontSize: ruSize === 1 ? '0.65rem' : '0.7rem', // Slightly larger for 1U name if it's the only text
-              lineHeight: '1.1', // Consistent tighter line height
-              boxSizing: 'border-box', // Ensure padding/border are included in height
+              fontSize: ruSize === 1 ? '0.65rem' : '0.7rem',
+              lineHeight: '1.1',
+              boxSizing: 'border-box',
+              transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
             }}
             onClick={handleClick}
           >
             <div className="w-full text-center truncate" style={{ fontWeight: 500, lineHeight: ruSize === 1 ? `${height-2}px` : 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               {name}
             </div>
-            {/* Conditionally render model line only if showModelLine is true (which implies ruSize > 1) */}
             {showModelLine && (
               <div className="w-full text-center truncate opacity-80" style={{ fontSize: '0.6rem'}}>
                 {model}
               </div>
             )}
-            {/* DO NOT show separate RU size for 1U devices to save space for name */}
-            {/* For multi-RU devices where model isn't shown due to small height, show RU size instead of model */} 
             {!showModelLine && ruSize > 1 && height > 15 && (
               <div className="w-full text-center truncate opacity-70" style={{ fontSize: '0.6rem'}}>
                 {ruSize}U

@@ -25,11 +25,11 @@ export function placeDefaultDevice({
   let placed = false;
   let reportItem: PlacementReportItem | null = null;
 
-  let componentClusterAZs: string[] | undefined;
+  let _componentClusterAZs: string[] | undefined;
   if (component.clusterId && allowedAZs) {
-    componentClusterAZs = allowedAZs;
+    _componentClusterAZs = allowedAZs;
   } else if (component.clusterInfo?.clusterId && allowedAZs) {
-    componentClusterAZs = allowedAZs;
+    _componentClusterAZs = allowedAZs;
   }
   const eligibleRacks = rackProfiles.filter(rk =>
     allowedAZs.includes(rk.availabilityZoneId || '')

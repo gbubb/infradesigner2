@@ -411,7 +411,7 @@ export class CapacityManagementService {
    * Calculate expansion potential
    */
   private calculateExpansionPotential(
-    constraints: CapacityConstraint[]
+    _constraints: CapacityConstraint[]
   ): {
     maxAdditionalRacks: number;
     maxAdditionalPowerKW: number;

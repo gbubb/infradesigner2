@@ -1,5 +1,5 @@
-import { ComponentType, ConnectorType } from './component-types';
-import { PortRole, PortSpeed, MediaType, PortSide } from './port-types';
+import { ComponentType } from './component-types';
+import { PortRole, PortSpeed, PortSide } from './port-types';
 
 export interface DeviceCriteria {
   componentType?: ComponentType;

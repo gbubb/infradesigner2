@@ -11,7 +11,7 @@ import { StoreState } from '@/store/types';
  */
 export function placePatchPanel({
   component,
-  rackProfiles,
+  rackProfiles: _rackProfiles,
   state,
   components,
   typeLabel,
@@ -40,16 +40,16 @@ export function placePatchPanel({
   let reportItem: PlacementReportItem | null = null;
 
   const isCopperPatchPanel = typeLabel.includes('copperpatchpanel');
-  const isFiberPatchPanel = typeLabel.includes('fiberpatchpanel');
+  const _isFiberPatchPanel = typeLabel.includes('fiberpatchpanel');
 
   // Remove debug log
   const perCoreRackQty = isCopperPatchPanel ? copperPatchPanelsPerCoreRack : fiberPatchPanelsPerCoreRack;
 
   // 1. Place in Core racks with their specific perCoreRackQty (separate for copper/fiber, only applies to core)
   if (perCoreRackQty > 0 && coreRacks.length > 0) {
-    coreRacks.forEach((r, idx) => {
+    coreRacks.forEach((r, _idx) => {
       // For this *type* only
-      const countOfThisType = r.devices.filter(d => {
+      const _countOfThisType = r.devices.filter(d => {
         const dev = components.find(cmp => cmp.id === d.deviceId);
         if (!dev) return false;
         const lbl = getTypeKey(dev);

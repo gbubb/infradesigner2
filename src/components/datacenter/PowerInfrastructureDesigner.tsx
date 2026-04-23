@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Edit2, Trash2, Zap, AlertTriangle, TrendingDown, Activity } from 'lucide-react';
-import { DatacenterFacility, PowerLayer, RedundancyConfig } from '@/types/infrastructure/datacenter-types';
+import { Plus, Edit2, Trash2, Zap, AlertTriangle, TrendingDown } from 'lucide-react';
+import { DatacenterFacility, PowerLayer } from '@/types/infrastructure/datacenter-types';
 import { cn } from '@/lib/utils';
 
 interface PowerInfrastructureDesignerProps {

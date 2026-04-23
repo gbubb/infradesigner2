@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, AlertCircle, Loader2, XCircle } from 'lucide-react';
+import { TrendingUp, AlertCircle, XCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ComputeClusterMetrics } from '@/hooks/design/useComputeClusterMetrics';
 import {
@@ -69,7 +69,7 @@ export const VMCostScalingDialog: React.FC<VMCostScalingDialogProps> = ({ cluste
 
   // Use async scaling hook
   const {
-    status,
+    status: _status,
     progress,
     currentNodeCount,
     results,

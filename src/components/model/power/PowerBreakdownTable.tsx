@@ -89,7 +89,7 @@ export const PowerBreakdownTable: React.FC<PowerBreakdownTableProps> = ({ result
   // Get actual PSU efficiency and calculate loss
   const actualPsuEfficiency = getPowerValue(result.psuEfficiency) * 100;
   const acBeforeSafety = getPowerValue(result.acTotalBeforeSafety);
-  const psuLoss = acBeforeSafety - totalDcPower;
+  const _psuLoss = acBeforeSafety - totalDcPower;
   
   return (
     <Card className="mt-6">

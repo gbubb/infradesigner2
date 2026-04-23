@@ -1,12 +1,11 @@
 
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { PowerUsage } from '@/types/infrastructure';
 import { usePhysicalResourceMetrics } from '@/hooks/design/usePhysicalResourceMetrics';
 
 export const usePowerCalculations = () => {
   const { activeDesign } = useDesignStore();
-  const physicalMetrics = usePhysicalResourceMetrics();
+  const _physicalMetrics = usePhysicalResourceMetrics();
   
   // Extract operational load percentage from requirements
   const operationalLoadPercentage = useMemo(() => {

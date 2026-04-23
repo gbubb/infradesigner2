@@ -13,7 +13,7 @@ interface MemoryCalibrationTabProps {
 
 export const MemoryCalibrationTab: React.FC<MemoryCalibrationTabProps> = ({
   profile,
-  updateProfile,
+  updateProfile: _updateProfile,
   updateNestedValue
 }) => {
   return (

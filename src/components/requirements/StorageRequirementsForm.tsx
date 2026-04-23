@@ -373,7 +373,7 @@ export const StorageRequirementsForm = ({ requirements, onUpdate }: StorageRequi
       {storagePools.map((pool) => {
         const targetCluster = pool.storageClusterId ? getClusterById(pool.storageClusterId) : null;
         const efficiencyFactor = StoragePoolEfficiencyFactors[pool.poolType] || 0.33;
-        const usableCapacity = pool.totalCapacityTB * efficiencyFactor;
+        const _usableCapacity = pool.totalCapacityTB * efficiencyFactor;
 
         return (
           <Card key={pool.id} className="relative">

@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2 } from 'lucide-react';
 import { PowerCalculationResult } from './powerCalculations';
-import { PowerCalibrationProfile } from './powerCalibration';
 
 interface PowerValidationDialogProps {
   open: boolean;

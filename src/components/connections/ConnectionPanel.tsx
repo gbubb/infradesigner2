@@ -11,7 +11,7 @@ interface ConnectionPanelProps {
 }
 
 export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ deviceId, onClose }) => {
-  const { getDeviceConnections, getConnection } = useConnectionManager();
+  const { getDeviceConnections, getConnection: _getConnection } = useConnectionManager();
   const [activeTab, setActiveTab] = useState<'info' | 'connections'>('info');
   const { activeDesign } = useDesignStore();
   

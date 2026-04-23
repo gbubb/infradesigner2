@@ -5,7 +5,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { PowerCalibrationProfile } from '../power-calibration/PowerCalibrationTypes';
 
 interface MemoryPowerAnalysisProps {
@@ -50,11 +49,11 @@ export const MemoryPowerAnalysis: React.FC<MemoryPowerAnalysisProps> = ({
   const avgPowerPerDimm = peakPowerPerDimm * memModel.activityMultipliers.average;
   
   const totalIdle = dimmCount * idlePowerPerDimm;
-  const totalAvg = dimmCount * avgPowerPerDimm;
+  const _totalAvg = dimmCount * avgPowerPerDimm;
   const totalPeak = dimmCount * peakPowerPerDimm;
 
   // Example calculation for 12x 64GB DDR5 @ 4800MHz
-  const example = {
+  const _example = {
     controllerPower: 0.8,
     chipsPerDimm: 64 * 0.25,
     chipPower: 16 * 0.135,

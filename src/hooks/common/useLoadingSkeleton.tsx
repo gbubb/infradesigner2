@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 
-interface UseLoadingSkeletonOptions {
+interface _UseLoadingSkeletonOptions {
   isLoading: boolean;
   skeleton: ReactNode;
   children: ReactNode;

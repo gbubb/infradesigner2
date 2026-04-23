@@ -1,17 +1,13 @@
 import React from 'react';
 import { 
   InfrastructureDesign,
-  ComponentType,
-  PowerUsage,
-  ServerRole,
-  Switch
+  ComponentType
 } from '@/types/infrastructure';
 import { 
   DesignMetrics, 
   SignificantDifferences, 
   ComponentCostsByType, 
-  AdditionalDesignMetrics, 
-  ResourceMetrics,
+  AdditionalDesignMetrics,
   ServerComponentExtended,
   DiskComponentExtended,
   StoragePoolEfficiencyFactors

@@ -19,7 +19,7 @@ export const ShareDesignDialog: React.FC<ShareDesignDialogProps> = ({
   onOpenChange
 }) => {
   const { activeDesign, togglePublicAccess, saveDesign } = useDesignStore();
-  const [copied, setCopied] = useState(false);
+  const [_copied, setCopied] = useState(false);
 
   const handleCopyLink = () => {
     if (!activeDesign) return;

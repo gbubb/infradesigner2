@@ -13,9 +13,9 @@ interface GPUComponentFormProps {
 
 export const GPUComponentForm: React.FC<GPUComponentFormProps> = ({
   control,
-  formValues,
+  formValues: _formValues,
   onInputChange,
-  onSelectChange,
+  onSelectChange: _onSelectChange,
 }) => {
   return (
     <div className="space-y-4">

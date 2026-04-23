@@ -21,8 +21,8 @@ import type { CableDistanceSettings } from "@/types/infrastructure/cable-setting
 
 import { filterDevicesByCriteria, filterPorts, getDeviceName } from "./PortMatcher";
 import { estimateCableLength, getCableTemplate, findCompatibleCableTemplate, getAnyCopperCable } from "./CableManager";
-import { getTransceiverForConnection, findCompatibleTransceiverTemplate } from "./TransceiverManager";
-import { generateBreakoutConnections, getBreakoutTargetSpeed, areDevicesWithinBreakoutDistance } from "./BreakoutManager";
+import { findCompatibleTransceiverTemplate } from "./TransceiverManager";
+import { generateBreakoutConnections } from "./BreakoutManager";
 
 // Constants
 const MAX_CONNECTION_ATTEMPTS = 10000;
@@ -159,7 +159,7 @@ export function generateConnections(
 
   let totalAttempts = 0;
 
-  enabledRules.forEach((rule: ConnectionRule, ruleIndex: number) => {
+  enabledRules.forEach((rule: ConnectionRule, _ruleIndex: number) => {
     if (totalAttempts >= MAX_CONNECTION_ATTEMPTS) {
       connectionAttempts.push({
         ruleId: rule.id,
@@ -274,7 +274,7 @@ export function generateConnections(
       for (const targetDevice of targets) {
         if (srcDevice.id === targetDevice.id) continue;
 
-        let connectionsMadeForThisPair = 0;
+        let _connectionsMadeForThisPair = 0;
         const desiredConnectionsForThisPair = (rule.connectionPattern === ConnectionPattern.ConnectToEachTarget && rule.connectionsPerPair)
           ? rule.connectionsPerPair
           : 1;
@@ -364,7 +364,7 @@ export function generateConnections(
               connection: connectionResult.connection,
             });
 
-            connectionsMadeForThisPair++;
+            _connectionsMadeForThisPair++;
             connectionsMadeForThisSrcDeviceOverall++;
             connectionCounter++;
           } else {

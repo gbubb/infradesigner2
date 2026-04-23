@@ -47,11 +47,11 @@ export const UtilizationAnalysisChart: React.FC<UtilizationAnalysisChartProps> =
   clusterAnalysis,
   computePricing,
   storagePricing,
-  operationalCosts,
-  requirements,
-  actualHardwareTotals,
+  operationalCosts: _operationalCosts,
+  requirements: _requirements,
+  actualHardwareTotals: _actualHardwareTotals,
   storageClustersMetrics,
-  clusterDeviceCounts,
+  clusterDeviceCounts: _clusterDeviceCounts,
 }) => {
   const currency = useCurrency();
 

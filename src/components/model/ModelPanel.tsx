@@ -60,7 +60,7 @@ export const ModelPanel: React.FC = () => {
   } = useClusterConsumption(computePricing, storagePricing);
 
   // Use custom hook for device counts
-  const { clusterDeviceCounts, totalDeviceCount } = useClusterDeviceCounts(requirements);
+  const { clusterDeviceCounts, totalDeviceCount: _totalDeviceCount } = useClusterDeviceCounts(requirements);
 
   // Use custom hook for cluster analysis
   const { clusterAnalysis, overallAnalysis } = useClusterAnalysis({

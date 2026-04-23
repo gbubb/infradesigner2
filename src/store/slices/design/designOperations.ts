@@ -1,7 +1,4 @@
-import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
-import { InfrastructureComponent, InfrastructureDesign, DesignRequirements } from '@/types/infrastructure';
-import { saveDesignToDB } from './databaseOperations';
 import { cableTemplates } from '@/data/componentData';
 import { 
   CreateNewDesignOperationFn,

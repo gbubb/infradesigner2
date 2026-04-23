@@ -1,8 +1,6 @@
-import { RackProfile } from '@/types/infrastructure/rack-types';
 import { tryPlaceDeviceInRacksWithConstraints } from '../placementHelpers';
 import { getTypeKey } from './placementUtils';
 import { PlacementConfig, PlacementReportItem } from '@/types/placement-types';
-import { InfrastructureComponent } from '@/types/infrastructure';
 
 export function placeComputeLike({
   component,

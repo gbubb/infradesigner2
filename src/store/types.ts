@@ -4,11 +4,8 @@ import {
   InfrastructureDesign,
   DesignRequirements,
   ComponentRole,
-  ClusterInfo,
-  ComputeClusterRequirement,
   ComponentType
 } from '@/types/infrastructure';
-import { StorageClusterRequirement } from '@/types/infrastructure/storage-types';
 import { ComponentWithPosition } from '@/types/workspace';
 
 export interface StoreState {

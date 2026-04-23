@@ -112,8 +112,8 @@ export function calculateVMPriceExcessOnly(
   const naturalRatio = capacity.totalMemoryGB / capacity.totalvCPUs;
   
   // Calculate base costs
-  const baseCpuCost = baseCosts.cpuCost * vCPUs;
-  const baseMemoryCost = baseCosts.memoryCost * memoryGB;
+  const _baseCpuCost = baseCosts.cpuCost * vCPUs;
+  const _baseMemoryCost = baseCosts.memoryCost * memoryGB;
   const baseStorageCost = baseCosts.storageCost * storageGB;
   
   // Determine the "balanced" portion (no premium)
@@ -125,7 +125,7 @@ export function calculateVMPriceExcessOnly(
   const excessMemory = Math.max(0, memoryGB - balancedMemory);
   
   // Apply premiums only to excess resources
-  const ratioExponent = config.ratioPenaltyExponent || 2;
+  const _ratioExponent = config.ratioPenaltyExponent || 2;
   const ratioPenaltyMultiplier = 1 + config.sizePenaltyFactor;
   
   // Size premium calculation

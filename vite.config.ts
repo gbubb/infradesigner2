@@ -75,11 +75,7 @@ export default defineConfig(({ mode }) => ({
             return 'pdf-export';
           }
           
-          // Don't separate react-dnd to avoid loading order issues
-          // Let it be included with vendor to ensure React is available
-          // if (id.includes('react-dnd')) {
-          //   return 'dnd';
-          // }
+          // dnd-kit is small and stateless; kept in the vendor chunk.
           
           // Form handling
           if (id.includes('react-hook-form') || 
@@ -101,7 +97,7 @@ export default defineConfig(({ mode }) => ({
         
         // Better chunk naming for production
         chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
+          const _facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
           return `assets/js/[name]-[hash].js`;
         },
         
@@ -151,8 +147,9 @@ export default defineConfig(({ mode }) => ({
       '@supabase/realtime-js',
       '@supabase/storage-js',
       '@supabase/functions-js',
-      'react-dnd',
-      'react-dnd-html5-backend',
+      '@dnd-kit/core',
+      '@dnd-kit/sortable',
+      '@dnd-kit/utilities',
       'react-plotly.js',
     ],
   },

@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { errorLogger } from '@/utils/errorLogger';
 import { useDesignStore } from '../designStore';
 
-import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
+import { InfrastructureComponent } from '@/types/infrastructure';
 import { ComponentWithPlacement } from '@/types/service-types';
 
 let isRecalculating = false;
@@ -154,7 +154,7 @@ export const recalculateDesign = () => {
           // console.log(
           //   `Recalculating quantity for role ${role.role} (${role.description}) with component ${componentTemplate.name}`
           // );
-          const newQuantity = state.calculateRequiredQuantity(role.id, role.assignedComponentId);
+          const _newQuantity = state.calculateRequiredQuantity(role.id, role.assignedComponentId);
           // console.log(`Recalculated ${role.role}: ${newQuantity} units required`);
         }
       });
@@ -419,7 +419,7 @@ export const manualRecalculateDesign = () => {
   isRecalculating = false;
   // console.log("Manual recalculation requested");
   
-  const state = useDesignStore.getState();
+  const _state = useDesignStore.getState();
   // console.log("Current calculation state:", {
   //   roleCount: state.componentRoles.length,
   //   assignedRoles: state.componentRoles.filter(r => r.assignedComponentId).length,

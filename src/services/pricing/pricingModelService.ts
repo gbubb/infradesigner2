@@ -1099,7 +1099,7 @@ export class PricingModelService {
     
     // Network costs distributed per host
     const computeComponents = this.getClusterComponents();
-    const totalHosts = computeComponents.reduce((sum, comp) => sum + (comp.quantity || 1), 0);
+    const _totalHosts = computeComponents.reduce((sum, comp) => sum + (comp.quantity || 1), 0);
     
     // Calculate storage capacity from hyper-converged nodes
     let totalStorageTB = 0;
@@ -1407,8 +1407,8 @@ export class PricingModelService {
   }
 
   private generateSamplePrices(
-    baseCosts: { cpuCost: number; memoryCost: number },
-    capacity: ClusterCapacity
+    _baseCosts: { cpuCost: number; memoryCost: number },
+    _capacity: ClusterCapacity
   ): VMPricing[] {
     const samples: VMPricing[] = [];
     

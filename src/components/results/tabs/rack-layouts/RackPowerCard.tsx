@@ -15,10 +15,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType, componentTypeToCategory } from '@/types/infrastructure/component-types';
-import type { InfrastructureComponent } from '@/types/infrastructure';
+import { ComponentType } from '@/types/infrastructure/component-types';
 
 interface RackPowerStats {
   idlePower: number;
@@ -70,7 +68,7 @@ export const RackPowerCard: React.FC<RackPowerCardProps> = ({ rackProfileId, pow
   const { activeDesign, componentTemplates } = useDesignStore();
   
   // Create a dependency key that changes when rack devices change
-  const rackDevicesKey = useMemo(() => {
+  const _rackDevicesKey = useMemo(() => {
     const rack = activeDesign?.rackprofiles?.find(r => r.id === rackProfileId);
     return `${rack?.devices?.length || 0}-${rack?.devices?.map(d => d.deviceId).join(',') || ''}`;
   }, [activeDesign?.rackprofiles, rackProfileId]);

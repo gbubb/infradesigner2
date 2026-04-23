@@ -3,7 +3,6 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SwitchRole } from "@/types/infrastructure";
-import { PortSpeed } from "@/types/infrastructure/port-types";
 import { Control } from "react-hook-form";
 import { LegacyFormData } from "../forms/component-forms/ComponentValidationSchemas";
 
@@ -16,7 +15,7 @@ interface Props {
 
 export const SwitchFields: React.FC<Props> = ({
   control,
-  formValues,
+  formValues: _formValues,
   onInputChange,
   onSelectChange,
 }) => (

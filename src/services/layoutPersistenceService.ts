@@ -2,7 +2,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDesignStore } from "@/store/designStore";
 import { InfrastructureDesign } from "@/types/infrastructure/design-types";
 import { RackService } from "@/services/rackService";
-import { v4 as uuidv4 } from "uuid";
 
 export class LayoutPersistenceService {
   static async saveCurrentLayout() {

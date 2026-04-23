@@ -310,17 +310,17 @@ export const saveComponent = async (component: InfrastructureComponent): Promise
     const specializedFields: Record<string, unknown> = {};
     
     // Remove base fields to avoid duplication
-    const { 
-      id, name, type, manufacturer, model, description, cost, 
-      powerRequired, powerIdle, powerTypical, powerPeak, isDefault, ...rest 
+    const {
+      id: _id, name: _name, type: _type, manufacturer: _manufacturer, model: _model, description: _description, cost: _cost,
+      powerRequired: _powerRequired, powerIdle: _powerIdle, powerTypical: _powerTypical, powerPeak: _powerPeak, isDefault: _isDefault, ...rest
     } = componentWithValidID;
     
     // Remove serverRole and switchRole as they're already handled
     if ('serverRole' in rest) {
-      const { serverRole, ...remaining } = rest as Server;
+      const { serverRole: _serverRole, ...remaining } = rest as Server;
       Object.assign(specializedFields, remaining);
     } else if ('switchRole' in rest) {
-      const { switchRole, ...remaining } = rest as Switch;
+      const { switchRole: _switchRole, ...remaining } = rest as Switch;
       Object.assign(specializedFields, remaining);
     } else {
       Object.assign(specializedFields, rest);

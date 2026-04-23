@@ -189,7 +189,7 @@ export function useUpdateComponentMutation(): UseMutationResult<InfrastructureCo
       
       return data as InfrastructureComponent;
     },
-    onSuccess: (data) => {
+    onSuccess: (_data) => {
       // Invalidate both the list and the specific component
       cacheUtils.invalidateComponents();
       toast.success('Component updated successfully');

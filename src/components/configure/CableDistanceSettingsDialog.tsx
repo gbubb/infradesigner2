@@ -27,7 +27,7 @@ interface CableDistanceSettingsDialogProps {
 }
 
 export function CableDistanceSettingsDialog({ open, onOpenChange }: CableDistanceSettingsDialogProps) {
-  const { cableDistanceSettings, updateCableDistanceSettings, resetCableDistanceSettings } = useDesignStore();
+  const { cableDistanceSettings, updateCableDistanceSettings, resetCableDistanceSettings: _resetCableDistanceSettings } = useDesignStore();
   const [localSettings, setLocalSettings] = React.useState<CableDistanceSettings>(cableDistanceSettings);
 
   React.useEffect(() => {

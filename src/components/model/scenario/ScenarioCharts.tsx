@@ -25,7 +25,7 @@ export const ScenarioCharts: React.FC<ScenarioChartsProps> = ({
   storagePricing,
   formatCurrency
 }) => {
-  const currency = useCurrency();
+  const _currency = useCurrency();
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

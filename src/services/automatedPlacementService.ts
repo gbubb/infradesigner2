@@ -1,8 +1,6 @@
 import { RackService } from './rackService';
 import { useDesignStore } from '@/store/designStore';
-import { RackProfile } from '@/types/infrastructure/rack-types';
 import { ClusterAZAssignment } from '@/types/infrastructure/rack-types';
-import { tryPlaceDeviceInRacksWithConstraints } from './placementHelpers';
 import { defaultRequirements } from '@/store/slices/requirements/types';
 import { getTypeKey, isCoreNet, isPatchPanel, isComputeLike, getCoreAndComputeRacks } from './placement/placementUtils';
 import { ComponentWithPlacement } from '@/types/service-types';
@@ -111,7 +109,7 @@ export class AutomatedPlacementService {
     }
 
     // For patch panel per-rack report only
-    const patchPanelAssignedPerRack: Record<string, number> = {};
+    const _patchPanelAssignedPerRack: Record<string, number> = {};
 
     const requirements = state.requirements || defaultRequirements;
     const copperPatchPanelsPerAZ = requirements.networkRequirements?.copperPatchPanelsPerAZ ?? 0;

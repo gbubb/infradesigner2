@@ -2,7 +2,6 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useDesignStore } from '@/store/designStore';
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
@@ -15,9 +14,9 @@ interface DeleteConfirmationDialogProps {
 export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({ 
   isOpen, 
   onOpenChange, 
-  designId, 
+  designId: _designId, 
   onConfirm,
-  onDeleteCompleted 
+  onDeleteCompleted: _onDeleteCompleted 
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

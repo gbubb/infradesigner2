@@ -6,11 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { X, Cable, ChevronRight } from "lucide-react";
-import { InfrastructureComponent, Port, NetworkConnection, ComponentType } from "@/types/infrastructure";
-import { CableMediaType, PortSpeed, ConnectorType } from "@/types/infrastructure/port-types";
+import { InfrastructureComponent, Port, NetworkConnection } from "@/types/infrastructure";
+import { CableMediaType, PortSpeed } from "@/types/infrastructure/port-types";
 import { useDesignStore } from "@/store/designStore";
 import { cn } from "@/lib/utils";
 

@@ -4,18 +4,19 @@ A network infrastructure design application for designing, configuring, and anal
 
 ## Tech Stack
 
-- **React 18** + TypeScript, **Vite** (SWC)
+- **React 19** + TypeScript 6, **Vite 8** (SWC)
 - **Zustand** for state management
-- **PostgreSQL** (vanilla) with **PostgREST** (REST API) + **GoTrue** (auth)
-- **shadcn/ui** (Radix UI + Tailwind CSS)
-- **React Router v6**, **TanStack Query**
-- **Recharts** + **Plotly.js** for visualization
+- **PostgreSQL 18** (vanilla) with **PostgREST 14** (REST API) + **GoTrue 2.188** (auth) behind **Kong 3.9**
+- **shadcn/ui** (Radix UI umbrella + **Tailwind CSS 4**)
+- **React Router 7** (library mode), **TanStack Query**
+- **Recharts 3** + **Plotly.js** for visualization
+- **Vitest** for tests
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 22 LTS (≥22.12) and npm — see `.nvmrc`
 - Docker Desktop (or Colima) — for the local backend stack
 
 ### First-time setup
@@ -34,7 +35,7 @@ The first `dev:db` run takes ~30-60s because it pulls images and restores the da
 
 | Service    | Port  | Purpose                                         |
 |------------|-------|-------------------------------------------------|
-| postgres   | 5432  | Vanilla Postgres 16, data persisted in a volume |
+| postgres   | 5432  | Vanilla Postgres 18, data persisted in a volume |
 | kong       | 54321 | API gateway routing `/auth/v1` and `/rest/v1`   |
 | postgrest  | (via kong) | REST API over the public schema            |
 | gotrue     | (via kong) | Email/password auth, issues JWTs           |
@@ -83,6 +84,8 @@ The `docker-compose.yml` is the source of truth for how each service is configur
 npm run build      # production build
 npm run preview    # preview the production build
 npm run lint       # eslint
+npm run test       # vitest (watch mode)
+npm run test:run   # vitest (single run)
 ```
 
 ## Project structure
@@ -93,7 +96,7 @@ src/
 ├── context/        # React context providers
 ├── data/           # Static data and constants
 ├── hooks/          # Custom React hooks
-├── integrations/   # Supabase JS client + generated DB types
+├── integrations/   # supabase-js client (points at local Kong) + generated DB types
 ├── lib/            # Utility helpers
 ├── pages/          # Route pages
 ├── services/       # Business logic layer
@@ -106,7 +109,7 @@ docker/
 ├── kong/kong.yml               # API gateway routes
 └── postgres/init/              # First-run DB setup scripts
     ├── 01-restore-backup.sh    # Restores the pg_dumpall backup
-    └── 02-post-restore.sql     # Drops unused schemas + wires up roles/grants
+    └── 02-post-restore.sh      # Drops unused schemas + wires up roles/grants
 
 scripts/
 └── reset-db.sh     # Full DB reset helper

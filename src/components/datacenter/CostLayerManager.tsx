@@ -5,14 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Edit2, Trash2, DollarSign, Building, Wrench, Server, Zap, Home, Info } from 'lucide-react';
 import { DatacenterFacility, CostLayer, CostCategory } from '@/types/infrastructure/datacenter-types';
-import { cn } from '@/lib/utils';
 
 interface CostLayerManagerProps {
   facility: DatacenterFacility;
@@ -452,7 +450,7 @@ export const CostLayerManager: React.FC<CostLayerManagerProps> = ({ facility, on
                     setEditingLayer({ ...editingLayer, category: value });
                   } else {
                     // Find the key for the selected category value
-                    const categoryKey = Object.entries(categoryMapping).find(([key, val]) => val === value)?.[0] as keyof typeof costCategories;
+                    const categoryKey = Object.entries(categoryMapping).find(([_key, val]) => val === value)?.[0] as keyof typeof costCategories;
                     if (categoryKey) {
                       setSelectedCategory(categoryKey);
                     }

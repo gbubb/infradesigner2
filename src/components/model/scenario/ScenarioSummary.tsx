@@ -39,7 +39,7 @@ export const ScenarioSummary: React.FC<ScenarioSummaryProps> = ({
   storageClustersMetrics,
   formatCurrency
 }) => {
-  const currency = useCurrency();
+  const _currency = useCurrency();
   const finalData = cumulativeData[cumulativeData.length - 1];
   
   return (

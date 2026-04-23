@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ConnectorType } from '@/types/infrastructure';
-import { PortSpeed, CableMediaType, PortSide } from '@/types/infrastructure/port-types';
+import { PortSpeed, CableMediaType } from '@/types/infrastructure/port-types';
 
 import { Control, FieldValues } from 'react-hook-form';
 

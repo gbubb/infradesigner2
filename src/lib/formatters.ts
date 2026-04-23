@@ -221,7 +221,7 @@ export function formatEfficiency(value: number, decimals: number = 2): string {
 /**
  * Format cost per unit (e.g., $/GB, $/core)
  */
-export function formatCostPerUnit(cost: number, unit: string, decimals: number = 2, currency: string = 'USD'): string {
+export function formatCostPerUnit(cost: number, unit: string, _decimals: number = 2, currency: string = 'USD'): string {
   return `${formatCurrency(cost, currency, true)}/${unit}`;
 }
 

@@ -26,7 +26,7 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
   
   const computeClusters = getValue<ComputeClusterRequirement[]>(requirements, 'computeRequirements.computeClusters', []);
   const storageClusters = getValue<StorageCluster[]>(requirements, 'storageRequirements.storageClusters', []); // Physical infrastructure
-  const storagePools = getValue<StoragePool[]>(requirements, 'storageRequirements.storagePools', []); // Logical capacity tiers
+  const _storagePools = getValue<StoragePool[]>(requirements, 'storageRequirements.storagePools', []); // Logical capacity tiers
   
   const networkTopology = getValue(requirements, 'networkRequirements.networkTopology', "Spine-Leaf") as NetworkTopology;
   const physicalFirewalls = getValue(requirements, 'networkRequirements.physicalFirewalls', false);
@@ -99,7 +99,7 @@ export const calculateComponentRoles = (requirements: DesignRequirements): Compo
   // Add compute cluster nodes
   computeClusters.forEach((cluster, index) => {
     const totalVCPUs = cluster.totalVCPUs || 5000;
-    const totalMemoryTB = cluster.totalMemoryTB || 30;
+    const _totalMemoryTB = cluster.totalMemoryTB || 30;
     const availabilityZoneRedundancy = cluster.availabilityZoneRedundancy || 'N+1';
     const overcommitRatio = cluster.overcommitRatio || 2;
     const gpuEnabled = cluster.gpuEnabled || false;

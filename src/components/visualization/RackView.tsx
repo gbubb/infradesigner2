@@ -25,7 +25,7 @@ export const RackView: React.FC<RackViewProps> = ({
   onDeviceRemoved
 }) => {
   const { rackProfile, placedDevices, placeDevice, moveDevice, removeDevice } = useRackLayout(rackProfileId);
-  const activeDesign = useDesignStore(state => state.activeDesign);
+  const _activeDesign = useDesignStore(state => state.activeDesign);
 
   const unitHeight = useMemo(() => {
     return rackProfile ? height / rackProfile.uHeight : 0;
@@ -35,14 +35,14 @@ export const RackView: React.FC<RackViewProps> = ({
     return rackProfile ? Array.from({ length: rackProfile.uHeight }, (_, i) => i + 1) : [];
   }, [rackProfile]);
 
-  const { isOver, canDrop, drop } = useRackDropzone({
+  const { setNodeRef, isOver, canDrop } = useRackDropzone({
     rackProfileId,
     rackProfile: rackProfile ?? null,
     placeDevice,
     moveDevice
   });
 
-  const handleRemoveDevice = useCallback((deviceId: string) => {
+  const _handleRemoveDevice = useCallback((deviceId: string) => {
     if (!rackProfile) return { success: false, error: "No rack selected" };
 
     const result = removeDevice(deviceId);
@@ -96,8 +96,10 @@ export const RackView: React.FC<RackViewProps> = ({
 
           <div
             id={`rack-${rackProfileId}`}
-            ref={drop as unknown as React.Ref<HTMLDivElement>}
-            className={`relative bg-gray-100 border border-gray-300 rounded flex-1`}
+            ref={setNodeRef}
+            className={`relative bg-gray-100 border border-gray-300 rounded flex-1 ${
+              isOver && canDrop ? 'ring-2 ring-primary ring-inset' : ''
+            }`}
             style={{
               height: `${height}px`,
               width: `${width - 32}px`,

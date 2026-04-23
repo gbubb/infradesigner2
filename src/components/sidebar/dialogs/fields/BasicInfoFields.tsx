@@ -16,9 +16,9 @@ interface Props {
 
 export const BasicInfoFields: React.FC<Props> = ({
   control,
-  formValues,
+  formValues: _formValues,
   onInputChange,
-  onSelectChange,
+  onSelectChange: _onSelectChange,
   onTypeChange
 }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

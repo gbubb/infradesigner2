@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-const actionButtonsConfig = [
+const _actionButtonsConfig = [
   {
     key: 'new',
     icon: <PlusCircle size={26} />,

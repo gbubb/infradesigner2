@@ -2,9 +2,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PricingRequirements, ClusterPricing } from '@/types/infrastructure/pricing-types';
+import { PricingRequirements } from '@/types/infrastructure/pricing-types';
 import { ComputeClusterRequirement, StorageClusterRequirement } from '@/types/infrastructure';
 
 interface PricingRequirementsFormProps {

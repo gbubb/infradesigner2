@@ -18,7 +18,7 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
 }) => {
   const [breakdownSteps, setBreakdownSteps] = useState<string[]>([]);
   const [calculatedQuantity, setCalculatedQuantity] = useState<number | null>(null);
-  const [displayedQuantity, setDisplayedQuantity] = useState<number | null>(null);
+  const [_displayedQuantity, _setDisplayedQuantity] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
@@ -55,14 +55,14 @@ export const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({
       }
     };
     
-    const manuallyCalculateQuantity = (role: ComponentRole, roleId?: string) => {
+    const manuallyCalculateQuantity = (role: ComponentRole, _roleId?: string) => {
       return {
         requiredQuantity: role.adjustedRequiredCount || role.requiredCount,
         calculationSteps: [`Manually set or initial quantity: ${role.adjustedRequiredCount || role.requiredCount}`]
       };
     };
     
-    const generateDetailedBreakdown = (role: ComponentRole, calculatedQtyFromEffect?: number, roleId?: string): { steps: string[], generatedQty: number | null } => {
+    const generateDetailedBreakdown = (role: ComponentRole, _calculatedQtyFromEffect?: number, _roleId?: string): { steps: string[], generatedQty: number | null } => {
       const steps: string[] = [];
       let generatedQty: number | null = null;
       

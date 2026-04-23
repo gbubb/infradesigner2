@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { StoreState, WorkspaceState } from '../types';
+import { StoreState } from '../types';
 import { InfrastructureComponent } from '@/types/infrastructure';
 import { ComponentWithPosition, Position } from '@/types/workspace';
 import { v4 as uuidv4 } from 'uuid';

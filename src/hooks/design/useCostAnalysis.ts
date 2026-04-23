@@ -13,7 +13,7 @@ export const useCostAnalysis = () => {
   const { actualHardwareTotals } = useHardwareTotals();
   const { energyCosts } = usePowerCalculations();
   const racks = useRackLayout().getAllRackProfiles();
-  const { storageClustersMetrics } = useStorageClustersWrapper();
+  const { storageClustersMetrics: _storageClustersMetrics } = useStorageClustersWrapper();
   
   // Get facility data
   const getFacilityById = useDesignStore(state => state.getFacilityById);
@@ -22,7 +22,7 @@ export const useCostAnalysis = () => {
   const selectedFacility = selectedFacilityId ? getFacilityById(selectedFacilityId) : null;
   
   // Get rack quantity
-  const rackQuantity = useMemo(() => {
+  const _rackQuantity = useMemo(() => {
     return activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity || 1;
   }, [activeDesign?.requirements?.physicalConstraints?.computeStorageRackQuantity]);
   
@@ -37,7 +37,7 @@ export const useCostAnalysis = () => {
   }, [facilityType, selectedFacility, racks]);
   
   // Get rack cost per month (colocation or facility-based)
-  const rackCostPerMonth = useMemo(() => {
+  const _rackCostPerMonth = useMemo(() => {
     if (facilityType === 'colocation') {
       // Support both new and legacy field names for backward compatibility
       const constraints = activeDesign?.requirements?.physicalConstraints;

@@ -1,5 +1,5 @@
 
-import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { ComponentType } from '@/types/infrastructure';
 import { StoreState } from '../../types';
 import { StoreSet, StoreGet } from '@/types/store-operations';
 

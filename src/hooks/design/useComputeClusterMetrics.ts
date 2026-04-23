@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure/component-types';
 import { ComputeClusterRequirement } from '@/types/infrastructure/requirements-types';
-import { DiskConfig } from '@/types/design';
 import { useCostAnalysis } from './useCostAnalysis';
 
 export interface ComputeClusterMetrics {

@@ -1,5 +1,4 @@
 import { RackService } from '@/services/rackService';
-import { PlacementResult } from '@/services/rackService';
 import { useDesignStore } from '@/store/designStore';
 
 /**

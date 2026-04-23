@@ -38,7 +38,7 @@ export const PowerCalculationDebug: React.FC<PowerCalculationDebugProps> = ({ re
     peak: componentSum.peak + result.componentBreakdown.fans.peak
   };
 
-  const fanFactor = {
+  const _fanFactor = {
     idle: withFans.idle / componentSum.idle,
     average: withFans.average / componentSum.average,
     peak: withFans.peak / componentSum.peak
@@ -57,7 +57,7 @@ export const PowerCalculationDebug: React.FC<PowerCalculationDebugProps> = ({ re
   };
 
   // No safety margin applied anymore
-  const safetyFactor = {
+  const _safetyFactor = {
     idle: 1.0,
     average: 1.0,
     peak: 1.0

@@ -2,7 +2,6 @@
 
 import { InfrastructureComponent, InfrastructureDesign } from './infrastructure';
 import { RackProfile } from './infrastructure/rack-types';
-import { PlacementResult } from './service-types';
 import { ComputeClusterRequirement } from './infrastructure/requirements-types';
 import { StorageClusterRequirement } from './infrastructure/storage-types';
 

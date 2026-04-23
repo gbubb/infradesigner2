@@ -1,19 +1,27 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useDrag, useDrop } from 'react-dnd';
+import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useDesignStore } from '@/store/designStore';
 import { RowLayoutConfiguration, RackPhysicalProperties } from '@/types/infrastructure/rack-types';
 import { toast } from 'sonner';
-
-const RACK_ITEM_TYPE = 'rack';
-
-interface DragItem {
-  id: string;
-  index: number;
-}
 
 interface RackItemProps {
   rackId: string;
@@ -21,47 +29,28 @@ interface RackItemProps {
   index: number;
   properties: RackPhysicalProperties;
   onUpdateProperties: (rackId: string, updates: Partial<RackPhysicalProperties>) => void;
-  onMoveRack: (dragIndex: number, hoverIndex: number) => void;
 }
 
 const RackItem: React.FC<RackItemProps> = ({
   rackId,
-  rackName,
+  rackName: _rackName,
   index,
   properties,
   onUpdateProperties,
-  onMoveRack
 }) => {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const [{ isDragging }, drag] = useDrag({
-    type: RACK_ITEM_TYPE,
-    item: { id: rackId, index },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging()
-    })
+  const { attributes, listeners, setNodeRef, isDragging, transform, transition } = useSortable({
+    id: rackId,
   });
-
-  const [, drop] = useDrop({
-    accept: RACK_ITEM_TYPE,
-    hover: (item: DragItem) => {
-      if (item.index !== index) {
-        onMoveRack(item.index, index);
-        item.index = index;
-      }
-    }
-  });
-
-  useEffect(() => {
-    if (ref.current) {
-      drag(ref.current);
-      drop(ref.current);
-    }
-  }, [drag, drop]);
 
   return (
     <div
-      ref={ref}
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
       className={`bg-white border rounded-lg p-4 shadow-xs transition-opacity ${
         isDragging ? 'opacity-50' : 'opacity-100'
       } cursor-move`}
@@ -157,7 +146,7 @@ const TopDownView: React.FC<TopDownViewProps> = ({ rowLayout }) => {
             </div>
             
             {/* Racks */}
-            {rowLayout.rackOrder.map((rackId, index) => {
+            {rowLayout.rackOrder.map((rackId, _index) => {
               const props = rowLayout.rackProperties[rackId];
               if (!props) return null;
               
@@ -326,17 +315,22 @@ export const RowLayoutTab: React.FC = () => {
     }));
   };
 
-  const handleMoveRack = (dragIndex: number, hoverIndex: number) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
     setRowLayout(prev => {
-      const newRackOrder = [...prev.rackOrder];
-      const draggedRack = newRackOrder[dragIndex];
-      newRackOrder.splice(dragIndex, 1);
-      newRackOrder.splice(hoverIndex, 0, draggedRack);
-      
+      const oldIndex = prev.rackOrder.indexOf(active.id as string);
+      const newIndex = prev.rackOrder.indexOf(over.id as string);
+      if (oldIndex === -1 || newIndex === -1) return prev;
       return {
         ...prev,
-        rackOrder: newRackOrder,
-        updatedAt: new Date()
+        rackOrder: arrayMove(prev.rackOrder, oldIndex, newIndex),
+        updatedAt: new Date(),
       };
     });
   };
@@ -465,26 +459,29 @@ export const RowLayoutTab: React.FC = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {rowLayout.rackOrder.map((rackId, index) => {
-                const rackProfile = rackProfiles.find((rack) => rack.id === rackId);
-                const properties = rowLayout.rackProperties[rackId];
-                
-                if (!rackProfile || !properties) return null;
-                
-                return (
-                  <RackItem
-                    key={rackId}
-                    rackId={rackId}
-                    rackName={rackProfile.name || `Rack ${rackId}`}
-                    index={index}
-                    properties={properties}
-                    onUpdateProperties={handleUpdateProperties}
-                    onMoveRack={handleMoveRack}
-                  />
-                );
-              })}
-            </div>
+            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+              <SortableContext items={rowLayout.rackOrder} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {rowLayout.rackOrder.map((rackId, index) => {
+                    const rackProfile = rackProfiles.find((rack) => rack.id === rackId);
+                    const properties = rowLayout.rackProperties[rackId];
+
+                    if (!rackProfile || !properties) return null;
+
+                    return (
+                      <RackItem
+                        key={rackId}
+                        rackId={rackId}
+                        rackName={rackProfile.name || `Rack ${rackId}`}
+                        index={index}
+                        properties={properties}
+                        onUpdateProperties={handleUpdateProperties}
+                      />
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
           </CardContent>
         </Card>
     </div>

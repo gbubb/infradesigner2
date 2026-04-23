@@ -121,7 +121,7 @@ export class RackExportService {
   private static async addRowViewPages(
     pdf: jsPDF,
     groupedRacks: Record<string, RackWithDevices[]>,
-    azNameMap: Record<string, string>
+    _azNameMap: Record<string, string>
   ): Promise<void> {
     // Landscape dimensions
     const pageWidth = 297; // A4 landscape width
@@ -360,7 +360,7 @@ export class RackExportService {
       return maxB - maxA;
     });
 
-    sortedGroups.forEach(([key, group]) => {
+    sortedGroups.forEach(([_key, group]) => {
       // Check if we need a new page
       if (currentY > this.PAGE_HEIGHT - 40) {
         pdf.addPage();

@@ -122,9 +122,9 @@ export const ResourceSummaryCard: React.FC<ResourceSummaryProps> = ({
 };
 
 export const KeyMetricsCard: React.FC<KeyMetricsProps> = ({
-  totalCapitalCost,
-  costPerVCPU,
-  costTBMemory,
+  totalCapitalCost: _totalCapitalCost,
+  costPerVCPU: _costPerVCPU,
+  costTBMemory: _costTBMemory,
   monthlyCostPerAverageVM,
   averageVMVCPUs,
   averageVMMemoryGB,

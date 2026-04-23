@@ -18,7 +18,7 @@ const formFactors = ['2.5"', '3.5"', 'M.2', 'U.2', 'E1.S', 'E1.L'];
 
 export const DiskComponentForm: React.FC<DiskComponentFormProps> = ({
   control,
-  formValues,
+  formValues: _formValues,
   onInputChange,
   onSelectChange,
 }) => {

@@ -29,22 +29,23 @@ The backend stack is defined in `docker-compose.yml`. Kong on `:54321` fronts Po
 
 ## Testing
 
-No test framework is currently configured. Verify changes by running `npm run build` and `npm run lint` before committing.
+Vitest is wired (jsdom env, `@/` alias). Run `npm run test:run` for a single pass, `npm run test` for watch, `npm run test:ui` for the Vitest UI. Also run `npm run build` and `npm run lint` before committing.
 
 ## Architecture
 
 ### Tech Stack
-- **React 18** + TypeScript
-- **Vite** for build tooling (SWC plugin)
+- **React 19** + TypeScript 6 (`strict: true`)
+- **Vite 8** for build tooling (SWC plugin)
 - **Zustand** for state management (modular slice pattern)
-- **PostgreSQL** (vanilla) + **PostgREST** (REST API) + **GoTrue** (auth), self-hosted via Docker Compose. The `@supabase/supabase-js` client points at a Kong gateway so queries/auth work unchanged.
-- **shadcn/ui** (Radix UI + Tailwind CSS)
-- **React Router v6** for routing
-- **React Hook Form + Zod** for forms/validation
+- **PostgreSQL 18** (vanilla) + **PostgREST v14** (REST API) + **GoTrue v2.188** (auth) behind **Kong 3.9**, self-hosted via Docker Compose. The `@supabase/supabase-js` client points at the Kong gateway so queries/auth work unchanged.
+- **shadcn/ui** `new-york` (Radix UI umbrella + **Tailwind CSS 4**, `data-slot` pattern)
+- **React Router 7** (library mode)
+- **React Hook Form + Zod 4** for forms/validation
 - **TanStack Query** for data fetching
-- **Recharts** + **Plotly.js** for visualization
-- **React DND** for drag-and-drop
+- **Recharts 3** + **Plotly.js** for visualization
+- **React DND** for drag-and-drop (migration to `@dnd-kit` tracked)
 - **jsPDF + html2canvas** for PDF export
+- **Vitest** for tests
 
 ### Directory Structure
 ```
@@ -113,16 +114,16 @@ src/
 - One component per file, function components with hooks
 - Lazy loading for heavy panel components
 - Error boundaries around critical UI sections
-- ESLint: `@typescript-eslint/no-unused-vars` is off
+- ESLint: `@typescript-eslint/no-unused-vars` is enforced as `error`. Prefix intentionally-unused names with `_` to silence. `eslint-plugin-unused-imports` autofixes dead imports on `--fix`.
 
 ## Backend architecture (post-Supabase migration)
 
 The app still uses `@supabase/supabase-js` as its client library because both PostgREST and GoTrue implement the same wire protocols Supabase does. But the backend is now vanilla infrastructure:
 
-- **Postgres 16** (alpine image) — the DB itself, data volume-mounted
-- **PostgREST** — serves the REST API at `/rest/v1`
-- **GoTrue** — handles signup/signin/JWT at `/auth/v1`
-- **Kong** — API gateway on port 54321, fronts both of the above
+- **Postgres 18** (alpine image) — the DB itself, data volume-mounted
+- **PostgREST v14** — serves the REST API at `/rest/v1`
+- **GoTrue v2.188** (image now `supabase/auth`) — handles signup/signin/JWT at `/auth/v1`
+- **Kong 3.9** — API gateway on port 54321, fronts both of the above
 - **Mailpit** — dev-only SMTP capture (browse at `:8025`)
 
 JWT auth: all services share `JWT_SECRET`. The anon key is a JWT signed with that secret, `role: anon`. Existing users and data are preserved from the `db_cluster-11-11-2025@01-58-10.backup.gz` snapshot.
@@ -135,7 +136,7 @@ Only env vars change — no code. See README.md § "Switching to an external/hos
 
 `docker/postgres/init/` executes alphabetically on first container start:
 1. `01-restore-backup.sh` — pipes the gzipped pg_dumpall through psql
-2. `02-post-restore.sql` — drops unused Supabase-cloud schemas (pgsodium, vault, realtime, storage, graphql), sets role passwords, wires up PostgREST role hierarchy, strips role configs referencing libraries we don't ship (e.g. `safeupdate`)
+2. `02-post-restore.sh` — drops unused Supabase-cloud schemas (pgsodium, vault, realtime, storage, graphql), sets role passwords (from `AUTHENTICATOR_PASSWORD` / `AUTH_ADMIN_PASSWORD` env vars), wires up PostgREST role hierarchy, strips role configs referencing libraries we don't ship (e.g. `safeupdate`)
 
 ## Key Services
 

@@ -5,7 +5,6 @@ import { useComponentForm, ComponentFormValues } from '@/hooks/components/useCom
 import { ComponentFormDialog } from './dialogs/ComponentFormDialog';
 import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
 import { ComponentsTable } from './tables/ComponentsTable';
-import { VirtualComponentsTable } from './tables/VirtualComponentsTable';
 import { CategoryFilter } from './filters/CategoryFilter';
 import { SearchBar } from './components/SearchBar';
 import { ComponentLibraryHeader } from './components/ComponentLibraryHeader';
@@ -26,7 +25,10 @@ import {
 } from '@/types/infrastructure';
 import { PortSpeed, MediaType } from '@/types/infrastructure/port-types';
 
-// Define the form schema type for the data argument, mirroring ComponentFormDialog
+// Define the form schema type for the data argument, mirroring ComponentFormDialog.
+// Only referenced via `z.infer<typeof formSchema>` below — ESLint's no-unused-vars
+// doesn't count typeof references, hence the disable.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const formSchema = z.object({
   type: z.nativeEnum(ComponentType),
   name: z.string().min(2),
@@ -113,7 +115,7 @@ export const ComponentLibrary: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<ComponentCategory | 'all'>('all');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteComponentId, setDeleteComponentId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, _setIsLoading] = useState(false);
 
   const {
     isAddDialogOpen,
@@ -130,7 +132,7 @@ export const ComponentLibrary: React.FC = () => {
     handleInputChange,
     handleSelectChange,
     handleTypeChange,
-    validateForm,
+    validateForm: _validateForm,
     processFormForSubmission,
     addPort,
     removePort,

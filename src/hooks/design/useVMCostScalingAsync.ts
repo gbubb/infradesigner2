@@ -52,7 +52,7 @@ export interface VMCostScalingConfig {
 /**
  * Calculate recommended scaling range based on current cluster configuration
  */
-export const getRecommendedScalingRange = (clusterMetrics: ComputeClusterMetrics) => {
+export const getRecommendedScalingRange = (_clusterMetrics: ComputeClusterMetrics) => {
   // Suggest scaling from 0.5x to 10x current vCPUs
   // With 50 steps, we'll capture every possible node count in the range
   // Deduplication ensures fast execution even with many candidates
@@ -86,7 +86,7 @@ export const useVMCostScalingAsync = () => {
    */
   const startSimulation = useCallback(async (
     config: VMCostScalingConfig,
-    clusterMetrics: ComputeClusterMetrics
+    _clusterMetrics: ComputeClusterMetrics
   ): Promise<void> => {
     // Reset cancellation flag
     cancelledRef.current = false;

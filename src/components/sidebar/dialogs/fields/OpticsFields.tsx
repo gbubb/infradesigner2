@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox'; // For multi-select mediaTypeSupported
 import { Switch } from '@/components/ui/switch';
-import { ComponentType, ConnectorType } from '@/types/infrastructure';
+import { ConnectorType } from '@/types/infrastructure';
 import { PortSpeed, MediaType } from '@/types/infrastructure/port-types';
 import { LegacyFormData } from '../forms/component-forms/ComponentValidationSchemas';
 
@@ -94,7 +94,7 @@ export const OpticsFields: React.FC<OpticsFieldsProps> = ({ control }) => {
         <FormField
             control={control}
             name="mediaTypeSupported"
-            render={({ field }) => (
+            render={({ field: _field }) => (
                 <div className="space-y-2 pt-2">
                     {mediaTypes.map((item) => (
                         <FormField

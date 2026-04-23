@@ -5,7 +5,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BarChart } from 'lucide-react';
 import { DesignComparison } from './DesignComparison';
-import { InfrastructureDesign } from '@/types/infrastructure';
 
 export const ComparePanel: React.FC = () => {
   const { savedDesigns, activeDesign } = useDesignStore();

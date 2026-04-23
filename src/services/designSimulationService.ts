@@ -9,9 +9,8 @@
  * requirements and triggering a full recalculation.
  */
 
-import { DesignRequirements, ComputeClusterRequirement, InfrastructureComponent } from '@/types/infrastructure';
+import { DesignRequirements, InfrastructureComponent } from '@/types/infrastructure';
 import { calculateComponentRoles } from '@/store/slices/requirements/roleCalculator';
-import { ComponentRole } from '@/types/infrastructure';
 import { calculateRequiredQuantity } from '@/store/slices/requirements/calculationManager';
 import {
   calculateCompleteCostAnalysis,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { formatCurrency, formatPreciseCurrency } from '@/lib/utils';
+import { formatPreciseCurrency } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { VMPricing } from '@/services/pricing/pricingModelService';
 import { Info } from 'lucide-react';

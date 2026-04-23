@@ -71,13 +71,13 @@ export const ComponentTypeSummaryTable: React.FC<ComponentTypeSummaryTableProps>
     percent: number;
   }
   
-  const formatLabelValue = (value: number, name: string, props: LabelProps) => {
+  const _formatLabelValue = (value: number, name: string, props: LabelProps) => {
     const item = props.payload;
     return `${name}: ${item.type} (${props.percent.toFixed(1)}%)`;
   };
   
   // Custom tooltip for pie charts
-  const CustomTooltip = ({ active, payload, label }: ChartTooltipProps & { label?: string }) => {
+  const CustomTooltip = ({ active, payload, label: _label }: ChartTooltipProps & { label?: string }) => {
     if (active && payload && payload.length) {
       const payloadItem = payload[0];
       const data = payloadItem.payload as {

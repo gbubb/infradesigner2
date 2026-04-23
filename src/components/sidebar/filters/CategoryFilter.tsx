@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Check, ChevronDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { ComponentCategory } from '@/types/infrastructure';
 import {
   DropdownMenu,

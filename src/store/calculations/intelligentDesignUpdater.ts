@@ -27,7 +27,7 @@ export class IntelligentDesignUpdater {
     previousRequirements: DesignRequirements,
     newRequirements: DesignRequirements
   ): void {
-    const state = useDesignStore.getState();
+    const _state = useDesignStore.getState();
     
     // Detect what actually changed
     const changes = ChangeManager.detectChanges(previousRequirements, newRequirements);
@@ -59,7 +59,7 @@ export class IntelligentDesignUpdater {
    * Performs selective updates based on the change impact analysis
    */
   private static performSelectiveUpdate(context: UpdateContext): void {
-    const state = useDesignStore.getState();
+    const _state = useDesignStore.getState();
     
     // Step 1: Update component roles (if needed)
     this.updateComponentRoles(context);
@@ -221,7 +221,7 @@ export class IntelligentDesignUpdater {
   private static calculateComponentsFromRoles(
     roles: ComponentRole[],
     existingComponents: InfrastructureComponent[],
-    context: UpdateContext
+    _context: UpdateContext
   ): InfrastructureComponent[] {
     const state = useDesignStore.getState();
     const updatedComponents: InfrastructureComponent[] = [];
@@ -323,7 +323,7 @@ export class IntelligentDesignUpdater {
   /**
    * Rebalances devices in existing racks without changing rack structure
    */
-  private static rebalanceRackDevices(context: UpdateContext): void {
+  private static rebalanceRackDevices(_context: UpdateContext): void {
     // This is a placeholder for intelligent rack rebalancing
     // For now, we'll let the existing rack system handle it
   }

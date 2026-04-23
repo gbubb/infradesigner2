@@ -56,7 +56,7 @@ export const ClusterConsumptionControls: React.FC<ClusterConsumptionControlsProp
     
     computePricing.forEach(cluster => {
       // Calculate resources for this cluster based on device count
-      const deviceCount = clusterDeviceCounts[cluster.clusterId] || 0;
+      const _deviceCount = clusterDeviceCounts[cluster.clusterId] || 0;
       const vcpus = actualHardwareTotals.totalVCPUs / computePricing.length;
       const memoryGB = (actualHardwareTotals.totalComputeMemoryTB * 1024) / computePricing.length;
       

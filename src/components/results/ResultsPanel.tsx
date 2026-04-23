@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { manualRecalculateDesign } from '@/store/calculations/designCalculator';
-import { IntelligentDesignUpdater } from '@/store/calculations/intelligentDesignUpdater';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ResultsHeader } from './ResultsHeader';

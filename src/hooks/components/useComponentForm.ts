@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { ComponentType, InfrastructureComponent } from '@/types/infrastructure';
+import { ComponentType } from '@/types/infrastructure';
 import { Port, PortRole, PortSpeed, MediaType, ConnectorType } from '@/types/infrastructure/port-types';
 import { PCIeSlot } from '@/types/infrastructure/server-types';
 import { useDesignStore } from '@/store/designStore';

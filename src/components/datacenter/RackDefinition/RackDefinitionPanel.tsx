@@ -20,7 +20,7 @@ export function RackDefinitionPanel() {
   const { selectedFacilityId, getFacilityById } = useStore();
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const [datacenterRacks, setDatacenterRacks] = useState<DatacenterRack[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   
   // Rack creation form state

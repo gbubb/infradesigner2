@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
 import { StoragePoolEfficiencyFactors, TB_TO_TIB_FACTOR } from '@/store/slices/requirements/constants';
 import { InfrastructureComponent, ComponentType } from '@/types/infrastructure';
-import { ClusterInfo } from '@/types/infrastructure/roles-types';
 import { Server } from '@/types/infrastructure/server-types';
 
 export const useStorageClustersWrapper = () => {

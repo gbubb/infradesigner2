@@ -1,41 +1,42 @@
-
-import * as React from 'react';
+import * as React from "react";
+import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 
 interface DndProviderProps {
   children: React.ReactNode;
 }
 
+/**
+ * Global drag-and-drop context. Each droppable attaches its own `onDrop` handler
+ * via `useDroppable({ data: { onDrop } })`; this provider just routes the drag-end
+ * event to whichever droppable the user released over.
+ *
+ * Feature areas that want independent DnD (HierarchyBuilder, RowLayoutTab) mount
+ * their own nested `<DndContext>` — nested contexts capture drags started inside
+ * their subtree and don't bubble to this global handler.
+ */
 export const DndProvider: React.FC<DndProviderProps> = ({ children }) => {
-  const [DndComponents, setDndComponents] = React.useState<{
-    DndProvider: React.ComponentType<{ backend: unknown; children: React.ReactNode }>;
-    HTML5Backend: unknown;
-  } | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor)
+  );
 
-  React.useEffect(() => {
-    // Dynamically import react-dnd to ensure React is fully loaded first
-    Promise.all([
-      import('react-dnd'),
-      import('react-dnd-html5-backend')
-    ]).then(([dndModule, backendModule]) => {
-      setDndComponents({
-        DndProvider: dndModule.DndProvider as React.ComponentType<{ backend: unknown; children: React.ReactNode }>,
-        HTML5Backend: backendModule.HTML5Backend
-      });
-    }).catch(error => {
-      console.error('Failed to load react-dnd:', error);
-    });
-  }, []);
-
-  // Render children without DnD during SSR and initial load
-  if (!DndComponents) {
-    return <>{children}</>;
-  }
-
-  const { DndProvider: ReactDndProvider, HTML5Backend } = DndComponents;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const dropHandler = event.over?.data?.current?.onDrop as
+      | ((event: DragEndEvent) => void)
+      | undefined;
+    dropHandler?.(event);
+  };
 
   return (
-    <ReactDndProvider backend={HTML5Backend}>
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       {children}
-    </ReactDndProvider>
+    </DndContext>
   );
 };

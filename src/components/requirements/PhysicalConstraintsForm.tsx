@@ -3,8 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { FormItem } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -76,7 +74,7 @@ export const PhysicalConstraintsForm: React.FC<PhysicalConstraintsProps> = ({
     onUpdate({ [name]: isNaN(floatValue) ? undefined : floatValue });
   };
   
-  const handleSwitchChange = (checked: boolean) => {
+  const _handleSwitchChange = (checked: boolean) => {
     onUpdate({ useColoRacks: checked });
   };
 

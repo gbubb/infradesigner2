@@ -50,7 +50,7 @@ export const PowerEnergySection: React.FC<PowerEnergySectionProps> = ({
                         (maximumPower || 0);
   
   // Calculate unused power
-  const unusedPower = availablePower - (maximumPower || 0);
+  const _unusedPower = availablePower - (maximumPower || 0);
   
   // Create power bar
   const renderPowerBar = (powerData: {

@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import type { DatacenterFacility, FacilityRackStats, RackCostAllocation } from '@/types/infrastructure/datacenter-types';
-import type { RackProfile, RackHierarchyAssignment } from '@/types/infrastructure/rack-types';
+import type { RackHierarchyAssignment } from '@/types/infrastructure/rack-types';
 import { supabase } from '@/lib/supabase';
 import { RackFacilityIntegrationService } from '@/services/datacenter/RackFacilityIntegrationService';
 
@@ -300,7 +300,7 @@ export const createFacilitiesSlice: StateCreator<FacilitiesSlice> = (set, get) =
         assignmentMap.set(assignment.rack_id, assignment as unknown as RackHierarchyAssignment);
       });
 
-      set(state => ({
+      set(_state => ({
         rackAssignments: assignmentMap,
         assignmentLoading: false
       }));

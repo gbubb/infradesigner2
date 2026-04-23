@@ -8,10 +8,9 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogDescription,
-  DialogFooter,
-  DialogClose
+  DialogFooter
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -38,7 +37,7 @@ import { ComponentFormFactory } from './forms/component-forms/ComponentFormFacto
 import { PortManagementSection } from './forms/component-forms/PortManagementSection';
 
 // Schema is now imported from ComponentValidationSchemas.ts
-const formSchema = legacyFormSchema;
+const _formSchema = legacyFormSchema;
 
 interface ComponentFormDialogProps {
   isOpen: boolean;

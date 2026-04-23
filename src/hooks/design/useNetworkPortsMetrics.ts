@@ -1,7 +1,7 @@
 
 import { useMemo } from 'react';
 import { useDesignStore } from '@/store/designStore';
-import { ComponentType, ManagementNetworkType, IPMINetworkType, InfrastructureComponent } from '@/types/infrastructure';
+import { ComponentType, ManagementNetworkType, IPMINetworkType } from '@/types/infrastructure';
 import { Server, Switch } from '@/types/infrastructure';
 
 export const useNetworkPortsMetrics = () => {

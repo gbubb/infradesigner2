@@ -134,7 +134,7 @@ export const useHardwareTotals = () => {
       const pool = storagePools.find(p => p.storageClusterId === cluster.id);
       const poolType = pool?.poolType || '3 Replica';
       const poolEfficiencyFactor = StoragePoolEfficiencyFactors[poolType] || (1/3);
-      const maxFillFactor = ((pool?.maxFillFactor ?? 80)) / 100;
+      const _maxFillFactor = ((pool?.maxFillFactor ?? 80)) / 100;
 
       let clusterRawCapacityTB = 0;
 

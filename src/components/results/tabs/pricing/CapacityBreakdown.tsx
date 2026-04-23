@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { ClusterCapacity, StorageClusterCapacity } from '@/services/pricing/pricingModelService';
 import { Cpu, MemoryStick, Server, AlertCircle, Info, ChevronDown, ChevronUp, DollarSign, HardDrive, Database } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -53,11 +52,11 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, 
     return `${(value * 100).toFixed(1)}%`;
   };
 
-  const cpuUtilization = capacity.totalvCPUs > 0 
+  const _cpuUtilization = capacity.totalvCPUs > 0 
     ? (capacity.sellingvCPUs / capacity.totalvCPUs) * 100 
     : 0;
 
-  const memoryUtilization = capacity.totalMemoryGB > 0
+  const _memoryUtilization = capacity.totalMemoryGB > 0
     ? (capacity.sellingMemoryGB / capacity.totalMemoryGB) * 100
     : 0;
   
@@ -78,7 +77,7 @@ export const CapacityBreakdown: React.FC<CapacityBreakdownProps> = ({ capacity, 
   const memHAPercent = capacity.haReservation * availableForCompute;
   const memVirtPercent = capacity.virtualizationOverhead * availableForCompute;
   const memReservePercent = (1 - capacity.targetUtilization) * (availableForCompute - memHAPercent - memVirtPercent);
-  const memSellablePercent = availableForCompute - memHAPercent - memVirtPercent - memReservePercent;
+  const _memSellablePercent = availableForCompute - memHAPercent - memVirtPercent - memReservePercent;
 
   return (
     <Card>

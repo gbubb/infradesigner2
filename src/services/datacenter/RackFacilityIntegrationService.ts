@@ -5,9 +5,7 @@ import type {
   RackSpecifications 
 } from '@/types/infrastructure/rack-types';
 import type { 
-  HierarchyLevel, 
-  FacilityRackStats,
-  RackCostAllocation
+  FacilityRackStats
 } from '@/types/infrastructure/datacenter-types';
 import { RackPowerCalculationService } from './RackPowerCalculationService';
 
@@ -281,7 +279,7 @@ export class RackFacilityIntegrationService {
     }, {} as Record<string, number>);
 
     // Calculate cost statistics (this would come from cost calculations)
-    const costs = assignedRacks.map(r => 0); // Placeholder - will be calculated by cost service
+    const costs = assignedRacks.map(_r => 0); // Placeholder - will be calculated by cost service
     const avgCost = costs.length > 0 ? costs.reduce((a, b) => a + b, 0) / costs.length : 0;
     const minCost = costs.length > 0 ? Math.min(...costs) : 0;
     const maxCost = costs.length > 0 ? Math.max(...costs) : 0;

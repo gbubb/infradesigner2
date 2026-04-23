@@ -84,7 +84,7 @@ export class RackOperationsService {
     return rules.map(rule => ({
       ...rule,
       selectedAZs: rule.selectedAZs.map(friendlyName => {
-        const azEntry = Object.entries(azNameMap).find(([id, name]) => name === friendlyName);
+        const azEntry = Object.entries(azNameMap).find(([_id, name]) => name === friendlyName);
         return azEntry ? azEntry[0] : friendlyName;
       })
     }));

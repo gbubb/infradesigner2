@@ -45,7 +45,7 @@ export function useClusterAnalysis({
   operationalCosts,
   amortizedCostsByType,
   requirements,
-  actualHardwareTotals,
+  actualHardwareTotals: _actualHardwareTotals,
   storageClustersMetrics,
   storageOverallocationRatios
 }: UseClusterAnalysisProps) {

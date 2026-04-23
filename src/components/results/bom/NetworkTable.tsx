@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { FileSpreadsheet } from 'lucide-react';
 import { CalculationBreakdownDialog } from '../CalculationBreakdownDialog';
-import { ComponentType, InfrastructureComponent, Switch, Router, Firewall, Transceiver } from '@/types/infrastructure';
+import { InfrastructureComponent, Switch, Router, Firewall } from '@/types/infrastructure';
 import { ComponentWithPlacement } from '@/types/service-types';
 import { MediaType } from '@/types/infrastructure';
 import { BomItemHoverCard } from './BomItemHoverCard';
@@ -32,7 +32,7 @@ interface NetworkTableProps {
   onExport: (category: string) => void;
 }
 
-type NetworkComponent = Switch | Router | Firewall;
+type _NetworkComponent = Switch | Router | Firewall;
 
 const NetworkTableComponent: React.FC<NetworkTableProps> = ({
   summarizedComponentsByCategory,

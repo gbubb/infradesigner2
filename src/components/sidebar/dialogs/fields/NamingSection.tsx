@@ -2,7 +2,6 @@
 import React from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ComponentType } from "@/types/infrastructure";
 import { Control } from "react-hook-form";
 import { LegacyFormData } from "../forms/component-forms/ComponentValidationSchemas";
 

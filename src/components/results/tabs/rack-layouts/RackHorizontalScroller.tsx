@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, HardDrive, Database } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { RackProfile } from '@/types/infrastructure/rack-types';
 import { useDesignStore } from '@/store/designStore';
 import { getDeviceColor } from '@/components/visualization/rack/rackUtils';
 import { ComponentType } from '@/types/infrastructure/component-types';

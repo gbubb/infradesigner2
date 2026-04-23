@@ -19,7 +19,7 @@ const routerTemplates: InfrastructureComponent[] = [];
 const firewallTemplates: InfrastructureComponent[] = [];
 const diskTemplates: InfrastructureComponent[] = [];
 const gpuTemplates: InfrastructureComponent[] = [];
-const transceiverTemplates: Transceiver[] = [];
+const _transceiverTemplates: Transceiver[] = [];
 
 // Add sample fiber patch panels
 export const fiberPatchPanelTemplates: FiberPatchPanel[] = [

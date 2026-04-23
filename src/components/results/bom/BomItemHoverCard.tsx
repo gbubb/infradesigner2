@@ -1,19 +1,11 @@
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { 
   InfrastructureComponent, 
   ComponentType, 
-  Cable, 
   Server, 
-  Disk, 
-  Switch, 
-  Router, 
-  Firewall,
-  FiberPatchPanel,
-  CopperPatchPanel,
-  Cassette
+  Switch
 } from "@/types/infrastructure";
 import { useNavigate } from "react-router";
 import { ExternalLink, Cpu, HardDrive, Network, Cable as CableIcon, Router as RouterIcon, Shield } from "lucide-react";

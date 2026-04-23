@@ -11,8 +11,8 @@ interface CompareCostMetricsProps {
 }
 
 export const CompareCostMetrics: React.FC<CompareCostMetricsProps> = ({
-  designAName,
-  designBName,
+  designAName: _designAName,
+  designBName: _designBName,
   metricsA,
   metricsB,
   significantDifferences
